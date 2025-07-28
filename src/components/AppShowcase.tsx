@@ -83,8 +83,11 @@ const AppShowcase = () => {
               </CardContent>
             </Card>
 
-            <Button className="w-full bg-primary hover:bg-primary/90 shadow-elegant">
-              Download Learner App
+            <Button 
+              className="w-full bg-primary hover:bg-primary/90 shadow-elegant"
+              onClick={() => window.location.href = '/learner'}
+            >
+              Try Learner App
             </Button>
           </div>
 
@@ -172,8 +175,11 @@ const AppShowcase = () => {
               </CardContent>
             </Card>
 
-            <Button className="w-full bg-secondary hover:bg-secondary/90 shadow-elegant">
-              Become a Tutor
+            <Button 
+              className="w-full bg-secondary hover:bg-secondary/90 shadow-elegant"
+              onClick={() => window.location.href = '/tutor'}
+            >
+              Try Tutor App
             </Button>
           </div>
         </div>
