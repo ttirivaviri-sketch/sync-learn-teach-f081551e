@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { Search, MapPin, Star, Clock, CreditCard, User } from "lucide-react";
+import { Search, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import VideoMeeting from "@/components/VideoMeeting";
+import StudyStore from "@/components/StudyStore";
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
+  const [showVideoMeeting, setShowVideoMeeting] = useState(false);
 
   const nearbyTutors = [
     {
@@ -21,7 +24,8 @@ const LearnerApp = () => {
       distance: "2.3 km",
       price: "R150/hour",
       avatar: "/placeholder.svg",
-      available: true
+      available: true,
+      onlineAvailable: true
     },
     {
       id: 2,
@@ -33,7 +37,8 @@ const LearnerApp = () => {
       distance: "1.8 km",
       price: "R200/hour",
       avatar: "/placeholder.svg",
-      available: true
+      available: true,
+      onlineAvailable: true
     },
     {
       id: 3,
@@ -45,7 +50,8 @@ const LearnerApp = () => {
       distance: "3.1 km",
       price: "R180/hour",
       avatar: "/placeholder.svg",
-      available: false
+      available: false,
+      onlineAvailable: true
     }
   ];
 
@@ -68,6 +74,17 @@ const LearnerApp = () => {
     }
   ];
 
+  if (showVideoMeeting) {
+    return (
+      <VideoMeeting
+        sessionType="learner"
+        partnerName="Sarah Johnson"
+        subject="Mathematics"
+        onEndCall={() => setShowVideoMeeting(false)}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -87,9 +104,10 @@ const LearnerApp = () => {
       {/* Main Content */}
       <div className="p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="search">Search</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
+            <TabsTrigger value="store">Store</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
@@ -150,15 +168,33 @@ const LearnerApp = () => {
                           {tutor.available && (
                             <Badge variant="secondary" className="ml-2 text-xs">Available</Badge>
                           )}
+                          {tutor.onlineAvailable && (
+                            <Badge variant="outline" className="ml-2 text-xs">
+                              <Video className="h-3 w-3 mr-1" />
+                              Online
+                            </Badge>
+                          )}
                         </div>
                         
-                        <Button 
-                          className="w-full mt-3" 
-                          disabled={!tutor.available}
-                          variant={tutor.available ? "default" : "outline"}
-                        >
-                          {tutor.available ? "Book Now" : "Unavailable"}
-                        </Button>
+                        <div className="grid grid-cols-2 gap-2 mt-3">
+                          <Button 
+                            disabled={!tutor.available}
+                            variant={tutor.available ? "default" : "outline"}
+                            className="flex-1"
+                          >
+                            {tutor.available ? "Book In-Person" : "Unavailable"}
+                          </Button>
+                          {tutor.onlineAvailable && (
+                            <Button 
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => setShowVideoMeeting(true)}
+                            >
+                              <Video className="h-4 w-4 mr-1" />
+                              Book Online
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </CardContent>
@@ -196,12 +232,29 @@ const LearnerApp = () => {
                   <Button variant="outline" size="sm" className="flex-1">
                     Reschedule
                   </Button>
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => setShowVideoMeeting(true)}
+                  >
+                    <Video className="h-4 w-4 mr-1" />
+                    Join Online
+                  </Button>
                   <Button variant="destructive" size="sm" className="flex-1">
                     Cancel
                   </Button>
                 </div>
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="store" className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <ShoppingBag className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold">Study Store</h3>
+            </div>
+            <StudyStore />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">

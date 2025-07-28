@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star } from "lucide-react";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import VideoMeeting from "@/components/VideoMeeting";
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isOnline, setIsOnline] = useState(true);
+  const [showVideoMeeting, setShowVideoMeeting] = useState(false);
 
   const todayStats = {
     earnings: "R450",
@@ -29,7 +31,8 @@ const TutorApp = () => {
       time: "4:00 PM",
       duration: "1 hour",
       rate: "R150/hour",
-      distance: "2.1 km"
+      distance: "2.1 km",
+      type: "online"
     },
     {
       id: 2,
@@ -41,7 +44,8 @@ const TutorApp = () => {
       time: "2:00 PM",
       duration: "2 hours",
       rate: "R200/hour",
-      distance: "1.8 km"
+      distance: "1.8 km",
+      type: "in-person"
     }
   ];
 
@@ -52,17 +56,30 @@ const TutorApp = () => {
       subject: "Chemistry",
       time: "3:00 PM - 4:00 PM",
       location: "Sandton City",
-      earnings: "R180"
+      earnings: "R180",
+      type: "in-person"
     },
     {
       id: 2,
       student: "Michael Brown",
       subject: "Mathematics",
       time: "5:00 PM - 6:30 PM",
-      location: "Rosebank",
-      earnings: "R225"
+      location: "Online Session",
+      earnings: "R225",
+      type: "online"
     }
   ];
+
+  if (showVideoMeeting) {
+    return (
+      <VideoMeeting
+        sessionType="tutor"
+        partnerName="John Doe"
+        subject="Mathematics"
+        onEndCall={() => setShowVideoMeeting(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -198,7 +215,19 @@ const TutorApp = () => {
                         <p className="text-sm text-muted-foreground">
                           {request.subject} • {request.topic}
                         </p>
-                        <p className="text-xs text-muted-foreground">{request.level}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-foreground">{request.level}</p>
+                          <Badge variant={request.type === "online" ? "secondary" : "outline"} className="text-xs">
+                            {request.type === "online" ? (
+                              <>
+                                <Video className="h-3 w-3 mr-1" />
+                                Online
+                              </>
+                            ) : (
+                              "In-Person"
+                            )}
+                          </Badge>
+                        </div>
                       </div>
                       <Badge variant="outline">{request.rate}</Badge>
                     </div>
@@ -214,7 +243,7 @@ const TutorApp = () => {
                       </div>
                       <div className="flex items-center gap-1">
                         <MapPin className="h-4 w-4" />
-                        <span>{request.distance} away</span>
+                        <span>{request.type === "online" ? "Online" : `${request.distance} away`}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <DollarSign className="h-4 w-4" />
@@ -223,7 +252,11 @@ const TutorApp = () => {
                     </div>
                     
                     <div className="flex gap-2">
-                      <Button className="flex-1" size="sm">
+                      <Button 
+                        className="flex-1" 
+                        size="sm"
+                        onClick={() => request.type === "online" && setShowVideoMeeting(true)}
+                      >
                         Accept
                       </Button>
                       <Button variant="outline" className="flex-1" size="sm">
