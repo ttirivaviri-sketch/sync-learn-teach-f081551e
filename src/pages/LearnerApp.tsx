@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { Search, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +18,34 @@ const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setLoading(false);
+        if (!session?.user && !loading) {
+          navigate("/learner/auth");
+        }
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+      if (!session?.user) {
+        navigate("/learner/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate, loading]);
 
   const nearbyTutors = [
     {
@@ -76,6 +108,31 @@ const LearnerApp = () => {
     }
   ];
 
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      navigate("/learner/auth");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null; // Will redirect to auth
+  }
+
   if (showLaunchScreen) {
     return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
   }
@@ -100,10 +157,19 @@ const LearnerApp = () => {
             <h1 className="text-xl font-bold">StudySync Learner</h1>
             <p className="text-sm opacity-90">Find your perfect tutor</p>
           </div>
-          <Avatar>
-            <AvatarImage src="/placeholder.svg" />
-            <AvatarFallback>JD</AvatarFallback>
-          </Avatar>
+          <div className="flex items-center gap-3">
+            <div className="text-right">
+              <p className="text-sm opacity-90 font-medium">{session?.user?.email}</p>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={handleSignOut}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </header>
 
