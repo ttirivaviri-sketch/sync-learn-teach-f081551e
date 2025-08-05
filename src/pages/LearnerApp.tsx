@@ -20,6 +20,11 @@ const LearnerApp = () => {
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedSubject, setSelectedSubject] = useState("");
+  const [userLocation, setUserLocation] = useState("Johannesburg Central");
+  const [profile, setProfile] = useState<any>(null);
+  const [upcomingSession, setUpcomingSession] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -46,6 +51,64 @@ const LearnerApp = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate, loading]);
+
+  // Load user profile and upcoming sessions
+  useEffect(() => {
+    if (session?.user) {
+      loadUserProfile();
+      loadUpcomingSession();
+      requestLocation();
+    }
+  }, [session]);
+
+  const loadUserProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session?.user?.id)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading profile:', error);
+        return;
+      }
+      
+      setProfile(data);
+    } catch (error) {
+      console.error('Profile load error:', error);
+    }
+  };
+
+  const loadUpcomingSession = async () => {
+    // Simulate upcoming session - in real app this would come from database
+    setUpcomingSession({
+      tutor: "Sarah Johnson",
+      subject: "Mathematics • Trigonometry",
+      time: "Today, 3:00 PM",
+      price: "R150/hour",
+      sessionId: "session_123"
+    });
+  };
+
+  const requestLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          // In a real app, you'd reverse geocode this
+          setUserLocation("Current Location");
+          toast({
+            title: "Location Updated",
+            description: "Found tutors near you!",
+          });
+        },
+        () => {
+          // Keep default location if permission denied
+          setUserLocation("Johannesburg Central");
+        }
+      );
+    }
+  };
 
   const nearbyTutors = [
     {
@@ -190,29 +253,71 @@ const LearnerApp = () => {
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
                 placeholder="Search by subject or level..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
               />
             </div>
 
             {/* Quick Filters */}
             <div className="flex gap-2 overflow-x-auto pb-2">
-              <Badge variant="secondary">Mathematics</Badge>
-              <Badge variant="outline">Physics</Badge>
-              <Badge variant="outline">Chemistry</Badge>
+              <Badge 
+                variant={selectedSubject === "Mathematics" ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setSelectedSubject(selectedSubject === "Mathematics" ? "" : "Mathematics")}
+              >
+                Mathematics
+              </Badge>
+              <Badge 
+                variant={selectedSubject === "Physics" ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setSelectedSubject(selectedSubject === "Physics" ? "" : "Physics")}
+              >
+                Physics
+              </Badge>
+              <Badge 
+                variant={selectedSubject === "Chemistry" ? "default" : "outline"}
+                className="cursor-pointer"
+                onClick={() => setSelectedSubject(selectedSubject === "Chemistry" ? "" : "Chemistry")}
+              >
+                Chemistry
+              </Badge>
               <Badge variant="outline">English</Badge>
               <Badge variant="outline">Grade 12</Badge>
             </div>
 
-            {/* Location */}
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <MapPin className="h-4 w-4" />
-              <span>Tutors near Johannesburg Central</span>
+            {/* Location with refresh button */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>Tutors near {userLocation}</span>
+              </div>
+              <Button variant="outline" size="sm" onClick={requestLocation}>
+                Update Location
+              </Button>
             </div>
 
             {/* Available Tutors */}
             <div className="space-y-3">
-              <h3 className="font-semibold">Available Now</h3>
-              {nearbyTutors.map((tutor) => (
+              <div className="flex items-center justify-between">
+                <h3 className="font-semibold">Available Now</h3>
+                <p className="text-sm text-muted-foreground">
+                  {nearbyTutors.filter(tutor => 
+                    (!searchQuery || tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                     tutor.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                     tutor.level.toLowerCase().includes(searchQuery.toLowerCase())) &&
+                    (!selectedSubject || tutor.subject === selectedSubject)
+                  ).length} tutors found
+                </p>
+              </div>
+              {nearbyTutors
+                .filter(tutor => 
+                  (!searchQuery || tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                   tutor.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                   tutor.level.toLowerCase().includes(searchQuery.toLowerCase())) &&
+                  (!selectedSubject || tutor.subject === selectedSubject)
+                )
+                .map((tutor) => (
                 <Card key={tutor.id} className="shadow-sm">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -365,28 +470,97 @@ const LearnerApp = () => {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-16 w-16">
                     <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>JD</AvatarFallback>
+                    <AvatarFallback>
+                      {profile?.full_name ? 
+                        profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 
+                        session?.user?.email?.charAt(0).toUpperCase() || 'U'
+                      }
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold">John Doe</h3>
-                    <p className="text-sm text-muted-foreground">Grade 12 Student</p>
+                    <h3 className="font-semibold">
+                      {profile?.full_name || session?.user?.email?.split('@')[0] || 'Learner'}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      {profile?.user_type === 'learner' ? 'Student' : 'User'} • {userLocation}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                  </div>
+                </div>
+
+                {/* Profile Stats */}
+                <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">12</p>
+                    <p className="text-xs text-muted-foreground">Sessions</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">4.8</p>
+                    <p className="text-xs text-muted-foreground">Rating</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-lg font-semibold">R2,350</p>
+                    <p className="text-xs text-muted-foreground">Spent</p>
                   </div>
                 </div>
                 
                 <div className="space-y-2">
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => toast({ title: "Feature coming soon!", description: "Payment methods will be available in the next update." })}
+                  >
                     <CreditCard className="h-4 w-4 mr-2" />
                     Payment Methods
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => setActiveTab("history")}
+                  >
                     <Clock className="h-4 w-4 mr-2" />
                     Booking History
                   </Button>
-                  <Button variant="outline" className="w-full justify-start">
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-start"
+                    onClick={() => toast({ title: "Feature coming soon!", description: "Review system will be available in the next update." })}
+                  >
                     <Star className="h-4 w-4 mr-2" />
                     My Reviews
                   </Button>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab("search")}
+                >
+                  Find New Tutor
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab("store")}
+                >
+                  Browse Study Materials
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start text-destructive"
+                  onClick={handleSignOut}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Sign Out
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
