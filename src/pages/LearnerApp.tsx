@@ -8,10 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
 import StudyStore from "@/components/StudyStore";
+import LaunchScreen from "@/components/LaunchScreen";
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
+  const [showLaunchScreen, setShowLaunchScreen] = useState(true);
 
   const nearbyTutors = [
     {
@@ -73,6 +75,10 @@ const LearnerApp = () => {
       cost: "R225"
     }
   ];
+
+  if (showLaunchScreen) {
+    return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
+  }
 
   if (showVideoMeeting) {
     return (
