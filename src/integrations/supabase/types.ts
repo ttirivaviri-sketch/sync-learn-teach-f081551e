@@ -44,6 +44,99 @@ export type Database = {
         }
         Relationships: []
       }
+      qualifications: {
+        Row: {
+          created_at: string
+          document_url: string | null
+          id: string
+          institution: string
+          qualification_type: string
+          user_id: string
+          year_obtained: number | null
+        }
+        Insert: {
+          created_at?: string
+          document_url?: string | null
+          id?: string
+          institution: string
+          qualification_type: string
+          user_id: string
+          year_obtained?: number | null
+        }
+        Update: {
+          created_at?: string
+          document_url?: string | null
+          id?: string
+          institution?: string
+          qualification_type?: string
+          user_id?: string
+          year_obtained?: number | null
+        }
+        Relationships: []
+      }
+      tutor_subjects: {
+        Row: {
+          created_at: string
+          hourly_rate: number | null
+          id: string
+          level: string
+          subject: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          level: string
+          subject: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hourly_rate?: number | null
+          id?: string
+          level?: string
+          subject?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tutor_verifications: {
+        Row: {
+          created_at: string
+          id: string
+          id_document_url: string | null
+          id_number: string | null
+          police_clearance_url: string | null
+          profile_photo_url: string | null
+          updated_at: string
+          user_id: string
+          verification_status: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          id_document_url?: string | null
+          id_number?: string | null
+          police_clearance_url?: string | null
+          profile_photo_url?: string | null
+          updated_at?: string
+          user_id: string
+          verification_status?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          id_document_url?: string | null
+          id_number?: string | null
+          police_clearance_url?: string | null
+          profile_photo_url?: string | null
+          updated_at?: string
+          user_id?: string
+          verification_status?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
