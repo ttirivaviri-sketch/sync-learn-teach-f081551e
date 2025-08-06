@@ -11,11 +11,14 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import VideoMeeting from "@/components/VideoMeeting";
+import DirectionsMap from "@/components/DirectionsMap";
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
+  const [showDirections, setShowDirections] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -94,6 +97,7 @@ const TutorApp = () => {
       duration: "1 hour",
       rate: "R150/hour",
       distance: "2.1 km",
+      address: "123 Main Street, Sandton, Johannesburg",
       type: "online"
     },
     {
@@ -107,6 +111,7 @@ const TutorApp = () => {
       duration: "2 hours",
       rate: "R200/hour",
       distance: "1.8 km",
+      address: "456 Oak Avenue, Rosebank, Johannesburg",
       type: "in-person"
     }
   ];
@@ -132,6 +137,15 @@ const TutorApp = () => {
     }
   ];
 
+  const handleAcceptRequest = (request: any) => {
+    if (request.type === "online") {
+      setShowVideoMeeting(true);
+    } else {
+      setSelectedRequest(request);
+      setShowDirections(true);
+    }
+  };
+
   if (showVideoMeeting) {
     return (
       <VideoMeeting
@@ -139,6 +153,20 @@ const TutorApp = () => {
         partnerName="John Doe"
         subject="Mathematics"
         onEndCall={() => setShowVideoMeeting(false)}
+      />
+    );
+  }
+
+  if (showDirections && selectedRequest) {
+    return (
+      <DirectionsMap
+        learnerAddress={selectedRequest.address}
+        learnerName={selectedRequest.student}
+        subject={selectedRequest.subject}
+        onBack={() => {
+          setShowDirections(false);
+          setSelectedRequest(null);
+        }}
       />
     );
   }
@@ -323,7 +351,7 @@ const TutorApp = () => {
                       <Button 
                         className="flex-1" 
                         size="sm"
-                        onClick={() => request.type === "online" && setShowVideoMeeting(true)}
+                        onClick={() => handleAcceptRequest(request)}
                       >
                         Accept
                       </Button>
