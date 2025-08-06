@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import LearnerApp from "./pages/LearnerApp";
 import LearnerAuth from "./pages/LearnerAuth";
 import TutorApp from "./pages/TutorApp";
+import TutorAuth from "./pages/TutorAuth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/learner" element={<LearnerApp />} />
           <Route path="/learner/auth" element={<LearnerAuth />} />
           <Route path="/tutor" element={<TutorApp />} />
+          <Route path="/tutor/auth" element={<TutorAuth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

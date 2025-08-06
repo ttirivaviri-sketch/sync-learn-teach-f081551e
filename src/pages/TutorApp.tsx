@@ -1,5 +1,9 @@
-import { useState } from "react";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Session } from "@supabase/supabase-js";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +16,64 @@ const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setLoading(false);
+        if (!session?.user) {
+          navigate("/tutor/auth");
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+      if (!session?.user) {
+        navigate("/tutor/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleSignOut = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out of your tutor account.",
+      });
+      navigate("/tutor/auth");
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to sign out. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return null;
+  }
 
   const todayStats = {
     earnings: "R450",
@@ -98,9 +160,15 @@ const TutorApp = () => {
                 onCheckedChange={setIsOnline}
               />
             </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm">{session.user?.email}</span>
+              <Button variant="ghost" size="sm" onClick={handleSignOut}>
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
             <Avatar>
               <AvatarImage src="/placeholder.svg" />
-              <AvatarFallback>SJ</AvatarFallback>
+              <AvatarFallback>{session.user?.user_metadata?.full_name?.[0] || 'T'}</AvatarFallback>
             </Avatar>
           </div>
         </div>
