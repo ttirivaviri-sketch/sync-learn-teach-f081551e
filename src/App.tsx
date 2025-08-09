@@ -9,6 +9,7 @@ import LearnerAuth from "./pages/LearnerAuth";
 import TutorApp from "./pages/TutorApp";
 import TutorAuth from "./pages/TutorAuth";
 import NotFound from "./pages/NotFound";
+import ChooseStudyLevel from "./pages/ChooseStudyLevel";
 
 const queryClient = new QueryClient();
 
@@ -22,6 +23,7 @@ const App = () => (
           <Route path="/" element={<Index />} />
           <Route path="/learner" element={<LearnerApp />} />
           <Route path="/learner/auth" element={<LearnerAuth />} />
+          <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
           <Route path="/tutor" element={<TutorApp />} />
           <Route path="/tutor/auth" element={<TutorAuth />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

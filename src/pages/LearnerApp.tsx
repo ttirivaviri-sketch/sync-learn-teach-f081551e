@@ -75,6 +75,13 @@ const LearnerApp = () => {
       }
       
       setProfile(data);
+      if (!data?.study_level) {
+        toast({
+          title: "Select your study level",
+          description: "Choose your level to personalize your search.",
+        });
+        navigate('/learner/choose-level');
+      }
     } catch (error) {
       console.error('Profile load error:', error);
     }
@@ -252,10 +259,11 @@ const LearnerApp = () => {
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input 
-                placeholder="Search by subject or level..."
+                placeholder={profile?.study_level ? "Search by subject or level..." : "Select your study level first"}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
+                disabled={!profile?.study_level}
               />
             </div>
 
@@ -485,6 +493,15 @@ const LearnerApp = () => {
                       {profile?.user_type === 'learner' ? 'Student' : 'User'} • {userLocation}
                     </p>
                     <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Study Level: {
+                        profile?.study_level === 'junior_primary' ? 'Junior Primary (Grades 1-4)' :
+                        profile?.study_level === 'senior_primary' ? 'Senior Primary (Grades 5-7)' :
+                        profile?.study_level === 'junior_high' ? 'Junior High (Grades 8-9)' :
+                        profile?.study_level === 'senior_high' ? 'Senior High (Grades 10-12)' :
+                        profile?.study_level === 'tertiary' ? 'College & University' : 'Not set'
+                      }
+                    </p>
                   </div>
                 </div>
 
@@ -552,6 +569,13 @@ const LearnerApp = () => {
                   onClick={() => setActiveTab("store")}
                 >
                   Browse Study Materials
+                </Button>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start"
+                  onClick={() => navigate('/learner/choose-level')}
+                >
+                  Change Study Level
                 </Button>
                 <Button 
                   variant="outline" 

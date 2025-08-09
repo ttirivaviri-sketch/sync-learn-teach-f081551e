@@ -21,6 +21,7 @@ export type Database = {
           full_name: string | null
           id: string
           phone: string | null
+          study_level: Database["public"]["Enums"]["study_level"] | null
           updated_at: string
           user_type: string
         }
@@ -30,6 +31,7 @@ export type Database = {
           full_name?: string | null
           id: string
           phone?: string | null
+          study_level?: Database["public"]["Enums"]["study_level"] | null
           updated_at?: string
           user_type: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           phone?: string | null
+          study_level?: Database["public"]["Enums"]["study_level"] | null
           updated_at?: string
           user_type?: string
         }
@@ -173,6 +176,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin"
+      study_level:
+        | "junior_primary"
+        | "senior_primary"
+        | "junior_high"
+        | "senior_high"
+        | "tertiary"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -301,6 +310,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin"],
+      study_level: [
+        "junior_primary",
+        "senior_primary",
+        "junior_high",
+        "senior_high",
+        "tertiary",
+      ],
     },
   },
 } as const
