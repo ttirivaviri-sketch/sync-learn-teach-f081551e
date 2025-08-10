@@ -11,20 +11,20 @@ const AdminLayout = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-        <div className="mx-auto max-w-screen-2xl px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <SidebarTrigger aria-label="Toggle admin sidebar" />
-            <Link to="/admin" className="font-semibold tracking-tight">StudySync Admin</Link>
+    <SidebarProvider>
+      <div className="min-h-screen w-full bg-background text-foreground">
+        <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+          <div className="mx-auto max-w-screen-2xl px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <SidebarTrigger aria-label="Toggle admin sidebar" />
+              <Link to="/admin" className="font-semibold tracking-tight">StudySync Admin</Link>
+            </div>
+            <nav className="text-sm">
+              <Link to="/" className="hover:underline">Back to site</Link>
+            </nav>
           </div>
-          <nav className="text-sm">
-            <Link to="/" className="hover:underline">Back to site</Link>
-          </nav>
-        </div>
-      </header>
+        </header>
 
-      <SidebarProvider>
         <div className="flex w-full min-h-[calc(100vh-56px)]">
           <aside aria-label="Admin navigation">
             <AppSidebar />
@@ -33,8 +33,8 @@ const AdminLayout = () => {
             <Outlet />
           </main>
         </div>
-      </SidebarProvider>
-    </div>
+      </div>
+    </SidebarProvider>
   );
 };
 
