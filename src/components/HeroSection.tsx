@@ -17,6 +17,19 @@ const HeroSection = () => {
         <div className="absolute inset-0 bg-gradient-hero opacity-80"></div>
       </div>
       
+      {/* Admin Panel link for staff */}
+      <div className="absolute top-6 right-6 z-20">
+        <Button
+          size="sm"
+          variant="outline"
+          className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground hover:text-primary"
+          onClick={() => navigate("/admin/auth")}
+          aria-label="Open Admin Panel"
+        >
+          Admin Panel
+        </Button>
+      </div>
+      
       {/* Content */}
       <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="animate-float">
