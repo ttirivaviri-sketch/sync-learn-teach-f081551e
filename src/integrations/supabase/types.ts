@@ -75,6 +75,178 @@ export type Database = {
           },
         ]
       }
+      location_codes: {
+        Row: {
+          active: boolean
+          city: string | null
+          code: string
+          created_at: string
+          latitude: number | null
+          longitude: number | null
+          name: string
+          region: string | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          city?: string | null
+          code: string
+          created_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          name: string
+          region?: string | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          city?: string | null
+          code?: string
+          created_at?: string
+          latitude?: number | null
+          longitude?: number | null
+          name?: string
+          region?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      message_logs: {
+        Row: {
+          body: string
+          channel: Database["public"]["Enums"]["message_channel"]
+          created_at: string
+          direction: Database["public"]["Enums"]["message_direction"]
+          error: string | null
+          from_msisdn: string | null
+          id: string
+          provider_message_id: string | null
+          related_request_id: string | null
+          to_msisdn: string | null
+        }
+        Insert: {
+          body: string
+          channel: Database["public"]["Enums"]["message_channel"]
+          created_at?: string
+          direction: Database["public"]["Enums"]["message_direction"]
+          error?: string | null
+          from_msisdn?: string | null
+          id?: string
+          provider_message_id?: string | null
+          related_request_id?: string | null
+          to_msisdn?: string | null
+        }
+        Update: {
+          body?: string
+          channel?: Database["public"]["Enums"]["message_channel"]
+          created_at?: string
+          direction?: Database["public"]["Enums"]["message_direction"]
+          error?: string | null
+          from_msisdn?: string | null
+          id?: string
+          provider_message_id?: string | null
+          related_request_id?: string | null
+          to_msisdn?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_logs_related_request_id_fkey"
+            columns: ["related_request_id"]
+            isOneToOne: false
+            referencedRelation: "offline_booking_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      offline_booking_requests: {
+        Row: {
+          cell_tower_id: string | null
+          channel: Database["public"]["Enums"]["message_channel"]
+          created_at: string
+          created_by_profile_id: string | null
+          id: string
+          learner_msisdn: string
+          learner_profile_id: string | null
+          location_code: string | null
+          location_pin: string | null
+          raw_payload: Json | null
+          scheduled_at: string | null
+          status: Database["public"]["Enums"]["offline_request_status"]
+          subject_code: string | null
+          subject_name: string | null
+          tutor_msisdn: string | null
+          tutor_profile_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          cell_tower_id?: string | null
+          channel: Database["public"]["Enums"]["message_channel"]
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          learner_msisdn: string
+          learner_profile_id?: string | null
+          location_code?: string | null
+          location_pin?: string | null
+          raw_payload?: Json | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["offline_request_status"]
+          subject_code?: string | null
+          subject_name?: string | null
+          tutor_msisdn?: string | null
+          tutor_profile_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cell_tower_id?: string | null
+          channel?: Database["public"]["Enums"]["message_channel"]
+          created_at?: string
+          created_by_profile_id?: string | null
+          id?: string
+          learner_msisdn?: string
+          learner_profile_id?: string | null
+          location_code?: string | null
+          location_pin?: string | null
+          raw_payload?: Json | null
+          scheduled_at?: string | null
+          status?: Database["public"]["Enums"]["offline_request_status"]
+          subject_code?: string | null
+          subject_name?: string | null
+          tutor_msisdn?: string | null
+          tutor_profile_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "offline_booking_requests_created_by_profile_id_fkey"
+            columns: ["created_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_booking_requests_learner_profile_id_fkey"
+            columns: ["learner_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "offline_booking_requests_location_code_fkey"
+            columns: ["location_code"]
+            isOneToOne: false
+            referencedRelation: "location_codes"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "offline_booking_requests_tutor_profile_id_fkey"
+            columns: ["tutor_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
@@ -327,6 +499,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ussd_sessions: {
+        Row: {
+          created_at: string
+          current_step: string | null
+          data: Json | null
+          id: string
+          is_active: boolean
+          msisdn: string
+          provider_session_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          current_step?: string | null
+          data?: Json | null
+          id?: string
+          is_active?: boolean
+          msisdn: string
+          provider_session_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          current_step?: string | null
+          data?: Json | null
+          id?: string
+          is_active?: boolean
+          msisdn?: string
+          provider_session_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       verification_reviews: {
         Row: {
           created_at: string
@@ -385,6 +590,16 @@ export type Database = {
     Enums: {
       app_role: "admin"
       booking_status: "requested" | "confirmed" | "completed" | "canceled"
+      message_channel: "sms" | "ussd" | "whatsapp"
+      message_direction: "inbound" | "outbound"
+      offline_request_status:
+        | "received"
+        | "parsed"
+        | "notified_tutor"
+        | "tutor_confirmed"
+        | "tutor_declined"
+        | "synced"
+        | "failed"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
       priority_level: "low" | "medium" | "high" | "urgent"
       study_level:
@@ -524,6 +739,17 @@ export const Constants = {
     Enums: {
       app_role: ["admin"],
       booking_status: ["requested", "confirmed", "completed", "canceled"],
+      message_channel: ["sms", "ussd", "whatsapp"],
+      message_direction: ["inbound", "outbound"],
+      offline_request_status: [
+        "received",
+        "parsed",
+        "notified_tutor",
+        "tutor_confirmed",
+        "tutor_declined",
+        "synced",
+        "failed",
+      ],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
       priority_level: ["low", "medium", "high", "urgent"],
       study_level: [
