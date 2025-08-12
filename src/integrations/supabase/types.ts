@@ -14,6 +14,121 @@ export type Database = {
   }
   public: {
     Tables: {
+      bookings: {
+        Row: {
+          created_at: string
+          duration_minutes: number
+          id: string
+          learner_id: string
+          price: number
+          scheduled_at: string
+          status: Database["public"]["Enums"]["booking_status"]
+          tutor_id: string
+          tutor_subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes: number
+          id?: string
+          learner_id: string
+          price: number
+          scheduled_at: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          tutor_id: string
+          tutor_subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          learner_id?: string
+          price?: number
+          scheduled_at?: string
+          status?: Database["public"]["Enums"]["booking_status"]
+          tutor_id?: string
+          tutor_subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bookings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_tutor_subject_id_fkey"
+            columns: ["tutor_subject_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          booking_id: string
+          created_at: string
+          currency: string
+          id: string
+          payer_id: string
+          provider: string | null
+          provider_ref: string | null
+          status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payer_id: string
+          provider?: string | null
+          provider_ref?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          payer_id?: string
+          provider?: string | null
+          provider_ref?: string | null
+          status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_payer_id_fkey"
+            columns: ["payer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -76,6 +191,57 @@ export type Database = {
           year_obtained?: number | null
         }
         Relationships: []
+      }
+      support_tickets: {
+        Row: {
+          assignee_id: string | null
+          created_at: string
+          creator_id: string
+          id: string
+          message: string
+          priority: Database["public"]["Enums"]["priority_level"]
+          status: Database["public"]["Enums"]["support_status"]
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          created_at?: string
+          creator_id: string
+          id?: string
+          message: string
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["support_status"]
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          created_at?: string
+          creator_id?: string
+          id?: string
+          message?: string
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["support_status"]
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_tickets_assignee_id_fkey"
+            columns: ["assignee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_tickets_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tutor_subjects: {
         Row: {
@@ -161,6 +327,48 @@ export type Database = {
         }
         Relationships: []
       }
+      verification_reviews: {
+        Row: {
+          created_at: string
+          decision: Database["public"]["Enums"]["verification_decision"]
+          id: string
+          notes: string | null
+          reviewer_id: string
+          verification_id: string
+        }
+        Insert: {
+          created_at?: string
+          decision: Database["public"]["Enums"]["verification_decision"]
+          id?: string
+          notes?: string | null
+          reviewer_id: string
+          verification_id: string
+        }
+        Update: {
+          created_at?: string
+          decision?: Database["public"]["Enums"]["verification_decision"]
+          id?: string
+          notes?: string | null
+          reviewer_id?: string
+          verification_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "verification_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "verification_reviews_verification_id_fkey"
+            columns: ["verification_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_verifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -176,12 +384,17 @@ export type Database = {
     }
     Enums: {
       app_role: "admin"
+      booking_status: "requested" | "confirmed" | "completed" | "canceled"
+      payment_status: "pending" | "succeeded" | "failed" | "refunded"
+      priority_level: "low" | "medium" | "high" | "urgent"
       study_level:
         | "junior_primary"
         | "senior_primary"
         | "junior_high"
         | "senior_high"
         | "tertiary"
+      support_status: "open" | "in_progress" | "resolved" | "closed"
+      verification_decision: "approved" | "rejected" | "needs_more_info"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -310,6 +523,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin"],
+      booking_status: ["requested", "confirmed", "completed", "canceled"],
+      payment_status: ["pending", "succeeded", "failed", "refunded"],
+      priority_level: ["low", "medium", "high", "urgent"],
       study_level: [
         "junior_primary",
         "senior_primary",
@@ -317,6 +533,8 @@ export const Constants = {
         "senior_high",
         "tertiary",
       ],
+      support_status: ["open", "in_progress", "resolved", "closed"],
+      verification_decision: ["approved", "rejected", "needs_more_info"],
     },
   },
 } as const
