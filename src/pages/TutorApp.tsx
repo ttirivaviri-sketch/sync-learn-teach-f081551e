@@ -21,6 +21,13 @@ const TutorApp = () => {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [weeklyAvailability, setWeeklyAvailability] = useState({
+    Monday: true,
+    Tuesday: true, 
+    Wednesday: true,
+    Thursday: true,
+    Friday: true
+  });
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -138,12 +145,60 @@ const TutorApp = () => {
   ];
 
   const handleAcceptRequest = (request: any) => {
+    toast({
+      title: "Request Accepted!",
+      description: `Starting session with ${request.student}`,
+    });
+    
     if (request.type === "online") {
       setShowVideoMeeting(true);
     } else {
       setSelectedRequest(request);
       setShowDirections(true);
     }
+  };
+
+  const handleDeclineRequest = (request: any) => {
+    toast({
+      title: "Request Declined",
+      description: `Declined session with ${request.student}`,
+    });
+  };
+
+  const handleOnlineToggle = (checked: boolean) => {
+    setIsOnline(checked);
+    toast({
+      title: checked ? "Now Online" : "Now Offline",
+      description: checked ? "You're available for bookings" : "You won't receive new booking requests",
+    });
+  };
+
+  const handleUpdateAvailability = () => {
+    toast({
+      title: "Availability Updated",
+      description: "Your weekly schedule has been saved",
+    });
+  };
+
+  const handleQuickAction = (action: string) => {
+    toast({
+      title: action,
+      description: "Feature coming soon!",
+    });
+  };
+
+  const handleRequestPayout = () => {
+    toast({
+      title: "Payout Requested",
+      description: "Your payout request has been submitted and will be processed within 2-3 business days",
+    });
+  };
+
+  const toggleDayAvailability = (day: string) => {
+    setWeeklyAvailability(prev => ({
+      ...prev,
+      [day]: !prev[day as keyof typeof prev]
+    }));
   };
 
   if (showVideoMeeting) {
@@ -185,7 +240,7 @@ const TutorApp = () => {
               <span className="text-sm">Online</span>
               <Switch 
                 checked={isOnline} 
-                onCheckedChange={setIsOnline}
+                onCheckedChange={handleOnlineToggle}
               />
             </div>
             <div className="flex items-center gap-2">
@@ -261,11 +316,19 @@ const TutorApp = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
-                <Button variant="outline" className="h-auto p-4 flex-col">
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex-col"
+                  onClick={() => handleQuickAction("Update Availability")}
+                >
                   <Bell className="h-6 w-6 mb-2" />
                   <span className="text-sm">Update Availability</span>
                 </Button>
-                <Button variant="outline" className="h-auto p-4 flex-col">
+                <Button 
+                  variant="outline" 
+                  className="h-auto p-4 flex-col"
+                  onClick={() => handleQuickAction("Profile Settings")}
+                >
                   <Settings className="h-6 w-6 mb-2" />
                   <span className="text-sm">Profile Settings</span>
                 </Button>
@@ -355,7 +418,12 @@ const TutorApp = () => {
                       >
                         Accept
                       </Button>
-                      <Button variant="outline" className="flex-1" size="sm">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1" 
+                        size="sm"
+                        onClick={() => handleDeclineRequest(request)}
+                      >
                         Decline
                       </Button>
                     </div>
@@ -376,14 +444,25 @@ const TutorApp = () => {
                     <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
                       <span className="font-medium">{day}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Available 2:00 PM - 8:00 PM</span>
-                        <Switch defaultChecked />
+                        <span className="text-sm text-muted-foreground">
+                          {weeklyAvailability[day as keyof typeof weeklyAvailability] 
+                            ? "Available 2:00 PM - 8:00 PM" 
+                            : "Not available"
+                          }
+                        </span>
+                        <Switch 
+                          checked={weeklyAvailability[day as keyof typeof weeklyAvailability]}
+                          onCheckedChange={() => toggleDayAvailability(day)}
+                        />
                       </div>
                     </div>
                   ))}
                 </div>
                 
-                <Button className="w-full mt-4">
+                <Button 
+                  className="w-full mt-4"
+                  onClick={handleUpdateAvailability}
+                >
                   Update Availability
                 </Button>
               </CardContent>
@@ -431,7 +510,11 @@ const TutorApp = () => {
               </CardContent>
             </Card>
             
-            <Button className="w-full" size="lg">
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={handleRequestPayout}
+            >
               Request Payout
             </Button>
           </TabsContent>

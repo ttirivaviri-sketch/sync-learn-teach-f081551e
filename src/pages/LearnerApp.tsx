@@ -27,6 +27,7 @@ const LearnerApp = () => {
   const [upcomingSession, setUpcomingSession] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [bookingRequests, setBookingRequests] = useState<any[]>([]);
 
   useEffect(() => {
     // Set up auth state listener
@@ -60,6 +61,19 @@ const LearnerApp = () => {
       requestLocation();
     }
   }, [session]);
+
+  // Listen for custom toast events from StudyStore
+  useEffect(() => {
+    const handleToastEvent = (event: any) => {
+      toast({
+        title: event.detail.title,
+        description: event.detail.description,
+      });
+    };
+
+    window.addEventListener('show-toast', handleToastEvent);
+    return () => window.removeEventListener('show-toast', handleToastEvent);
+  }, [toast]);
 
   const loadUserProfile = async () => {
     try {
@@ -181,6 +195,10 @@ const LearnerApp = () => {
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
+      toast({
+        title: "Signed out successfully",
+        description: "You have been logged out of your learner account.",
+      });
       navigate("/learner/auth");
     } catch (error) {
       toast({
@@ -189,6 +207,71 @@ const LearnerApp = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleBookInPerson = (tutor: any) => {
+    const newRequest = {
+      id: Date.now(),
+      tutor: tutor.name,
+      subject: tutor.subject,
+      type: "in-person",
+      status: "pending",
+      price: tutor.price,
+      scheduledFor: "Today, 4:00 PM"
+    };
+    
+    setBookingRequests(prev => [...prev, newRequest]);
+    toast({
+      title: "Booking Request Sent!",
+      description: `Your in-person session request has been sent to ${tutor.name}`,
+    });
+  };
+
+  const handleBookOnline = (tutor: any) => {
+    const newRequest = {
+      id: Date.now(),
+      tutor: tutor.name,
+      subject: tutor.subject,
+      type: "online",
+      status: "pending",
+      price: tutor.price,
+      scheduledFor: "Today, 4:00 PM"
+    };
+    
+    setBookingRequests(prev => [...prev, newRequest]);
+    toast({
+      title: "Online Booking Request Sent!",
+      description: `Your online session request has been sent to ${tutor.name}`,
+    });
+  };
+
+  const handleSessionAction = (action: string) => {
+    if (action === "join") {
+      setShowVideoMeeting(true);
+      return;
+    }
+    
+    toast({
+      title: action === "reschedule" ? "Reschedule Session" : "Cancel Session",
+      description: action === "reschedule" 
+        ? "Reschedule options will be available soon" 
+        : "Session cancellation processed",
+      variant: action === "cancel" ? "destructive" : "default"
+    });
+  };
+
+  const handleRateAndReview = (session: any) => {
+    toast({
+      title: "Rate & Review",
+      description: "Rating and review feature coming soon!",
+    });
+  };
+
+  const handleQuickProfileAction = (action: string) => {
+    toast({
+      title: action,
+      description: "Feature coming soon!",
+    });
   };
 
   if (loading) {
@@ -366,6 +449,7 @@ const LearnerApp = () => {
                             disabled={!tutor.available}
                             variant={tutor.available ? "default" : "outline"}
                             className="flex-1"
+                            onClick={() => handleBookInPerson(tutor)}
                           >
                             {tutor.available ? "Book In-Person" : "Unavailable"}
                           </Button>
@@ -373,7 +457,7 @@ const LearnerApp = () => {
                             <Button 
                               variant="outline"
                               className="flex-1"
-                              onClick={() => setShowVideoMeeting(true)}
+                              onClick={() => handleBookOnline(tutor)}
                             >
                               <Video className="h-4 w-4 mr-1" />
                               Book Online
@@ -414,19 +498,29 @@ const LearnerApp = () => {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-4">
-                  <Button variant="outline" size="sm" className="flex-1">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleSessionAction("reschedule")}
+                  >
                     Reschedule
                   </Button>
                   <Button 
                     variant="default" 
                     size="sm" 
                     className="flex-1"
-                    onClick={() => setShowVideoMeeting(true)}
+                    onClick={() => handleSessionAction("join")}
                   >
                     <Video className="h-4 w-4 mr-1" />
                     Join Online
                   </Button>
-                  <Button variant="destructive" size="sm" className="flex-1">
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    className="flex-1"
+                    onClick={() => handleSessionAction("cancel")}
+                  >
                     Cancel
                   </Button>
                 </div>
@@ -456,7 +550,12 @@ const LearnerApp = () => {
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{session.cost}</p>
-                      <Button variant="outline" size="sm" className="mt-2">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mt-2"
+                        onClick={() => handleRateAndReview(session)}
+                      >
                         Rate & Review
                       </Button>
                     </div>

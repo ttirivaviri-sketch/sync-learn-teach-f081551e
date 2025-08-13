@@ -122,8 +122,39 @@ const StudyStore = () => {
     ]
   };
 
-  const addToCart = (productId: number) => {
+  const addToCart = (productId: number, productName: string) => {
     setCartItems(cartItems + 1);
+    // Using a simple toast here since StudyStore doesn't have access to the main toast
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { 
+          title: "Added to Cart!", 
+          description: `${productName} has been added to your cart` 
+        } 
+      }));
+    }
+  };
+
+  const handleFilter = () => {
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { 
+          title: "Filter Options", 
+          description: "Advanced filtering coming soon!" 
+        } 
+      }));
+    }
+  };
+
+  const handleCartClick = () => {
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('show-toast', { 
+        detail: { 
+          title: "Shopping Cart", 
+          description: cartItems > 0 ? `You have ${cartItems} item${cartItems > 1 ? 's' : ''} in your cart` : "Your cart is empty" 
+        } 
+      }));
+    }
   };
 
   const ProductCard = ({ product }: { product: any }) => (
@@ -160,7 +191,7 @@ const StudyStore = () => {
             className="w-full" 
             size="sm"
             disabled={!product.inStock}
-            onClick={() => addToCart(product.id)}
+            onClick={() => addToCart(product.id, product.name)}
           >
             {product.inStock ? "Add to Cart" : "Out of Stock"}
           </Button>
@@ -182,7 +213,12 @@ const StudyStore = () => {
             className="pl-10"
           />
         </div>
-        <Button variant="outline" size="icon" className="relative">
+        <Button 
+          variant="outline" 
+          size="icon" 
+          className="relative"
+          onClick={handleCartClick}
+        >
           <ShoppingCart className="h-4 w-4" />
           {cartItems > 0 && (
             <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center text-xs p-0">
@@ -216,7 +252,11 @@ const StudyStore = () => {
           <TabsContent key={categoryId} value={categoryId} className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">{categories.find(c => c.id === categoryId)?.name}</h3>
-              <Button variant="outline" size="sm">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleFilter}
+              >
                 <Filter className="h-4 w-4 mr-1" />
                 Filter
               </Button>
