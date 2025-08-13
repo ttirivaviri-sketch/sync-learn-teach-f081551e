@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut } from "lucide-react";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import VideoMeeting from "@/components/VideoMeeting";
 import DirectionsMap from "@/components/DirectionsMap";
+import ChatInterface from "@/components/ChatInterface";
+import StarRating from "@/components/StarRating";
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -28,6 +30,9 @@ const TutorApp = () => {
     Thursday: true,
     Friday: true
   });
+  const [showChat, setShowChat] = useState(false);
+  const [chatWithUserId, setChatWithUserId] = useState<string | null>(null);
+  const [chatWithUserName, setChatWithUserName] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -243,6 +248,14 @@ const TutorApp = () => {
                 onCheckedChange={handleOnlineToggle}
               />
             </div>
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowChat(true)}
+              className="text-secondary-foreground hover:bg-secondary-foreground/10"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
             <div className="flex items-center gap-2">
               <span className="text-sm">{session.user?.email}</span>
               <Button variant="ghost" size="sm" onClick={handleSignOut}>
@@ -520,6 +533,20 @@ const TutorApp = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Chat Interface */}
+      <ChatInterface
+        session={session}
+        userType="tutor"
+        isOpen={showChat}
+        onClose={() => {
+          setShowChat(false);
+          setChatWithUserId(null);
+          setChatWithUserName(null);
+        }}
+        otherUserId={chatWithUserId || undefined}
+        otherUserName={chatWithUserName || undefined}
+      />
     </div>
   );
 };

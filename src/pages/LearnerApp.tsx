@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut } from "lucide-react";
+import { Search, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
 import StudyStore from "@/components/StudyStore";
 import LaunchScreen from "@/components/LaunchScreen";
+import ChatInterface from "@/components/ChatInterface";
+import ReviewModal from "@/components/ReviewModal";
+import StarRating from "@/components/StarRating";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +31,11 @@ const LearnerApp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [bookingRequests, setBookingRequests] = useState<any[]>([]);
+  const [showChat, setShowChat] = useState(false);
+  const [chatWithUserId, setChatWithUserId] = useState<string | null>(null);
+  const [chatWithUserName, setChatWithUserName] = useState<string | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [reviewData, setReviewData] = useState<any>(null);
 
   useEffect(() => {
     // Set up auth state listener
@@ -261,10 +269,13 @@ const LearnerApp = () => {
   };
 
   const handleRateAndReview = (session: any) => {
-    toast({
-      title: "Rate & Review",
-      description: "Rating and review feature coming soon!",
+    setReviewData({
+      bookingId: null, // Would be real booking ID in production
+      reviewedId: 'tutor_id_here', // Would be actual tutor ID
+      reviewedName: session.tutor,
+      userType: 'learner'
     });
+    setShowReviewModal(true);
   };
 
   const handleQuickProfileAction = (action: string) => {
@@ -272,6 +283,12 @@ const LearnerApp = () => {
       title: action,
       description: "Feature coming soon!",
     });
+  };
+
+  const handleStartChat = (tutor: any) => {
+    setChatWithUserId(tutor.id.toString());
+    setChatWithUserName(tutor.name);
+    setShowChat(true);
   };
 
   if (loading) {
@@ -311,6 +328,14 @@ const LearnerApp = () => {
             <p className="text-sm opacity-90">Find your perfect tutor</p>
           </div>
           <div className="flex items-center gap-3">
+            <Button 
+              variant="ghost" 
+              size="sm"
+              onClick={() => setShowChat(true)}
+              className="text-primary-foreground hover:bg-primary-foreground/10"
+            >
+              <MessageCircle className="h-4 w-4" />
+            </Button>
             <div className="text-right">
               <p className="text-sm opacity-90 font-medium">{session?.user?.email}</p>
             </div>
@@ -430,7 +455,7 @@ const LearnerApp = () => {
                         </div>
                         
                         <div className="flex items-center gap-1 mt-2">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <StarRating rating={tutor.rating} readonly size="sm" />
                           <span className="text-sm font-medium">{tutor.rating}</span>
                           <span className="text-sm text-muted-foreground">({tutor.reviews})</span>
                           {tutor.available && (
@@ -444,7 +469,7 @@ const LearnerApp = () => {
                           )}
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 mt-3">
+                        <div className="grid grid-cols-3 gap-2 mt-3">
                           <Button 
                             disabled={!tutor.available}
                             variant={tutor.available ? "default" : "outline"}
@@ -463,6 +488,14 @@ const LearnerApp = () => {
                               Book Online
                             </Button>
                           )}
+                          <Button 
+                            variant="secondary"
+                            className="flex-1"
+                            onClick={() => handleStartChat(tutor)}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-1" />
+                            Chat
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -689,6 +722,41 @@ const LearnerApp = () => {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Chat Interface */}
+      <ChatInterface
+        session={session}
+        userType="learner"
+        isOpen={showChat}
+        onClose={() => {
+          setShowChat(false);
+          setChatWithUserId(null);
+          setChatWithUserName(null);
+        }}
+        otherUserId={chatWithUserId || undefined}
+        otherUserName={chatWithUserName || undefined}
+      />
+
+      {/* Review Modal */}
+      {reviewData && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => {
+            setShowReviewModal(false);
+            setReviewData(null);
+          }}
+          bookingId={reviewData.bookingId}
+          reviewedId={reviewData.reviewedId}
+          reviewedName={reviewData.reviewedName}
+          userType={reviewData.userType}
+          onReviewSubmitted={() => {
+            toast({
+              title: "Review Submitted!",
+              description: "Thank you for your feedback.",
+            });
+          }}
+        />
+      )}
     </div>
   );
 };
