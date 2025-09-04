@@ -13,9 +13,15 @@ import LaunchScreen from "@/components/LaunchScreen";
 import ChatInterface from "@/components/ChatInterface";
 import ReviewModal from "@/components/ReviewModal";
 import StarRating from "@/components/StarRating";
+import { LoadingScreen } from "@/components/LoadingSpinner";
+import { EmptyState } from "@/components/EmptyState";
+import { NotificationCenter } from "@/components/NotificationCenter";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { analytics } from "@/utils/analytics";
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
@@ -28,16 +34,20 @@ const LearnerApp = () => {
   const [userLocation, setUserLocation] = useState("Johannesburg Central");
   const [profile, setProfile] = useState<any>(null);
   const [upcomingSession, setUpcomingSession] = useState<any>(null);
-  const navigate = useNavigate();
-  const { toast } = useToast();
   const [bookingRequests, setBookingRequests] = useState<any[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState<string | null>(null);
   const [chatWithUserName, setChatWithUserName] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewData, setReviewData] = useState<any>(null);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  const { isOnline, isSlowConnection } = useNetworkStatus();
 
   useEffect(() => {
+    analytics.pageView('learner-app');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
@@ -82,6 +92,11 @@ const LearnerApp = () => {
     window.addEventListener('show-toast', handleToastEvent);
     return () => window.removeEventListener('show-toast', handleToastEvent);
   }, [toast]);
+
+  // Track tab changes
+  useEffect(() => {
+    analytics.track('tab_changed', { tab: activeTab });
+  }, [activeTab]);
 
   const loadUserProfile = async () => {
     try {
@@ -200,8 +215,13 @@ const LearnerApp = () => {
     }
   ];
 
-  const handleSignOut = async () => {
+  const handleSignOut = () => {
+    setShowSignOutConfirm(true);
+  };
+
+  const confirmSignOut = async () => {
     try {
+      analytics.track('user_signout', { userType: 'learner' });
       await supabase.auth.signOut();
       toast({
         title: "Signed out successfully",
@@ -209,15 +229,29 @@ const LearnerApp = () => {
       });
       navigate("/learner/auth");
     } catch (error) {
+      analytics.error(error as Error, 'sign_out_failed');
       toast({
         title: "Error",
         description: "Failed to sign out. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setShowSignOutConfirm(false);
     }
   };
 
   const handleBookInPerson = (tutor: any) => {
+    if (!isOnline) {
+      toast({
+        title: "No connection",
+        description: "Please check your internet connection to book sessions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    analytics.track('booking_initiated', { type: 'in-person', tutorId: tutor.id });
+    
     const newRequest = {
       id: Date.now(),
       tutor: tutor.name,
@@ -292,11 +326,7 @@ const LearnerApp = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-      </div>
-    );
+    return <LoadingScreen message="Loading your account..." />;
   }
 
   if (!session?.user) {
@@ -328,6 +358,7 @@ const LearnerApp = () => {
             <p className="text-sm opacity-90">Find your perfect tutor</p>
           </div>
           <div className="flex items-center gap-3">
+            <NotificationCenter />
             <Button 
               variant="ghost" 
               size="sm"
@@ -338,6 +369,9 @@ const LearnerApp = () => {
             </Button>
             <div className="text-right">
               <p className="text-sm opacity-90 font-medium">{session?.user?.email}</p>
+              {!isOnline && (
+                <p className="text-xs text-red-200">Offline</p>
+              )}
             </div>
             <Button 
               variant="ghost" 
