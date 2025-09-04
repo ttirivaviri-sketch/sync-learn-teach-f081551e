@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
-import StudyStore from "@/components/StudyStore";
+import StudySyncLibrary from "@/components/StudySyncLibrary";
 import LaunchScreen from "@/components/LaunchScreen";
 import ChatInterface from "@/components/ChatInterface";
 import ReviewModal from "@/components/ReviewModal";
@@ -70,7 +70,7 @@ const LearnerApp = () => {
     }
   }, [session]);
 
-  // Listen for custom toast events from StudyStore
+  // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
     const handleToastEvent = (event: any) => {
       toast({
@@ -564,9 +564,9 @@ const LearnerApp = () => {
           <TabsContent value="store" className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <ShoppingBag className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">Study Store</h3>
+              <h3 className="font-semibold">StudySync Library</h3>
             </div>
-            <StudyStore />
+            <StudySyncLibrary />
           </TabsContent>
 
           <TabsContent value="history" className="space-y-4">
