@@ -2,6 +2,8 @@ import HeroSection from "@/components/HeroSection";
 import AppShowcase from "@/components/AppShowcase";
 import TrustSection from "@/components/TrustSection";
 import FeaturesSection from "@/components/FeaturesSection";
+import { TestimonialSection } from "@/components/TestimonialSection";
+import { StatsSection } from "@/components/StatsSection";
 import Footer from "@/components/Footer";
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { CookieConsent } from "@/components/CookieConsent";
@@ -16,9 +18,11 @@ const Index = () => {
   return (
     <div className="min-h-screen">
       <HeroSection />
+      <StatsSection />
       <AppShowcase />
-      <TrustSection />
       <FeaturesSection />
+      <TestimonialSection />
+      <TrustSection />
       <Footer />
       <PWAInstallPrompt />
       <CookieConsent />

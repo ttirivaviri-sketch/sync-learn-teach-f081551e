@@ -13,6 +13,7 @@ import LaunchScreen from "@/components/LaunchScreen";
 import ChatInterface from "@/components/ChatInterface";
 import ReviewModal from "@/components/ReviewModal";
 import StarRating from "@/components/StarRating";
+import { AdvancedBooking } from "@/components/AdvancedBooking";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
 import { NotificationCenter } from "@/components/NotificationCenter";
@@ -391,23 +392,13 @@ const LearnerApp = () => {
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="search">Search</TabsTrigger>
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="store">Store</TabsTrigger>
+            <TabsTrigger value="library">Library</TabsTrigger>
             <TabsTrigger value="history">History</TabsTrigger>
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
           <TabsContent value="search" className="space-y-4">
-            {/* Search Bar */}
-            <div className="relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder={profile?.study_level ? "Search by subject or level..." : "Select your study level first"}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-                disabled={!profile?.study_level}
-              />
-            </div>
+            <AdvancedBooking />
 
             {/* Quick Filters */}
             <div className="flex gap-2 overflow-x-auto pb-2">
@@ -595,7 +586,7 @@ const LearnerApp = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="store" className="space-y-4">
+          <TabsContent value="library" className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
               <ShoppingBag className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">StudySync Library</h3>
