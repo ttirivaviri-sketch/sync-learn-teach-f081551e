@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle } from "lucide-react";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +14,9 @@ import VideoMeeting from "@/components/VideoMeeting";
 import DirectionsMap from "@/components/DirectionsMap";
 import ChatInterface from "@/components/ChatInterface";
 import StarRating from "@/components/StarRating";
+import TutorEarningsChart from "@/components/TutorEarningsChart";
+import TutorProfile from "@/components/TutorProfile";
+import SessionHistory from "@/components/SessionHistory";
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -280,11 +283,13 @@ const TutorApp = () => {
       {/* Main Content */}
       <div className="p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
             <TabsTrigger value="requests">Requests</TabsTrigger>
             <TabsTrigger value="schedule">Schedule</TabsTrigger>
             <TabsTrigger value="earnings">Earnings</TabsTrigger>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard" className="space-y-4">
@@ -483,9 +488,10 @@ const TutorApp = () => {
           </TabsContent>
 
           <TabsContent value="earnings" className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
+                  <TrendingUp className="h-8 w-8 mx-auto text-primary mb-2" />
                   <p className="text-2xl font-bold text-primary">R2,450</p>
                   <p className="text-sm text-muted-foreground">This Week</p>
                 </CardContent>
@@ -493,11 +499,40 @@ const TutorApp = () => {
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <p className="text-2xl font-bold text-secondary">R9,680</p>
+                  <DollarSign className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                  <p className="text-2xl font-bold text-green-600">R9,680</p>
                   <p className="text-sm text-muted-foreground">This Month</p>
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <BarChart3 className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+                  <p className="text-2xl font-bold text-blue-600">R35,240</p>
+                  <p className="text-sm text-muted-foreground">Total Earned</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardContent className="p-4 text-center">
+                  <Clock className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+                  <p className="text-2xl font-bold text-purple-600">156h</p>
+                  <p className="text-sm text-muted-foreground">Total Hours</p>
+                </CardContent>
+              </Card>
             </div>
+
+            <TutorEarningsChart 
+              data={[
+                { name: "Mon", earnings: 350, sessions: 2 },
+                { name: "Tue", earnings: 450, sessions: 3 },
+                { name: "Wed", earnings: 300, sessions: 2 },
+                { name: "Thu", earnings: 600, sessions: 4 },
+                { name: "Fri", earnings: 400, sessions: 3 },
+                { name: "Sat", earnings: 550, sessions: 4 },
+                { name: "Sun", earnings: 200, sessions: 1 }
+              ]}
+            />
             
             <Card>
               <CardHeader>
@@ -505,14 +540,17 @@ const TutorApp = () => {
               </CardHeader>
               <CardContent className="space-y-3">
                 {[
-                  { student: "John Doe", subject: "Mathematics", amount: "R150", date: "Today" },
-                  { student: "Sarah Wilson", subject: "Physics", amount: "R200", date: "Yesterday" },
-                  { student: "Mike Brown", subject: "Chemistry", amount: "R180", date: "2 days ago" }
+                  { student: "John Doe", subject: "Mathematics", amount: "R150", date: "Today", rating: 5 },
+                  { student: "Sarah Wilson", subject: "Physics", amount: "R200", date: "Yesterday", rating: 4 },
+                  { student: "Mike Brown", subject: "Chemistry", amount: "R180", date: "2 days ago", rating: 5 }
                 ].map((earning, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
                     <div>
                       <h4 className="font-medium">{earning.student}</h4>
                       <p className="text-sm text-muted-foreground">{earning.subject}</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        <StarRating rating={earning.rating} readonly size="sm" />
+                      </div>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold text-primary">{earning.amount}</p>
@@ -523,13 +561,31 @@ const TutorApp = () => {
               </CardContent>
             </Card>
             
-            <Button 
-              className="w-full" 
-              size="lg"
-              onClick={handleRequestPayout}
-            >
-              Request Payout
-            </Button>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={handleRequestPayout}
+              >
+                Request Payout
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full" 
+                size="lg"
+                onClick={() => handleQuickAction("Download Tax Report")}
+              >
+                Download Tax Report
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="profile" className="space-y-4">
+            <TutorProfile user={session?.user} />
+          </TabsContent>
+
+          <TabsContent value="history" className="space-y-4">
+            <SessionHistory userType="tutor" userId={session?.user?.id || ""} />
           </TabsContent>
         </Tabs>
       </div>
