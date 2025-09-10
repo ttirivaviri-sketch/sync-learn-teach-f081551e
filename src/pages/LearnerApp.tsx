@@ -23,6 +23,9 @@ import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { analytics } from "@/utils/analytics";
+import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
+import { LiveBookingCard } from "@/components/LiveBookingCard";
+import { QuickBookingModal } from "@/components/QuickBookingModal";
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
@@ -42,9 +45,20 @@ const LearnerApp = () => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewData, setReviewData] = useState<any>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [selectedTutor, setSelectedTutor] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, isSlowConnection } = useNetworkStatus();
+  
+  // Real-time bookings hook
+  const { 
+    bookings, 
+    loading: bookingsLoading, 
+    createBooking, 
+    updateBookingStatus,
+    getUpcomingSessions 
+  } = useRealtimeBookings('learner', session?.user?.id);
 
   useEffect(() => {
     analytics.pageView('learner-app');
@@ -252,40 +266,14 @@ const LearnerApp = () => {
     }
 
     analytics.track('booking_initiated', { type: 'in-person', tutorId: tutor.id });
-    
-    const newRequest = {
-      id: Date.now(),
-      tutor: tutor.name,
-      subject: tutor.subject,
-      type: "in-person",
-      status: "pending",
-      price: tutor.price,
-      scheduledFor: "Today, 4:00 PM"
-    };
-    
-    setBookingRequests(prev => [...prev, newRequest]);
-    toast({
-      title: "Booking Request Sent!",
-      description: `Your in-person session request has been sent to ${tutor.name}`,
-    });
+    setSelectedTutor(tutor);
+    setShowBookingModal(true);
   };
 
   const handleBookOnline = (tutor: any) => {
-    const newRequest = {
-      id: Date.now(),
-      tutor: tutor.name,
-      subject: tutor.subject,
-      type: "online",
-      status: "pending",
-      price: tutor.price,
-      scheduledFor: "Today, 4:00 PM"
-    };
-    
-    setBookingRequests(prev => [...prev, newRequest]);
-    toast({
-      title: "Online Booking Request Sent!",
-      description: `Your online session request has been sent to ${tutor.name}`,
-    });
+    analytics.track('booking_initiated', { type: 'online', tutorId: tutor.id });
+    setSelectedTutor(tutor);
+    setShowBookingModal(true);
   };
 
   const handleSessionAction = (action: string) => {
@@ -531,59 +519,42 @@ const LearnerApp = () => {
           </TabsContent>
 
           <TabsContent value="bookings" className="space-y-4">
-            <h3 className="font-semibold">Upcoming Sessions</h3>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold">Your Bookings</h3>
+              <Badge variant="outline">{bookings.length} total</Badge>
+            </div>
             
-            <Card>
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>SJ</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <h4 className="font-medium">Sarah Johnson</h4>
-                    <p className="text-sm text-muted-foreground">Mathematics • Trigonometry</p>
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>Today, 3:00 PM</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <CreditCard className="h-4 w-4" />
-                        <span>R150/hour</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div className="flex gap-2 mt-4">
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleSessionAction("reschedule")}
-                  >
-                    Reschedule
-                  </Button>
-                  <Button 
-                    variant="default" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleSessionAction("join")}
-                  >
-                    <Video className="h-4 w-4 mr-1" />
-                    Join Online
-                  </Button>
-                  <Button 
-                    variant="destructive" 
-                    size="sm" 
-                    className="flex-1"
-                    onClick={() => handleSessionAction("cancel")}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {bookingsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading bookings...</p>
+              </div>
+            ) : bookings.length === 0 ? (
+              <EmptyState
+                title="No bookings yet"
+                description="Start by searching for tutors and booking your first session!"
+                action={{
+                  label: "Browse Tutors",
+                  onClick: () => setActiveTab("search")
+                }}
+              />
+            ) : (
+              <div className="space-y-3">
+                {bookings.map((booking) => (
+                  <LiveBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    userType="learner"
+                    onJoinSession={(booking) => setShowVideoMeeting(true)}
+                    onStartChat={(booking) => {
+                      setChatWithUserId(booking.tutor_id);
+                      setChatWithUserName("Tutor");
+                      setShowChat(true);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="library" className="space-y-4">
@@ -780,6 +751,19 @@ const LearnerApp = () => {
               description: "Thank you for your feedback.",
             });
           }}
+        />
+      )}
+
+      {/* Quick Booking Modal */}
+      {showBookingModal && selectedTutor && (
+        <QuickBookingModal
+          isOpen={showBookingModal}
+          onClose={() => {
+            setShowBookingModal(false);
+            setSelectedTutor(null);
+          }}
+          tutor={selectedTutor}
+          onSubmit={createBooking}
         />
       )}
     </div>

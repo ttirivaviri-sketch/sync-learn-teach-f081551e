@@ -4,6 +4,8 @@ import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
+import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
+import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +40,15 @@ const TutorApp = () => {
   const [chatWithUserName, setChatWithUserName] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  
+  // Real-time bookings hook
+  const { 
+    bookings, 
+    loading: bookingsLoading, 
+    updateBookingStatus,
+    getIncomingRequests,
+    getUpcomingSessions 
+  } = useRealtimeBookings('tutor', session?.user?.id);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -152,25 +163,45 @@ const TutorApp = () => {
     }
   ];
 
-  const handleAcceptRequest = (request: any) => {
-    toast({
-      title: "Request Accepted!",
-      description: `Starting session with ${request.student}`,
-    });
-    
-    if (request.type === "online") {
-      setShowVideoMeeting(true);
-    } else {
-      setSelectedRequest(request);
-      setShowDirections(true);
+  const handleAcceptRequest = async (booking: any) => {
+    try {
+      await updateBookingStatus(booking.id, 'confirmed');
+      toast({
+        title: "Request Accepted!",
+        description: `Session confirmed with ${booking.learner_profile?.full_name}`,
+      });
+      
+      // For immediate sessions, start video meeting
+      const sessionTime = new Date(booking.scheduled_at);
+      const now = new Date();
+      const isNow = Math.abs(sessionTime.getTime() - now.getTime()) < 15 * 60 * 1000;
+      
+      if (isNow) {
+        setShowVideoMeeting(true);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to accept booking request",
+        variant: "destructive",
+      });
     }
   };
 
-  const handleDeclineRequest = (request: any) => {
-    toast({
-      title: "Request Declined",
-      description: `Declined session with ${request.student}`,
-    });
+  const handleDeclineRequest = async (booking: any) => {
+    try {
+      await updateBookingStatus(booking.id, 'canceled');
+      toast({
+        title: "Request Declined",
+        description: `Declined session with ${booking.learner_profile?.full_name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to decline booking request",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleOnlineToggle = (checked: boolean) => {
@@ -379,76 +410,41 @@ const TutorApp = () => {
           <TabsContent value="requests" className="space-y-4">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold">Booking Requests</h3>
-              <Badge variant="secondary">{incomingRequests.length} new</Badge>
+              <Badge variant="secondary">{getIncomingRequests().length} new</Badge>
             </div>
             
-            {incomingRequests.map((request) => (
-              <Card key={request.id} className="shadow-sm">
-                <CardContent className="p-4">
-                  <div className="space-y-3">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <h4 className="font-medium">{request.student}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {request.subject} • {request.topic}
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <p className="text-xs text-muted-foreground">{request.level}</p>
-                          <Badge variant={request.type === "online" ? "secondary" : "outline"} className="text-xs">
-                            {request.type === "online" ? (
-                              <>
-                                <Video className="h-3 w-3 mr-1" />
-                                Online
-                              </>
-                            ) : (
-                              "In-Person"
-                            )}
-                          </Badge>
-                        </div>
-                      </div>
-                      <Badge variant="outline">{request.rate}</Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{request.date}, {request.time}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>{request.duration}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="h-4 w-4" />
-                        <span>{request.type === "online" ? "Online" : `${request.distance} away`}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <DollarSign className="h-4 w-4" />
-                        <span>Est. {request.rate.split('/')[0]}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        className="flex-1" 
-                        size="sm"
-                        onClick={() => handleAcceptRequest(request)}
-                      >
-                        Accept
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="flex-1" 
-                        size="sm"
-                        onClick={() => handleDeclineRequest(request)}
-                      >
-                        Decline
-                      </Button>
-                    </div>
-                  </div>
+            {bookingsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                <p className="text-muted-foreground">Loading requests...</p>
+              </div>
+            ) : getIncomingRequests().length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <h4 className="font-medium mb-2">No pending requests</h4>
+                  <p className="text-sm text-muted-foreground">
+                    New booking requests will appear here in real-time
+                  </p>
                 </CardContent>
               </Card>
-            ))}
+            ) : (
+              <div className="space-y-3">
+                {getIncomingRequests().map((booking) => (
+                  <LiveBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    userType="tutor"
+                    onAccept={handleAcceptRequest}
+                    onDecline={handleDeclineRequest}
+                    onStartChat={(booking) => {
+                      setChatWithUserId(booking.learner_id);
+                      setChatWithUserName(booking.learner_profile?.full_name || "Student");
+                      setShowChat(true);
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="schedule" className="space-y-4">
