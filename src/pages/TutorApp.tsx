@@ -19,6 +19,8 @@ import StarRating from "@/components/StarRating";
 import TutorEarningsChart from "@/components/TutorEarningsChart";
 import TutorProfile from "@/components/TutorProfile";
 import SessionHistory from "@/components/SessionHistory";
+import { useTutorData } from '@/hooks/useTutorData';
+import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -50,6 +52,10 @@ const TutorApp = () => {
     getIncomingRequests,
     getUpcomingSessions 
   } = useRealtimeBookings('tutor', session?.user?.id);
+
+  // Initialize tutor data management
+  const { tutors, updateOnlineStatus } = useTutorData();
+  const currentTutor = tutors.find(t => t.id === session?.user?.id);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -219,12 +225,9 @@ const TutorApp = () => {
     }
   };
 
-  const handleOnlineToggle = (checked: boolean) => {
+  const handleOnlineToggle = async (checked: boolean) => {
     setIsOnline(checked);
-    toast({
-      title: checked ? "Now Online" : "Now Offline",
-      description: checked ? "You're available for bookings" : "You won't receive new booking requests",
-    });
+    await updateOnlineStatus(checked);
   };
 
   const handleUpdateAvailability = () => {
@@ -597,6 +600,9 @@ const TutorApp = () => {
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-4">
+            <TutorSubjectManager 
+              subjects={currentTutor?.subjects || []}
+            />
             <TutorProfile user={session?.user} />
           </TabsContent>
 

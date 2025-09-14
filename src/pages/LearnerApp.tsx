@@ -26,6 +26,7 @@ import { analytics } from "@/utils/analytics";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { QuickBookingModal } from "@/components/QuickBookingModal";
+import { useTutorData, TutorProfile } from '@/hooks/useTutorData';
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
@@ -60,6 +61,9 @@ const LearnerApp = () => {
     updateBookingStatus,
     getUpcomingSessions 
   } = useRealtimeBookings('learner', session?.user?.id);
+
+  // Initialize tutor data
+  const { tutors, loading: tutorsLoading } = useTutorData();
 
   useEffect(() => {
     analytics.pageView('learner-app');
@@ -170,47 +174,7 @@ const LearnerApp = () => {
     }
   };
 
-  const nearbyTutors = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      subject: "Mathematics",
-      level: "Grade 10-12",
-      rating: 4.8,
-      reviews: 156,
-      distance: "2.3 km",
-      price: "R150/hour",
-      avatar: "/placeholder.svg",
-      available: true,
-      onlineAvailable: true
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      subject: "Physics",
-      level: "University",
-      rating: 4.9,
-      reviews: 203,
-      distance: "1.8 km",
-      price: "R200/hour",
-      avatar: "/placeholder.svg",
-      available: true,
-      onlineAvailable: true
-    },
-    {
-      id: 3,
-      name: "Priya Patel",
-      subject: "Chemistry",
-      level: "Grade 11-12",
-      rating: 4.7,
-      reviews: 89,
-      distance: "3.1 km",
-      price: "R180/hour",
-      avatar: "/placeholder.svg",
-      available: false,
-      onlineAvailable: true
-    }
-  ];
+  // Real tutor data is now handled by useTutorData hook
 
   const recentSessions = [
     {
@@ -450,50 +414,53 @@ const LearnerApp = () => {
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Available Now</h3>
                 <p className="text-sm text-muted-foreground">
-                  {nearbyTutors.filter(tutor => 
-                    (!searchQuery || tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                     tutor.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                     tutor.level.toLowerCase().includes(searchQuery.toLowerCase())) &&
-                    (!selectedSubject || tutor.subject === selectedSubject)
+                  {tutors.filter(tutor => 
+                    (!searchQuery || tutor.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                     tutor.subjects.some(s => s.subject.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+                    (!selectedSubject || tutor.subjects.some(s => s.subject === selectedSubject))
                   ).length} tutors found
                 </p>
               </div>
-              {nearbyTutors
-                .filter(tutor => 
-                  (!searchQuery || tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                   tutor.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                   tutor.level.toLowerCase().includes(searchQuery.toLowerCase())) &&
-                  (!selectedSubject || tutor.subject === selectedSubject)
-                )
-                .map((tutor) => (
+              {tutorsLoading ? (
+                <div className="text-center py-4">Loading tutors...</div>
+              ) : (
+                tutors
+                  .filter(tutor => 
+                    (!searchQuery || tutor.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                     tutor.subjects.some(s => s.subject.toLowerCase().includes(searchQuery.toLowerCase()))) &&
+                    (!selectedSubject || tutor.subjects.some(s => s.subject === selectedSubject))
+                  )
+                  .map((tutor) => (
                 <Card key={tutor.id} className="shadow-sm">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
                       <Avatar>
-                        <AvatarImage src={tutor.avatar} />
-                        <AvatarFallback>{tutor.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} />
+                        <AvatarFallback>{tutor.full_name?.split(' ').map(n => n[0]).join('') || 'T'}</AvatarFallback>
                       </Avatar>
                       
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div>
-                            <h4 className="font-medium">{tutor.name}</h4>
-                            <p className="text-sm text-muted-foreground">{tutor.subject} • {tutor.level}</p>
+                            <h4 className="font-medium">{tutor.full_name}</h4>
+                            <p className="text-sm text-muted-foreground">
+                              {tutor.subjects.map(s => s.subject).join(", ")} • {tutor.subjects[0]?.level}
+                            </p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold text-primary">{tutor.price}</p>
+                            <p className="font-semibold text-primary">R{tutor.subjects[0]?.hourly_rate}/hour</p>
                             <p className="text-xs text-muted-foreground">{tutor.distance}</p>
                           </div>
                         </div>
                         
                         <div className="flex items-center gap-1 mt-2">
-                          <StarRating rating={tutor.rating} readonly size="sm" />
-                          <span className="text-sm font-medium">{tutor.rating}</span>
-                          <span className="text-sm text-muted-foreground">({tutor.reviews})</span>
-                          {tutor.available && (
+                          <StarRating rating={tutor.rating || 4.8} readonly size="sm" />
+                          <span className="text-sm font-medium">{tutor.rating || 4.8}</span>
+                          <span className="text-sm text-muted-foreground">(156)</span>
+                          {tutor.online_status && (
                             <Badge variant="secondary" className="ml-2 text-xs">Available</Badge>
                           )}
-                          {tutor.onlineAvailable && (
+                          {tutor.online_status && (
                             <Badge variant="outline" className="ml-2 text-xs">
                               <Video className="h-3 w-3 mr-1" />
                               Online
@@ -503,14 +470,14 @@ const LearnerApp = () => {
                         
                         <div className="grid grid-cols-3 gap-2 mt-3">
                           <Button 
-                            disabled={!tutor.available}
-                            variant={tutor.available ? "default" : "outline"}
+                            disabled={!tutor.online_status}
+                            variant={tutor.online_status ? "default" : "outline"}
                             className="flex-1"
                             onClick={() => handleBookInPerson(tutor)}
                           >
-                            {tutor.available ? "Book In-Person" : "Unavailable"}
+                            {tutor.online_status ? "Book In-Person" : "Unavailable"}
                           </Button>
-                          {tutor.onlineAvailable && (
+                          {tutor.online_status && (
                             <Button 
                               variant="outline"
                               className="flex-1"
@@ -533,7 +500,8 @@ const LearnerApp = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))}
+              ))
+              )}
             </div>
           </TabsContent>
 
