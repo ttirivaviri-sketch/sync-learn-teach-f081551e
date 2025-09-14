@@ -24,6 +24,7 @@ const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
+  const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
   const [showDirections, setShowDirections] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -177,6 +178,11 @@ const TutorApp = () => {
       const isNow = Math.abs(sessionTime.getTime() - now.getTime()) < 15 * 60 * 1000;
       
       if (isNow) {
+        setVideoMeetingData({
+          partnerName: booking.learner_profile?.full_name || "Student",
+          subject: booking.tutor_subjects?.subject || "Study Session",
+          booking: booking
+        });
         setShowVideoMeeting(true);
       }
     } catch (error) {
@@ -186,6 +192,15 @@ const TutorApp = () => {
         variant: "destructive",
       });
     }
+  };
+
+  const handleJoinVideoSession = (booking: any) => {
+    setVideoMeetingData({
+      partnerName: booking.learner_profile?.full_name || "Student",
+      subject: booking.tutor_subjects?.subject || "Study Session",
+      booking: booking
+    });
+    setShowVideoMeeting(true);
   };
 
   const handleDeclineRequest = async (booking: any) => {
@@ -240,13 +255,17 @@ const TutorApp = () => {
     }));
   };
 
-  if (showVideoMeeting) {
+  if (showVideoMeeting && videoMeetingData) {
     return (
       <VideoMeeting
         sessionType="tutor"
-        partnerName="John Doe"
-        subject="Mathematics"
-        onEndCall={() => setShowVideoMeeting(false)}
+        partnerName={videoMeetingData.partnerName}
+        subject={videoMeetingData.subject}
+        booking={videoMeetingData.booking}
+        onEndCall={() => {
+          setShowVideoMeeting(false);
+          setVideoMeetingData(null);
+        }}
       />
     );
   }
@@ -436,6 +455,7 @@ const TutorApp = () => {
                     userType="tutor"
                     onAccept={handleAcceptRequest}
                     onDecline={handleDeclineRequest}
+                    onJoinSession={handleJoinVideoSession}
                     onStartChat={(booking) => {
                       setChatWithUserId(booking.learner_id);
                       setChatWithUserName(booking.learner_profile?.full_name || "Student");

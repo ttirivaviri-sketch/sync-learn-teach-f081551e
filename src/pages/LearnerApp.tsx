@@ -30,6 +30,7 @@ import { QuickBookingModal } from "@/components/QuickBookingModal";
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
+  const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -278,6 +279,11 @@ const LearnerApp = () => {
 
   const handleSessionAction = (action: string) => {
     if (action === "join") {
+      setVideoMeetingData({
+        partnerName: upcomingSession?.tutor || "Tutor",
+        subject: upcomingSession?.subject || "Study Session",
+        booking: null
+      });
       setShowVideoMeeting(true);
       return;
     }
@@ -289,6 +295,15 @@ const LearnerApp = () => {
         : "Session cancellation processed",
       variant: action === "cancel" ? "destructive" : "default"
     });
+  };
+
+  const handleJoinVideoSession = (booking: any) => {
+    setVideoMeetingData({
+      partnerName: "Tutor", // In real app, get from booking data
+      subject: booking.tutor_subjects?.subject || "Study Session",
+      booking: booking
+    });
+    setShowVideoMeeting(true);
   };
 
   const handleRateAndReview = (session: any) => {
@@ -326,13 +341,17 @@ const LearnerApp = () => {
     return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
   }
 
-  if (showVideoMeeting) {
+  if (showVideoMeeting && videoMeetingData) {
     return (
       <VideoMeeting
         sessionType="learner"
-        partnerName="Sarah Johnson"
-        subject="Mathematics"
-        onEndCall={() => setShowVideoMeeting(false)}
+        partnerName={videoMeetingData.partnerName}
+        subject={videoMeetingData.subject}
+        booking={videoMeetingData.booking}
+        onEndCall={() => {
+          setShowVideoMeeting(false);
+          setVideoMeetingData(null);
+        }}
       />
     );
   }
@@ -545,7 +564,7 @@ const LearnerApp = () => {
                     key={booking.id}
                     booking={booking}
                     userType="learner"
-                    onJoinSession={(booking) => setShowVideoMeeting(true)}
+                    onJoinSession={handleJoinVideoSession}
                     onStartChat={(booking) => {
                       setChatWithUserId(booking.tutor_id);
                       setChatWithUserName("Tutor");

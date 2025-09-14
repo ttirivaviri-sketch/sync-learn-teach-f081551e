@@ -1,26 +1,49 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Video, VideoOff, Mic, MicOff, Phone, MessageCircle, Share2, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 interface VideoMeetingProps {
   sessionType: "tutor" | "learner";
   partnerName: string;
   subject: string;
+  booking?: any;
   onEndCall: () => void;
 }
 
-const VideoMeeting = ({ sessionType, partnerName, subject, onEndCall }: VideoMeetingProps) => {
+const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }: VideoMeetingProps) => {
+  const { toast } = useToast();
   const [isVideoOn, setIsVideoOn] = useState(true);
   const [isAudioOn, setIsAudioOn] = useState(true);
   const [showChat, setShowChat] = useState(false);
   const [chatMessage, setChatMessage] = useState("");
+  const [sessionStartTime] = useState(new Date());
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [isRecording, setIsRecording] = useState(false);
   const [chatMessages, setChatMessages] = useState([
     { sender: partnerName, message: "Hello! Ready to start our session?", time: "14:30" },
     { sender: "You", message: "Yes, let's begin!", time: "14:31" }
   ]);
+
+  // Update session timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const duration = Math.floor((now.getTime() - sessionStartTime.getTime()) / 1000);
+      setSessionDuration(duration);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sessionStartTime]);
+
+  const formatDuration = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const sendMessage = () => {
     if (chatMessage.trim()) {
@@ -80,9 +103,18 @@ const VideoMeeting = ({ sessionType, partnerName, subject, onEndCall }: VideoMee
         {/* Session Timer */}
         <div className="absolute top-4 left-4">
           <Badge variant="outline" className="bg-background">
-            Session: 15:30
+            Session: {formatDuration(sessionDuration)}
           </Badge>
         </div>
+
+        {/* Recording Indicator */}
+        {isRecording && (
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+            <Badge variant="destructive" className="animate-pulse">
+              ● Recording
+            </Badge>
+          </div>
+        )}
       </div>
 
       {/* Chat Panel */}
@@ -157,7 +189,18 @@ const VideoMeeting = ({ sessionType, partnerName, subject, onEndCall }: VideoMee
           </Button>
 
           {/* Share Screen */}
-          <Button variant="outline" size="icon" className="rounded-full">
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="rounded-full"
+            onClick={() => {
+              // In a real implementation, this would start screen sharing
+              toast({
+                title: "Screen Share",
+                description: "Screen sharing feature will be available soon",
+              });
+            }}
+          >
             <Share2 className="h-5 w-5" />
           </Button>
 
