@@ -97,6 +97,9 @@ export const useTutorData = () => {
 
       if (error) throw error;
 
+      // Refresh tutors data to reflect the change
+      fetchTutors();
+
       toast({
         title: isOnline ? "You're now online" : "You're now offline",
         description: isOnline ? "Students can see you're available" : "Students won't see you as available",

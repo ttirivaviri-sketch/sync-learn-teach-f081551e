@@ -21,6 +21,7 @@ import TutorProfile from "@/components/TutorProfile";
 import SessionHistory from "@/components/SessionHistory";
 import { useTutorData } from '@/hooks/useTutorData';
 import { TutorSubjectManager } from '@/components/TutorSubjectManager';
+import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -56,6 +57,9 @@ const TutorApp = () => {
   // Initialize tutor data management
   const { tutors, updateOnlineStatus } = useTutorData();
   const currentTutor = tutors.find(t => t.id === session?.user?.id);
+
+  // Initialize presence tracking for real-time online status
+  const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -227,7 +231,12 @@ const TutorApp = () => {
 
   const handleOnlineToggle = async (checked: boolean) => {
     setIsOnline(checked);
-    await updateOnlineStatus(checked);
+    
+    // Update both database and presence tracking
+    await Promise.all([
+      updateOnlineStatus(checked),
+      setOnlineStatus(checked)
+    ]);
   };
 
   const handleUpdateAvailability = () => {
@@ -330,6 +339,11 @@ const TutorApp = () => {
       {isOnline && (
         <div className="bg-primary text-primary-foreground p-3 text-center text-sm">
           🟢 You're online and available for booking requests
+          {onlineUsers.length > 1 && (
+            <span className="ml-2 opacity-75">
+              • {onlineUsers.length - 1} other users online
+            </span>
+          )}
         </div>
       )}
 

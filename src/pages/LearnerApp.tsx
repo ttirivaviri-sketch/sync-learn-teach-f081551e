@@ -27,6 +27,7 @@ import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { QuickBookingModal } from "@/components/QuickBookingModal";
 import { useTutorData, TutorProfile } from '@/hooks/useTutorData';
+import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
@@ -62,8 +63,9 @@ const LearnerApp = () => {
     getUpcomingSessions 
   } = useRealtimeBookings('learner', session?.user?.id);
 
-  // Initialize tutor data
+  // Initialize tutor data and presence tracking
   const { tutors, loading: tutorsLoading } = useTutorData();
+  const { isUserOnline } = usePresenceTracking(session);
 
   useEffect(() => {
     analytics.pageView('learner-app');
@@ -457,27 +459,27 @@ const LearnerApp = () => {
                           <StarRating rating={tutor.rating || 4.8} readonly size="sm" />
                           <span className="text-sm font-medium">{tutor.rating || 4.8}</span>
                           <span className="text-sm text-muted-foreground">(156)</span>
-                          {tutor.online_status && (
+                          {isUserOnline(tutor.id) && (
                             <Badge variant="secondary" className="ml-2 text-xs">Available</Badge>
                           )}
-                          {tutor.online_status && (
+                          {isUserOnline(tutor.id) && (
                             <Badge variant="outline" className="ml-2 text-xs">
-                              <Video className="h-3 w-3 mr-1" />
-                              Online
+                              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
+                              Online now
                             </Badge>
                           )}
                         </div>
                         
                         <div className="grid grid-cols-3 gap-2 mt-3">
                           <Button 
-                            disabled={!tutor.online_status}
-                            variant={tutor.online_status ? "default" : "outline"}
+                            disabled={!isUserOnline(tutor.id)}
+                            variant={isUserOnline(tutor.id) ? "default" : "outline"}
                             className="flex-1"
                             onClick={() => handleBookInPerson(tutor)}
                           >
-                            {tutor.online_status ? "Book In-Person" : "Unavailable"}
+                            {isUserOnline(tutor.id) ? "Book In-Person" : "Offline"}
                           </Button>
-                          {tutor.online_status && (
+                          {isUserOnline(tutor.id) && (
                             <Button 
                               variant="outline"
                               className="flex-1"
