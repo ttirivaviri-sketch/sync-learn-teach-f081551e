@@ -28,6 +28,7 @@ import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { QuickBookingModal } from "@/components/QuickBookingModal";
 import { useTutorData, TutorProfile } from '@/hooks/useTutorData';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
+import { useGeolocation } from '@/hooks/useGeolocation';
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("search");
@@ -38,7 +39,7 @@ const LearnerApp = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [userLocation, setUserLocation] = useState("Johannesburg Central");
+  const [userLocationName, setUserLocationName] = useState("Johannesburg Central");
   const [profile, setProfile] = useState<any>(null);
   const [upcomingSession, setUpcomingSession] = useState<any>(null);
   const [bookingRequests, setBookingRequests] = useState<any[]>([]);
@@ -63,8 +64,9 @@ const LearnerApp = () => {
     getUpcomingSessions 
   } = useRealtimeBookings('learner', session?.user?.id);
 
-  // Initialize tutor data and presence tracking
-  const { tutors, loading: tutorsLoading } = useTutorData();
+  // Initialize geolocation, tutor data and presence tracking  
+  const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
+  const { tutors, loading: tutorsLoading } = useTutorData(userGeoLocation);
   const { isUserOnline } = usePresenceTracking(session);
 
   useEffect(() => {
@@ -158,22 +160,7 @@ const LearnerApp = () => {
   };
 
   const requestLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          // In a real app, you'd reverse geocode this
-          setUserLocation("Current Location");
-          toast({
-            title: "Location Updated",
-            description: "Found tutors near you!",
-          });
-        },
-        () => {
-          // Keep default location if permission denied
-          setUserLocation("Johannesburg Central");
-        }
-      );
-    }
+    getCurrentLocation();
   };
 
   // Real tutor data is now handled by useTutorData hook
@@ -404,10 +391,18 @@ const LearnerApp = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
-                <span>Tutors near {userLocation}</span>
+                <span>
+                  Tutors near {userGeoLocation ? 'your location' : userLocationName}
+                  {locationLoading && ' (updating...)'}
+                </span>
               </div>
-              <Button variant="outline" size="sm" onClick={requestLocation}>
-                Update Location
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={requestLocation}
+                disabled={locationLoading}
+              >
+                {locationLoading ? 'Updating...' : 'Update Location'}
               </Button>
             </div>
 
@@ -607,7 +602,7 @@ const LearnerApp = () => {
                       {profile?.full_name || session?.user?.email?.split('@')[0] || 'Learner'}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {profile?.user_type === 'learner' ? 'Student' : 'User'} • {userLocation}
+                      {profile?.user_type === 'learner' ? 'Student' : 'User'} • {userLocationName}
                     </p>
                     <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">

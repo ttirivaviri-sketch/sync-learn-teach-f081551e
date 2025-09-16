@@ -24,7 +24,7 @@ export interface TutorProfile {
   distance?: string;
 }
 
-export const useTutorData = () => {
+export const useTutorData = (userLocation?: { latitude: number; longitude: number } | null) => {
   const [tutors, setTutors] = useState<TutorProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -74,13 +74,25 @@ export const useTutorData = () => {
 
       if (subjectsError) throw subjectsError;
 
-      // Combine tutor data with their subjects
+      // Combine tutor data with their subjects and calculate real distances
       const tutorsWithSubjects = tutorsData?.map(tutor => ({
         ...tutor,
         subjects: subjectsData?.filter(subject => subject.user_id === tutor.id) || [],
         rating: 4.8, // Mock rating for now
-        distance: calculateDistance(tutor.location_lat, tutor.location_lng)
+        distance: calculateDistance(tutor.location_lat, tutor.location_lng, userLocation),
+        distanceValue: userLocation && tutor.location_lat && tutor.location_lng 
+          ? calculateRealDistance(tutor.location_lat, tutor.location_lng, userLocation) 
+          : null
       })) || [];
+
+      // Sort by distance if user location is available
+      if (userLocation) {
+        tutorsWithSubjects.sort((a, b) => {
+          if (a.distanceValue === null) return 1;
+          if (b.distanceValue === null) return -1;
+          return a.distanceValue - b.distanceValue;
+        });
+      }
 
       setTutors(tutorsWithSubjects);
 
@@ -100,10 +112,36 @@ export const useTutorData = () => {
     }
   };
 
-  const calculateDistance = (lat?: number, lng?: number): string => {
-    // Simple mock distance calculation - in real app would use geolocation
-    if (!lat || !lng) return "Unknown";
-    return `${(Math.random() * 5 + 0.5).toFixed(1)} km`;
+  const calculateDistance = (lat?: number, lng?: number, userLocation?: { latitude: number; longitude: number } | null): string => {
+    if (!lat || !lng || !userLocation) return "Unknown";
+    
+    // Calculate real distance using Haversine formula
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat - userLocation.latitude) * Math.PI / 180;
+    const dLon = (lng - userLocation.longitude) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(userLocation.latitude * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    
+    if (distance < 1) {
+      return `${Math.round(distance * 1000)}m`;
+    }
+    return `${distance.toFixed(1)}km`;
+  };
+
+  const calculateRealDistance = (lat: number, lng: number, userLocation: { latitude: number; longitude: number }): number => {
+    const R = 6371; // Earth's radius in kilometers
+    const dLat = (lat - userLocation.latitude) * Math.PI / 180;
+    const dLon = (lng - userLocation.longitude) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(userLocation.latitude * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
   };
 
   const updateOnlineStatus = async (isOnline: boolean) => {

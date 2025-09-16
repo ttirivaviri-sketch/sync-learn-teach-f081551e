@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import StarRating from "@/components/StarRating";
+import { LocationPicker } from "@/components/LocationPicker";
 
 interface TutorProfileProps {
   user: any;
@@ -15,11 +16,14 @@ interface TutorProfileProps {
 
 const TutorProfile = ({ user }: TutorProfileProps) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showLocationPicker, setShowLocationPicker] = useState(false);
   const [profileData, setProfileData] = useState({
     bio: "Experienced mathematics and physics tutor with over 5 years of teaching experience. Passionate about helping students achieve their academic goals.",
     subjects: ["Mathematics", "Physics", "Chemistry"],
     hourlyRate: "R150",
     location: "Johannesburg, South Africa",
+    locationLat: null as number | null,
+    locationLng: null as number | null,
     availability: "Mon-Fri: 2:00 PM - 8:00 PM",
     qualifications: ["BSc Mathematics", "Teaching Certificate", "5+ Years Experience"]
   });
@@ -34,10 +38,21 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
 
   const handleSaveProfile = () => {
     setIsEditing(false);
+    setShowLocationPicker(false);
     toast({
       title: "Profile Updated",
       description: "Your profile has been successfully updated.",
     });
+  };
+
+  const handleLocationUpdate = (lat: number, lng: number, address: string) => {
+    setProfileData(prev => ({
+      ...prev,
+      location: address,
+      locationLat: lat,
+      locationLng: lng
+    }));
+    setShowLocationPicker(false);
   };
 
   return (
@@ -139,15 +154,34 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
               <div className="flex items-center gap-2">
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 {isEditing ? (
-                  <Input
-                    value={profileData.location}
-                    onChange={(e) => setProfileData({...profileData, location: e.target.value})}
-                    placeholder="Your location"
-                  />
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      value={profileData.location}
+                      onChange={(e) => setProfileData({...profileData, location: e.target.value})}
+                      placeholder="Your location"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowLocationPicker(!showLocationPicker)}
+                    >
+                      <MapPin className="h-4 w-4 mr-2" />
+                      {showLocationPicker ? 'Hide' : 'Set GPS Location'}
+                    </Button>
+                  </div>
                 ) : (
                   <span className="text-sm">{profileData.location}</span>
                 )}
               </div>
+              
+              {isEditing && showLocationPicker && (
+                <LocationPicker
+                  currentLat={profileData.locationLat || undefined}
+                  currentLng={profileData.locationLng || undefined}
+                  onLocationUpdate={handleLocationUpdate}
+                />
+              )}
               
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
