@@ -31,6 +31,20 @@ export const useTutorData = () => {
 
   const fetchTutors = async () => {
     try {
+      const cacheKey = 'tutors_cache_v1';
+      const cacheTTL = 2 * 60 * 1000; // 2 minutes
+      const cached = localStorage.getItem(cacheKey);
+
+      if (cached) {
+        try {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < cacheTTL && Array.isArray(data)) {
+            setTutors(data);
+            setLoading(false); // show cached immediately
+          }
+        } catch {}
+      }
+
       setLoading(true);
       
       // Fetch tutors with their subjects
@@ -47,7 +61,9 @@ export const useTutorData = () => {
           location_lat,
           location_lng
         `)
-        .eq('user_type', 'tutor');
+        .eq('user_type', 'tutor')
+        .order('online_status', { ascending: false })
+        .order('last_seen', { ascending: false, nullsFirst: false });
 
       if (tutorsError) throw tutorsError;
 
@@ -67,6 +83,11 @@ export const useTutorData = () => {
       })) || [];
 
       setTutors(tutorsWithSubjects);
+
+      // Cache fresh result
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ data: tutorsWithSubjects, ts: Date.now() }));
+      } catch {}
     } catch (error) {
       console.error('Error fetching tutors:', error);
       toast({
