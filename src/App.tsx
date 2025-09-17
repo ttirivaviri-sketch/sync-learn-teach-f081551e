@@ -22,6 +22,7 @@ import AdminPayments from "./pages/admin/Payments";
 import AdminSupport from "./pages/admin/Support";
 import AdminReports from "./pages/admin/Reports";
 import AdminRoles from "./pages/admin/Roles";
+import AdminSecurity from "./pages/admin/Security";
 import AdminAuth from "./pages/AdminAuth";
 
 const queryClient = new QueryClient({
@@ -64,6 +65,7 @@ const App = () => (
                 <Route path="support" element={<AdminSupport />} />
                 <Route path="reports" element={<AdminReports />} />
                 <Route path="roles" element={<AdminRoles />} />
+                <Route path="security" element={<AdminSecurity />} />
               </Route>
 
               {/* 404 handling */}

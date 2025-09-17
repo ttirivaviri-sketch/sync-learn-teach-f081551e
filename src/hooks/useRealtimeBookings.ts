@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { security } from '@/utils/security';
 
 export interface BookingRequest {
   id: string;
@@ -34,6 +35,13 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
     const loadBookings = async () => {
       try {
+        // Validate session before loading sensitive data
+        const validation = await security.validateSession();
+        if (!validation.valid) {
+          console.error('Invalid session for booking access');
+          return;
+        }
+        
         const query = supabase
           .from('bookings')
           .select(`
@@ -176,6 +184,15 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   }) => {
     if (!userId) throw new Error('User not authenticated');
 
+    // Validate session and rate limit
+    const validation = await security.validateSession();
+    if (!validation.valid) {
+      throw new Error('Authentication required');
+    }
+    
+    if (!security.checkRateLimit(`booking_${userId}`, 10, 60000)) {
+      throw new Error('Too many booking requests. Please wait a moment.');
+    }
     const { data, error } = await supabase
       .from('bookings')
       .insert({
@@ -187,9 +204,11 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
     if (error) {
       console.error('Error creating booking:', error);
+      security.logSecurityEvent('booking_creation_failed', { error: error.message, userId });
       throw error;
     }
 
+    security.logSecurityEvent('booking_created', { bookingId: data.id, userId });
     return data;
   };
 

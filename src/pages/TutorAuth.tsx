@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Session } from "@supabase/supabase-js";
 import { Upload, Shield, GraduationCap, FileText } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import { security } from "@/utils/security";
 
 const TutorAuth = () => {
   const [email, setEmail] = useState("");
@@ -149,6 +150,46 @@ const TutorAuth = () => {
 
   const handleVerificationSubmit = async () => {
     if (!session?.user) return;
+    
+    // Validate all uploaded files
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+    const allowedDocTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+    
+    if (files.idDocument) {
+      const validation = security.validateFileUpload(files.idDocument, allowedDocTypes, 10);
+      if (!validation.valid) {
+        toast({
+          title: "Invalid file",
+          description: `ID Document: ${validation.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    if (files.profilePhoto) {
+      const validation = security.validateFileUpload(files.profilePhoto, allowedImageTypes, 5);
+      if (!validation.valid) {
+        toast({
+          title: "Invalid file",
+          description: `Profile Photo: ${validation.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
+    if (files.policeClearance) {
+      const validation = security.validateFileUpload(files.policeClearance, allowedDocTypes, 10);
+      if (!validation.valid) {
+        toast({
+          title: "Invalid file",
+          description: `Police Clearance: ${validation.error}`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     
     setLoading(true);
     try {

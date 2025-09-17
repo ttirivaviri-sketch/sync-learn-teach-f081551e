@@ -18,6 +18,7 @@ import {
   LifeBuoy,
   BarChart3,
   ShieldCheck,
+  Shield,
 } from "lucide-react";
 
 const items = [
@@ -28,6 +29,7 @@ const items = [
   { title: "Support", url: "/admin/support", icon: LifeBuoy },
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
   { title: "Roles", url: "/admin/roles", icon: ShieldCheck },
+  { title: "Security", url: "/admin/security", icon: Shield },
 ];
 
 export function AppSidebar() {

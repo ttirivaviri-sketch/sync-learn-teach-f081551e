@@ -66,7 +66,7 @@ const LearnerApp = () => {
 
   // Initialize geolocation, tutor data and presence tracking  
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
-  const { tutors, loading: tutorsLoading } = useTutorData(userGeoLocation);
+  const { tutors, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation);
   const { isUserOnline } = usePresenceTracking(session);
 
   useEffect(() => {
@@ -219,12 +219,32 @@ const LearnerApp = () => {
       return;
     }
 
+    // Check if user is authenticated before booking
+    if (!session?.user) {
+      toast({
+        title: "Authentication required",
+        description: "Please sign in to book sessions.",
+        variant: "destructive",
+      });
+      navigate("/learner/auth");
+      return;
+    }
     analytics.track('booking_initiated', { type: 'in-person', tutorId: tutor.id });
     setSelectedTutor(tutor);
     setShowBookingModal(true);
   };
 
   const handleBookOnline = (tutor: any) => {
+    // Check if user is authenticated before booking
+    if (!session?.user) {
+      toast({
+        title: "Authentication required", 
+        description: "Please sign in to book sessions.",
+        variant: "destructive",
+      });
+      navigate("/learner/auth");
+      return;
+    }
     analytics.track('booking_initiated', { type: 'online', tutorId: tutor.id });
     setSelectedTutor(tutor);
     setShowBookingModal(true);

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { analytics } from '@/utils/analytics';
 
 export interface TutorSubject {
   id: string;
@@ -47,42 +48,56 @@ export const useTutorData = (userLocation?: { latitude: number; longitude: numbe
 
       setLoading(true);
       
-      // Fetch tutors with their subjects
+      // Use secure tutor search function instead of direct table access
       const { data: tutorsData, error: tutorsError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          full_name,
-          email,
-          online_status,
-          last_seen,
-          bio,
-          avatar_url,
-          location_lat,
-          location_lng
-        `)
-        .eq('user_type', 'tutor')
-        .order('online_status', { ascending: false })
-        .order('last_seen', { ascending: false, nullsFirst: false });
+        .rpc('search_tutors', {
+          _search_query: '',
+          _subject_filter: '',
+          _user_lat: userLocation?.latitude || null,
+          _user_lng: userLocation?.longitude || null,
+          _max_distance_km: 50,
+          _limit: 50
+        });
 
-      if (tutorsError) throw tutorsError;
+      if (tutorsError) {
+        console.error('Error fetching tutors:', tutorsError);
+        throw tutorsError;
+      }
 
-      // Fetch all tutor subjects
-      const { data: subjectsData, error: subjectsError } = await supabase
-        .from('tutor_subjects')
-        .select('*');
+      // For authenticated users, get subject pricing data
+      const { data: { session } } = await supabase.auth.getSession();
+      let subjectsData: any[] = [];
+      
+      if (session?.user) {
+        const { data, error } = await supabase
+          .from('tutor_subjects')
+          .select('*');
+        
+        if (!error) {
+          subjectsData = data || [];
+        }
+      }
 
-      if (subjectsError) throw subjectsError;
-
-      // Combine tutor data with their subjects and calculate real distances
+      // Transform the data to match expected format
       const tutorsWithSubjects = tutorsData?.map(tutor => ({
-        ...tutor,
-        subjects: subjectsData?.filter(subject => subject.user_id === tutor.id) || [],
-        rating: 4.8, // Mock rating for now
-        distance: calculateDistance(tutor.location_lat, tutor.location_lng, userLocation),
-        distanceValue: userLocation && tutor.location_lat && tutor.location_lng 
-          ? calculateRealDistance(tutor.location_lat, tutor.location_lng, userLocation) 
-          : null
+        id: tutor.id,
+        full_name: tutor.full_name,
+        email: '', // Not exposed in public view
+        online_status: tutor.online_status,
+        last_seen: tutor.last_seen,
+        bio: tutor.bio,
+        avatar_url: null, // Will be loaded separately if needed
+        location_lat: null, // Not exposed for privacy
+        location_lng: null, // Not exposed for privacy
+        subjects: session?.user 
+          ? subjectsData.filter(subject => subject.user_id === tutor.id)
+          : (tutor.subjects || []).map((s: any) => ({
+              ...s,
+              hourly_rate: null // Hide pricing from unauthenticated users
+            })),
+        rating: tutor.average_rating || 4.8,
+        distance: tutor.distance_km ? `${tutor.distance_km.toFixed(1)}km` : 'Unknown',
+        distanceValue: tutor.distance_km
       })) || [];
 
       // Sort by distance if user location is available
@@ -100,8 +115,16 @@ export const useTutorData = (userLocation?: { latitude: number; longitude: numbe
       try {
         localStorage.setItem(cacheKey, JSON.stringify({ data: tutorsWithSubjects, ts: Date.now() }));
       } catch {}
+      
+      // Track analytics
+      analytics.track('tutors_loaded', { 
+        count: tutorsWithSubjects.length,
+        hasLocation: !!userLocation,
+        authenticated: !!session?.user
+      });
     } catch (error) {
       console.error('Error fetching tutors:', error);
+      analytics.error(error as Error, 'fetch_tutors_failed');
       toast({
         title: "Error",
         description: "Failed to load tutors. Please try again.",

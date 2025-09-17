@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 import StarRating from "@/components/StarRating";
 import { LocationPicker } from "@/components/LocationPicker";
+import { security } from "@/utils/security";
 
 interface TutorProfileProps {
   user: any;
@@ -37,6 +38,16 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
   };
 
   const handleSaveProfile = () => {
+    // Validate and sanitize input data
+    const sanitizedBio = security.sanitizeInput(profileData.bio);
+    const sanitizedLocation = security.sanitizeInput(profileData.location);
+    
+    setProfileData(prev => ({
+      ...prev,
+      bio: sanitizedBio,
+      location: sanitizedLocation
+    }));
+    
     setIsEditing(false);
     setShowLocationPicker(false);
     toast({

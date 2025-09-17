@@ -1,0 +1,129 @@
+// Security utilities for production readiness
+
+export const security = {
+  // Validate and sanitize user input
+  sanitizeInput: (input: string): string => {
+    return input
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '') // Remove script tags
+      .replace(/javascript:/gi, '') // Remove javascript: protocols
+      .replace(/on\w+\s*=/gi, '') // Remove event handlers
+      .trim();
+  },
+
+  // Check if request is from a suspicious source
+  isRequestSuspicious: (userAgent?: string, referer?: string): boolean => {
+    if (!userAgent) return true;
+    
+    const suspiciousPatterns = [
+      /bot/i,
+      /crawler/i,
+      /scraper/i,
+      /spider/i,
+      /curl/i,
+      /wget/i,
+      /python/i,
+      /requests/i
+    ];
+    
+    return suspiciousPatterns.some(pattern => pattern.test(userAgent));
+  },
+
+  // Rate limiting check (client-side)
+  checkRateLimit: (key: string, maxRequests: number = 60, windowMs: number = 60000): boolean => {
+    const now = Date.now();
+    const windowKey = `rate_limit_${key}_${Math.floor(now / windowMs)}`;
+    
+    try {
+      const current = parseInt(localStorage.getItem(windowKey) || '0');
+      if (current >= maxRequests) {
+        return false; // Rate limit exceeded
+      }
+      
+      localStorage.setItem(windowKey, (current + 1).toString());
+      
+      // Clean up old entries
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith('rate_limit_') && key !== windowKey) {
+          localStorage.removeItem(key);
+        }
+      }
+      
+      return true;
+    } catch {
+      return true; // Allow if localStorage fails
+    }
+  },
+
+  // Validate session and permissions
+  validateSession: async (requiredRole?: string) => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session?.user) {
+        return { valid: false, error: 'Not authenticated' };
+      }
+
+      if (requiredRole) {
+        const { data: hasRole, error: roleError } = await supabase
+          .rpc('has_role', { 
+            _user_id: session.user.id, 
+            _role: requiredRole 
+          });
+        
+        if (roleError || !hasRole) {
+          return { valid: false, error: 'Insufficient permissions' };
+        }
+      }
+
+      return { valid: true, session };
+    } catch (error) {
+      return { valid: false, error: 'Session validation failed' };
+    }
+  },
+
+  // Log security events
+  logSecurityEvent: async (action: string, details: any = {}) => {
+    try {
+      await supabase.rpc('log_suspicious_activity', {
+        _action: action,
+        _details: details
+      });
+    } catch (error) {
+      console.error('Failed to log security event:', error);
+    }
+  },
+
+  // Validate file uploads
+  validateFileUpload: (file: File, allowedTypes: string[], maxSizeMB: number = 5): { valid: boolean; error?: string } => {
+    // Check file type
+    if (!allowedTypes.includes(file.type)) {
+      return { valid: false, error: 'File type not allowed' };
+    }
+
+    // Check file size
+    if (file.size > maxSizeMB * 1024 * 1024) {
+      return { valid: false, error: `File size must be less than ${maxSizeMB}MB` };
+    }
+
+    // Check for suspicious file names
+    const suspiciousPatterns = [
+      /\.exe$/i,
+      /\.bat$/i,
+      /\.cmd$/i,
+      /\.scr$/i,
+      /\.php$/i,
+      /\.jsp$/i,
+      /\.asp$/i
+    ];
+
+    if (suspiciousPatterns.some(pattern => pattern.test(file.name))) {
+      return { valid: false, error: 'File type not allowed for security reasons' };
+    }
+
+    return { valid: true };
+  }
+};
+
+// Import supabase client for security functions
+import { supabase } from '@/integrations/supabase/client';
