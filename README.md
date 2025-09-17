@@ -1,73 +1,155 @@
-# Welcome to your Lovable project
+# StudySync - Tutor Booking Platform
 
-## Project info
+A modern React-based platform connecting learners with tutors for personalized education sessions.
+
+## 🌟 Features
+
+- **Real-time tutor discovery** with proximity-based search
+- **Live booking system** with instant notifications  
+- **Video meeting integration** for online sessions
+- **Geolocation support** for finding nearby tutors
+- **Admin dashboard** for platform management
+- **Mobile-responsive PWA** with offline support
+
+## 🚀 Live Demo
 
 **URL**: https://lovable.dev/projects/e0da842e-0970-4b5c-8c27-0c559f93a2fb
 
-## How can I edit this code?
+## 📋 Prerequisites
 
-There are several ways of editing your application.
+- Node.js 18+ and npm
+- Supabase account for backend services
 
-**Use Lovable**
+## 🛠️ Local Development Setup
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/e0da842e-0970-4b5c-8c27-0c559f93a2fb) and start prompting.
+### 1. Clone and Install
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+```bash
+# Clone the repository
 git clone <YOUR_GIT_URL>
+cd studysync-platform
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+# Install dependencies
+npm install
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Start development server
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### 2. Environment Setup
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+Create a `.env` file in the project root:
 
-**Use GitHub Codespaces**
+```env
+VITE_SUPABASE_PROJECT_ID="uynoykcratwbcdzmsxfw"
+VITE_SUPABASE_PUBLISHABLE_KEY="your-publishable-key"
+VITE_SUPABASE_URL="https://uynoykcratwbcdzmsxfw.supabase.co"
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### 3. Database Setup
 
-## What technologies are used for this project?
+The project uses Supabase with the following key tables:
+- `profiles` - User profiles and preferences
+- `tutor_subjects` - Tutor expertise and pricing
+- `bookings` - Session bookings and status
+- `conversations` - In-app messaging
+- `payments` - Transaction records
 
-This project is built with:
+## 🏗️ Architecture
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Frontend Stack
+- **React 18** with TypeScript
+- **Vite** for build tooling
+- **Tailwind CSS** for styling
+- **shadcn/ui** for component library
+- **React Query** for data fetching
+- **React Router** for navigation
 
-## How can I deploy this project?
+### Backend Integration
+- **Supabase** for database and authentication
+- **Real-time subscriptions** for live updates
+- **Row Level Security (RLS)** for data protection
+- **Edge Functions** for serverless logic
 
-Simply open [Lovable](https://lovable.dev/projects/e0da842e-0970-4b5c-8c27-0c559f93a2fb) and click on Share -> Publish.
+### Key Features
+- **Geolocation API** for proximity search
+- **WebRTC** for video meetings
+- **PWA capabilities** with offline support
+- **Real-time presence tracking**
 
-## Can I connect a custom domain to my Lovable project?
+## 📱 User Roles
 
-Yes, you can!
+### Learners
+- Browse and search for tutors by subject and location
+- Book tutoring sessions with real-time availability
+- Join video meetings and chat with tutors
+- Rate and review completed sessions
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Tutors  
+- Manage profile, subjects, and availability
+- Accept/decline booking requests
+- Conduct video sessions with learners
+- Track earnings and session history
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Administrators
+- Monitor platform activity and users
+- Manage bookings and resolve disputes
+- Access analytics and reports
+- Configure platform settings
+
+## 🔧 Development Workflow
+
+### Using Lovable (Recommended)
+1. Visit the [Lovable Project](https://lovable.dev/projects/e0da842e-0970-4b5c-8c27-0c559f93a2fb)
+2. Make changes using AI-powered development
+3. Changes sync automatically to GitHub
+
+### Using Local IDE
+1. Clone repository and install dependencies
+2. Make changes locally
+3. Push to GitHub - changes sync to Lovable automatically
+
+### Using GitHub Codespaces
+1. Open repository on GitHub
+2. Click "Code" → "Codespaces" → "New codespace"
+3. Develop in browser-based VS Code environment
+
+## 🚀 Deployment
+
+### Quick Deploy with Lovable
+1. Open [Lovable Project](https://lovable.dev/projects/e0da842e-0970-4b5c-8c27-0c559f93a2fb)
+2. Click Share → Publish
+3. Your app is live instantly!
+
+### Custom Domain Setup
+1. Navigate to Project > Settings > Domains in Lovable
+2. Click Connect Domain
+3. Follow the [custom domain guide](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+
+### Manual Deployment
+The project can be deployed to any static hosting service:
+
+```bash
+# Build for production
+npm run build
+
+# Deploy the dist/ folder to your hosting provider
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit changes (`git commit -m 'Add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is open source and available under the [MIT License](LICENSE).
+
+## 🆘 Support
+
+- 📖 [Lovable Documentation](https://docs.lovable.dev/)
+- 💬 [Discord Community](https://discord.com/channels/1119885301872070706/1280461670979993613)
+- 🎥 [Video Tutorials](https://www.youtube.com/watch?v=9KHLTZaJcR8&list=PLbVHz4urQBZkJiAWdG8HWoJTdgEysigIO)
