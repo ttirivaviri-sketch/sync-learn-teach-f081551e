@@ -48,21 +48,18 @@ export const useTutorData = (userLocation?: { latitude: number; longitude: numbe
 
       setLoading(true);
       
-      // Use secure tutor search function instead of direct table access
-      const { data: tutorsData, error: tutorsError } = await supabase
-        .rpc('search_tutors', {
-          _search_query: '',
-          _subject_filter: '',
-          _user_lat: userLocation?.latitude || null,
-          _user_lng: userLocation?.longitude || null,
-          _max_distance_km: 50,
-          _limit: 50
-        });
+      // Fetch tutor profiles and subjects directly
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_type', 'tutor');
 
-      if (tutorsError) {
-        console.error('Error fetching tutors:', tutorsError);
-        throw tutorsError;
+      if (profilesError) {
+        console.error('Error fetching tutors:', profilesError);
+        throw profilesError;
       }
+
+      const tutorsData = profilesData || [];
 
       // For authenticated users, get subject pricing data
       const { data: { session } } = await supabase.auth.getSession();
@@ -79,26 +76,31 @@ export const useTutorData = (userLocation?: { latitude: number; longitude: numbe
       }
 
       // Transform the data to match expected format
-      const tutorsWithSubjects = tutorsData?.map(tutor => ({
-        id: tutor.id,
-        full_name: tutor.full_name,
-        email: '', // Not exposed in public view
-        online_status: tutor.online_status,
-        last_seen: tutor.last_seen,
-        bio: tutor.bio,
-        avatar_url: null, // Will be loaded separately if needed
-        location_lat: null, // Not exposed for privacy
-        location_lng: null, // Not exposed for privacy
-        subjects: session?.user 
+      const tutorsWithSubjects = tutorsData.map(tutor => {
+        const tutorSubjects = session?.user 
           ? subjectsData.filter(subject => subject.user_id === tutor.id)
-          : (tutor.subjects || []).map((s: any) => ({
-              ...s,
-              hourly_rate: null // Hide pricing from unauthenticated users
-            })),
-        rating: tutor.average_rating || 4.8,
-        distance: tutor.distance_km ? `${tutor.distance_km.toFixed(1)}km` : 'Unknown',
-        distanceValue: tutor.distance_km
-      })) || [];
+          : [];
+
+        const distance = userLocation && tutor.location_lat && tutor.location_lng
+          ? calculateRealDistance(tutor.location_lat, tutor.location_lng, userLocation)
+          : null;
+
+        return {
+          id: tutor.id,
+          full_name: tutor.full_name || 'Anonymous',
+          email: session?.user ? tutor.email : '',
+          online_status: tutor.online_status || false,
+          last_seen: tutor.last_seen || new Date().toISOString(),
+          bio: tutor.bio,
+          avatar_url: tutor.avatar_url,
+          location_lat: tutor.location_lat,
+          location_lng: tutor.location_lng,
+          subjects: tutorSubjects,
+          rating: 4.8,
+          distance: distance ? `${distance.toFixed(1)}km` : 'Unknown',
+          distanceValue: distance
+        };
+      });
 
       // Sort by distance if user location is available
       if (userLocation) {

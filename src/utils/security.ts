@@ -56,7 +56,7 @@ export const security = {
   },
 
   // Validate session and permissions
-  validateSession: async (requiredRole?: string) => {
+  validateSession: async (requiredRole?: 'admin' | 'tutor' | 'learner') => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession();
       
@@ -68,7 +68,7 @@ export const security = {
         const { data: hasRole, error: roleError } = await supabase
           .rpc('has_role', { 
             _user_id: session.user.id, 
-            _role: requiredRole 
+            _role: requiredRole as any
           });
         
         if (roleError || !hasRole) {
@@ -85,10 +85,16 @@ export const security = {
   // Log security events
   logSecurityEvent: async (action: string, details: any = {}) => {
     try {
-      await supabase.rpc('log_suspicious_activity', {
-        _action: action,
-        _details: details
-      });
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        await supabase.rpc('log_security_event', {
+          _user_id: session.user.id,
+          _action: action,
+          _details: details,
+          _ip_address: null,
+          _user_agent: navigator.userAgent
+        });
+      }
     } catch (error) {
       console.error('Failed to log security event:', error);
     }
