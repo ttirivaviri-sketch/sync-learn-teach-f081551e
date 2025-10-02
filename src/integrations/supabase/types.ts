@@ -488,6 +488,36 @@ export type Database = {
           },
         ]
       }
+      security_audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           assignee_id: string | null
@@ -709,6 +739,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_security_event: {
+        Args: {
+          _action: string
+          _details?: Json
+          _ip_address?: unknown
+          _user_agent?: string
+          _user_id: string
+        }
+        Returns: string
       }
     }
     Enums: {
