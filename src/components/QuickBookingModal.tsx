@@ -50,6 +50,15 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       return;
     }
 
+    if (!tutor.subjectId) {
+      toast({
+        title: "Invalid Tutor Data",
+        description: "This tutor's subject information is missing. Please try another tutor.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     
     try {
