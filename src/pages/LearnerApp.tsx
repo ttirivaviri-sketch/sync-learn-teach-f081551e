@@ -527,23 +527,21 @@ const LearnerApp = () => {
                         
                         <div className="grid grid-cols-3 gap-2 mt-3">
                           <Button 
-                            disabled={!isUserOnline(tutor.id)}
-                            variant={isUserOnline(tutor.id) ? "default" : "outline"}
+                            variant="outline"
                             className="flex-1"
                             onClick={() => handleBookInPerson(tutor)}
                           >
-                            {isUserOnline(tutor.id) ? "Book In-Person" : "Offline"}
+                            <MapPin className="h-3 w-3 mr-1" />
+                            In-Person
                           </Button>
-                          {isUserOnline(tutor.id) && (
-                            <Button 
-                              variant="outline"
-                              className="flex-1"
-                              onClick={() => handleBookOnline(tutor)}
-                            >
-                              <Video className="h-4 w-4 mr-1" />
-                              Book Online
-                            </Button>
-                          )}
+                          <Button 
+                            variant="default"
+                            className="flex-1"
+                            onClick={() => handleBookOnline(tutor)}
+                          >
+                            <Video className="h-4 w-4 mr-1" />
+                            Book Online
+                          </Button>
                           <Button 
                             variant="secondary"
                             className="flex-1"
