@@ -13,11 +13,12 @@ interface QuickBookingModalProps {
   isOpen: boolean;
   onClose: () => void;
   tutor: {
-    id: number;
+    id: string;
     name: string;
     subject: string;
     level: string;
-    price: string;
+    price: number;
+    subjectId: string;
     avatar?: string;
   };
   onSubmit: (bookingData: {
@@ -53,14 +54,13 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
     
     try {
       const scheduledAt = new Date(`${selectedDate}T${selectedTime}`);
-      const priceValue = parseInt(tutor.price.replace(/[^\d]/g, ''));
       
       await onSubmit({
-        tutor_id: tutor.id.toString(),
-        tutor_subject_id: 'temp_subject_id', // In real app, this would be fetched
+        tutor_id: tutor.id,
+        tutor_subject_id: tutor.subjectId,
         scheduled_at: scheduledAt.toISOString(),
         duration_minutes: parseInt(duration),
-        price: priceValue,
+        price: tutor.price,
       });
 
       toast({
@@ -131,7 +131,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
               </div>
               <div className="flex items-center gap-1 text-primary font-semibold">
                 <DollarSign className="h-4 w-4" />
-                {tutor.price}/hour
+                R{tutor.price}/hour
               </div>
             </CardContent>
           </Card>

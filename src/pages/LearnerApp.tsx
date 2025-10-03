@@ -209,7 +209,7 @@ const LearnerApp = () => {
     }
   };
 
-  const handleBookInPerson = (tutor: any) => {
+  const handleBookInPerson = (tutor: TutorProfile) => {
     if (!isOnline) {
       toast({
         title: "No connection",
@@ -229,12 +229,32 @@ const LearnerApp = () => {
       navigate("/learner/auth");
       return;
     }
+
+    if (!tutor.subjects || tutor.subjects.length === 0) {
+      toast({
+        title: "No subjects available",
+        description: "This tutor hasn't set up their subjects yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     analytics.track('booking_initiated', { type: 'in-person', tutorId: tutor.id });
-    setSelectedTutor(tutor);
+    
+    const firstSubject = tutor.subjects[0];
+    setSelectedTutor({
+      id: tutor.id,
+      name: tutor.full_name || 'Tutor',
+      subject: firstSubject.subject,
+      level: firstSubject.level,
+      price: firstSubject.hourly_rate,
+      subjectId: firstSubject.id,
+      avatar: tutor.avatar_url
+    });
     setShowBookingModal(true);
   };
 
-  const handleBookOnline = (tutor: any) => {
+  const handleBookOnline = (tutor: TutorProfile) => {
     // Check if user is authenticated before booking
     if (!session?.user) {
       toast({
@@ -245,8 +265,28 @@ const LearnerApp = () => {
       navigate("/learner/auth");
       return;
     }
+
+    if (!tutor.subjects || tutor.subjects.length === 0) {
+      toast({
+        title: "No subjects available",
+        description: "This tutor hasn't set up their subjects yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     analytics.track('booking_initiated', { type: 'online', tutorId: tutor.id });
-    setSelectedTutor(tutor);
+    
+    const firstSubject = tutor.subjects[0];
+    setSelectedTutor({
+      id: tutor.id,
+      name: tutor.full_name || 'Tutor',
+      subject: firstSubject.subject,
+      level: firstSubject.level,
+      price: firstSubject.hourly_rate,
+      subjectId: firstSubject.id,
+      avatar: tutor.avatar_url
+    });
     setShowBookingModal(true);
   };
 
