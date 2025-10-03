@@ -45,87 +45,159 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
   // Initialize Jitsi Meet
   useEffect(() => {
+    console.log('🎥 VideoMeeting: Initializing video session', {
+      sessionType,
+      partnerName,
+      subject,
+      bookingId: booking?.id
+    });
+
     const loadJitsi = () => {
+      console.log('📥 Loading Jitsi Meet script...');
       const script = document.createElement('script');
       script.src = 'https://meet.jit.si/external_api.js';
       script.async = true;
-      script.onload = () => initJitsi();
+      script.onload = () => {
+        console.log('✅ Jitsi Meet script loaded successfully');
+        initJitsi();
+      };
+      script.onerror = (error) => {
+        console.error('❌ Failed to load Jitsi Meet script:', error);
+        setIsLoading(false);
+        toast({
+          title: "Connection Failed",
+          description: "Unable to load video service. Please check your internet connection.",
+          variant: "destructive",
+        });
+      };
       document.body.appendChild(script);
     };
 
     const initJitsi = () => {
-      if (!jitsiContainer.current || jitsiApi.current) return;
+      if (!jitsiContainer.current) {
+        console.error('❌ Jitsi container not found');
+        return;
+      }
+      
+      if (jitsiApi.current) {
+        console.log('⚠️ Jitsi API already initialized');
+        return;
+      }
 
       const roomName = `StudySync-${booking?.id || 'demo'}-${Date.now()}`;
       const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
-      const options = {
-        roomName,
-        width: '100%',
-        height: '100%',
-        parentNode: jitsiContainer.current,
-        configOverwrite: {
-          startWithAudioMuted: false,
-          startWithVideoMuted: false,
-          enableWelcomePage: false,
-          prejoinPageEnabled: false,
-          disableDeepLinking: true,
-        },
-        interfaceConfigOverwrite: {
-          TOOLBAR_BUTTONS: [
-            'microphone',
-            'camera',
-            'closedcaptions',
-            'desktop',
-            'fullscreen',
-            'fodeviceselection',
-            'hangup',
-            'chat',
-            'recording',
-            'livestreaming',
-            'etherpad',
-            'sharedvideo',
-            'settings',
-            'raisehand',
-            'videoquality',
-            'filmstrip',
-            'stats',
-            'shortcuts',
-            'tileview',
-            'download',
-            'help',
-            'mute-everyone',
-          ],
-          SHOW_JITSI_WATERMARK: false,
-          SHOW_WATERMARK_FOR_GUESTS: false,
-        },
-        userInfo: {
-          displayName,
-        },
-      };
+      console.log('🚀 Initializing Jitsi Meet with:', { roomName, displayName });
 
-      jitsiApi.current = new window.JitsiMeetExternalAPI('meet.jit.si', options);
+      try {
+        const options = {
+          roomName,
+          width: '100%',
+          height: '100%',
+          parentNode: jitsiContainer.current,
+          configOverwrite: {
+            startWithAudioMuted: false,
+            startWithVideoMuted: false,
+            enableWelcomePage: false,
+            prejoinPageEnabled: false,
+            disableDeepLinking: true,
+          },
+          interfaceConfigOverwrite: {
+            TOOLBAR_BUTTONS: [
+              'microphone',
+              'camera',
+              'closedcaptions',
+              'desktop',
+              'fullscreen',
+              'fodeviceselection',
+              'hangup',
+              'chat',
+              'recording',
+              'livestreaming',
+              'etherpad',
+              'sharedvideo',
+              'settings',
+              'raisehand',
+              'videoquality',
+              'filmstrip',
+              'stats',
+              'shortcuts',
+              'tileview',
+              'download',
+              'help',
+              'mute-everyone',
+            ],
+            SHOW_JITSI_WATERMARK: false,
+            SHOW_WATERMARK_FOR_GUESTS: false,
+          },
+          userInfo: {
+            displayName,
+          },
+        };
 
-      jitsiApi.current.addEventListener('videoConferenceJoined', () => {
+        jitsiApi.current = new window.JitsiMeetExternalAPI('meet.jit.si', options);
+        console.log('✅ Jitsi API instance created');
+
+        jitsiApi.current.addEventListener('videoConferenceJoined', () => {
+          console.log('🎉 Successfully joined video conference');
+          setIsLoading(false);
+          toast({
+            title: "Connected",
+            description: "You've joined the video session",
+          });
+        });
+
+        jitsiApi.current.addEventListener('videoConferenceLeft', () => {
+          console.log('👋 Left video conference');
+        });
+
+        jitsiApi.current.addEventListener('readyToClose', () => {
+          console.log('🔚 Video conference ready to close');
+          handleEndCall();
+        });
+
+        jitsiApi.current.addEventListener('errorOccurred', (error: any) => {
+          console.error('❌ Jitsi error occurred:', error);
+          toast({
+            title: "Connection Error",
+            description: error.message || "An error occurred during the video session",
+            variant: "destructive",
+          });
+        });
+
+        // Set timeout to detect connection issues
+        const connectionTimeout = setTimeout(() => {
+          if (isLoading) {
+            console.error('⏱️ Connection timeout - taking too long to connect');
+            toast({
+              title: "Connection Timeout",
+              description: "Taking longer than expected to connect. Please check your internet connection.",
+              variant: "destructive",
+            });
+          }
+        }, 30000); // 30 seconds
+
+        return () => clearTimeout(connectionTimeout);
+      } catch (error) {
+        console.error('❌ Failed to initialize Jitsi:', error);
         setIsLoading(false);
         toast({
-          title: "Connected",
-          description: "You've joined the video session",
+          title: "Initialization Failed",
+          description: "Failed to start video session. Please try again.",
+          variant: "destructive",
         });
-      });
-
-      jitsiApi.current.addEventListener('readyToClose', () => {
-        handleEndCall();
-      });
+      }
     };
 
     if (!window.JitsiMeetExternalAPI) {
       loadJitsi();
     } else {
+      console.log('ℹ️ Jitsi Meet API already available');
       initJitsi();
     }
 
     return () => {
+      console.log('🧹 Cleaning up video session');
       if (jitsiApi.current) {
         jitsiApi.current.dispose();
         jitsiApi.current = null;
