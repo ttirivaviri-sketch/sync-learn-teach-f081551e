@@ -84,10 +84,14 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         return;
       }
 
-      const roomName = `StudySync-${booking?.id || 'demo'}-${Date.now()}`;
+      const roomName = `StudySync-${booking?.id || 'demo-session'}`;
       const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
-      console.log('🚀 Initializing Jitsi Meet with:', { roomName, displayName });
+      if (!booking?.id) {
+        console.warn('⚠️ No booking ID found - using demo room');
+      }
+
+      console.log('🚀 Initializing Jitsi Meet with:', { roomName, displayName, bookingId: booking?.id });
 
       try {
         const options = {
