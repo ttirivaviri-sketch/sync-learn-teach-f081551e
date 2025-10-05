@@ -103,34 +103,10 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
             startWithAudioMuted: false,
             startWithVideoMuted: false,
             enableWelcomePage: false,
-            prejoinPageEnabled: false,
+            prejoinPageEnabled: true, // Enable prejoin page for proper permission handling
             disableDeepLinking: true,
           },
           interfaceConfigOverwrite: {
-            TOOLBAR_BUTTONS: [
-              'microphone',
-              'camera',
-              'closedcaptions',
-              'desktop',
-              'fullscreen',
-              'fodeviceselection',
-              'hangup',
-              'chat',
-              'recording',
-              'livestreaming',
-              'etherpad',
-              'sharedvideo',
-              'settings',
-              'raisehand',
-              'videoquality',
-              'filmstrip',
-              'stats',
-              'shortcuts',
-              'tileview',
-              'download',
-              'help',
-              'mute-everyone',
-            ],
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
           },
@@ -148,6 +124,14 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           toast({
             title: "Connected",
             description: "You've joined the video session",
+          });
+        });
+
+        jitsiApi.current.addEventListener('participantJoined', (participant: any) => {
+          console.log('👤 Participant joined:', participant);
+          toast({
+            title: "Participant Joined",
+            description: `${participant.displayName || 'Someone'} has joined the session`,
           });
         });
 
