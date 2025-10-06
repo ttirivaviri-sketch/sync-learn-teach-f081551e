@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Search, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle } from "lucide-react";
+import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +31,7 @@ import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
 const LearnerApp = () => {
-  const [activeTab, setActiveTab] = useState("search");
+  const [activeTab, setActiveTab] = useState("home");
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
   const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
@@ -407,17 +407,11 @@ const LearnerApp = () => {
       </header>
 
       {/* Main Content */}
-      <div className="p-4">
+      <div className="pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="search">Search</TabsTrigger>
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="library">Library</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-          </TabsList>
 
-          <TabsContent value="search" className="space-y-4">
+          {/* Home Tab - Search Content */}
+          <TabsContent value="home" className="space-y-4 p-4 mt-0">
             <AdvancedBooking />
 
             {/* Quick Filters */}
@@ -560,46 +554,8 @@ const LearnerApp = () => {
             </div>
           </TabsContent>
 
-          <TabsContent value="bookings" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Your Bookings</h3>
-              <Badge variant="outline">{bookings.length} total</Badge>
-            </div>
-            
-            {bookingsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-muted-foreground">Loading bookings...</p>
-              </div>
-            ) : bookings.length === 0 ? (
-              <EmptyState
-                title="No bookings yet"
-                description="Start by searching for tutors and booking your first session!"
-                action={{
-                  label: "Browse Tutors",
-                  onClick: () => setActiveTab("search")
-                }}
-              />
-            ) : (
-              <div className="space-y-3">
-                {bookings.map((booking) => (
-                  <LiveBookingCard
-                    key={booking.id}
-                    booking={booking}
-                    userType="learner"
-                    onJoinSession={handleJoinVideoSession}
-                    onStartChat={(booking) => {
-                      setChatWithUserId(booking.tutor_id);
-                      setChatWithUserName("Tutor");
-                      setShowChat(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="library" className="space-y-4">
+          {/* Library Tab */}
+          <TabsContent value="library" className="space-y-4 p-4 mt-0">
             <div className="flex items-center gap-2 mb-4">
               <ShoppingBag className="h-5 w-5 text-primary" />
               <h3 className="font-semibold">StudySync Library</h3>
@@ -607,36 +563,78 @@ const LearnerApp = () => {
             <StudySyncLibrary />
           </TabsContent>
 
-          <TabsContent value="history" className="space-y-4">
-            <h3 className="font-semibold">Recent Sessions</h3>
-            
-            {recentSessions.map((session) => (
-              <Card key={session.id}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h4 className="font-medium">{session.tutor}</h4>
-                      <p className="text-sm text-muted-foreground">{session.subject}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{session.date} • {session.duration}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold">{session.cost}</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mt-2"
-                        onClick={() => handleRateAndReview(session)}
-                      >
-                        Rate & Review
-                      </Button>
-                    </div>
+          {/* Activity Tab - Bookings and History Combined */}
+          <TabsContent value="activity" className="space-y-4 p-4 mt-0">
+            {/* Upcoming Bookings Section */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold">Upcoming Sessions</h3>
+                <Badge variant="outline">{bookings.length} active</Badge>
+              </div>
+              
+              {bookingsLoading ? (
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <p className="text-muted-foreground">Loading bookings...</p>
+                </div>
+              ) : bookings.length === 0 ? (
+                <Card className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-sm">No upcoming sessions</p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {bookings.map((booking) => (
+                    <LiveBookingCard
+                      key={booking.id}
+                      booking={booking}
+                      userType="learner"
+                      onJoinSession={handleJoinVideoSession}
+                      onStartChat={(booking) => {
+                        setChatWithUserId(booking.tutor_id);
+                        setChatWithUserName("Tutor");
+                        setShowChat(true);
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Past Sessions Section */}
+            <div className="mt-6">
+              <h3 className="font-semibold mb-3">Past Sessions</h3>
+              
+              {recentSessions.map((session) => (
+                <Card key={session.id} className="mb-3">
+                  <CardContent className="p-4">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h4 className="font-medium">{session.tutor}</h4>
+                        <p className="text-sm text-muted-foreground">{session.subject}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{session.date} • {session.duration}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold">{session.cost}</p>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="mt-2"
+                          onClick={() => handleRateAndReview(session)}
+                        >
+                          Rate & Review
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
 
-          <TabsContent value="profile" className="space-y-4">
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-4 p-4 mt-0">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -703,7 +701,7 @@ const LearnerApp = () => {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => setActiveTab("history")}
+                    onClick={() => setActiveTab("activity")}
                   >
                     <Clock className="h-4 w-4 mr-2" />
                     Booking History
@@ -729,14 +727,14 @@ const LearnerApp = () => {
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => setActiveTab("search")}
+                  onClick={() => setActiveTab("home")}
                 >
                   Find New Tutor
                 </Button>
                 <Button 
                   variant="outline" 
                   className="w-full justify-start"
-                  onClick={() => setActiveTab("store")}
+                  onClick={() => setActiveTab("library")}
                 >
                   Browse Study Materials
                 </Button>
@@ -759,6 +757,44 @@ const LearnerApp = () => {
             </Card>
           </TabsContent>
         </Tabs>
+
+        {/* Bottom Navigation */}
+        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg">
+          <div className="grid grid-cols-4 gap-1 p-2">
+            <Button
+              variant={activeTab === "home" ? "default" : "ghost"}
+              className="flex flex-col h-auto py-2 px-1"
+              onClick={() => setActiveTab("home")}
+            >
+              <Home className="h-5 w-5 mb-1" />
+              <span className="text-xs">Home</span>
+            </Button>
+            <Button
+              variant={activeTab === "library" ? "default" : "ghost"}
+              className="flex flex-col h-auto py-2 px-1"
+              onClick={() => setActiveTab("library")}
+            >
+              <BookOpen className="h-5 w-5 mb-1" />
+              <span className="text-xs">Library</span>
+            </Button>
+            <Button
+              variant={activeTab === "activity" ? "default" : "ghost"}
+              className="flex flex-col h-auto py-2 px-1"
+              onClick={() => setActiveTab("activity")}
+            >
+              <Activity className="h-5 w-5 mb-1" />
+              <span className="text-xs">Activity</span>
+            </Button>
+            <Button
+              variant={activeTab === "profile" ? "default" : "ghost"}
+              className="flex flex-col h-auto py-2 px-1"
+              onClick={() => setActiveTab("profile")}
+            >
+              <User className="h-5 w-5 mb-1" />
+              <span className="text-xs">Profile</span>
+            </Button>
+          </div>
+        </div>
       </div>
 
       {/* Chat Interface */}
