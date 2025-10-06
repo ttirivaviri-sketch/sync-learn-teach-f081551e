@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp } from "lucide-react";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp, Home, BookOpen, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -22,9 +22,10 @@ import SessionHistory from "@/components/SessionHistory";
 import { useTutorData } from '@/hooks/useTutorData';
 import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
+import StudySyncLibrary from "@/components/StudySyncLibrary";
 
 const TutorApp = () => {
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("home");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
   const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
@@ -348,18 +349,28 @@ const TutorApp = () => {
       )}
 
       {/* Main Content */}
-      <div className="p-4">
+      <div className="p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-            <TabsTrigger value="requests">Requests</TabsTrigger>
-            <TabsTrigger value="schedule">Schedule</TabsTrigger>
-            <TabsTrigger value="earnings">Earnings</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="history">History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="home" className="flex flex-col gap-1">
+              <Home className="h-4 w-4" />
+              <span className="text-xs">Home</span>
+            </TabsTrigger>
+            <TabsTrigger value="library" className="flex flex-col gap-1">
+              <BookOpen className="h-4 w-4" />
+              <span className="text-xs">Library</span>
+            </TabsTrigger>
+            <TabsTrigger value="activity" className="flex flex-col gap-1">
+              <Activity className="h-4 w-4" />
+              <span className="text-xs">Activity</span>
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex flex-col gap-1">
+              <User className="h-4 w-4" />
+              <span className="text-xs">Profile</span>
+            </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-4">
+          <TabsContent value="home" className="space-y-4">
             {/* Today's Stats */}
             <div className="grid grid-cols-2 gap-4">
               <Card>
@@ -443,48 +454,55 @@ const TutorApp = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="requests" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Booking Requests</h3>
-              <Badge variant="secondary">{getIncomingRequests().length} new</Badge>
-            </div>
-            
-            {bookingsLoading ? (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                <p className="text-muted-foreground">Loading requests...</p>
-              </div>
-            ) : getIncomingRequests().length === 0 ? (
-              <Card>
-                <CardContent className="p-8 text-center">
-                  <h4 className="font-medium mb-2">No pending requests</h4>
-                  <p className="text-sm text-muted-foreground">
-                    New booking requests will appear here in real-time
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-3">
-                {getIncomingRequests().map((booking) => (
-                  <LiveBookingCard
-                    key={booking.id}
-                    booking={booking}
-                    userType="tutor"
-                    onAccept={handleAcceptRequest}
-                    onDecline={handleDeclineRequest}
-                    onJoinSession={handleJoinVideoSession}
-                    onStartChat={(booking) => {
-                      setChatWithUserId(booking.learner_id);
-                      setChatWithUserName(booking.learner_profile?.full_name || "Student");
-                      setShowChat(true);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
+          <TabsContent value="library" className="space-y-4">
+            <StudySyncLibrary />
           </TabsContent>
 
-          <TabsContent value="schedule" className="space-y-4">
+          <TabsContent value="activity" className="space-y-4">
+            {/* Booking Requests Section */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Booking Requests</CardTitle>
+                  <Badge variant="secondary">{getIncomingRequests().length} new</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {bookingsLoading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                    <p className="text-muted-foreground">Loading requests...</p>
+                  </div>
+                ) : getIncomingRequests().length === 0 ? (
+                  <div className="p-8 text-center">
+                    <h4 className="font-medium mb-2">No pending requests</h4>
+                    <p className="text-sm text-muted-foreground">
+                      New booking requests will appear here in real-time
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {getIncomingRequests().map((booking) => (
+                      <LiveBookingCard
+                        key={booking.id}
+                        booking={booking}
+                        userType="tutor"
+                        onAccept={handleAcceptRequest}
+                        onDecline={handleDeclineRequest}
+                        onJoinSession={handleJoinVideoSession}
+                        onStartChat={(booking) => {
+                          setChatWithUserId(booking.learner_id);
+                          setChatWithUserName(booking.learner_profile?.full_name || "Student");
+                          setShowChat(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Schedule Section */}
             <Card>
               <CardHeader>
                 <CardTitle>This Week</CardTitle>
@@ -518,9 +536,20 @@ const TutorApp = () => {
                 </Button>
               </CardContent>
             </Card>
+
+            {/* Session History Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Session History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SessionHistory userType="tutor" userId={session?.user?.id || ""} />
+              </CardContent>
+            </Card>
           </TabsContent>
 
-          <TabsContent value="earnings" className="space-y-4">
+          <TabsContent value="profile" className="space-y-4">
+            {/* Earnings Section */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
@@ -611,17 +640,11 @@ const TutorApp = () => {
                 Download Tax Report
               </Button>
             </div>
-          </TabsContent>
 
-          <TabsContent value="profile" className="space-y-4">
             <TutorSubjectManager 
               subjects={currentTutor?.subjects || []}
             />
             <TutorProfile user={session?.user} />
-          </TabsContent>
-
-          <TabsContent value="history" className="space-y-4">
-            <SessionHistory userType="tutor" userId={session?.user?.id || ""} />
           </TabsContent>
         </Tabs>
       </div>
