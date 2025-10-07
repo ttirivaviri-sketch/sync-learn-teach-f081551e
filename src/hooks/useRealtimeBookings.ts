@@ -236,10 +236,27 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   };
 
   const getUpcomingSessions = () => {
-    return bookings.filter(booking => 
-      booking.status === 'confirmed' && 
-      new Date(booking.scheduled_at) > new Date()
-    );
+    const now = new Date();
+    const upcoming = bookings.filter(booking => {
+      const isConfirmed = booking.status === 'confirmed';
+      const sessionTime = new Date(booking.scheduled_at);
+      const isUpcoming = sessionTime > now;
+      
+      console.log('📅 Session check:', {
+        id: booking.id,
+        scheduled_at: booking.scheduled_at,
+        sessionTime: sessionTime.toISOString(),
+        now: now.toISOString(),
+        isConfirmed,
+        isUpcoming,
+        willShow: isConfirmed && isUpcoming
+      });
+      
+      return isConfirmed && isUpcoming;
+    });
+    
+    console.log('📊 Total bookings:', bookings.length, 'Upcoming sessions:', upcoming.length);
+    return upcoming;
   };
 
   return {
