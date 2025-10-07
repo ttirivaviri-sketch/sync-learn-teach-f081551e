@@ -292,10 +292,26 @@ const LearnerApp = () => {
 
   const handleSessionAction = (action: string) => {
     if (action === "join") {
+      // Get the actual upcoming booking from real-time data
+      const upcomingSessions = getUpcomingSessions();
+      const nextSession = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
+      
+      if (!nextSession) {
+        console.error('❌ No upcoming session found');
+        toast({
+          title: "No Session Found",
+          description: "Unable to find an upcoming session to join.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('🎥 Learner joining session with booking ID:', nextSession.id);
+      
       setVideoMeetingData({
-        partnerName: upcomingSession?.tutor || "Tutor",
-        subject: upcomingSession?.subject || "Study Session",
-        booking: null
+        partnerName: nextSession.tutor_profile?.full_name || "Tutor",
+        subject: nextSession.tutor_subjects?.subject || "Study Session",
+        booking: nextSession
       });
       setShowVideoMeeting(true);
       return;
@@ -311,8 +327,20 @@ const LearnerApp = () => {
   };
 
   const handleJoinVideoSession = (booking: any) => {
+    if (!booking?.id) {
+      console.error('❌ No booking ID provided to handleJoinVideoSession');
+      toast({
+        title: "Invalid Session",
+        description: "Unable to join session. Missing booking information.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    console.log('🎥 Learner joining video session with booking ID:', booking.id);
+    
     setVideoMeetingData({
-      partnerName: "Tutor", // In real app, get from booking data
+      partnerName: booking.tutor_profile?.full_name || "Tutor",
       subject: booking.tutor_subjects?.subject || "Study Session",
       booking: booking
     });

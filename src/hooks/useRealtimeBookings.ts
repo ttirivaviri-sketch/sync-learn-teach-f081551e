@@ -18,6 +18,10 @@ export interface BookingRequest {
     full_name: string;
     email: string;
   };
+  tutor_profile?: {
+    full_name: string;
+    email: string;
+  };
   tutor_subjects?: {
     subject: string;
     level: string;
@@ -47,6 +51,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
           .select(`
             *,
             learner_profile:profiles!bookings_learner_id_fkey(full_name, email),
+            tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
             tutor_subjects(subject, level)
           `);
 
@@ -102,6 +107,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
             .select(`
               *,
               learner_profile:profiles!bookings_learner_id_fkey(full_name, email),
+              tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
               tutor_subjects(subject, level)
             `)
             .eq('id', payload.new.id)
@@ -136,6 +142,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
             .select(`
               *,
               learner_profile:profiles!bookings_learner_id_fkey(full_name, email),
+              tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
               tutor_subjects(subject, level)
             `)
             .eq('id', payload.new.id)
