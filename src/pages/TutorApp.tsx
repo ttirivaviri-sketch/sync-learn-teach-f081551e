@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp, Home, BookOpen, Activity } from "lucide-react";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp, Home, Activity } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -22,7 +22,7 @@ import SessionHistory from "@/components/SessionHistory";
 import { useTutorData } from '@/hooks/useTutorData';
 import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
-import StudySyncLibrary from "@/components/StudySyncLibrary";
+
 
 const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -351,14 +351,10 @@ const TutorApp = () => {
       {/* Main Content */}
       <div className="p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="home" className="flex flex-col gap-1">
               <Home className="h-4 w-4" />
               <span className="text-xs">Home</span>
-            </TabsTrigger>
-            <TabsTrigger value="library" className="flex flex-col gap-1">
-              <BookOpen className="h-4 w-4" />
-              <span className="text-xs">Library</span>
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex flex-col gap-1">
               <Activity className="h-4 w-4" />
@@ -454,9 +450,6 @@ const TutorApp = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="library" className="space-y-4">
-            <StudySyncLibrary />
-          </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
             {/* Booking Requests Section */}
