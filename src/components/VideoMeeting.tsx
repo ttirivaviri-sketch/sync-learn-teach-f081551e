@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from "react";
-import { Phone } from "lucide-react";
+import { Phone, Mic, MicOff, Video, VideoOff, Users, Signal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 declare global {
   interface Window {
@@ -25,6 +26,11 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const [sessionStartTime] = useState(new Date());
   const [sessionDuration, setSessionDuration] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
+  const [participantCount, setParticipantCount] = useState(1);
+  const [connectionQuality, setConnectionQuality] = useState<'good' | 'poor' | 'unknown'>('unknown');
+  const [isAudioMuted, setIsAudioMuted] = useState(false);
+  const [isVideoMuted, setIsVideoMuted] = useState(false);
 
   // Update session timer
   useEffect(() => {
@@ -43,6 +49,41 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
+  // Request media permissions first
+  const requestMediaPermissions = async () => {
+    console.log('🎤 Requesting camera and microphone permissions...');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        video: true, 
+        audio: true 
+      });
+      console.log('✅ Media permissions granted');
+      // Stop the test stream - Jitsi will request its own
+      stream.getTracks().forEach(track => track.stop());
+      return true;
+    } catch (error: any) {
+      console.error('❌ Media permission denied:', error);
+      
+      let errorMessage = 'Camera and microphone access denied. Please allow access to continue.';
+      if (error.name === 'NotAllowedError') {
+        errorMessage = 'Camera/microphone access denied. Please check your browser permissions.';
+      } else if (error.name === 'NotFoundError') {
+        errorMessage = 'No camera or microphone found. Please connect a device.';
+      } else if (error.name === 'NotReadableError') {
+        errorMessage = 'Camera/microphone is already in use by another application.';
+      }
+      
+      setPermissionError(errorMessage);
+      setIsLoading(false);
+      toast({
+        title: "Permission Required",
+        description: errorMessage,
+        variant: "destructive",
+      });
+      return false;
+    }
+  };
+
   // Initialize Jitsi Meet
   useEffect(() => {
     console.log('🎥 VideoMeeting: Initializing video session', {
@@ -57,9 +98,13 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       const script = document.createElement('script');
       script.src = 'https://meet.jit.si/external_api.js';
       script.async = true;
-      script.onload = () => {
+      script.onload = async () => {
         console.log('✅ Jitsi Meet script loaded successfully');
-        initJitsi();
+        // Request permissions before initializing Jitsi
+        const hasPermissions = await requestMediaPermissions();
+        if (hasPermissions) {
+          initJitsi();
+        }
       };
       script.onerror = (error) => {
         console.error('❌ Failed to load Jitsi Meet script:', error);
@@ -103,12 +148,38 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
             startWithAudioMuted: false,
             startWithVideoMuted: false,
             enableWelcomePage: false,
-            prejoinPageEnabled: true, // Enable prejoin page for proper permission handling
+            prejoinPageEnabled: false, // Disable prejoin for direct connection
             disableDeepLinking: true,
+            enableNoisyMicDetection: true,
+            enableNoAudioDetection: true,
+            enableClosePage: false,
+            // WebRTC configuration for better connectivity
+            p2p: {
+              enabled: true,
+              stunServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+              ]
+            },
+            // Better audio/video quality
+            resolution: 720,
+            constraints: {
+              video: {
+                height: { ideal: 720, max: 1080, min: 360 },
+                width: { ideal: 1280, max: 1920, min: 640 }
+              }
+            }
           },
           interfaceConfigOverwrite: {
             SHOW_JITSI_WATERMARK: false,
             SHOW_WATERMARK_FOR_GUESTS: false,
+            SHOW_BRAND_WATERMARK: false,
+            TOOLBAR_BUTTONS: [
+              'microphone', 'camera', 'closedcaptions', 'desktop', 'fullscreen',
+              'fodeviceselection', 'hangup', 'chat', 'recording',
+              'settings', 'raisehand', 'videoquality', 'filmstrip',
+              'stats', 'shortcuts', 'tileview', 'download', 'help'
+            ],
           },
           userInfo: {
             displayName,
@@ -118,8 +189,9 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         jitsiApi.current = new window.JitsiMeetExternalAPI('meet.jit.si', options);
         console.log('✅ Jitsi API instance created');
 
-        jitsiApi.current.addEventListener('videoConferenceJoined', () => {
-          console.log('🎉 Successfully joined video conference');
+        // Event: Successfully joined
+        jitsiApi.current.addEventListener('videoConferenceJoined', (event: any) => {
+          console.log('🎉 Successfully joined video conference', event);
           setIsLoading(false);
           toast({
             title: "Connected",
@@ -127,23 +199,60 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           });
         });
 
+        // Event: Participant joined
         jitsiApi.current.addEventListener('participantJoined', (participant: any) => {
           console.log('👤 Participant joined:', participant);
+          setParticipantCount(prev => prev + 1);
           toast({
             title: "Participant Joined",
             description: `${participant.displayName || 'Someone'} has joined the session`,
           });
         });
 
+        // Event: Participant left
+        jitsiApi.current.addEventListener('participantLeft', (participant: any) => {
+          console.log('👋 Participant left:', participant);
+          setParticipantCount(prev => Math.max(1, prev - 1));
+          toast({
+            title: "Participant Left",
+            description: `${participant.displayName || 'Someone'} has left the session`,
+          });
+        });
+
+        // Event: Audio mute status changed
+        jitsiApi.current.addEventListener('audioMuteStatusChanged', (event: any) => {
+          console.log('🎤 Audio mute status:', event);
+          setIsAudioMuted(event.muted);
+        });
+
+        // Event: Video mute status changed
+        jitsiApi.current.addEventListener('videoMuteStatusChanged', (event: any) => {
+          console.log('📹 Video mute status:', event);
+          setIsVideoMuted(event.muted);
+        });
+
+        // Event: Connection quality changed
+        jitsiApi.current.addEventListener('participantConnectionStatusChanged', (event: any) => {
+          console.log('📶 Connection status:', event);
+          if (event.connectionQuality === 'good' || event.connectionQuality > 50) {
+            setConnectionQuality('good');
+          } else {
+            setConnectionQuality('poor');
+          }
+        });
+
+        // Event: Left conference
         jitsiApi.current.addEventListener('videoConferenceLeft', () => {
           console.log('👋 Left video conference');
         });
 
+        // Event: Ready to close
         jitsiApi.current.addEventListener('readyToClose', () => {
           console.log('🔚 Video conference ready to close');
           handleEndCall();
         });
 
+        // Event: Error occurred
         jitsiApi.current.addEventListener('errorOccurred', (error: any) => {
           console.error('❌ Jitsi error occurred:', error);
           toast({
@@ -153,13 +262,34 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           });
         });
 
+        // Event: Camera error
+        jitsiApi.current.addEventListener('cameraError', (error: any) => {
+          console.error('📹 Camera error:', error);
+          toast({
+            title: "Camera Error",
+            description: "There was an issue with your camera. Check permissions and try again.",
+            variant: "destructive",
+          });
+        });
+
+        // Event: Mic error
+        jitsiApi.current.addEventListener('micError', (error: any) => {
+          console.error('🎤 Microphone error:', error);
+          toast({
+            title: "Microphone Error",
+            description: "There was an issue with your microphone. Check permissions and try again.",
+            variant: "destructive",
+          });
+        });
+
         // Set timeout to detect connection issues
         const connectionTimeout = setTimeout(() => {
           if (isLoading) {
             console.error('⏱️ Connection timeout - taking too long to connect');
+            setIsLoading(false);
             toast({
               title: "Connection Timeout",
-              description: "Taking longer than expected to connect. Please check your internet connection.",
+              description: "Taking longer than expected to connect. Please check your internet connection and firewall settings.",
               variant: "destructive",
             });
           }
@@ -171,7 +301,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         setIsLoading(false);
         toast({
           title: "Initialization Failed",
-          description: "Failed to start video session. Please try again.",
+          description: "Failed to start video session. Please refresh and try again.",
           variant: "destructive",
         });
       }
@@ -181,7 +311,11 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       loadJitsi();
     } else {
       console.log('ℹ️ Jitsi Meet API already available');
-      initJitsi();
+      requestMediaPermissions().then(hasPermissions => {
+        if (hasPermissions) {
+          initJitsi();
+        }
+      });
     }
 
     return () => {
@@ -201,6 +335,26 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     onEndCall();
   };
 
+  const toggleAudio = () => {
+    if (jitsiApi.current) {
+      jitsiApi.current.executeCommand('toggleAudio');
+    }
+  };
+
+  const toggleVideo = () => {
+    if (jitsiApi.current) {
+      jitsiApi.current.executeCommand('toggleVideo');
+    }
+  };
+
+  const getConnectionQualityColor = () => {
+    switch (connectionQuality) {
+      case 'good': return 'text-green-600';
+      case 'poor': return 'text-red-600';
+      default: return 'text-gray-400';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -210,6 +364,14 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           <p className="text-sm opacity-90">with {partnerName}</p>
         </div>
         <div className="flex items-center gap-3">
+          <Badge variant="outline" className="bg-background text-foreground flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            {participantCount}
+          </Badge>
+          <Badge variant="outline" className="bg-background text-foreground flex items-center gap-1">
+            <Signal className={`h-3 w-3 ${getConnectionQualityColor()}`} />
+            {connectionQuality === 'unknown' ? 'Connecting...' : connectionQuality === 'good' ? 'Good' : 'Poor'}
+          </Badge>
           <Badge variant="outline" className="bg-background text-foreground">
             {formatDuration(sessionDuration)}
           </Badge>
@@ -219,21 +381,67 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         </div>
       </header>
 
+      {/* Permission Error Alert */}
+      {permissionError && (
+        <Alert variant="destructive" className="m-4">
+          <AlertDescription>
+            {permissionError}
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="ml-2"
+              onClick={() => window.location.reload()}
+            >
+              Retry
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {/* Waiting for Participant */}
+      {!isLoading && participantCount === 1 && !permissionError && (
+        <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-20">
+          <Alert className="bg-card border-primary">
+            <Users className="h-4 w-4" />
+            <AlertDescription>
+              Waiting for {sessionType === "tutor" ? "the learner" : "your tutor"} to join...
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Jitsi Meet Container */}
       <div className="flex-1 relative">
-        {isLoading && (
+        {isLoading && !permissionError && (
           <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Connecting to video session...</p>
+              <p className="text-muted-foreground font-medium">Connecting to video session...</p>
+              <p className="text-sm text-muted-foreground mt-2">Please allow camera and microphone access</p>
             </div>
           </div>
         )}
         <div ref={jitsiContainer} className="w-full h-full" />
       </div>
 
-      {/* End Call Button */}
-      <div className="p-4 bg-card border-t flex justify-center">
+      {/* Control Bar */}
+      <div className="p-4 bg-card border-t flex justify-center gap-4">
+        <Button
+          variant={isAudioMuted ? "destructive" : "secondary"}
+          size="lg"
+          className="rounded-full"
+          onClick={toggleAudio}
+        >
+          {isAudioMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+        </Button>
+        <Button
+          variant={isVideoMuted ? "destructive" : "secondary"}
+          size="lg"
+          className="rounded-full"
+          onClick={toggleVideo}
+        >
+          {isVideoMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+        </Button>
         <Button
           variant="destructive"
           size="lg"
