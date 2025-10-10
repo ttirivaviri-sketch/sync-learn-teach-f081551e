@@ -21,6 +21,7 @@ export type Database = {
           id: string
           learner_id: string
           price: number
+          room_name: string | null
           scheduled_at: string
           status: Database["public"]["Enums"]["booking_status"]
           tutor_id: string
@@ -33,6 +34,7 @@ export type Database = {
           id?: string
           learner_id: string
           price: number
+          room_name?: string | null
           scheduled_at: string
           status?: Database["public"]["Enums"]["booking_status"]
           tutor_id: string
@@ -45,6 +47,7 @@ export type Database = {
           id?: string
           learner_id?: string
           price?: number
+          room_name?: string | null
           scheduled_at?: string
           status?: Database["public"]["Enums"]["booking_status"]
           tutor_id?: string

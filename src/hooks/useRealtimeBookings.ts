@@ -200,10 +200,16 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
     if (!security.checkRateLimit(`booking_${userId}`, 10, 60000)) {
       throw new Error('Too many booking requests. Please wait a moment.');
     }
+
+    // Generate unique room name for Jitsi session
+    const roomName = `session-${crypto.randomUUID()}`;
+    console.log('🎯 Generated unique room name:', roomName);
+
     const { data, error } = await supabase
       .from('bookings')
       .insert({
         learner_id: userId,
+        room_name: roomName,
         ...bookingData,
       })
       .select()
@@ -215,7 +221,8 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       throw error;
     }
 
-    security.logSecurityEvent('booking_created', { bookingId: data.id, userId });
+    console.log('✅ Booking created with room:', { bookingId: data.id, roomName: data.room_name });
+    security.logSecurityEvent('booking_created', { bookingId: data.id, userId, roomName: data.room_name });
     return data;
   };
 

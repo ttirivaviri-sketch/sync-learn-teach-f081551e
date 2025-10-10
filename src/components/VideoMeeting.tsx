@@ -129,14 +129,20 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         return;
       }
 
-      const roomName = `StudySync-${booking?.id || 'demo-session'}`;
+      // Use room_name from booking if available, otherwise fallback to booking ID
+      const roomName = booking?.room_name || `StudySync-${booking?.id || 'demo-session'}`;
       const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
-      if (!booking?.id) {
-        console.warn('⚠️ No booking ID found - using demo room');
+      if (!booking?.room_name && !booking?.id) {
+        console.warn('⚠️ No booking room_name or ID found - using demo room');
       }
 
-      console.log('🚀 Initializing Jitsi Meet with:', { roomName, displayName, bookingId: booking?.id });
+      console.log('🚀 Initializing Jitsi Meet with:', { 
+        roomName, 
+        displayName, 
+        bookingId: booking?.id,
+        roomNameSource: booking?.room_name ? 'database' : 'fallback'
+      });
 
       try {
         const options = {
@@ -356,26 +362,26 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="fixed inset-0 flex flex-col bg-background overflow-hidden">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 flex items-center justify-between">
+      <header className="bg-primary text-primary-foreground p-3 sm:p-4 flex items-center justify-between shrink-0 z-30">
         <div>
-          <h2 className="text-lg font-semibold">{subject} Session</h2>
-          <p className="text-sm opacity-90">with {partnerName}</p>
+          <h2 className="text-base sm:text-lg font-semibold">{subject} Session</h2>
+          <p className="text-xs sm:text-sm opacity-90">with {partnerName}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-background text-foreground flex items-center gap-1">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Badge variant="outline" className="bg-background text-foreground flex items-center gap-1 text-xs">
             <Users className="h-3 w-3" />
             {participantCount}
           </Badge>
-          <Badge variant="outline" className="bg-background text-foreground flex items-center gap-1">
+          <Badge variant="outline" className="bg-background text-foreground flex items-center gap-1 text-xs">
             <Signal className={`h-3 w-3 ${getConnectionQualityColor()}`} />
             {connectionQuality === 'unknown' ? 'Connecting...' : connectionQuality === 'good' ? 'Good' : 'Poor'}
           </Badge>
-          <Badge variant="outline" className="bg-background text-foreground">
+          <Badge variant="outline" className="bg-background text-foreground text-xs">
             {formatDuration(sessionDuration)}
           </Badge>
-          <Badge variant="secondary" className="bg-green-100 text-green-700">
+          <Badge variant="secondary" className="bg-green-100 text-green-700 hidden sm:inline-flex text-xs">
             Online Lesson
           </Badge>
         </div>
@@ -383,7 +389,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
       {/* Permission Error Alert */}
       {permissionError && (
-        <Alert variant="destructive" className="m-4">
+        <Alert variant="destructive" className="m-4 shrink-0">
           <AlertDescription>
             {permissionError}
             <Button 
@@ -400,7 +406,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
       {/* Waiting for Participant */}
       {!isLoading && participantCount === 1 && !permissionError && (
-        <div className="absolute top-24 left-1/2 transform -translate-x-1/2 z-20">
+        <div className="absolute top-20 sm:top-24 left-1/2 transform -translate-x-1/2 z-20 max-w-sm mx-4">
           <Alert className="bg-card border-primary">
             <Users className="h-4 w-4" />
             <AlertDescription>
@@ -410,8 +416,8 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         </div>
       )}
 
-      {/* Jitsi Meet Container */}
-      <div className="flex-1 relative">
+      {/* Jitsi Meet Container - Fullscreen */}
+      <div className="flex-1 relative w-full overflow-hidden">
         {isLoading && !permissionError && (
           <div className="absolute inset-0 flex items-center justify-center bg-background z-10">
             <div className="text-center">
@@ -425,11 +431,11 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       </div>
 
       {/* Control Bar */}
-      <div className="p-4 bg-card border-t flex justify-center gap-4">
+      <div className="p-3 sm:p-4 bg-card border-t flex justify-center gap-3 sm:gap-4 shrink-0">
         <Button
           variant={isAudioMuted ? "destructive" : "secondary"}
           size="lg"
-          className="rounded-full"
+          className="rounded-full h-12 w-12 sm:h-14 sm:w-14"
           onClick={toggleAudio}
         >
           {isAudioMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
@@ -437,7 +443,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         <Button
           variant={isVideoMuted ? "destructive" : "secondary"}
           size="lg"
-          className="rounded-full"
+          className="rounded-full h-12 w-12 sm:h-14 sm:w-14"
           onClick={toggleVideo}
         >
           {isVideoMuted ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
@@ -445,7 +451,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         <Button
           variant="destructive"
           size="lg"
-          className="rounded-full px-8"
+          className="rounded-full px-6 sm:px-8 h-12 sm:h-14"
           onClick={handleEndCall}
         >
           <Phone className="h-5 w-5 mr-2" />
