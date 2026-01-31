@@ -26,6 +26,7 @@ import { analytics } from "@/utils/analytics";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { QuickBookingModal } from "@/components/QuickBookingModal";
+import { PaymentHistory } from "@/components/PaymentHistory";
 import { useTutorData, TutorProfile } from '@/hooks/useTutorData';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -745,6 +746,16 @@ const LearnerApp = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Payment History Section */}
+            {session?.user?.id && (
+              <PaymentHistory
+                userId={session.user.id}
+                limit={5}
+                showViewAll={true}
+                onViewAll={() => toast({ title: "Full History", description: "Complete payment history coming soon!" })}
+              />
+            )}
 
             {/* Quick Actions */}
             <Card>
