@@ -26,14 +26,14 @@ const Reports = () => {
       const [usersRes, bookingsRes, paymentsRes] = await Promise.all([
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('bookings').select('id, price', { count: 'exact' }),
-        supabase.from('payments').select('amount').eq('status', 'completed'),
+        supabase.from('payments').select('amount').eq('status', 'succeeded'),
       ]);
 
-      const totalRevenue = paymentsData.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
-      const totalBookings = bookingsData.data?.length || 0;
+      const totalRevenue = paymentsRes.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
+      const totalBookings = bookingsRes.count || 0;
 
       setStats({
-        totalUsers: usersCount.count || 0,
+        totalUsers: usersRes.count || 0,
         totalBookings,
         totalRevenue,
         averageSessionCost: totalBookings > 0 ? totalRevenue / totalBookings : 0,
@@ -43,7 +43,7 @@ const Reports = () => {
     }
   };
 
-  const exportToCSV = async (tableName: string, columns: string) => {
+  const exportToCSV = async (tableName: 'profiles' | 'bookings' | 'payments' | 'support_tickets' | 'reviews' | 'security_audit_logs', columns: string) => {
     setLoading(true);
     try {
       const { data, error } = await supabase
