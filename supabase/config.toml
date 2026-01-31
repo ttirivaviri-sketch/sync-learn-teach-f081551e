@@ -1,1 +1,7 @@
 project_id = "uynoykcratwbcdzmsxfw"
+
+[functions.payfast-create-payment]
+verify_jwt = true
+
+[functions.payfast-itn]
+verify_jwt = false

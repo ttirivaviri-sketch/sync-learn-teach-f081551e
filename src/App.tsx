@@ -14,6 +14,8 @@ import TutorApp from "./pages/TutorApp";
 import TutorAuth from "./pages/TutorAuth";
 import NotFound from "./pages/NotFound";
 import ChooseStudyLevel from "./pages/ChooseStudyLevel";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import PaymentCancelled from "./pages/PaymentCancelled";
 import AdminLayout from "./pages/admin/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminUsers from "./pages/admin/Users";
@@ -54,6 +56,10 @@ const App = () => (
               <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
               <Route path="/tutor" element={<TutorApp />} />
               <Route path="/tutor/auth" element={<TutorAuth />} />
+              
+              {/* Payment routes */}
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-cancelled" element={<PaymentCancelled />} />
 
               {/* Admin routes */}
               <Route path="/admin/auth" element={<AdminAuth />} />
