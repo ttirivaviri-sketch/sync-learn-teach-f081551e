@@ -1,46 +1,32 @@
 import { useState } from "react";
-import { Calendar, Clock, MapPin, Video, DollarSign, User } from "lucide-react";
+import { Clock, MapPin, Video, DollarSign, User, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-
-const mockTutors = [
-  {
-    id: "1",
-    name: "Dr. Sarah Johnson",
-    subject: "Mathematics",
-    rating: 4.9,
-    price: 50,
-    experience: "10+ years",
-    specialty: "Calculus, Statistics",
-    availability: ["Mon 2-6pm", "Wed 1-5pm", "Fri 3-7pm"],
-    location: "Online & In-person",
-    image: "/placeholder.svg"
-  },
-  {
-    id: "2", 
-    name: "Prof. Michael Chen",
-    subject: "Physics",
-    rating: 4.8,
-    price: 60,
-    experience: "15+ years",
-    specialty: "Quantum Physics, Mechanics",
-    availability: ["Tue 10am-2pm", "Thu 2-6pm", "Sat 9am-1pm"],
-    location: "Online only",
-    image: "/placeholder.svg"
-  }
-];
+import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
+import { useGeolocation } from "@/hooks/useGeolocation";
+import { OnlineStatus } from "@/components/OnlineStatus";
 
 export const AdvancedBooking = () => {
-  const [selectedTutor, setSelectedTutor] = useState<string>("");
+  const [selectedTutor, setSelectedTutor] = useState<TutorProfile | null>(null);
   const [sessionType, setSessionType] = useState<"online" | "in-person">("online");
   const [duration, setDuration] = useState<string>("60");
   const [notes, setNotes] = useState<string>("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const { toast } = useToast();
+
+  // Use real data hooks
+  const { location } = useGeolocation();
+  const { tutors, loading, refreshTutors } = useTutorData(location);
+
+  // Filter tutors who have at least one subject
+  const availableTutors = tutors.filter(tutor => tutor.subjects && tutor.subjects.length > 0);
 
   const handleBookSession = () => {
     if (!selectedTutor) {
@@ -52,10 +38,41 @@ export const AdvancedBooking = () => {
       return;
     }
 
+    if (!selectedSubjectId) {
+      toast({
+        title: "Select a subject",
+        description: "Please choose a subject for your session",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const selectedSubject = selectedTutor.subjects.find(s => s.id === selectedSubjectId);
+    const price = selectedSubject ? selectedSubject.hourly_rate * (parseInt(duration) / 60) : 0;
+
     toast({
       title: "Session booked!",
-      description: "You'll receive a confirmation email shortly.",
+      description: `Booking with ${selectedTutor.full_name} for R${price.toFixed(0)}. You'll receive a confirmation shortly.`,
     });
+
+    // Reset form
+    setSelectedTutor(null);
+    setSelectedSubjectId("");
+    setNotes("");
+  };
+
+  const handleTutorSelect = (tutor: TutorProfile) => {
+    setSelectedTutor(tutor);
+    // Auto-select first subject if available
+    if (tutor.subjects && tutor.subjects.length > 0) {
+      setSelectedSubjectId(tutor.subjects[0].id);
+    }
+  };
+
+  const getSelectedSubjectPrice = () => {
+    if (!selectedTutor || !selectedSubjectId) return 0;
+    const subject = selectedTutor.subjects.find(s => s.id === selectedSubjectId);
+    return subject ? subject.hourly_rate * (parseInt(duration) / 60) : 0;
   };
 
   return (
@@ -72,37 +89,104 @@ export const AdvancedBooking = () => {
         </TabsList>
         
         <TabsContent value="browse" className="space-y-4">
+          {/* Refresh button */}
+          <div className="flex justify-end">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={refreshTutors}
+              disabled={loading}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
+
+          {/* Loading state */}
+          {loading && availableTutors.length === 0 && (
+            <div className="space-y-4">
+              {[1, 2].map((i) => (
+                <Card key={i}>
+                  <CardContent className="p-6">
+                    <div className="flex items-start gap-4">
+                      <Skeleton className="w-16 h-16 rounded-full" />
+                      <div className="flex-1 space-y-2">
+                        <Skeleton className="h-5 w-40" />
+                        <Skeleton className="h-4 w-60" />
+                        <Skeleton className="h-4 w-32" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!loading && availableTutors.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <User className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-semibold text-lg mb-2">No tutors available</h3>
+                <p className="text-muted-foreground mb-4">
+                  No tutors with subjects are currently registered. Check back soon!
+                </p>
+                <Button variant="outline" onClick={refreshTutors}>
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  Refresh List
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tutor list */}
           <div className="grid gap-4">
-            {mockTutors.map((tutor) => (
+            {availableTutors.map((tutor) => (
               <Card 
                 key={tutor.id} 
                 className={`cursor-pointer transition-all ${
-                  selectedTutor === tutor.id 
+                  selectedTutor?.id === tutor.id 
                     ? "ring-2 ring-primary border-primary" 
                     : "hover:shadow-card"
                 }`}
-                onClick={() => setSelectedTutor(tutor.id)}
+                onClick={() => handleTutorSelect(tutor)}
               >
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                      <User className="w-8 h-8 text-primary" />
-                    </div>
+                    <Avatar className="w-16 h-16">
+                      <AvatarImage src={tutor.avatar_url || undefined} alt={tutor.full_name} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-lg">
+                        {tutor.full_name?.charAt(0) || 'T'}
+                      </AvatarFallback>
+                    </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-semibold text-foreground">{tutor.name}</h3>
-                        <Badge variant="secondary">{tutor.rating} ⭐</Badge>
+                        <h3 className="font-semibold text-foreground">{tutor.full_name}</h3>
+                        <OnlineStatus isOnline={tutor.online_status} lastSeen={tutor.last_seen} />
+                        <Badge variant="secondary">{tutor.rating || 4.8} ⭐</Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{tutor.subject} • {tutor.experience}</p>
-                      <p className="text-sm text-muted-foreground mb-3">{tutor.specialty}</p>
+                      
+                      {/* Subjects */}
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {tutor.subjects.map((subject) => (
+                          <Badge key={subject.id} variant="outline" className="text-xs">
+                            {subject.subject} • {subject.level}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      {tutor.bio && (
+                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{tutor.bio}</p>
+                      )}
+                      
                       <div className="flex items-center gap-4 text-sm">
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-primary font-medium">
                           <DollarSign className="w-4 h-4" />
-                          ${tutor.price}/hour
+                          R{tutor.subjects[0]?.hourly_rate || 0}/hour
                         </span>
-                        <span className="flex items-center gap-1">
+                        <span className="flex items-center gap-1 text-muted-foreground">
                           <MapPin className="w-4 h-4" />
-                          {tutor.location}
+                          {tutor.distance || 'Location unknown'}
                         </span>
                       </div>
                     </div>
@@ -125,8 +209,35 @@ export const AdvancedBooking = () => {
               <p className="text-muted-foreground">
                 Get matched with an available tutor in under 5 minutes
               </p>
-              <Button className="w-full" size="lg">
-                Find Available Tutor Now
+              <Button 
+                className="w-full" 
+                size="lg"
+                onClick={() => {
+                  const onlineTutors = availableTutors.filter(t => t.online_status);
+                  if (onlineTutors.length > 0) {
+                    handleTutorSelect(onlineTutors[0]);
+                    toast({
+                      title: "Match found!",
+                      description: `You've been matched with ${onlineTutors[0].full_name}`,
+                    });
+                  } else {
+                    toast({
+                      title: "No tutors online",
+                      description: "No tutors are currently available. Please try again later.",
+                      variant: "destructive"
+                    });
+                  }
+                }}
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Finding tutors...
+                  </>
+                ) : (
+                  `Find Available Tutor Now (${availableTutors.filter(t => t.online_status).length} online)`
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -136,10 +247,29 @@ export const AdvancedBooking = () => {
       {selectedTutor && (
         <Card>
           <CardHeader>
-            <CardTitle>Session Details</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              Book with {selectedTutor.full_name}
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Subject selection */}
+              <div>
+                <label className="text-sm font-medium mb-2 block">Subject</label>
+                <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {selectedTutor.subjects.map((subject) => (
+                      <SelectItem key={subject.id} value={subject.id}>
+                        {subject.subject} ({subject.level}) - R{subject.hourly_rate}/hr
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div>
                 <label className="text-sm font-medium mb-2 block">Session Type</label>
                 <Select value={sessionType} onValueChange={(value: "online" | "in-person") => setSessionType(value)}>
@@ -162,6 +292,7 @@ export const AdvancedBooking = () => {
                   </SelectContent>
                 </Select>
               </div>
+
               <div>
                 <label className="text-sm font-medium mb-2 block">Duration</label>
                 <Select value={duration} onValueChange={setDuration}>
@@ -187,8 +318,13 @@ export const AdvancedBooking = () => {
               />
             </div>
             
-            <Button onClick={handleBookSession} className="w-full" size="lg">
-              Book Session - ${mockTutors.find(t => t.id === selectedTutor)?.price * (parseInt(duration) / 60)}
+            <Button 
+              onClick={handleBookSession} 
+              className="w-full" 
+              size="lg"
+              disabled={!selectedSubjectId}
+            >
+              Book Session - R{getSelectedSubjectPrice().toFixed(0)}
             </Button>
           </CardContent>
         </Card>
