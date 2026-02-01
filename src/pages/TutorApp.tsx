@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { Skeleton } from "@/components/ui/skeleton";
 import VideoMeeting from "@/components/VideoMeeting";
 import DirectionsMap from "@/components/DirectionsMap";
 import ChatInterface from "@/components/ChatInterface";
@@ -22,6 +23,7 @@ import SessionHistory from "@/components/SessionHistory";
 import { useTutorData } from '@/hooks/useTutorData';
 import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
+import { useTutorStats } from '@/hooks/useTutorStats';
 
 
 const TutorApp = () => {
@@ -61,6 +63,9 @@ const TutorApp = () => {
 
   // Initialize presence tracking for real-time online status
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
+
+  // Real tutor stats from database
+  const { formattedStats, weeklyData, recentEarnings, loading: statsLoading } = useTutorStats(session?.user?.id);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -116,64 +121,13 @@ const TutorApp = () => {
     return null;
   }
 
+  // Use real stats from database
   const todayStats = {
-    earnings: "R450",
-    sessions: 3,
-    hours: 4.5,
-    rating: 4.8
+    earnings: formattedStats.todayEarnings,
+    sessions: formattedStats.todaySessions,
+    hours: formattedStats.todayHours,
+    rating: formattedStats.averageRating || 0
   };
-
-  const incomingRequests = [
-    {
-      id: 1,
-      student: "John Doe",
-      subject: "Mathematics",
-      topic: "Quadratic Equations",
-      level: "Grade 11",
-      date: "Today",
-      time: "4:00 PM",
-      duration: "1 hour",
-      rate: "R150/hour",
-      distance: "2.1 km",
-      address: "123 Main Street, Sandton, Johannesburg",
-      type: "online"
-    },
-    {
-      id: 2,
-      student: "Sarah Wilson",
-      subject: "Physics",
-      topic: "Thermodynamics",
-      level: "University",
-      date: "Tomorrow",
-      time: "2:00 PM",
-      duration: "2 hours",
-      rate: "R200/hour",
-      distance: "1.8 km",
-      address: "456 Oak Avenue, Rosebank, Johannesburg",
-      type: "in-person"
-    }
-  ];
-
-  const upcomingSessions = [
-    {
-      id: 1,
-      student: "Emily Chen",
-      subject: "Chemistry",
-      time: "3:00 PM - 4:00 PM",
-      location: "Sandton City",
-      earnings: "R180",
-      type: "in-person"
-    },
-    {
-      id: 2,
-      student: "Michael Brown",
-      subject: "Mathematics",
-      time: "5:00 PM - 6:30 PM",
-      location: "Online Session",
-      earnings: "R225",
-      type: "online"
-    }
-  ];
 
   const handleAcceptRequest = async (booking: any) => {
     try {
@@ -427,25 +381,38 @@ const TutorApp = () => {
               </CardContent>
             </Card>
 
-            {/* Today's Schedule */}
+            {/* Today's Schedule - uses real booking data */}
             <Card>
               <CardHeader>
                 <CardTitle>Today's Schedule</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {upcomingSessions.map((session) => (
-                  <div key={session.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div>
-                      <h4 className="font-medium">{session.student}</h4>
-                      <p className="text-sm text-muted-foreground">{session.subject}</p>
-                      <p className="text-xs text-muted-foreground">{session.time}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-primary">{session.earnings}</p>
-                      <p className="text-xs text-muted-foreground">{session.location}</p>
-                    </div>
+                {statsLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
                   </div>
-                ))}
+                ) : getUpcomingSessions().length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No sessions scheduled for today
+                  </p>
+                ) : (
+                  getUpcomingSessions().slice(0, 3).map((booking) => (
+                    <div key={booking.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div>
+                        <h4 className="font-medium">{booking.learner_profile?.full_name}</h4>
+                        <p className="text-sm text-muted-foreground">{booking.tutor_subjects?.subject}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(booking.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-primary">R{booking.price}</p>
+                        <p className="text-xs text-muted-foreground">{booking.duration_minutes} min</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -601,77 +568,103 @@ const TutorApp = () => {
           </TabsContent>
 
           <TabsContent value="profile" className="space-y-4">
-            {/* Earnings Section */}
+            {/* Earnings Section - Real Data */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
-                  <TrendingUp className="h-8 w-8 mx-auto text-primary mb-2" />
-                  <p className="text-2xl font-bold text-primary">R2,450</p>
-                  <p className="text-sm text-muted-foreground">This Week</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-20 w-full" />
+                  ) : (
+                    <>
+                      <TrendingUp className="h-8 w-8 mx-auto text-primary mb-2" />
+                      <p className="text-2xl font-bold text-primary">{formattedStats.weekEarnings}</p>
+                      <p className="text-sm text-muted-foreground">This Week</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
               
               <Card>
                 <CardContent className="p-4 text-center">
-                  <DollarSign className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                  <p className="text-2xl font-bold text-green-600">R9,680</p>
-                  <p className="text-sm text-muted-foreground">This Month</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-20 w-full" />
+                  ) : (
+                    <>
+                      <DollarSign className="h-8 w-8 mx-auto text-green-500 mb-2" />
+                      <p className="text-2xl font-bold text-green-600">{formattedStats.monthEarnings}</p>
+                      <p className="text-sm text-muted-foreground">This Month</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4 text-center">
-                  <BarChart3 className="h-8 w-8 mx-auto text-blue-500 mb-2" />
-                  <p className="text-2xl font-bold text-blue-600">R35,240</p>
-                  <p className="text-sm text-muted-foreground">Total Earned</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-20 w-full" />
+                  ) : (
+                    <>
+                      <BarChart3 className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+                      <p className="text-2xl font-bold text-blue-600">{formattedStats.totalEarnings}</p>
+                      <p className="text-sm text-muted-foreground">Total Earned</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
               <Card>
                 <CardContent className="p-4 text-center">
-                  <Clock className="h-8 w-8 mx-auto text-purple-500 mb-2" />
-                  <p className="text-2xl font-bold text-purple-600">156h</p>
-                  <p className="text-sm text-muted-foreground">Total Hours</p>
+                  {statsLoading ? (
+                    <Skeleton className="h-20 w-full" />
+                  ) : (
+                    <>
+                      <Clock className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+                      <p className="text-2xl font-bold text-purple-600">{formattedStats.totalHours}h</p>
+                      <p className="text-sm text-muted-foreground">Total Hours</p>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </div>
 
-            <TutorEarningsChart 
-              data={[
-                { name: "Mon", earnings: 350, sessions: 2 },
-                { name: "Tue", earnings: 450, sessions: 3 },
-                { name: "Wed", earnings: 300, sessions: 2 },
-                { name: "Thu", earnings: 600, sessions: 4 },
-                { name: "Fri", earnings: 400, sessions: 3 },
-                { name: "Sat", earnings: 550, sessions: 4 },
-                { name: "Sun", earnings: 200, sessions: 1 }
-              ]}
-            />
+            {weeklyData.length > 0 && (
+              <TutorEarningsChart data={weeklyData} />
+            )}
             
             <Card>
               <CardHeader>
                 <CardTitle>Recent Earnings</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {[
-                  { student: "John Doe", subject: "Mathematics", amount: "R150", date: "Today", rating: 5 },
-                  { student: "Sarah Wilson", subject: "Physics", amount: "R200", date: "Yesterday", rating: 4 },
-                  { student: "Mike Brown", subject: "Chemistry", amount: "R180", date: "2 days ago", rating: 5 }
-                ].map((earning, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                    <div>
-                      <h4 className="font-medium">{earning.student}</h4>
-                      <p className="text-sm text-muted-foreground">{earning.subject}</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        <StarRating rating={earning.rating} readonly size="sm" />
+                {statsLoading ? (
+                  <div className="space-y-3">
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                    <Skeleton className="h-16 w-full" />
+                  </div>
+                ) : recentEarnings.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No completed sessions yet
+                  </p>
+                ) : (
+                  recentEarnings.map((earning) => (
+                    <div key={earning.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <div>
+                        <h4 className="font-medium">{earning.student}</h4>
+                        <p className="text-sm text-muted-foreground">{earning.subject}</p>
+                        {earning.rating && (
+                          <div className="flex items-center gap-1 mt-1">
+                            <StarRating rating={earning.rating} readonly size="sm" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-primary">R{earning.amount}</p>
+                        <p className="text-xs text-muted-foreground">{earning.date}</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-primary">{earning.amount}</p>
-                      <p className="text-xs text-muted-foreground">{earning.date}</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
             
