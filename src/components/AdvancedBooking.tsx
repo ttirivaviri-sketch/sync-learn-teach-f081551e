@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, MapPin, Video, DollarSign, User, Loader2, RefreshCw } from "lucide-react";
+import { Clock, MapPin, Video, DollarSign, User, Loader2, RefreshCw, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { OnlineStatus } from "@/components/OnlineStatus";
+import TutorAvailabilityDisplay from "@/components/TutorAvailabilityDisplay";
+import { format } from "date-fns";
 
 export const AdvancedBooking = () => {
   const [selectedTutor, setSelectedTutor] = useState<TutorProfile | null>(null);
@@ -19,6 +21,9 @@ export const AdvancedBooking = () => {
   const [duration, setDuration] = useState<string>("60");
   const [notes, setNotes] = useState<string>("");
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<string>("");
+  const [selectedEndTime, setSelectedEndTime] = useState<string>("");
   const { toast } = useToast();
 
   // Use real data hooks
@@ -47,32 +52,62 @@ export const AdvancedBooking = () => {
       return;
     }
 
+    if (!selectedDate || !selectedTime) {
+      toast({
+        title: "Select a time",
+        description: "Please choose when you'd like to have your session",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const selectedSubject = selectedTutor.subjects.find(s => s.id === selectedSubjectId);
     const price = selectedSubject ? selectedSubject.hourly_rate * (parseInt(duration) / 60) : 0;
 
     toast({
       title: "Session booked!",
-      description: `Booking with ${selectedTutor.full_name} for R${price.toFixed(0)}. You'll receive a confirmation shortly.`,
+      description: `Booking with ${selectedTutor.full_name} on ${format(selectedDate, 'EEE, MMM d')} at ${formatTime(selectedTime)} for R${price.toFixed(0)}.`,
     });
 
     // Reset form
     setSelectedTutor(null);
     setSelectedSubjectId("");
+    setSelectedDate(null);
+    setSelectedTime("");
+    setSelectedEndTime("");
     setNotes("");
   };
 
   const handleTutorSelect = (tutor: TutorProfile) => {
     setSelectedTutor(tutor);
+    setSelectedDate(null);
+    setSelectedTime("");
+    setSelectedEndTime("");
     // Auto-select first subject if available
     if (tutor.subjects && tutor.subjects.length > 0) {
       setSelectedSubjectId(tutor.subjects[0].id);
     }
   };
 
+  const handleSlotSelect = (date: Date, startTime: string, endTime: string) => {
+    setSelectedDate(date);
+    setSelectedTime(startTime);
+    setSelectedEndTime(endTime);
+  };
+
   const getSelectedSubjectPrice = () => {
     if (!selectedTutor || !selectedSubjectId) return 0;
     const subject = selectedTutor.subjects.find(s => s.id === selectedSubjectId);
     return subject ? subject.hourly_rate * (parseInt(duration) / 60) : 0;
+  };
+
+  const formatTime = (time: string) => {
+    const [hours] = time.split(':');
+    const hour = parseInt(hours);
+    if (hour === 0) return '12:00 AM';
+    if (hour === 12) return '12:00 PM';
+    if (hour > 12) return `${hour - 12}:00 PM`;
+    return `${hour}:00 AM`;
   };
 
   return (
@@ -308,6 +343,32 @@ export const AdvancedBooking = () => {
                 </Select>
               </div>
             </div>
+
+            {/* Availability Display */}
+            <div className="border rounded-lg p-4 bg-muted/30">
+              <TutorAvailabilityDisplay
+                tutorId={selectedTutor.id}
+                onSelectSlot={handleSlotSelect}
+                selectedDate={selectedDate || undefined}
+                selectedTime={selectedTime}
+              />
+            </div>
+
+            {/* Selected time confirmation */}
+            {selectedDate && selectedTime && (
+              <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <Calendar className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">
+                    {format(selectedDate, 'EEEE, MMMM d, yyyy')}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {formatTime(selectedTime)} - {formatTime(selectedEndTime)}
+                  </p>
+                </div>
+                <Badge variant="secondary">Selected</Badge>
+              </div>
+            )}
             
             <div>
               <label className="text-sm font-medium mb-2 block">Special requests or topics</label>
@@ -322,9 +383,12 @@ export const AdvancedBooking = () => {
               onClick={handleBookSession} 
               className="w-full" 
               size="lg"
-              disabled={!selectedSubjectId}
+              disabled={!selectedSubjectId || !selectedDate || !selectedTime}
             >
-              Book Session - R{getSelectedSubjectPrice().toFixed(0)}
+              {!selectedDate || !selectedTime 
+                ? "Select a time slot to continue"
+                : `Book Session - R${getSelectedSubjectPrice().toFixed(0)}`
+              }
             </Button>
           </CardContent>
         </Card>
