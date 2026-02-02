@@ -10,6 +10,8 @@ import { useToast } from "@/hooks/use-toast";
 import StarRating from "@/components/StarRating";
 import { LocationPicker } from "@/components/LocationPicker";
 import { security } from "@/utils/security";
+import { useTutorStats } from "@/hooks/useTutorStats";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface TutorProfileProps {
   user: any;
@@ -29,13 +31,9 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
     qualifications: ["BSc Mathematics", "Teaching Certificate", "5+ Years Experience"]
   });
   const { toast } = useToast();
-
-  const stats = {
-    totalSessions: 247,
-    rating: 4.8,
-    totalEarnings: "R45,680",
-    responseTime: "< 1 hour"
-  };
+  
+  // Use real stats from database
+  const { formattedStats, stats: rawStats, loading: statsLoading } = useTutorStats(user?.id);
 
   const handleSaveProfile = () => {
     // Validate and sanitize input data
@@ -91,10 +89,16 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
               <h2 className="text-2xl font-bold">{user?.user_metadata?.full_name || 'Professional Tutor'}</h2>
               <p className="text-muted-foreground">{user?.email}</p>
               <div className="flex items-center gap-2 mt-2">
-                <StarRating rating={stats.rating} readonly size="sm" showValue />
-                <span className="text-sm text-muted-foreground">
-                  ({stats.totalSessions} sessions)
-                </span>
+                {statsLoading ? (
+                  <Skeleton className="h-5 w-32" />
+                ) : (
+                  <>
+                    <StarRating rating={rawStats.averageRating} readonly size="sm" showValue />
+                    <span className="text-sm text-muted-foreground">
+                      ({rawStats.totalReviews} reviews)
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             <Button
@@ -112,7 +116,11 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
         <Card>
           <CardContent className="p-4 text-center">
             <BookOpen className="h-8 w-8 mx-auto text-primary mb-2" />
-            <p className="text-2xl font-bold">{stats.totalSessions}</p>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-16 mx-auto mb-2" />
+            ) : (
+              <p className="text-2xl font-bold">{formattedStats.todaySessions + rawStats.totalReviews}</p>
+            )}
             <p className="text-sm text-muted-foreground">Total Sessions</p>
           </CardContent>
         </Card>
@@ -120,7 +128,11 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
         <Card>
           <CardContent className="p-4 text-center">
             <Star className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
-            <p className="text-2xl font-bold">{stats.rating}</p>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-16 mx-auto mb-2" />
+            ) : (
+              <p className="text-2xl font-bold">{formattedStats.averageRating || "N/A"}</p>
+            )}
             <p className="text-sm text-muted-foreground">Average Rating</p>
           </CardContent>
         </Card>
@@ -128,7 +140,11 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
         <Card>
           <CardContent className="p-4 text-center">
             <DollarSign className="h-8 w-8 mx-auto text-green-500 mb-2" />
-            <p className="text-2xl font-bold">{stats.totalEarnings}</p>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-20 mx-auto mb-2" />
+            ) : (
+              <p className="text-2xl font-bold">{formattedStats.totalEarnings}</p>
+            )}
             <p className="text-sm text-muted-foreground">Total Earned</p>
           </CardContent>
         </Card>
@@ -136,8 +152,12 @@ const TutorProfile = ({ user }: TutorProfileProps) => {
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="h-8 w-8 mx-auto text-blue-500 mb-2" />
-            <p className="text-2xl font-bold">{stats.responseTime}</p>
-            <p className="text-sm text-muted-foreground">Response Time</p>
+            {statsLoading ? (
+              <Skeleton className="h-8 w-16 mx-auto mb-2" />
+            ) : (
+              <p className="text-2xl font-bold">{formattedStats.totalHours}h</p>
+            )}
+            <p className="text-sm text-muted-foreground">Hours Taught</p>
           </CardContent>
         </Card>
       </div>
