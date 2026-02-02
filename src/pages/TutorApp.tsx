@@ -24,6 +24,7 @@ import { useTutorData } from '@/hooks/useTutorData';
 import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useTutorStats } from '@/hooks/useTutorStats';
+import TutorAvailabilitySchedule from '@/components/TutorAvailabilitySchedule';
 
 
 const TutorApp = () => {
@@ -689,6 +690,10 @@ const TutorApp = () => {
             <TutorSubjectManager 
               subjects={currentTutor?.subjects || []}
             />
+            
+            {/* Availability Schedule - persisted to database */}
+            <TutorAvailabilitySchedule tutorId={session?.user?.id || ''} />
+            
             <TutorProfile user={session?.user} />
           </TabsContent>
         </Tabs>
