@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Clock, MapPin, Video, DollarSign, User, Loader2, RefreshCw, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +13,8 @@ import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { OnlineStatus } from "@/components/OnlineStatus";
 import TutorAvailabilityDisplay from "@/components/TutorAvailabilityDisplay";
+import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 
 export const AdvancedBooking = () => {
@@ -24,16 +26,37 @@ export const AdvancedBooking = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>("");
   const [selectedEndTime, setSelectedEndTime] = useState<string>("");
+  const [isBooking, setIsBooking] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>();
   const { toast } = useToast();
 
   // Use real data hooks
   const { location } = useGeolocation();
   const { tutors, loading, refreshTutors } = useTutorData(location);
+  const { createBooking } = useRealtimeBookings('learner', userId);
+
+  // Get current user
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUserId(user?.id);
+    };
+    getUser();
+  }, []);
 
   // Filter tutors who have at least one subject
   const availableTutors = tutors.filter(tutor => tutor.subjects && tutor.subjects.length > 0);
 
-  const handleBookSession = () => {
+  const handleBookSession = async () => {
+    if (!userId) {
+      toast({
+        title: "Please sign in",
+        description: "You need to be logged in to book a session",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (!selectedTutor) {
       toast({
         title: "Select a tutor",
@@ -64,18 +87,43 @@ export const AdvancedBooking = () => {
     const selectedSubject = selectedTutor.subjects.find(s => s.id === selectedSubjectId);
     const price = selectedSubject ? selectedSubject.hourly_rate * (parseInt(duration) / 60) : 0;
 
-    toast({
-      title: "Session booked!",
-      description: `Booking with ${selectedTutor.full_name} on ${format(selectedDate, 'EEE, MMM d')} at ${formatTime(selectedTime)} for R${price.toFixed(0)}.`,
-    });
+    // Combine date and time into scheduled_at timestamp
+    const [hours, minutes] = selectedTime.split(':').map(Number);
+    const scheduledAt = new Date(selectedDate);
+    scheduledAt.setHours(hours, minutes, 0, 0);
 
-    // Reset form
-    setSelectedTutor(null);
-    setSelectedSubjectId("");
-    setSelectedDate(null);
-    setSelectedTime("");
-    setSelectedEndTime("");
-    setNotes("");
+    setIsBooking(true);
+    try {
+      await createBooking({
+        tutor_id: selectedTutor.id,
+        tutor_subject_id: selectedSubjectId,
+        scheduled_at: scheduledAt.toISOString(),
+        duration_minutes: parseInt(duration),
+        price: price,
+      });
+
+      toast({
+        title: "Session booked!",
+        description: `Your session with ${selectedTutor.full_name} on ${format(selectedDate, 'EEE, MMM d')} at ${formatTime(selectedTime)} has been requested.`,
+      });
+
+      // Reset form
+      setSelectedTutor(null);
+      setSelectedSubjectId("");
+      setSelectedDate(null);
+      setSelectedTime("");
+      setSelectedEndTime("");
+      setNotes("");
+    } catch (error) {
+      console.error('Booking error:', error);
+      toast({
+        title: "Booking failed",
+        description: error instanceof Error ? error.message : "Could not create booking. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   const handleTutorSelect = (tutor: TutorProfile) => {
@@ -383,12 +431,20 @@ export const AdvancedBooking = () => {
               onClick={handleBookSession} 
               className="w-full" 
               size="lg"
-              disabled={!selectedSubjectId || !selectedDate || !selectedTime}
+              disabled={!selectedSubjectId || !selectedDate || !selectedTime || isBooking || !userId}
             >
-              {!selectedDate || !selectedTime 
-                ? "Select a time slot to continue"
-                : `Book Session - R${getSelectedSubjectPrice().toFixed(0)}`
-              }
+              {isBooking ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Creating booking...
+                </>
+              ) : !userId ? (
+                "Sign in to book"
+              ) : !selectedDate || !selectedTime ? (
+                "Select a time slot to continue"
+              ) : (
+                `Book Session - R${getSelectedSubjectPrice().toFixed(0)}`
+              )}
             </Button>
           </CardContent>
         </Card>
