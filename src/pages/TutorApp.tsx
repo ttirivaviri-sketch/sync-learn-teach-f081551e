@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
-import { LiveBookingCard } from "@/components/LiveBookingCard";
+import { TutorBookingManager } from "@/components/TutorBookingManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -420,107 +420,19 @@ const TutorApp = () => {
 
 
           <TabsContent value="activity" className="space-y-4">
-            {/* Booking Requests Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Booking Requests</CardTitle>
-                  <Badge variant="secondary">{getIncomingRequests().length} new</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {bookingsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-muted-foreground">Loading requests...</p>
-                  </div>
-                ) : getIncomingRequests().length === 0 ? (
-                  <div className="p-8 text-center">
-                    <h4 className="font-medium mb-2">No pending requests</h4>
-                    <p className="text-sm text-muted-foreground">
-                      New booking requests will appear here in real-time
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {getIncomingRequests().map((booking) => (
-                      <LiveBookingCard
-                        key={booking.id}
-                        booking={booking}
-                        userType="tutor"
-                        onAccept={handleAcceptRequest}
-                        onDecline={handleDeclineRequest}
-                        onJoinSession={handleJoinVideoSession}
-                        onStartChat={(booking) => {
-                          setChatWithUserId(booking.learner_id);
-                          setChatWithUserName(booking.learner_profile?.full_name || "Student");
-                          setShowChat(true);
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Upcoming Sessions Section */}
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle>Upcoming Sessions</CardTitle>
-                  <Badge variant="secondary">{getUpcomingSessions().length}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {bookingsLoading ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
-                    <p className="text-muted-foreground">Loading sessions...</p>
-                  </div>
-                ) : getUpcomingSessions().length === 0 ? (
-                  <div className="p-8 text-center">
-                    <Calendar className="h-12 w-12 mx-auto mb-3 text-muted-foreground" />
-                    <h4 className="font-medium mb-2">No upcoming sessions</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Accepted sessions will appear here
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {getUpcomingSessions().map((booking) => (
-                      <div key={booking.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="font-medium">{booking.learner_profile?.full_name}</h4>
-                            {booking.status === 'confirmed' && (
-                              <Badge variant="outline" className="text-xs">Confirmed</Badge>
-                            )}
-                          </div>
-                          <p className="text-sm text-muted-foreground">{booking.tutor_subjects?.subject}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(booking.scheduled_at).toLocaleDateString()} at {new Date(booking.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {booking.duration_minutes} minutes
-                          </p>
-                        </div>
-                        <div className="text-right flex flex-col gap-2">
-                          <p className="font-semibold text-primary">R{booking.price}</p>
-                          <Button 
-                            size="sm" 
-                            onClick={() => handleJoinVideoSession(booking)}
-                            className="whitespace-nowrap"
-                          >
-                            <Video className="h-3 w-3 mr-1" />
-                            Join
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            {/* Comprehensive Booking Manager */}
+            <TutorBookingManager
+              bookings={bookings}
+              loading={bookingsLoading}
+              onAccept={handleAcceptRequest}
+              onDecline={handleDeclineRequest}
+              onJoinSession={handleJoinVideoSession}
+              onStartChat={(booking) => {
+                setChatWithUserId(booking.learner_id);
+                setChatWithUserName(booking.learner_profile?.full_name || "Student");
+                setShowChat(true);
+              }}
+            />
 
             {/* Schedule Section */}
             <Card>
