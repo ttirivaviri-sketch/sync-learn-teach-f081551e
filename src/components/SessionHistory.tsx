@@ -1,25 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Calendar, Clock, Star, DollarSign, Video, MapPin, MessageCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
 import ReviewModal from "@/components/ReviewModal";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface Session {
   id: string;
-  student: string;
+  personName: string;
+  personId: string;
   subject: string;
-  topic: string;
+  level: string;
   date: string;
   time: string;
   duration: string;
-  earnings: string;
-  type: "online" | "in-person";
+  price: string;
   status: "completed" | "cancelled" | "no-show";
   rating?: number;
   review?: string;
+  hasReview?: boolean;
 }
 
 interface SessionHistoryProps {
@@ -31,61 +35,106 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
   const [selectedTab, setSelectedTab] = useState("all");
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const sessions: Session[] = [
-    {
-      id: "1",
-      student: "John Doe",
-      subject: "Mathematics",
-      topic: "Quadratic Equations",
-      date: "2024-01-15",
-      time: "14:00",
-      duration: "1h",
-      earnings: "R150",
-      type: "online",
-      status: "completed",
-      rating: 5,
-      review: "Excellent explanation of complex topics!"
-    },
-    {
-      id: "2",
-      student: "Sarah Wilson",
-      subject: "Physics",
-      topic: "Thermodynamics",
-      date: "2024-01-14",
-      time: "16:00",
-      duration: "2h",
-      earnings: "R300",
-      type: "in-person",
-      status: "completed",
-      rating: 4,
-      review: "Very helpful session, patient teacher."
-    },
-    {
-      id: "3",
-      student: "Mike Brown",
-      subject: "Chemistry",
-      topic: "Organic Chemistry",
-      date: "2024-01-13",
-      time: "15:00",
-      duration: "1.5h",
-      earnings: "R225",
-      type: "online",
-      status: "cancelled"
-    },
-    {
-      id: "4",
-      student: "Emma Davis",
-      subject: "Mathematics",
-      topic: "Calculus",
-      date: "2024-01-12",
-      time: "13:00",
-      duration: "1h",
-      earnings: "R150",
-      type: "online",
-      status: "no-show"
-    }
-  ];
+  useEffect(() => {
+    const fetchSessionHistory = async () => {
+      if (!userId) return;
+
+      try {
+        // Fetch completed and canceled bookings
+        const query = supabase
+          .from('bookings')
+          .select(`
+            *,
+            learner_profile:profiles!bookings_learner_id_fkey(id, full_name, email),
+            tutor_profile:profiles!bookings_tutor_id_fkey(id, full_name, email),
+            tutor_subjects(subject, level)
+          `)
+          .in('status', ['completed', 'canceled'])
+          .order('scheduled_at', { ascending: false });
+
+        if (userType === 'learner') {
+          query.eq('learner_id', userId);
+        } else {
+          query.eq('tutor_id', userId);
+        }
+
+        const { data: bookings, error } = await query;
+
+        if (error) {
+          console.error('Error fetching session history:', error);
+          toast({
+            title: 'Error',
+            description: 'Failed to load session history',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        // Fetch reviews for these bookings
+        const bookingIds = bookings?.map(b => b.id) || [];
+        let reviewsMap: Record<string, { rating: number; comment: string | null }> = {};
+
+        if (bookingIds.length > 0) {
+          const { data: reviews } = await supabase
+            .from('reviews')
+            .select('booking_id, rating, comment')
+            .in('booking_id', bookingIds);
+
+          if (reviews) {
+            reviewsMap = reviews.reduce((acc, review) => {
+              if (review.booking_id) {
+                acc[review.booking_id] = { rating: review.rating, comment: review.comment };
+              }
+              return acc;
+            }, {} as Record<string, { rating: number; comment: string | null }>);
+          }
+        }
+
+        // Transform bookings to sessions
+        const transformedSessions: Session[] = (bookings || []).map(booking => {
+          const scheduledAt = new Date(booking.scheduled_at);
+          const review = reviewsMap[booking.id];
+          const person = userType === 'tutor' ? booking.learner_profile : booking.tutor_profile;
+          
+          // Map database status to display status
+          let displayStatus: "completed" | "cancelled" | "no-show" = "completed";
+          if (booking.status === 'canceled') {
+            displayStatus = 'cancelled';
+          } else if (booking.status === 'completed') {
+            displayStatus = 'completed';
+          }
+
+          return {
+            id: booking.id,
+            personName: person?.full_name || 'Unknown',
+            personId: userType === 'tutor' ? booking.learner_id : booking.tutor_id,
+            subject: booking.tutor_subjects?.subject || 'Unknown Subject',
+            level: booking.tutor_subjects?.level || '',
+            date: scheduledAt.toISOString().split('T')[0],
+            time: scheduledAt.toLocaleTimeString('en-ZA', { hour: '2-digit', minute: '2-digit' }),
+            duration: `${booking.duration_minutes}min`,
+            price: `R${booking.price}`,
+            status: displayStatus,
+            rating: review?.rating,
+            review: review?.comment || undefined,
+            hasReview: !!review,
+          };
+        });
+
+        setSessions(transformedSessions);
+      } catch (error) {
+        console.error('Error in fetchSessionHistory:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSessionHistory();
+  }, [userId, userType, toast]);
 
   const filteredSessions = sessions.filter(session => {
     if (selectedTab === "all") return true;
@@ -105,6 +154,24 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
     setSelectedSession(session);
     setShowReviewModal(true);
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Session History</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-3">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -128,9 +195,9 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
                     <CardContent className="p-4">
                       <div className="flex items-start justify-between mb-3">
                         <div>
-                          <h4 className="font-medium">{session.student}</h4>
+                          <h4 className="font-medium">{session.personName}</h4>
                           <p className="text-sm text-muted-foreground">
-                            {session.subject} • {session.topic}
+                            {session.subject} • {session.level}
                           </p>
                         </div>
                         <div className="text-right">
@@ -155,16 +222,12 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
                           <span>{session.time} ({session.duration})</span>
                         </div>
                         <div className="flex items-center gap-1">
-                          {session.type === "online" ? (
-                            <Video className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span>{session.type === "online" ? "Online" : "In-Person"}</span>
+                          <Video className="h-4 w-4 text-muted-foreground" />
+                          <span>Online</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-4 w-4 text-muted-foreground" />
-                          <span>{session.earnings}</span>
+                          <span>{session.price}</span>
                         </div>
                       </div>
 
@@ -175,7 +238,7 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
                       )}
 
                       <div className="flex gap-2">
-                        {session.status === "completed" && userType === "learner" && !session.rating && (
+                        {session.status === "completed" && userType === "learner" && !session.hasReview && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -218,12 +281,18 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
           setSelectedSession(null);
         }}
         bookingId={selectedSession?.id || ""}
-        reviewedId={userId}
-        reviewedName={selectedSession?.student || ""}
+        reviewedId={selectedSession?.personId || ""}
+        reviewedName={selectedSession?.personName || ""}
         userType={userType}
         onReviewSubmitted={() => {
           setShowReviewModal(false);
           setSelectedSession(null);
+          // Refresh sessions to show the new review
+          setSessions(prev => prev.map(s => 
+            s.id === selectedSession?.id 
+              ? { ...s, hasReview: true } 
+              : s
+          ));
         }}
       />
     </div>
