@@ -30,6 +30,8 @@ import { PaymentHistory } from "@/components/PaymentHistory";
 import { useTutorData, TutorProfile } from '@/hooks/useTutorData';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useGeolocation } from '@/hooks/useGeolocation';
+import { useBookingPayments } from '@/hooks/useBookingPayments';
+import { PendingPaymentCard } from '@/components/PendingPaymentCard';
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -52,6 +54,7 @@ const LearnerApp = () => {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTutor, setSelectedTutor] = useState<any>(null);
+  const [showPaymentForBooking, setShowPaymentForBooking] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, isSlowConnection } = useNetworkStatus();
@@ -69,6 +72,17 @@ const LearnerApp = () => {
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
   const { tutors, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation);
   const { isUserOnline } = usePresenceTracking(session);
+
+  // Get confirmed bookings that need payment
+  const confirmedBookingIds = bookings
+    .filter(b => b.status === 'confirmed')
+    .map(b => b.id);
+  const { needsPayment, isPaid } = useBookingPayments(confirmedBookingIds);
+
+  // Get bookings that need payment (confirmed but not paid)
+  const bookingsNeedingPayment = bookings.filter(
+    b => b.status === 'confirmed' && needsPayment(b.id)
+  );
 
   useEffect(() => {
     analytics.pageView('learner-app');
@@ -358,6 +372,11 @@ const LearnerApp = () => {
     setShowReviewModal(true);
   };
 
+  const handlePayNow = (booking: any) => {
+    setShowPaymentForBooking(booking);
+    setActiveTab("activity");
+  };
+
   const handleQuickProfileAction = (action: string) => {
     toast({
       title: action,
@@ -594,6 +613,37 @@ const LearnerApp = () => {
 
           {/* Activity Tab - Bookings and History Combined */}
           <TabsContent value="activity" className="space-y-4 p-4 mt-0">
+            {/* Pending Payments Section */}
+            {showPaymentForBooking && (
+              <div className="mb-4">
+                <PendingPaymentCard 
+                  booking={showPaymentForBooking}
+                  onPaymentComplete={() => setShowPaymentForBooking(null)}
+                />
+              </div>
+            )}
+
+            {!showPaymentForBooking && bookingsNeedingPayment.length > 0 && (
+              <div className="mb-4">
+                <h3 className="font-semibold mb-3 flex items-center gap-2">
+                  <span className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  </span>
+                  Action Required - Complete Payment
+                </h3>
+                <div className="space-y-3">
+                  {bookingsNeedingPayment.map((booking) => (
+                    <PendingPaymentCard 
+                      key={booking.id}
+                      booking={booking}
+                      onPaymentComplete={() => {}}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Upcoming Bookings Section */}
             <div>
               <div className="flex items-center justify-between mb-3">
@@ -620,6 +670,8 @@ const LearnerApp = () => {
                       booking={booking}
                       userType="learner"
                       onJoinSession={handleJoinVideoSession}
+                      onPayNow={handlePayNow}
+                      hasPendingPayment={needsPayment(booking.id)}
                       onStartChat={(booking) => {
                         setChatWithUserId(booking.tutor_id);
                         setChatWithUserName("Tutor");

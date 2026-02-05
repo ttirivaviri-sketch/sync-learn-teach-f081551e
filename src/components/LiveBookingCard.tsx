@@ -1,4 +1,4 @@
-import { Clock, MapPin, Video, Check, X, User } from "lucide-react";
+import { Clock, MapPin, Video, Check, X, User, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,8 @@ interface LiveBookingCardProps {
   onDecline?: (booking: BookingRequest) => void;
   onJoinSession?: (booking: BookingRequest) => void;
   onStartChat?: (booking: BookingRequest) => void;
+  onPayNow?: (booking: BookingRequest) => void;
+  hasPendingPayment?: boolean;
 }
 
 export const LiveBookingCard = ({ 
@@ -21,12 +23,15 @@ export const LiveBookingCard = ({
   onAccept, 
   onDecline, 
   onJoinSession,
-  onStartChat 
+  onStartChat,
+  onPayNow,
+  hasPendingPayment = false,
 }: LiveBookingCardProps) => {
   const isIncoming = booking.status === 'requested' && userType === 'tutor';
   const isAccepted = booking.status === 'confirmed';
   const scheduledTime = new Date(booking.scheduled_at);
   const isNow = Math.abs(scheduledTime.getTime() - new Date().getTime()) < 15 * 60 * 1000; // Within 15 minutes
+  const needsPayment = userType === 'learner' && isAccepted && hasPendingPayment;
 
   const getStatusBadge = () => {
     const statusConfig = {
@@ -36,6 +41,11 @@ export const LiveBookingCard = ({
       canceled: { label: 'Cancelled', variant: 'destructive' as const },
     };
     
+    // Override for pending payment state
+    if (needsPayment) {
+      return { label: 'Awaiting Payment', variant: 'secondary' as const };
+    }
+    
     return statusConfig[booking.status] || statusConfig.requested;
   };
 
@@ -43,7 +53,8 @@ export const LiveBookingCard = ({
 
   return (
     <Card className={`shadow-sm transition-all duration-200 ${
-      isIncoming ? 'ring-2 ring-primary ring-opacity-50 bg-primary/5' : ''
+      isIncoming ? 'ring-2 ring-primary ring-opacity-50 bg-primary/5' : 
+      needsPayment ? 'ring-2 ring-amber-500/50 bg-amber-50/50 dark:bg-amber-950/20' : ''
     }`}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -90,10 +101,16 @@ export const LiveBookingCard = ({
 
         <div className="flex items-center justify-between">
           <p className="font-semibold text-primary">R{booking.price}</p>
-          {isNow && isAccepted && (
+          {isNow && isAccepted && !needsPayment && (
             <Badge variant="default" className="bg-green-500">
               <Video className="h-3 w-3 mr-1" />
               Ready to Join
+            </Badge>
+          )}
+          {needsPayment && (
+            <Badge className="bg-amber-500 text-white">
+              <CreditCard className="h-3 w-3 mr-1" />
+              Payment Required
             </Badge>
           )}
         </div>
@@ -119,7 +136,18 @@ export const LiveBookingCard = ({
             </>
           )}
 
-          {isAccepted && isNow && (
+          {needsPayment && (
+            <Button 
+              size="sm" 
+              onClick={() => onPayNow?.(booking)}
+              className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              <CreditCard className="h-4 w-4 mr-1" />
+              Pay Now
+            </Button>
+          )}
+
+          {isAccepted && isNow && !needsPayment && (
             <Button 
               size="sm" 
               onClick={() => onJoinSession?.(booking)}
