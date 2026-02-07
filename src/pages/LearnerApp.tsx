@@ -70,7 +70,10 @@ const LearnerApp = () => {
 
   // Initialize geolocation, tutor data and presence tracking  
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
-  const { tutors, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation);
+  const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
+    subjectFilter: selectedSubject,
+    searchQuery: searchQuery,
+  });
   const { isUserOnline } = usePresenceTracking(session);
 
   // Get confirmed bookings that need payment
@@ -164,14 +167,20 @@ const LearnerApp = () => {
   };
 
   const loadUpcomingSession = async () => {
-    // Simulate upcoming session - in real app this would come from database
-    setUpcomingSession({
-      tutor: "Sarah Johnson",
-      subject: "Mathematics • Trigonometry",
-      time: "Today, 3:00 PM",
-      price: "R150/hour",
-      sessionId: "session_123"
-    });
+    // Upcoming session is now derived from real-time bookings
+    const upcoming = getUpcomingSessions();
+    if (upcoming.length > 0) {
+      const next = upcoming[0];
+      setUpcomingSession({
+        tutor: next.tutor_profile?.full_name || 'Tutor',
+        subject: `${next.tutor_subjects?.subject || 'Session'} • ${next.tutor_subjects?.level || ''}`,
+        time: new Date(next.scheduled_at).toLocaleString(),
+        price: `R${next.price}/hour`,
+        sessionId: next.id,
+      });
+    } else {
+      setUpcomingSession(null);
+    }
   };
 
   const requestLocation = () => {
@@ -179,25 +188,6 @@ const LearnerApp = () => {
   };
 
   // Real tutor data is now handled by useTutorData hook
-
-  const recentSessions = [
-    {
-      id: 1,
-      tutor: "Sarah Johnson",
-      subject: "Algebra",
-      date: "Yesterday",
-      duration: "2 hours",
-      cost: "R300"
-    },
-    {
-      id: 2,
-      tutor: "David Wilson",
-      subject: "Calculus",
-      date: "3 days ago",
-      duration: "1.5 hours",
-      cost: "R225"
-    }
-  ];
 
   const handleSignOut = () => {
     setShowSignOutConfirm(true);
@@ -362,15 +352,7 @@ const LearnerApp = () => {
     setShowVideoMeeting(true);
   };
 
-  const handleRateAndReview = (session: any) => {
-    setReviewData({
-      bookingId: null, // Would be real booking ID in production
-      reviewedId: 'tutor_id_here', // Would be actual tutor ID
-      reviewedName: session.tutor,
-      userType: 'learner'
-    });
-    setShowReviewModal(true);
-  };
+  // handleRateAndReview is now inline in the past sessions section
 
   const handlePayNow = (booking: any) => {
     setShowPaymentForBooking(booking);
@@ -462,31 +444,21 @@ const LearnerApp = () => {
           <TabsContent value="home" className="space-y-4 p-4 mt-0">
             <AdvancedBooking />
 
-            {/* Quick Filters */}
+            {/* Quick Filters - Dynamic from DB */}
             <div className="flex gap-2 overflow-x-auto pb-2">
-              <Badge 
-                variant={selectedSubject === "Mathematics" ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSelectedSubject(selectedSubject === "Mathematics" ? "" : "Mathematics")}
-              >
-                Mathematics
-              </Badge>
-              <Badge 
-                variant={selectedSubject === "Physics" ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSelectedSubject(selectedSubject === "Physics" ? "" : "Physics")}
-              >
-                Physics
-              </Badge>
-              <Badge 
-                variant={selectedSubject === "Chemistry" ? "default" : "outline"}
-                className="cursor-pointer"
-                onClick={() => setSelectedSubject(selectedSubject === "Chemistry" ? "" : "Chemistry")}
-              >
-                Chemistry
-              </Badge>
-              <Badge variant="outline">English</Badge>
-              <Badge variant="outline">Grade 12</Badge>
+              {allSubjects.map((subject) => (
+                <Badge
+                  key={subject}
+                  variant={selectedSubject === subject ? "default" : "outline"}
+                  className="cursor-pointer whitespace-nowrap"
+                  onClick={() => setSelectedSubject(selectedSubject === subject ? "" : subject)}
+                >
+                  {subject}
+                </Badge>
+              ))}
+              {allSubjects.length === 0 && !tutorsLoading && (
+                <p className="text-sm text-muted-foreground">No subjects available yet</p>
+              )}
             </div>
 
             {/* Location with refresh button */}
@@ -508,28 +480,27 @@ const LearnerApp = () => {
               </Button>
             </div>
 
-            {/* Available Tutors */}
+            {/* Available Tutors - filtered by hook */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Available Now</h3>
+                <h3 className="font-semibold">
+                  {selectedSubject ? `${selectedSubject} Tutors` : 'Available Tutors'}
+                </h3>
                 <p className="text-sm text-muted-foreground">
-                  {tutors.filter(tutor => 
-                    (!searchQuery || tutor.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                     tutor.subjects.some(s => s.subject.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-                    (!selectedSubject || tutor.subjects.some(s => s.subject === selectedSubject))
-                  ).length} tutors found
+                  {tutors.length} tutors found
                 </p>
               </div>
               {tutorsLoading ? (
                 <div className="text-center py-4">Loading tutors...</div>
+              ) : tutors.length === 0 ? (
+                <EmptyState
+                  title={selectedSubject ? `No ${selectedSubject} tutors found` : 'No tutors available'}
+                  description={selectedSubject 
+                    ? 'Try a different subject or clear your filter' 
+                    : 'Check back soon for available tutors'}
+                />
               ) : (
-                tutors
-                  .filter(tutor => 
-                    (!searchQuery || tutor.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                     tutor.subjects.some(s => s.subject.toLowerCase().includes(searchQuery.toLowerCase()))) &&
-                    (!selectedSubject || tutor.subjects.some(s => s.subject === selectedSubject))
-                  )
-                  .map((tutor) => (
+                tutors.map((tutor) => (
                 <Card key={tutor.id} className="shadow-sm">
                   <CardContent className="p-4">
                     <div className="flex items-start gap-3">
@@ -553,9 +524,11 @@ const LearnerApp = () => {
                         </div>
                         
                         <div className="flex items-center gap-1 mt-2">
-                          <StarRating rating={tutor.rating || 4.8} readonly size="sm" />
-                          <span className="text-sm font-medium">{tutor.rating || 4.8}</span>
-                          <span className="text-sm text-muted-foreground">(156)</span>
+                          <StarRating rating={tutor.rating} readonly size="sm" />
+                          <span className="text-sm font-medium">{tutor.rating > 0 ? tutor.rating : 'New'}</span>
+                          {tutor.totalReviews > 0 && (
+                            <span className="text-sm text-muted-foreground">({tutor.totalReviews})</span>
+                          )}
                           {isUserOnline(tutor.id) && (
                             <Badge variant="secondary" className="ml-2 text-xs">Available</Badge>
                           )}
@@ -683,34 +656,59 @@ const LearnerApp = () => {
               )}
             </div>
 
-            {/* Past Sessions Section */}
+            {/* Past Sessions Section - from real bookings */}
             <div className="mt-6">
               <h3 className="font-semibold mb-3">Past Sessions</h3>
               
-              {recentSessions.map((session) => (
-                <Card key={session.id} className="mb-3">
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-medium">{session.tutor}</h4>
-                        <p className="text-sm text-muted-foreground">{session.subject}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{session.date} • {session.duration}</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{session.cost}</p>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
-                          className="mt-2"
-                          onClick={() => handleRateAndReview(session)}
-                        >
-                          Rate & Review
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
+              {bookings.filter(b => b.status === 'completed' || b.status === 'canceled').length === 0 ? (
+                <Card className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-sm">No past sessions yet</p>
+                  </div>
                 </Card>
-              ))}
+              ) : (
+                bookings
+                  .filter(b => b.status === 'completed' || b.status === 'canceled')
+                  .map((pastBooking) => (
+                    <Card key={pastBooking.id} className="mb-3">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{pastBooking.tutor_profile?.full_name || 'Tutor'}</h4>
+                            <p className="text-sm text-muted-foreground">{pastBooking.tutor_subjects?.subject}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(pastBooking.scheduled_at).toLocaleDateString()} • {pastBooking.duration_minutes} min
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">R{pastBooking.price}</p>
+                            <Badge variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'} className="mt-1">
+                              {pastBooking.status === 'completed' ? 'Completed' : 'Cancelled'}
+                            </Badge>
+                            {pastBooking.status === 'completed' && (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="mt-2"
+                                onClick={() => {
+                                  setReviewData({
+                                    bookingId: pastBooking.id,
+                                    reviewedId: pastBooking.tutor_id,
+                                    reviewedName: pastBooking.tutor_profile?.full_name || 'Tutor',
+                                    userType: 'learner'
+                                  });
+                                  setShowReviewModal(true);
+                                }}
+                              >
+                                Rate & Review
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+              )}
             </div>
           </TabsContent>
 
@@ -754,18 +752,24 @@ const LearnerApp = () => {
                   </div>
                 </div>
 
-                {/* Profile Stats */}
+                {/* Profile Stats - from real bookings */}
                 <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div className="text-center">
-                    <p className="text-lg font-semibold">12</p>
+                    <p className="text-lg font-semibold">
+                      {bookings.filter(b => b.status === 'completed').length}
+                    </p>
                     <p className="text-xs text-muted-foreground">Sessions</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold">4.8</p>
-                    <p className="text-xs text-muted-foreground">Rating</p>
+                    <p className="text-lg font-semibold">
+                      {bookings.filter(b => b.status === 'confirmed' || b.status === 'requested').length}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Upcoming</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-semibold">R2,350</p>
+                    <p className="text-lg font-semibold">
+                      R{bookings.filter(b => b.status === 'completed').reduce((sum, b) => sum + Number(b.price), 0).toLocaleString()}
+                    </p>
                     <p className="text-xs text-muted-foreground">Spent</p>
                   </div>
                 </div>
