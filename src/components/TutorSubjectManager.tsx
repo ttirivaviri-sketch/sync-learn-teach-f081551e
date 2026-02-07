@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2 } from 'lucide-react';
-import { useTutorData, TutorSubject } from '@/hooks/useTutorData';
+import { TutorSubject } from '@/hooks/useTutorData';
+import { useTutorManagement } from '@/hooks/useTutorManagement';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TutorSubjectManagerProps {
@@ -32,7 +33,7 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
   const [newRate, setNewRate] = useState('');
   const [isAdding, setIsAdding] = useState(false);
 
-  const { addTutorSubject, removeTutorSubject } = useTutorData();
+  const { addTutorSubject, removeTutorSubject } = useTutorManagement();
 
   const handleAddSubject = async () => {
     if (!newSubject || !newLevel || !newRate) return;

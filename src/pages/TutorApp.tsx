@@ -20,7 +20,7 @@ import StarRating from "@/components/StarRating";
 import TutorEarningsChart from "@/components/TutorEarningsChart";
 import TutorProfile from "@/components/TutorProfile";
 import SessionHistory from "@/components/SessionHistory";
-import { useTutorData } from '@/hooks/useTutorData';
+import { useTutorManagement } from '@/hooks/useTutorManagement';
 import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useTutorStats } from '@/hooks/useTutorStats';
@@ -28,6 +28,7 @@ import TutorAvailabilitySchedule from '@/components/TutorAvailabilitySchedule';
 
 
 const TutorApp = () => {
+  const [mySubjects, setMySubjects] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("home");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
@@ -59,8 +60,7 @@ const TutorApp = () => {
   } = useRealtimeBookings('tutor', session?.user?.id);
 
   // Initialize tutor data management
-  const { tutors, updateOnlineStatus } = useTutorData();
-  const currentTutor = tutors.find(t => t.id === session?.user?.id);
+  const { updateOnlineStatus } = useTutorManagement();
 
   // Initialize presence tracking for real-time online status
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
@@ -89,6 +89,29 @@ const TutorApp = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
+
+  // Load tutor's own subjects
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    const loadSubjects = async () => {
+      const { data } = await supabase
+        .from('tutor_subjects')
+        .select('*')
+        .eq('user_id', session.user.id);
+      setMySubjects(data || []);
+    };
+    loadSubjects();
+
+    const channel = supabase
+      .channel('my-subjects')
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'tutor_subjects',
+        filter: `user_id=eq.${session.user.id}`,
+      }, () => loadSubjects())
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.id]);
 
   const handleSignOut = async () => {
     try {
@@ -600,7 +623,7 @@ const TutorApp = () => {
             </div>
 
             <TutorSubjectManager 
-              subjects={currentTutor?.subjects || []}
+              subjects={mySubjects}
             />
             
             {/* Availability Schedule - persisted to database */}
