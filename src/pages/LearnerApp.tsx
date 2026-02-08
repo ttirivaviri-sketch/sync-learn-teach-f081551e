@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle } from "lucide-react";
+import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,6 +32,8 @@ import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useBookingPayments } from '@/hooks/useBookingPayments';
 import { PendingPaymentCard } from '@/components/PendingPaymentCard';
+import LearnerSyllabusManager from '@/components/LearnerSyllabusManager';
+import { useLearnerSubjects } from '@/hooks/useLearnerSubjects';
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -73,6 +75,7 @@ const LearnerApp = () => {
   const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
     subjectFilter: selectedSubject,
     searchQuery: searchQuery,
+    studyLevel: profile?.study_level || undefined,
   });
   const { isUserOnline } = usePresenceTracking(session);
 
@@ -444,6 +447,17 @@ const LearnerApp = () => {
           <TabsContent value="home" className="space-y-4 p-4 mt-0">
             <AdvancedBooking />
 
+            {/* Search Bar */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search by subject or tutor name..."
+                className="pl-9"
+              />
+            </div>
+
             {/* Quick Filters - Dynamic from DB */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {allSubjects.map((subject) => (
@@ -802,6 +816,15 @@ const LearnerApp = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Syllabus Manager */}
+            {session?.user?.id && (
+              <LearnerSyllabusManager
+                userId={session.user.id}
+                currentStudyLevel={profile?.study_level}
+                onProfileUpdated={loadUserProfile}
+              />
+            )}
 
             {/* Payment History Section */}
             {session?.user?.id && (

@@ -30,6 +30,7 @@ export interface TutorProfile {
 interface UseTutorDataOptions {
   subjectFilter?: string;
   searchQuery?: string;
+  studyLevel?: string;
   maxActiveBookings?: number;
 }
 
@@ -141,6 +142,14 @@ export const useTutorData = (
         );
       }
 
+      // Filter by study level — only show tutors who teach at the learner's level
+      if (options?.studyLevel) {
+        const levelLower = options.studyLevel.toLowerCase();
+        filtered = filtered.filter(t =>
+          t.subjects.some(s => s.level.toLowerCase().includes(levelLower))
+        );
+      }
+
       // Filter by search query (name or subject)
       if (options?.searchQuery) {
         const queryLower = options.searchQuery.toLowerCase();
@@ -217,7 +226,7 @@ export const useTutorData = (
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
-  }, [options?.subjectFilter, options?.searchQuery]);
+  }, [options?.subjectFilter, options?.searchQuery, options?.studyLevel]);
 
   return {
     tutors,

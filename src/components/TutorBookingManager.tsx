@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, Filter, BookOpen, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,31 @@ export const TutorBookingManager = ({
   const [rescheduleBooking, setRescheduleBooking] = useState<BookingRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [learnerSubjectsMap, setLearnerSubjectsMap] = useState<Record<string, string[]>>({});
   const { toast } = useToast();
+
+  // Fetch learner subjects for all bookings
+  useEffect(() => {
+    const learnerIds = [...new Set(bookings.map(b => b.learner_id))];
+    if (learnerIds.length === 0) return;
+
+    const fetchLearnerSubjects = async () => {
+      const { data } = await supabase
+        .from('learner_subjects')
+        .select('user_id, subject')
+        .in('user_id', learnerIds);
+
+      if (data) {
+        const map: Record<string, string[]> = {};
+        for (const row of data) {
+          if (!map[row.user_id]) map[row.user_id] = [];
+          map[row.user_id].push(row.subject);
+        }
+        setLearnerSubjectsMap(map);
+      }
+    };
+    fetchLearnerSubjects();
+  }, [bookings]);
 
   const handleReschedule = async (bookingId: string, newScheduledAt: string, reason?: string) => {
     try {
@@ -144,6 +168,31 @@ export const TutorBookingManager = ({
                 <p className="text-sm text-muted-foreground">
                   {booking.learner_profile?.email}
                 </p>
+                {booking.learner_profile?.study_level && (
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                    <GraduationCap className="h-3 w-3" />
+                    {booking.learner_profile.study_level === 'junior_primary' ? 'Junior Primary' :
+                     booking.learner_profile.study_level === 'senior_primary' ? 'Senior Primary' :
+                     booking.learner_profile.study_level === 'junior_high' ? 'Junior High' :
+                     booking.learner_profile.study_level === 'senior_high' ? 'Senior High' :
+                     booking.learner_profile.study_level === 'tertiary' ? 'Tertiary' : booking.learner_profile.study_level}
+                  </p>
+                )}
+                {learnerSubjectsMap[booking.learner_id]?.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {learnerSubjectsMap[booking.learner_id].slice(0, 3).map((subj) => (
+                      <Badge key={subj} variant="outline" className="text-xs py-0 h-5">
+                        <BookOpen className="h-2.5 w-2.5 mr-0.5" />
+                        {subj}
+                      </Badge>
+                    ))}
+                    {learnerSubjectsMap[booking.learner_id].length > 3 && (
+                      <Badge variant="outline" className="text-xs py-0 h-5">
+                        +{learnerSubjectsMap[booking.learner_id].length - 3}
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <Badge className={getStatusColor(booking.status)}>
