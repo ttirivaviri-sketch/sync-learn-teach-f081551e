@@ -19,6 +19,7 @@ import {
   BarChart3,
   ShieldCheck,
   Shield,
+  RotateCcw,
 } from "lucide-react";
 
 const items = [
@@ -30,6 +31,7 @@ const items = [
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
   { title: "Roles", url: "/admin/roles", icon: ShieldCheck },
   { title: "Security", url: "/admin/security", icon: Shield },
+  { title: "Refunds", url: "/admin/refunds", icon: RotateCcw },
 ];
 
 export function AppSidebar() {

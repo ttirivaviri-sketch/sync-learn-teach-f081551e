@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search } from "lucide-react";
+import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,6 +34,7 @@ import { useBookingPayments } from '@/hooks/useBookingPayments';
 import { PendingPaymentCard } from '@/components/PendingPaymentCard';
 import LearnerSyllabusManager from '@/components/LearnerSyllabusManager';
 import { useLearnerSubjects } from '@/hooks/useLearnerSubjects';
+import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 
 const LearnerApp = () => {
   const [activeTab, setActiveTab] = useState("home");
@@ -553,6 +554,18 @@ const LearnerApp = () => {
                             </Badge>
                           )}
                         </div>
+
+                        {/* Qualifications */}
+                        {tutor.qualifications && tutor.qualifications.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {tutor.qualifications.slice(0, 3).map((q) => (
+                              <Badge key={q.id} variant="outline" className="text-xs">
+                                <Award className="h-3 w-3 mr-1" />
+                                {q.qualification_type}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
                         
                         <div className="grid grid-cols-3 gap-2 mt-3">
                           <Button 
@@ -737,15 +750,13 @@ const LearnerApp = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src="/placeholder.svg" />
-                    <AvatarFallback>
-                      {profile?.full_name ? 
-                        profile.full_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 
-                        session?.user?.email?.charAt(0).toUpperCase() || 'U'
-                      }
-                    </AvatarFallback>
-                  </Avatar>
+                  <ProfilePhotoUpload
+                    userId={session?.user?.id || ''}
+                    currentAvatarUrl={profile?.avatar_url}
+                    fullName={profile?.full_name}
+                    size="md"
+                    onUploaded={() => loadUserProfile()}
+                  />
                   <div>
                     <h3 className="font-semibold">
                       {profile?.full_name || session?.user?.email?.split('@')[0] || 'Learner'}
