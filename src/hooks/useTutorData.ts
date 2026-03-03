@@ -10,6 +10,13 @@ export interface TutorSubject {
   hourly_rate: number;
 }
 
+export interface TutorQualification {
+  id: string;
+  qualification_type: string;
+  institution: string;
+  year_obtained?: number;
+}
+
 export interface TutorProfile {
   id: string;
   full_name: string;
@@ -21,6 +28,7 @@ export interface TutorProfile {
   location_lat?: number;
   location_lng?: number;
   subjects: TutorSubject[];
+  qualifications: TutorQualification[];
   rating: number;
   totalReviews: number;
   distance?: string;
@@ -65,18 +73,20 @@ export const useTutorData = (
       // Fetch subjects, reviews, and active booking counts in parallel
       const { data: { session } } = await supabase.auth.getSession();
 
-      const [subjectsResult, reviewsResult, activeBookingsResult] = await Promise.all([
+      const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult] = await Promise.all([
         supabase.from('tutor_subjects').select('*'),
         supabase.from('reviews').select('reviewed_id, rating'),
         supabase
           .from('bookings')
           .select('tutor_id')
           .in('status', ['requested', 'confirmed']),
+        supabase.from('qualifications').select('id, user_id, qualification_type, institution, year_obtained'),
       ]);
 
       const subjectsData = subjectsResult.data || [];
       const reviewsData = reviewsResult.data || [];
       const activeBookingsData = activeBookingsResult.data || [];
+      const qualificationsData = qualificationsResult.data || [];
 
       // Build unique subjects list
       const uniqueSubjects = [...new Set(subjectsData.map(s => s.subject))].sort();
@@ -100,6 +110,7 @@ export const useTutorData = (
       // Transform tutor data
       const tutorsWithSubjects = tutorsData.map(tutor => {
         const tutorSubjects = subjectsData.filter(s => s.user_id === tutor.id);
+        const tutorQualifications = qualificationsData.filter(q => q.user_id === tutor.id);
         const ratingInfo = ratingsMap.get(tutor.id);
         const avgRating = ratingInfo ? Math.round((ratingInfo.total / ratingInfo.count) * 10) / 10 : 0;
         const totalReviews = ratingInfo?.count || 0;
@@ -120,6 +131,7 @@ export const useTutorData = (
           location_lat: tutor.location_lat,
           location_lng: tutor.location_lng,
           subjects: tutorSubjects,
+          qualifications: tutorQualifications,
           rating: avgRating,
           totalReviews,
           confirmedBookingsCount,
