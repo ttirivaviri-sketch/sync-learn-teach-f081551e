@@ -1,186 +1,268 @@
-import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  GraduationCap, 
-  Search, 
-  Calendar, 
+import {
+  GraduationCap,
+  Search,
+  Calendar,
   CreditCard,
   Shield,
   Upload,
   CheckCircle,
-  Star
+  Star,
+  ArrowRight,
+  Briefcase,
+  BookOpen,
+  ChevronRight,
 } from "lucide-react";
-import learnerAppImage from "@/assets/learner-app-mockup.jpg";
-import tutorAppImage from "@/assets/tutor-app-mockup.jpg";
 
+/* ── Feature row ─────────────────────────────────────── */
+interface FeatureRowProps {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  color: string;
+}
+const FeatureRow = ({ icon: Icon, title, desc, color }: FeatureRowProps) => (
+  <div className="flex items-start gap-4 group">
+    <div
+      className={`shrink-0 w-10 h-10 rounded-xl flex items-center justify-center shadow-sm ${color} group-hover:scale-110 transition-transform`}
+    >
+      <Icon className="h-5 w-5 text-white" />
+    </div>
+    <div>
+      <p className="font-semibold text-foreground text-sm mb-0.5">{title}</p>
+      <p className="text-sm text-muted-foreground leading-relaxed">{desc}</p>
+    </div>
+  </div>
+);
+
+/* ── Inline phone mockup ─────────────────────────────── */
+interface PhoneMockupProps {
+  accentColor: string;
+  screenContent: React.ReactNode;
+}
+const PhoneMockup = ({ accentColor, screenContent }: PhoneMockupProps) => (
+  <div className="relative flex justify-center">
+    {/* Outer glow */}
+    <div
+      className={`absolute inset-0 rounded-[2.5rem] blur-2xl opacity-30 ${accentColor}`}
+    />
+    {/* Phone shell */}
+    <div
+      className={`relative w-56 rounded-[2.5rem] border-[5px] overflow-hidden shadow-2xl ${accentColor.replace("bg-", "border-")} border-opacity-40`}
+      style={{ borderColor: "rgba(255,255,255,0.18)", background: "linear-gradient(145deg, #1e1b4b 0%, #312e81 100%)" }}
+    >
+      {/* Top notch */}
+      <div className="flex justify-center pt-3 pb-2">
+        <div className="w-16 h-5 rounded-full bg-black/60" />
+      </div>
+      {/* Screen */}
+      <div className="px-3 pb-4">{screenContent}</div>
+    </div>
+
+    {/* Decorative ring */}
+    <div className="absolute -inset-4 rounded-[3rem] border border-dashed border-primary/20 -z-10 animate-spin-slow" />
+  </div>
+);
+
+/* ── Learner screen content ──────────────────────────── */
+const LearnerScreen = () => (
+  <div className="space-y-2.5">
+    <p className="text-[10px] font-bold text-white/90 mb-1">Discover Tutors</p>
+    <div className="bg-white/15 rounded-xl px-2.5 py-1.5 flex items-center gap-1.5 border border-white/10">
+      <Search className="h-3 w-3 text-white/60" />
+      <span className="text-[9px] text-white/50">Search subject…</span>
+    </div>
+    {[
+      { sub: "Mathematics", name: "Dr. Alex M.", stars: 5, rate: "R180/hr" },
+      { sub: "Chemistry", name: "Sarah K.", stars: 5, rate: "R150/hr" },
+      { sub: "Physics", name: "James T.", stars: 4, rate: "R200/hr" },
+    ].map((t, i) => (
+      <div key={i} className="bg-white/10 rounded-xl p-2 border border-white/10 flex items-center gap-2">
+        <div
+          className="w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0"
+          style={{ background: `hsl(${200 + i * 40} 70% 50%)` }}
+        >
+          {t.name[0]}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold text-white truncate">{t.name}</p>
+          <p className="text-[8px] text-white/55">{t.sub}</p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-[9px] font-bold text-white">{t.rate}</p>
+          <div className="flex gap-0.5 mt-0.5">
+            {[...Array(t.stars)].map((_, s) => (
+              <div key={s} className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
+            ))}
+          </div>
+        </div>
+      </div>
+    ))}
+    <div className="bg-primary/80 rounded-xl py-2 text-center mt-1">
+      <span className="text-[10px] font-bold text-white">Book a Session →</span>
+    </div>
+  </div>
+);
+
+/* ── Tutor screen content ────────────────────────────── */
+const TutorScreen = () => (
+  <div className="space-y-2.5">
+    <p className="text-[10px] font-bold text-white/90 mb-1">Dashboard</p>
+    <div className="grid grid-cols-2 gap-2">
+      {[
+        { label: "This Month", value: "R4 200", icon: "💰" },
+        { label: "Sessions", value: "24", icon: "📅" },
+      ].map((m, i) => (
+        <div key={i} className="bg-white/10 rounded-xl p-2 border border-white/10 text-center">
+          <p className="text-base">{m.icon}</p>
+          <p className="text-[11px] font-bold text-white">{m.value}</p>
+          <p className="text-[8px] text-white/55">{m.label}</p>
+        </div>
+      ))}
+    </div>
+    <p className="text-[9px] text-white/55 font-medium mt-1">Upcoming sessions</p>
+    {["09:00 - Sipho (Maths)", "11:30 - Ayasha (Science)", "15:00 - Liam (English)"].map((s, i) => (
+      <div key={i} className="bg-white/10 rounded-xl px-2.5 py-2 border border-white/10 flex items-center gap-2">
+        <div className="w-1.5 h-8 rounded-full bg-secondary/70" />
+        <span className="text-[9px] text-white/80">{s}</span>
+        <ChevronRight className="w-3 h-3 text-white/40 ml-auto" />
+      </div>
+    ))}
+  </div>
+);
+
+/* ══════════════════════════════════════════════════════
+   AppShowcase
+   ══════════════════════════════════════════════════════ */
 const AppShowcase = () => {
+  const [activeTab, setActiveTab] = useState<"learner" | "tutor">("learner");
+
+  const learnerFeatures: FeatureRowProps[] = [
+    { icon: Search, title: "Smart Tutor Search", desc: "Filter by subject, level, location, or specific modules.", color: "bg-primary" },
+    { icon: Star, title: "Verified Profiles", desc: "View qualifications, ratings, and genuine student reviews.", color: "bg-amber-500" },
+    { icon: Calendar, title: "Flexible Booking", desc: "Choose your preferred date & time in seconds.", color: "bg-indigo-500" },
+    { icon: CreditCard, title: "Secure Payments", desc: "Pay via mobile money, card, or cash — all protected.", color: "bg-emerald-600" },
+  ];
+
+  const tutorFeatures: FeatureRowProps[] = [
+    { icon: Upload, title: "Easy Onboarding", desc: "Upload ID & qualifications — verified within 24 hours.", color: "bg-secondary" },
+    { icon: CheckCircle, title: "Background Checks", desc: "Criminal record verification for a safe platform.", color: "bg-teal-600" },
+    { icon: BookOpen, title: "Subject Management", desc: "Set your subjects, price per hour, and availability.", color: "bg-cyan-600" },
+    { icon: Briefcase, title: "Earnings Dashboard", desc: "Track income, completed sessions, and request payouts.", color: "bg-violet-600" },
+  ];
+
+  const isLearner = activeTab === "learner";
+
   return (
-    <section className="py-20 bg-background">
+    <section className="py-28 bg-background overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Two Apps, One Mission
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+            <span className="w-4 h-px bg-border block" />
+            Two apps, one mission
+            <span className="w-4 h-px bg-border block" />
+          </span>
+          <h2 className="text-4xl md:text-5xl font-display font-extrabold text-foreground mb-5">
+            Built for every role
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            StudySync provides separate, optimized experiences for learners and tutors, 
-            built specifically for Android devices.
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Separate, purpose-built experiences for learners and tutors.
           </p>
+
+          {/* Tab switcher */}
+          <div className="inline-flex mt-8 bg-muted rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setActiveTab("learner")}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                isLearner
+                  ? "bg-primary text-white shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <GraduationCap className="inline h-4 w-4 mr-1.5 -mt-0.5" />
+              StudySync Learner
+            </button>
+            <button
+              onClick={() => setActiveTab("tutor")}
+              className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                !isLearner
+                  ? "bg-secondary text-white shadow-md"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <Shield className="inline h-4 w-4 mr-1.5 -mt-0.5" />
+              StudySync Tutor
+            </button>
+          </div>
         </div>
 
+        {/* Content */}
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Learner App */}
-          <div className="space-y-8">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary rounded-xl">
-                <GraduationCap className="h-8 w-8 text-primary-foreground" />
+
+          {/* Left: features */}
+          <div className="space-y-8 animate-fade-up">
+            {/* Heading */}
+            <div>
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`p-2.5 rounded-xl ${isLearner ? "bg-primary" : "bg-secondary"}`}>
+                  {isLearner
+                    ? <GraduationCap className="h-6 w-6 text-white" />
+                    : <Shield className="h-6 w-6 text-white" />}
+                </div>
+                <div>
+                  <h3 className="text-2xl font-display font-bold text-foreground">
+                    {isLearner ? "StudySync Learner" : "StudySync Tutor"}
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    {isLearner ? "For students who need expert help" : "For educators who want to teach"}
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 className="text-3xl font-bold text-foreground">StudySync Learner</h3>
-                <p className="text-muted-foreground">For students who need help</p>
+
+              {/* Badges */}
+              <div className="flex flex-wrap gap-2 mt-3">
+                {isLearner
+                  ? (["Grade 8–12", "University", "All Subjects", "Online & In-Person"] as const).map((b) => (
+                      <Badge key={b} variant="secondary" className="bg-primary-light text-primary border-0">{b}</Badge>
+                    ))
+                  : (["Verified", "Trusted", "Qualified", "Background Checked"] as const).map((b) => (
+                      <Badge key={b} variant="outline" className="border-secondary/40 text-secondary">{b}</Badge>
+                    ))}
               </div>
             </div>
 
-            <Card className="bg-gradient-card shadow-card border-0">
-              <CardContent className="p-8">
-                <h4 className="text-xl font-semibold mb-6 text-foreground">Key Features:</h4>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Search className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Smart Tutor Search</p>
-                      <p className="text-sm text-muted-foreground">Find tutors by subject, level, or specific modules</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Star className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Verified Profiles</p>
-                      <p className="text-sm text-muted-foreground">View qualifications, ratings, and reviews</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <Calendar className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Easy Booking</p>
-                      <p className="text-sm text-muted-foreground">Choose dates, times, and get confirmations</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="h-5 w-5 text-primary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Flexible Payment</p>
-                      <p className="text-sm text-muted-foreground">Mobile money or cash options</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-8 flex flex-wrap gap-2">
-                  <Badge variant="secondary">Grade 8-12</Badge>
-                  <Badge variant="secondary">University</Badge>
-                  <Badge variant="secondary">All Subjects</Badge>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Feature rows */}
+            <div className="space-y-5">
+              {(isLearner ? learnerFeatures : tutorFeatures).map((f, i) => (
+                <FeatureRow key={i} {...f} />
+              ))}
+            </div>
 
-            <Button 
-              className="w-full bg-primary hover:bg-primary/90 shadow-elegant"
-              onClick={() => window.location.href = '/learner'}
+            {/* CTA */}
+            <Button
+              size="lg"
+              className={`gap-2 group font-semibold shadow-elegant ${
+                isLearner ? "bg-primary hover:bg-primary/90" : "bg-secondary hover:bg-secondary/90"
+              }`}
+              onClick={() =>
+                (window.location.href = isLearner ? "/learner" : "/tutor")
+              }
             >
-              Try Learner App
+              {isLearner ? "Try the Learner App" : "Try the Tutor App"}
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Button>
           </div>
 
-          {/* App Mockup */}
-          <div className="flex justify-center">
-            <div className="relative">
-              <img 
-                src={learnerAppImage} 
-                alt="StudySync Learner App Interface"
-                className="w-80 h-auto rounded-3xl shadow-elegant"
-              />
-              <div className="absolute -top-4 -right-4 bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                For Students
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Tutor App */}
-        <div className="grid lg:grid-cols-2 gap-16 items-center mt-24">
-          {/* App Mockup */}
-          <div className="flex justify-center lg:order-1">
-            <div className="relative">
-              <img 
-                src={tutorAppImage} 
-                alt="StudySync Tutor App Interface"
-                className="w-80 h-auto rounded-3xl shadow-elegant"
-              />
-              <div className="absolute -top-4 -right-4 bg-secondary text-secondary-foreground px-3 py-1 rounded-full text-sm font-medium">
-                For Tutors
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-8 lg:order-2">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-secondary rounded-xl">
-                <Shield className="h-8 w-8 text-secondary-foreground" />
-              </div>
-              <div>
-                <h3 className="text-3xl font-bold text-foreground">StudySync Tutor</h3>
-                <p className="text-muted-foreground">For people who want to teach</p>
-              </div>
-            </div>
-
-            <Card className="bg-gradient-card shadow-card border-0">
-              <CardContent className="p-8">
-                <h4 className="text-xl font-semibold mb-6 text-foreground">Key Features:</h4>
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <Upload className="h-5 w-5 text-secondary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Document Verification</p>
-                      <p className="text-sm text-muted-foreground">Upload ID and academic certificates</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CheckCircle className="h-5 w-5 text-secondary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Background Checks</p>
-                      <p className="text-sm text-muted-foreground">Criminal record verification for safety</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <GraduationCap className="h-5 w-5 text-secondary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Subject Selection</p>
-                      <p className="text-sm text-muted-foreground">Choose what you want to teach</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="h-5 w-5 text-secondary mt-1 flex-shrink-0" />
-                    <div>
-                      <p className="font-medium text-foreground">Earnings Tracking</p>
-                      <p className="text-sm text-muted-foreground">Monitor income and request payouts</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="mt-8 flex flex-wrap gap-2">
-                  <Badge variant="outline" className="border-secondary text-secondary">Verified</Badge>
-                  <Badge variant="outline" className="border-secondary text-secondary">Trusted</Badge>
-                  <Badge variant="outline" className="border-secondary text-secondary">Qualified</Badge>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Button 
-              className="w-full bg-secondary hover:bg-secondary/90 shadow-elegant"
-              onClick={() => window.location.href = '/tutor'}
-            >
-              Try Tutor App
-            </Button>
+          {/* Right: phone mockup */}
+          <div className="animate-fade-up delay-200">
+            <PhoneMockup
+              accentColor={isLearner ? "bg-primary/40" : "bg-secondary/40"}
+              screenContent={isLearner ? <LearnerScreen /> : <TutorScreen />}
+            />
           </div>
         </div>
       </div>

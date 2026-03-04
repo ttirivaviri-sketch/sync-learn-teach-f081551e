@@ -1,95 +1,143 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { 
-  Shield, 
-  Award, 
-  Users, 
+import {
+  Shield,
+  Award,
+  Users,
   CheckCircle,
   FileCheck,
-  Star
+  Star,
+  ArrowRight,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+interface TrustCard {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  gradient: string;
+  steps: string[];
+}
+
+const trustCards: TrustCard[] = [
+  {
+    icon: FileCheck,
+    title: "Document Verification",
+    description:
+      "All tutors must provide valid ID and academic certificates. We verify Matric certificates and university transcripts.",
+    gradient: "from-blue-500 to-indigo-600",
+    steps: ["ID document", "Academic certificates", "Matric / university transcript"],
+  },
+  {
+    icon: Shield,
+    title: "Background Checks",
+    description:
+      "Criminal background verification ensures the safety and security of all learning interactions on our platform.",
+    gradient: "from-teal-500 to-emerald-600",
+    steps: ["Criminal record check", "Identity confirmation", "Ongoing monitoring"],
+  },
+  {
+    icon: Star,
+    title: "Quality Ratings",
+    description:
+      "Student feedback and ratings help maintain high teaching standards and guide future learners in their selection.",
+    gradient: "from-amber-500 to-orange-500",
+    steps: ["Post-session reviews", "Verified ratings", "Performance monitoring"],
+  },
+];
 
 const TrustSection = () => {
+  const navigate = useNavigate();
+
   return (
-    <section className="py-20 bg-accent/30">
+    <section className="py-28 bg-muted/30 overflow-hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
-            Trust & Safety First
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
+            <span className="w-4 h-px bg-border block" />
+            Safety & Trust
+            <span className="w-4 h-px bg-border block" />
+          </span>
+          <h2 className="text-4xl md:text-5xl font-display font-extrabold text-foreground mb-5">
+            Your safety, our priority
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Our rigorous verification process ensures that learners connect with qualified, 
-            trustworthy tutors who are committed to educational excellence.
+            Our rigorous verification process ensures learners connect with qualified, 
+            trustworthy tutors committed to educational excellence.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <Card className="bg-background shadow-card border-0 text-center">
-            <CardContent className="p-8">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <FileCheck className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4 text-foreground">Document Verification</h3>
-              <p className="text-muted-foreground">
-                All tutors must provide valid ID and academic certificates. 
-                We verify Matric certificates and university transcripts.
-              </p>
-            </CardContent>
-          </Card>
+        {/* Trust cards */}
+        <div className="grid md:grid-cols-3 gap-6 mb-16">
+          {trustCards.map((card, i) => (
+            <div
+              key={i}
+              className="group bg-white rounded-2xl p-8 shadow-card border border-border/60 hover:border-primary/20 hover:shadow-elegant hover:-translate-y-1 transition-all duration-300 overflow-hidden relative"
+            >
+              {/* Gradient blob */}
+              <div
+                className={`absolute -top-10 -right-10 w-32 h-32 rounded-full bg-gradient-to-br ${card.gradient} opacity-0 group-hover:opacity-10 blur-2xl transition-opacity duration-500`}
+              />
 
-          <Card className="bg-background shadow-card border-0 text-center">
-            <CardContent className="p-8">
-              <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Shield className="h-8 w-8 text-secondary" />
+              {/* Icon */}
+              <div
+                className={`inline-flex items-center justify-center w-14 h-14 rounded-xl bg-gradient-to-br ${card.gradient} mb-6 shadow-md group-hover:scale-110 transition-transform duration-300`}
+              >
+                <card.icon className="h-7 w-7 text-white" />
               </div>
-              <h3 className="text-xl font-semibold mb-4 text-foreground">Background Checks</h3>
-              <p className="text-muted-foreground">
-                Criminal background verification ensures the safety and security 
-                of all learning interactions on our platform.
-              </p>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-background shadow-card border-0 text-center">
-            <CardContent className="p-8">
-              <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
-                <Star className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold mb-4 text-foreground">Quality Ratings</h3>
-              <p className="text-muted-foreground">
-                Student feedback and ratings help maintain high teaching standards 
-                and guide future learners in their tutor selection.
-              </p>
-            </CardContent>
-          </Card>
+              <h3 className="text-lg font-display font-bold text-foreground mb-3">{card.title}</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed mb-5">{card.description}</p>
+
+              {/* Steps checklist */}
+              <ul className="space-y-2">
+                {card.steps.map((step, j) => (
+                  <li key={j} className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                    {step}
+                  </li>
+                ))}
+              </ul>
+
+              {/* Bottom accent */}
+              <div className={`absolute bottom-0 left-0 right-0 h-0.5 w-0 group-hover:w-full transition-all duration-300 bg-gradient-to-r ${card.gradient}`} />
+            </div>
+          ))}
         </div>
 
-        <div className="bg-gradient-card rounded-2xl p-8 md:p-12 shadow-elegant">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="flex items-center justify-center mb-4">
-                <CheckCircle className="h-12 w-12 text-primary" />
+        {/* Stats strip */}
+        <div className="bg-white rounded-3xl shadow-elegant border border-border/50 p-8 md:p-12">
+          <div className="grid md:grid-cols-3 gap-10 text-center">
+            {[
+              { Icon: CheckCircle, value: "100%", label: "Verified Tutors", color: "text-primary", gradient: "from-blue-500 to-indigo-600" },
+              { Icon: Award,        value: "500+",  label: "Qualified Educators", color: "text-secondary", gradient: "from-teal-500 to-emerald-600" },
+              { Icon: Users,        value: "1 000+",label: "Happy Students", color: "text-primary", gradient: "from-violet-500 to-purple-600" },
+            ].map(({ Icon, value, label, gradient }, i) => (
+              <div key={i} className="group flex flex-col items-center gap-4">
+                <div
+                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shadow-md group-hover:scale-110 transition-transform duration-300`}
+                >
+                  <Icon className="h-8 w-8 text-white" />
+                </div>
+                <div>
+                  <p className="text-4xl font-display font-extrabold text-foreground mb-1">{value}</p>
+                  <p className="text-sm text-muted-foreground font-medium">{label}</p>
+                </div>
               </div>
-              <h3 className="text-3xl font-bold text-foreground mb-2">100%</h3>
-              <p className="text-muted-foreground">Verified Tutors</p>
-            </div>
-            
-            <div>
-              <div className="flex items-center justify-center mb-4">
-                <Award className="h-12 w-12 text-secondary" />
-              </div>
-              <h3 className="text-3xl font-bold text-foreground mb-2">500+</h3>
-              <p className="text-muted-foreground">Qualified Educators</p>
-            </div>
-            
-            <div>
-              <div className="flex items-center justify-center mb-4">
-                <Users className="h-12 w-12 text-primary" />
-              </div>
-              <h3 className="text-3xl font-bold text-foreground mb-2">1000+</h3>
-              <p className="text-muted-foreground">Happy Students</p>
-            </div>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <button
+              onClick={() => navigate("/learner/auth")}
+              className="inline-flex items-center gap-2 bg-primary text-white hover:bg-primary/90 px-7 py-3 rounded-xl font-bold text-sm shadow-elegant transition-all group"
+            >
+              Get Started Safely
+              <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            </button>
           </div>
         </div>
+
       </div>
     </section>
   );
