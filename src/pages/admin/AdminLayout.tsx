@@ -18,7 +18,7 @@ const AdminLayout = () => {
             <div className="flex items-center gap-3">
               <SidebarTrigger aria-label="Toggle admin sidebar" />
               <Link to="/admin">
-                <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-8 object-contain" />
+                <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
               </Link>
             </div>
             <nav className="text-sm">

@@ -26,7 +26,7 @@ const LaunchScreen = ({ onComplete }: LaunchScreenProps) => {
         <img 
           src="/lovable-uploads/studysync-logo.png" 
           alt="StudySync" 
-          className="mx-auto h-20 object-contain animate-bounce"
+          className="mx-auto h-28 object-contain mix-blend-screen animate-bounce"
         />
         <div className="flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>

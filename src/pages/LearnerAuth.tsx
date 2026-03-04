@@ -133,7 +133,7 @@ const LearnerAuth = () => {
           <img 
             src="/lovable-uploads/studysync-logo.png" 
             alt="StudySync" 
-            className="mx-auto mb-4 h-16 object-contain"
+            className="mx-auto mb-4 h-24 object-contain mix-blend-screen"
           />
           <p className="text-white/80">Learner App</p>
         </div>

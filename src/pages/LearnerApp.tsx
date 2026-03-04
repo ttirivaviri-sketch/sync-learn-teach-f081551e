@@ -409,7 +409,7 @@ const LearnerApp = () => {
       <header className="bg-primary text-primary-foreground p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-8 object-contain" />
+            <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain brightness-0 invert" />
           </div>
           <div className="flex items-center gap-3">
             <NotificationCenter />
