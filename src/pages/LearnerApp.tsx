@@ -408,9 +408,8 @@ const LearnerApp = () => {
       {/* Header */}
       <header className="bg-primary text-primary-foreground p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold">StudySync Learner</h1>
-            <p className="text-sm opacity-90">Find your perfect tutor</p>
+          <div className="flex items-center gap-2.5">
+            <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-8 object-contain" />
           </div>
           <div className="flex items-center gap-3">
             <NotificationCenter />

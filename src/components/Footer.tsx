@@ -35,10 +35,7 @@ const Footer = () => {
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-5">
             <div className="flex items-center gap-2.5">
-              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="w-9 h-9 rounded-xl object-contain" />
-              <span className="text-xl font-display font-bold text-background">
-                Study<span className="text-white/50">Sync</span>
-              </span>
+              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-9 object-contain" />
             </div>
 
             <p className="text-sm text-background/55 leading-relaxed max-w-xs">

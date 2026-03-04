@@ -130,15 +130,11 @@ const LearnerAuth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          {/* Cropped wide logo container to show both the icon and wordmark */}
-          <div className="mx-auto mb-4 w-56 h-14 overflow-hidden rounded-md">
-            <img 
-              src="/lovable-uploads/studysync-logo.png" 
-              alt="StudySync Logo" 
-              className="w-full h-full object-cover object-center"
-            />
-          </div>
-          <h1 className="text-3xl font-bold text-white mb-2">StudySync</h1>
+          <img 
+            src="/lovable-uploads/studysync-logo.png" 
+            alt="StudySync" 
+            className="mx-auto mb-4 h-16 object-contain"
+          />
           <p className="text-white/80">Learner App</p>
         </div>
 

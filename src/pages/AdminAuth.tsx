@@ -12,7 +12,7 @@ const AdminAuth = () => {
   return (
     <main className="min-h-[60vh] flex items-center justify-center p-6">
       <section className="w-full max-w-md rounded-lg border bg-card p-6">
-        <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="w-12 h-12 rounded object-contain mb-3" />
+        <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-12 object-contain mb-3" />
         <h1 className="text-xl font-semibold tracking-tight">Admin Sign In</h1>
         <p className="text-sm text-muted-foreground mt-1">
           This area is for StudySync staff. Authentication will be configured here.
