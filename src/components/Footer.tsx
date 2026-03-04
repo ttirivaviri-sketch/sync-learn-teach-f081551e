@@ -1,61 +1,129 @@
+import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { GraduationCap } from "lucide-react";
+import { GraduationCap, Twitter, Github, Linkedin, Instagram, ArrowRight } from "lucide-react";
+
+const footerLinks = {
+  "For Students": ["Find Tutors", "Book Sessions", "Track Progress", "Student Support"],
+  "For Tutors":   ["Become a Tutor", "Verification Process", "Earnings & Payouts", "Tutor Support"],
+  Company:        ["About Us", "Blog", "Careers", "Press Kit"],
+  Legal:          ["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact Us"],
+};
+
+const socials = [
+  { icon: Twitter,   label: "Twitter",   href: "#" },
+  { icon: Linkedin,  label: "LinkedIn",  href: "#" },
+  { icon: Instagram, label: "Instagram", href: "#" },
+  { icon: Github,    label: "GitHub",    href: "#" },
+];
 
 const Footer = () => {
+  const [email, setEmail] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+
+  const handleSubscribe = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (email) { setSubscribed(true); setEmail(""); }
+  };
+
   return (
-    <footer className="bg-muted/50 py-12">
+    <footer className="bg-foreground text-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid md:grid-cols-4 gap-8">
-          <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-8 w-8 text-primary" />
-              <span className="text-2xl font-bold text-foreground">StudySync</span>
+
+        {/* Top section */}
+        <div className="pt-16 pb-12 grid md:grid-cols-2 lg:grid-cols-6 gap-10">
+
+          {/* Brand column */}
+          <div className="lg:col-span-2 space-y-5">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
+                <GraduationCap className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-display font-bold text-background">
+                Study<span className="text-white/50">Sync</span>
+              </span>
             </div>
-            <p className="text-muted-foreground">
-              Connecting learners with verified, qualified tutors for accessible quality education.
+
+            <p className="text-sm text-background/55 leading-relaxed max-w-xs">
+              Connecting learners with verified, qualified tutors for accessible, 
+              quality education across South Africa and beyond.
             </p>
-          </div>
-          
-          <div>
-            <h3 className="font-semibold text-foreground mb-4">For Students</h3>
-            <div className="space-y-2 text-muted-foreground">
-              <p>Find Tutors</p>
-              <p>Book Sessions</p>
-              <p>Track Progress</p>
-              <p>Student Support</p>
+
+            {/* Newsletter */}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-widest text-background/50 mb-3">
+                Get updates
+              </p>
+              {subscribed ? (
+                <p className="text-sm text-emerald-400 font-medium">✓ You're subscribed!</p>
+              ) : (
+                <form onSubmit={handleSubscribe} className="flex gap-2">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="flex-1 min-w-0 bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-sm text-background placeholder:text-background/35 focus:outline-none focus:border-primary"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-2 transition-colors shrink-0"
+                    aria-label="Subscribe"
+                  >
+                    <ArrowRight className="h-4 w-4" />
+                  </button>
+                </form>
+              )}
+            </div>
+
+            {/* Socials */}
+            <div className="flex gap-3">
+              {socials.map(({ icon: Icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  aria-label={label}
+                  className="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary flex items-center justify-center transition-colors"
+                >
+                  <Icon className="h-4 w-4 text-background" />
+                </a>
+              ))}
             </div>
           </div>
-          
-          <div>
-            <h3 className="font-semibold text-foreground mb-4">For Tutors</h3>
-            <div className="space-y-2 text-muted-foreground">
-              <p>Become a Tutor</p>
-              <p>Verification Process</p>
-              <p>Earnings</p>
-              <p>Tutor Support</p>
+
+          {/* Link columns */}
+          {Object.entries(footerLinks).map(([heading, links]) => (
+            <div key={heading}>
+              <p className="text-xs font-bold uppercase tracking-widest text-background/45 mb-4">
+                {heading}
+              </p>
+              <ul className="space-y-2.5">
+                {links.map((link) => (
+                  <li key={link}>
+                    <a
+                      href="#"
+                      className="text-sm text-background/60 hover:text-background transition-colors"
+                    >
+                      {link}
+                    </a>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-          
-          <div>
-            <h3 className="font-semibold text-foreground mb-4">Company</h3>
-            <div className="space-y-2 text-muted-foreground">
-              <p>About Us</p>
-              <p>Privacy Policy</p>
-              <p>Terms of Service</p>
-              <p>Contact</p>
-            </div>
-          </div>
+          ))}
         </div>
-        
-        <Separator className="my-8" />
-        
-        <div className="flex flex-col md:flex-row justify-between items-center">
-          <p className="text-muted-foreground">
-            © 2024 StudySync. All rights reserved.
-          </p>
-          <p className="text-muted-foreground">
-            Made with ❤️ for accessible education
-          </p>
+
+        <Separator className="bg-white/10" />
+
+        {/* Bottom bar */}
+        <div className="py-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-background/40">
+          <p>© 2026 StudySync. All rights reserved.</p>
+          <div className="flex gap-5">
+            {["Privacy Policy", "Terms", "Cookie Policy"].map((l) => (
+              <a key={l} href="#" className="hover:text-background/70 transition-colors">{l}</a>
+            ))}
+          </div>
+          <p>Made with ❤️ for accessible education</p>
         </div>
       </div>
     </footer>
