@@ -35,9 +35,7 @@ const Footer = () => {
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-5">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
-                <GraduationCap className="h-5 w-5 text-white" />
-              </div>
+              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="w-9 h-9 rounded-xl object-contain" />
               <span className="text-xl font-display font-bold text-background">
                 Study<span className="text-white/50">Sync</span>
               </span>
