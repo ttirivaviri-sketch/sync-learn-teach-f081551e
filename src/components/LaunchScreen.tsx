@@ -23,17 +23,11 @@ const LaunchScreen = ({ onComplete }: LaunchScreenProps) => {
       }`}
     >
       <div className="text-center space-y-8 animate-pulse">
-        <div className="w-32 h-32 mx-auto">
-          <img 
-            src="/lovable-uploads/studysync-logo.png" 
-            alt="StudySync Logo" 
-            className="w-full h-full object-contain animate-bounce"
-          />
-        </div>
-        <div className="space-y-2">
-          <h1 className="text-4xl font-bold text-white">StudySync</h1>
-          <p className="text-white/80 text-lg">Learner App</p>
-        </div>
+        <img 
+          src="/lovable-uploads/studysync-logo.png" 
+          alt="StudySync" 
+          className="mx-auto h-20 object-contain animate-bounce"
+        />
         <div className="flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
         </div>
