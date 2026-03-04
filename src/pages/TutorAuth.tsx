@@ -270,7 +270,7 @@ const TutorAuth = () => {
             <img 
               src="/lovable-uploads/studysync-logo.png" 
               alt="StudySync" 
-              className="mx-auto mb-4 h-16 object-contain"
+              className="mx-auto mb-4 h-24 object-contain mix-blend-screen"
             />
             <h1 className="text-3xl font-bold text-white mb-2">Tutor Verification</h1>
             <p className="text-white/80">Complete your verification to start tutoring</p>
@@ -408,7 +408,7 @@ const TutorAuth = () => {
           <img 
             src="/lovable-uploads/studysync-logo.png" 
             alt="StudySync" 
-            className="mx-auto mb-4 h-16 object-contain"
+            className="mx-auto mb-4 h-24 object-contain mix-blend-screen"
           />
           <p className="text-white/80">Tutor App</p>
         </div>

@@ -35,7 +35,7 @@ const Footer = () => {
           {/* Brand column */}
           <div className="lg:col-span-2 space-y-5">
             <div className="flex items-center gap-2.5">
-              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-9 object-contain" />
+              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-12 object-contain brightness-0 invert" />
             </div>
 
             <p className="text-sm text-background/55 leading-relaxed max-w-xs">
