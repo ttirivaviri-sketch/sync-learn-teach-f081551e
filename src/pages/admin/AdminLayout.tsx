@@ -17,6 +17,7 @@ const AdminLayout = () => {
           <div className="mx-auto max-w-screen-2xl px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <SidebarTrigger aria-label="Toggle admin sidebar" />
+              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="w-8 h-8 rounded object-contain" />
               <Link to="/admin" className="font-semibold tracking-tight">StudySync Admin</Link>
             </div>
             <nav className="text-sm">

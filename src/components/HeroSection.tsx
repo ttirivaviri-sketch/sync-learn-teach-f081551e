@@ -66,9 +66,7 @@ const Navbar = () => {
           onClick={() => navigate("/")}
           className="flex items-center gap-2 group"
         >
-          <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
+          <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="w-9 h-9 rounded-xl object-contain" />
           <span className="text-xl font-display font-bold text-white tracking-tight">
             Study<span className="text-white/75">Sync</span>
           </span>
@@ -292,7 +290,7 @@ const HeroSection = () => {
                   {/* Screen content */}
                   <div className="flex-1 px-4 py-3 space-y-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <GraduationCap className="h-5 w-5 text-white" />
+                      <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-5 w-5 rounded object-contain" />
                       <span className="text-sm font-bold text-white">StudySync</span>
                     </div>
                     <p className="text-[11px] text-white/70 font-medium">Find your tutor</p>

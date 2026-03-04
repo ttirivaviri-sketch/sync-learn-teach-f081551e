@@ -133,7 +133,7 @@ const LearnerAuth = () => {
           {/* Cropped wide logo container to show both the icon and wordmark */}
           <div className="mx-auto mb-4 w-56 h-14 overflow-hidden rounded-md">
             <img 
-              src="/lovable-uploads/b660f842-9169-416b-826d-c9006528e365.png" 
+              src="/lovable-uploads/studysync-logo.png" 
               alt="StudySync Logo" 
               className="w-full h-full object-cover object-center"
             />

@@ -268,7 +268,7 @@ const TutorAuth = () => {
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
             <img 
-              src="/lovable-uploads/b660f842-9169-416b-826d-c9006528e365.png" 
+              src="/lovable-uploads/studysync-logo.png" 
               alt="StudySync Logo" 
               className="w-16 h-16 mx-auto mb-4"
             />
@@ -406,7 +406,7 @@ const TutorAuth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <img 
-            src="/lovable-uploads/b660f842-9169-416b-826d-c9006528e365.png" 
+            src="/lovable-uploads/studysync-logo.png" 
             alt="StudySync Logo" 
             className="w-16 h-16 mx-auto mb-4"
           />

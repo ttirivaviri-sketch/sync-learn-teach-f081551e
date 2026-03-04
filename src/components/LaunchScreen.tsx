@@ -25,7 +25,7 @@ const LaunchScreen = ({ onComplete }: LaunchScreenProps) => {
       <div className="text-center space-y-8 animate-pulse">
         <div className="w-32 h-32 mx-auto">
           <img 
-            src="/lovable-uploads/b660f842-9169-416b-826d-c9006528e365.png" 
+            src="/lovable-uploads/studysync-logo.png" 
             alt="StudySync Logo" 
             className="w-full h-full object-contain animate-bounce"
           />
