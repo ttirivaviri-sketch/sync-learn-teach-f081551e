@@ -267,15 +267,13 @@ const TutorAuth = () => {
       <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center gap-3 mb-3">
+            <div className="flex items-center justify-center mb-3">
               <img 
                 src="/lovable-uploads/studysync-logo.png" 
                 alt="StudySync" 
-                className="h-16 w-auto object-contain mix-blend-screen"
+                className="h-14 w-auto object-contain"
+                style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
               />
-              <span className="text-4xl font-extrabold tracking-tight">
-                <span className="text-white">Study</span><span className="text-green-400">Sync</span>
-              </span>
             </div>
             <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
               Education, in sync with your future
@@ -413,15 +411,13 @@ const TutorAuth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-3">
+          <div className="flex items-center justify-center mb-3">
             <img 
               src="/lovable-uploads/studysync-logo.png" 
               alt="StudySync" 
-              className="h-16 w-auto object-contain mix-blend-screen"
+              className="h-14 w-auto object-contain"
+              style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
             />
-            <span className="text-4xl font-extrabold tracking-tight">
-              <span className="text-white">Study</span><span className="text-green-400">Sync</span>
-            </span>
           </div>
           <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
             Education, in sync with your future
