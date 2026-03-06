@@ -130,12 +130,20 @@ const LearnerAuth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <img 
-            src="/lovable-uploads/studysync-logo.png" 
-            alt="StudySync" 
-            className="mx-auto mb-4 h-24 object-contain mix-blend-screen"
-          />
-          <p className="text-white/80">Learner App</p>
+          <div className="flex items-center justify-center gap-3 mb-3">
+            <img 
+              src="/lovable-uploads/studysync-logo.png" 
+              alt="StudySync" 
+              className="h-16 w-auto object-contain mix-blend-screen"
+            />
+            <span className="text-4xl font-extrabold tracking-tight">
+              <span className="text-white">Study</span><span className="text-green-400">Sync</span>
+            </span>
+          </div>
+          <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
+            Education, in sync with your future
+          </p>
+          <p className="text-2xl font-extrabold text-white">Confidence Starts Here</p>
         </div>
 
         <Card className="bg-white/95 backdrop-blur-sm">
