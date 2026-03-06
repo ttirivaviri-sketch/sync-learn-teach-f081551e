@@ -415,16 +415,13 @@ const LearnerApp = () => {
         {/* Row 1: Logo + Icons */}
         <div className="flex items-center justify-between px-5 pt-4 pb-2">
           {/* Logo */}
-          <div className="flex items-center gap-2.5 shrink-0">
+          <div className="flex items-center shrink-0">
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
-              className="h-16 w-auto object-contain"
+              className="h-14 w-auto object-contain"
               style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
             />
-            <span className="text-2xl font-extrabold tracking-tight leading-none">
-              <span className="text-white">Study</span><span className="text-green-400">Sync</span>
-            </span>
           </div>
 
           {/* Action Icons */}

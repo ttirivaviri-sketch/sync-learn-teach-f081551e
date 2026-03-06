@@ -23,15 +23,13 @@ const LaunchScreen = ({ onComplete }: LaunchScreenProps) => {
       }`}
     >
       <div className="text-center space-y-6 animate-pulse">
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex items-center justify-center">
           <img 
             src="/lovable-uploads/studysync-logo.png" 
             alt="StudySync" 
-            className="h-24 w-auto object-contain mix-blend-screen animate-bounce"
+            className="h-20 w-auto object-contain animate-bounce"
+            style={{ filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}
           />
-          <span className="text-5xl font-extrabold tracking-tight">
-            <span className="text-white">Study</span><span className="text-green-400">Sync</span>
-          </span>
         </div>
         <p className="text-xs font-semibold tracking-widest uppercase text-white/75" style={{ letterSpacing: "0.12em" }}>
           Education, in sync with your future

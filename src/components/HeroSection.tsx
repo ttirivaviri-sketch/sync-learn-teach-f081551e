@@ -67,9 +67,6 @@ const Navbar = () => {
           className="flex items-center gap-2.5 group"
         >
           <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-14 w-auto object-contain" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }} />
-          <span className="text-2xl font-extrabold tracking-tight leading-none">
-            <span className="text-white">Study</span><span className="text-green-400">Sync</span>
-          </span>
         </button>
 
         {/* Desktop links */}
