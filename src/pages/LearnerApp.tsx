@@ -420,7 +420,7 @@ const LearnerApp = () => {
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
               className="h-14 w-auto object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
             />
           </div>
 
@@ -439,11 +439,11 @@ const LearnerApp = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleSignOut}
+              onClick={() => setActiveTab("profile")}
               className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
-              aria-label="Sign Out"
+              aria-label="Profile"
             >
-              <LogOut className="h-5 w-5" />
+              <User className="h-5 w-5" />
             </Button>
           </div>
         </div>
