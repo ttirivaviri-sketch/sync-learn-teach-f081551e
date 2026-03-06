@@ -406,36 +406,67 @@ const LearnerApp = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-primary text-primary-foreground p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain brightness-0 invert" />
+      <header
+        className="text-white shadow-md"
+        style={{
+          background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
+        }}
+      >
+        {/* Row 1: Logo + Icons */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <img
+              src="/lovable-uploads/studysync-logo.png"
+              alt="StudySync"
+              className="h-12 w-auto object-contain"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+            />
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-1">
             <NotificationCenter />
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => setShowChat(true)}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
+              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              aria-label="Open Chat"
             >
-              <MessageCircle className="h-4 w-4" />
+              <MessageCircle className="h-5 w-5" />
             </Button>
-            <div className="text-right">
-              <p className="text-sm opacity-90 font-medium">{session?.user?.email}</p>
-              {!isOnline && (
-                <p className="text-xs text-red-200">Offline</p>
-              )}
-            </div>
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="sm"
               onClick={handleSignOut}
-              className="text-primary-foreground hover:bg-primary-foreground/10"
+              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              aria-label="Sign Out"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="h-5 w-5" />
             </Button>
           </div>
+        </div>
+
+        {/* Row 2: Slogan */}
+        <div className="px-5 pb-4">
+          <p
+            className="text-xs font-semibold tracking-widest uppercase mb-1"
+            style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.12em" }}
+          >
+            Education, in sync with your future
+          </p>
+          <h1
+            className="text-2xl font-extrabold leading-tight"
+            style={{ color: "#ffffff", maxWidth: "80%" }}
+          >
+            Confidence Starts Here
+          </h1>
+          {!isOnline && (
+            <span className="inline-block mt-1 text-xs font-medium bg-red-500/80 text-white px-2 py-0.5 rounded-full">
+              Offline
+            </span>
+          )}
         </div>
       </header>
 
