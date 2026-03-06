@@ -420,7 +420,7 @@ const LearnerApp = () => {
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
               className="h-14 w-auto object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
             />
           </div>
 
