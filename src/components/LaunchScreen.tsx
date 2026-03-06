@@ -22,12 +22,20 @@ const LaunchScreen = ({ onComplete }: LaunchScreenProps) => {
         fadeOut ? 'opacity-0' : 'opacity-100'
       }`}
     >
-      <div className="text-center space-y-8 animate-pulse">
-        <img 
-          src="/lovable-uploads/studysync-logo.png" 
-          alt="StudySync" 
-          className="mx-auto h-28 object-contain mix-blend-screen animate-bounce"
-        />
+      <div className="text-center space-y-6 animate-pulse">
+        <div className="flex items-center justify-center gap-4">
+          <img 
+            src="/lovable-uploads/studysync-logo.png" 
+            alt="StudySync" 
+            className="h-24 w-auto object-contain mix-blend-screen animate-bounce"
+          />
+          <span className="text-5xl font-extrabold tracking-tight">
+            <span className="text-white">Study</span><span className="text-green-400">Sync</span>
+          </span>
+        </div>
+        <p className="text-xs font-semibold tracking-widest uppercase text-white/75" style={{ letterSpacing: "0.12em" }}>
+          Education, in sync with your future
+        </p>
         <div className="flex justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
         </div>
