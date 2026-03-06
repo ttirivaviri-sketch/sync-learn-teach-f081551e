@@ -278,47 +278,84 @@ const TutorApp = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-secondary text-secondary-foreground p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
+      <header
+        className="text-white shadow-md"
+        style={{
+          background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
+        }}
+      >
+        {/* Row 1: Logo + Icons */}
+        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <img
+              src="/lovable-uploads/studysync-logo.png"
+              alt="StudySync"
+              className="h-12 w-auto object-contain"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+            />
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">Online</span>
-              <Switch 
-                checked={isOnline} 
+
+          {/* Action Icons */}
+          <div className="flex items-center gap-2">
+            {/* Online Toggle */}
+            <div className="flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1">
+              <div className={`w-2 h-2 rounded-full ${isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+              <span className="text-xs font-medium text-white">
+                {isOnline ? "Online" : "Offline"}
+              </span>
+              <Switch
+                checked={isOnline}
                 onCheckedChange={handleOnlineToggle}
+                className="scale-75"
               />
             </div>
-            <Button 
-              variant="ghost" 
+
+            <Button
+              variant="ghost"
               size="sm"
               onClick={() => setShowChat(true)}
-              className="text-secondary-foreground hover:bg-secondary-foreground/10"
+              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              aria-label="Open Chat"
             >
-              <MessageCircle className="h-4 w-4" />
+              <MessageCircle className="h-5 w-5" />
             </Button>
-            <div className="flex items-center gap-2">
-              <span className="text-sm">{session.user?.email}</span>
-              <Button variant="ghost" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
-            <Avatar>
-              <AvatarImage src="/placeholder.svg" />
-              <AvatarFallback>{session.user?.user_metadata?.full_name?.[0] || 'T'}</AvatarFallback>
-            </Avatar>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleSignOut}
+              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              aria-label="Sign Out"
+            >
+              <LogOut className="h-5 w-5" />
+            </Button>
           </div>
+        </div>
+
+        {/* Row 2: Slogan */}
+        <div className="px-5 pb-4">
+          <p
+            className="text-xs font-semibold tracking-widest uppercase mb-1"
+            style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.12em" }}
+          >
+            Education, in sync with your future
+          </p>
+          <h1
+            className="text-2xl font-extrabold leading-tight"
+            style={{ color: "#ffffff", maxWidth: "80%" }}
+          >
+            Confidence Starts Here
+          </h1>
         </div>
       </header>
 
       {/* Status Banner */}
       {isOnline && (
-        <div className="bg-primary text-primary-foreground p-3 text-center text-sm">
-          🟢 You're online and available for booking requests
+        <div className="bg-emerald-500 text-white px-5 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          You're online and available for booking requests
           {onlineUsers.length > 1 && (
-            <span className="ml-2 opacity-75">
+            <span className="opacity-80 text-xs">
               • {onlineUsers.length - 1} other users online
             </span>
           )}

@@ -66,7 +66,7 @@ const Navbar = () => {
           onClick={() => navigate("/")}
           className="flex items-center gap-2 group"
         >
-          <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain mix-blend-screen" />
+          <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-11 w-auto object-contain" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }} />
         </button>
 
         {/* Desktop links */}
@@ -287,7 +287,7 @@ const HeroSection = () => {
                   {/* Screen content */}
                   <div className="flex-1 px-4 py-3 space-y-3">
                     <div className="flex items-center gap-2 mb-2">
-                      <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-5 object-contain mix-blend-screen" />
+                      <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-5 w-auto object-contain" />
                     </div>
                     <p className="text-[11px] text-white/70 font-medium">Find your tutor</p>
                     {/* Search bar */}
