@@ -413,52 +413,51 @@ const LearnerApp = () => {
         }}
       >
         {/* Row 1: Logo + Icons */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-2">
+        <div className="flex items-center justify-between px-5 pt-6 pb-3">
           {/* Logo */}
           <div className="flex items-center shrink-0">
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
-              className="h-14 w-auto object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+              className="w-auto object-contain"
+              style={{ height: "52px", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
             />
           </div>
 
           {/* Action Icons */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowChat(true)}
-              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              className="text-white hover:bg-white/15 rounded-full w-10 h-10 p-0 flex items-center justify-center"
               aria-label="Open Chat"
             >
-              <MessageCircle className="h-5 w-5" />
+              <MessageCircle className="h-6 w-6" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setActiveTab("profile")}
-              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              className="text-white hover:bg-white/15 rounded-full w-10 h-10 p-0 flex items-center justify-center"
               aria-label="Profile"
             >
-              <User className="h-5 w-5" />
+              <User className="h-6 w-6" />
             </Button>
           </div>
         </div>
 
         {/* Row 2: Slogan */}
-        <div className="px-5 pb-4">
+        <div className="px-5 pt-2 pb-5">
           <p
-            className="text-xs font-semibold tracking-widest uppercase mb-1"
-            style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.12em" }}
+            className="text-xs font-semibold tracking-widest uppercase mb-2"
+            style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.12em" }}
           >
             Education, in sync with your future
           </p>
           <h1
-            className="text-2xl font-extrabold leading-tight"
-            style={{ color: "#ffffff", maxWidth: "80%" }}
+            className="text-2xl font-extrabold leading-tight text-white"
           >
             Confidence Starts Here
           </h1>
