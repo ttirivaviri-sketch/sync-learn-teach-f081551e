@@ -131,12 +131,12 @@ const LearnerAuth = () => {
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-3">
-            <img 
-              src="/lovable-uploads/studysync-logo.png" 
-              alt="StudySync" 
-              className="h-14 w-auto object-contain"
-              style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
-            />
+             <img 
+               src="/lovable-uploads/studysync-logo.png" 
+               alt="StudySync" 
+               className="w-auto object-contain"
+               style={{ height: "100px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
+             />
           </div>
           <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
             Education, in sync with your future
