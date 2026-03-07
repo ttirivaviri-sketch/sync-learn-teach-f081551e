@@ -267,12 +267,12 @@ const TutorAuth = () => {
       <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
           <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-3">
+            <div className="flex items-center justify-center mb-1">
               <img 
                 src="/lovable-uploads/studysync-logo.png" 
                 alt="StudySync" 
-                className="h-14 w-auto object-contain"
-                style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
+                className="w-auto object-contain"
+                style={{ height: "325px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
               />
             </div>
             <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
@@ -411,12 +411,12 @@ const TutorAuth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-3">
+          <div className="flex items-center justify-center mb-1">
             <img 
               src="/lovable-uploads/studysync-logo.png" 
               alt="StudySync" 
-              className="h-14 w-auto object-contain"
-              style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
+              className="w-auto object-contain"
+              style={{ height: "325px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
             />
           </div>
           <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
