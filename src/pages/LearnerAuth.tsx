@@ -135,7 +135,7 @@ const LearnerAuth = () => {
                src="/lovable-uploads/studysync-logo.png" 
                alt="StudySync" 
                className="w-auto object-contain"
-               style={{ height: "140px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
+               style={{ height: "650px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
              />
           </div>
           <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
