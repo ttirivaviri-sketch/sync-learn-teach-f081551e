@@ -66,7 +66,7 @@ const Navbar = () => {
           onClick={() => navigate("/")}
           className="flex items-center gap-2.5 group"
         >
-          <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-14 w-auto object-contain" style={{ filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }} />
+          <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="w-auto object-contain" style={{ height: '175px', filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }} />
         </button>
 
         {/* Desktop links */}

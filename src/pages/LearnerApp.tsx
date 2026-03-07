@@ -413,7 +413,7 @@ const LearnerApp = () => {
         }}
       >
         {/* Row 1: Logo + Icons */}
-        <div className="flex items-center justify-between px-5 pt-6 pb-1">
+        <div className="flex items-center justify-between px-5 pt-4 pb-0">
           {/* Logo */}
           <div className="flex items-center shrink-0">
             <img
@@ -449,7 +449,7 @@ const LearnerApp = () => {
         </div>
 
         {/* Row 2: Slogan */}
-        <div className="px-5 pt-0 pb-5">
+        <div className="px-5 pt-0 pb-4">
           <p
             className="text-xs font-semibold tracking-widest uppercase mb-2"
             style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.12em" }}
