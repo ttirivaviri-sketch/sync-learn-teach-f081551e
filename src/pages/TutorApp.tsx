@@ -285,7 +285,7 @@ const TutorApp = () => {
         }}
       >
         {/* Row 1: Logo + Icons */}
-        <div className="flex items-center justify-between px-5 pt-6 pb-1">
+        <div className="flex items-center justify-between px-5 pt-4 pb-0">
           {/* Logo */}
           <div className="flex items-center shrink-0">
             <img
