@@ -333,7 +333,7 @@ const TutorApp = () => {
         </div>
 
         {/* Row 2: Slogan */}
-        <div className="px-5 pt-0 pb-4">
+        <div className="px-5 pt-0 pb-3">
           <p
             className="text-xs font-semibold tracking-widest uppercase mb-1"
             style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.12em" }}

@@ -130,7 +130,7 @@ const LearnerAuth = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-1">
+          <div className="flex items-center justify-center mb-0.5">
              <img 
                src="/lovable-uploads/studysync-logo.png" 
                alt="StudySync" 

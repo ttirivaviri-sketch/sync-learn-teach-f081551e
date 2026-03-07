@@ -449,7 +449,7 @@ const LearnerApp = () => {
         </div>
 
         {/* Row 2: Slogan */}
-        <div className="px-5 pt-0 pb-5">
+        <div className="px-5 pt-0 pb-4">
           <p
             className="text-xs font-semibold tracking-widest uppercase mb-2"
             style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.12em" }}
