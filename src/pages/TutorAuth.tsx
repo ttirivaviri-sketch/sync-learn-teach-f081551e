@@ -433,6 +433,28 @@ const TutorAuth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {showForgotPassword ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">Enter your email to receive a password reset link</p>
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email-tutor">Email</Label>
+                  <Input
+                    id="forgot-email-tutor"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={forgotLoading}>
+                  {forgotLoading ? "Sending..." : "Send Reset Link"}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={() => setShowForgotPassword(false)}>
+                  ← Back to Sign In
+                </Button>
+              </form>
+            ) : (
             <Tabs defaultValue="signin" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -453,7 +475,16 @@ const TutorAuth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="signin-password">Password</Label>
+                      <button
+                        type="button"
+                        className="text-xs text-primary hover:underline"
+                        onClick={() => setShowForgotPassword(true)}
+                      >
+                        Forgot password?
+                      </button>
+                    </div>
                     <Input
                       id="signin-password"
                       type="password"
@@ -521,6 +552,7 @@ const TutorAuth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>
