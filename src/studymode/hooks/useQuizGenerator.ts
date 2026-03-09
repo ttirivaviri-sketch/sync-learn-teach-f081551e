@@ -57,20 +57,20 @@
          ? `Topic: ${topic.name}${topic.subtopics.length > 0 ? `, Subtopics: ${topic.subtopics.join(', ')}` : ''}`
          : `Current topic: ${subject.currentTopic.name}`;
  
-       const resp = await fetch(QUIZ_URL, {
-         method: 'POST',
-         headers: {
-           'Content-Type': 'application/json',
-           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-         },
-         body: JSON.stringify({
-           subject: subject.name,
-           topic: topic?.name || subject.currentTopic.name,
-           topicContext,
-           curriculumContext,
-           examWeight: topic?.examWeight || subject.currentTopic.examWeight,
-         }),
-       });
+        const resp = await fetch(QUIZ_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            subject: subject.name,
+            topic: topic?.name || subject.currentTopic.name,
+            topicContext,
+            curriculumContext: curriculumContext ? curriculumContext.substring(0, 3000) : '',
+            examWeight: topic?.examWeight || subject.currentTopic.examWeight,
+          }),
+        });
  
        if (!resp.ok) {
          const errorData = await resp.json().catch(() => ({}));
