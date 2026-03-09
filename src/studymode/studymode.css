@@ -1,0 +1,72 @@
+/*
+ * STUDYMODE – scoped CSS variables and utility classes
+ * Injected only when Study Mode is active.
+ */
+
+.studymode-root {
+  /* ── Gradient utilities ── */
+  --sm-gradient-primary: linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(262.1 83.3% 57.8%));
+  --sm-gradient-accent: linear-gradient(135deg, hsl(24.6 95% 53.1%), hsl(38 95% 60%));
+  --sm-gradient-secondary: linear-gradient(135deg, hsl(262.1 83.3% 57.8%), hsl(280 80% 60%));
+
+  /* ── Extra colour tokens ── */
+  --sm-warning: 38 92% 50%;
+  --sm-gold: 45 93% 47%;
+  --sm-success: 142.1 76.2% 36.3%;
+  --sm-accent: 24.6 95% 53.1%;
+
+  /* ── Shadow tokens ── */
+  --sm-shadow-glow: 0 0 20px hsl(217.2 91.2% 59.8% / 0.35);
+}
+
+/* Gradient background classes */
+.studymode-root .gradient-primary {
+  background: var(--sm-gradient-primary) !important;
+  color: white !important;
+}
+.studymode-root .gradient-accent {
+  background: var(--sm-gradient-accent) !important;
+  color: white !important;
+}
+.studymode-root .gradient-secondary {
+  background: var(--sm-gradient-secondary) !important;
+  color: white !important;
+}
+
+/* Shadow glow */
+.studymode-root .shadow-glow {
+  box-shadow: var(--sm-shadow-glow) !important;
+}
+
+/* Warning colour utilities */
+.studymode-root .text-warning { color: hsl(var(--sm-warning)) !important; }
+.studymode-root .bg-warning { background-color: hsl(var(--sm-warning)) !important; }
+.studymode-root .bg-warning\/10 { background-color: hsl(var(--sm-warning) / 0.1) !important; }
+.studymode-root .bg-warning\/20 { background-color: hsl(var(--sm-warning) / 0.2) !important; }
+.studymode-root .border-warning { border-color: hsl(var(--sm-warning)) !important; }
+.studymode-root .border-warning\/20 { border-color: hsl(var(--sm-warning) / 0.2) !important; }
+.studymode-root .border-warning\/30 { border-color: hsl(var(--sm-warning) / 0.3) !important; }
+
+/* Gold colour utilities */
+.studymode-root .text-gold { color: hsl(var(--sm-gold)) !important; }
+.studymode-root .bg-gold { background-color: hsl(var(--sm-gold)) !important; }
+.studymode-root .bg-gold\/10 { background-color: hsl(var(--sm-gold) / 0.1) !important; }
+.studymode-root .border-gold { border-color: hsl(var(--sm-gold)) !important; }
+.studymode-root .border-gold\/20 { border-color: hsl(var(--sm-gold) / 0.2) !important; }
+
+/* Animations (only scoped when needed) */
+@keyframes sm-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes sm-scale-in {
+  from { opacity: 0; transform: scale(0.92); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.studymode-root .animate-fade-in {
+  animation: sm-fade-in 0.3s ease-out both !important;
+}
+.studymode-root .animate-scale-in {
+  animation: sm-scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both !important;
+}
