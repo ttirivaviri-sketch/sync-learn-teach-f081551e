@@ -1,14 +1,22 @@
-import { useState } from "react";
-import { Search, Download, Star, Filter, Book, FileText, Video, BookOpen, Bookmark, Eye, Archive } from "lucide-react";
+import { useState, lazy, Suspense } from "react";
+import { Search, Download, Star, Filter, Book, FileText, Video, BookOpen, Bookmark, Eye, Archive, Brain, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+
+// ── Lazy-load Study Mode only when the toggle is activated ────────────────────
+const StudyModeWrapper = lazy(() =>
+  import("@/studymode/StudyModeWrapper").then((m) => ({ default: m.StudyModeWrapper }))
+);
 
 const StudySyncLibrary = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [myLibraryItems, setMyLibraryItems] = useState<number[]>([]);
+  const [studyModeActive, setStudyModeActive] = useState(false);
 
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
@@ -263,8 +271,54 @@ const StudySyncLibrary = () => {
     return resources[categoryId as keyof typeof resources] || [];
   };
 
+  // ── If Study Mode is active, show it full-screen inside the Library pane ──
+  if (studyModeActive) {
+    return (
+      <Suspense
+        fallback={
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Loading Study Mode…</p>
+          </div>
+        }
+      >
+        <StudyModeWrapper onDeactivate={() => setStudyModeActive(false)} />
+      </Suspense>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Study Mode Banner */}
+      <Card className="bg-gradient-to-r from-violet-500/10 via-primary/10 to-blue-500/10 border-primary/30">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="rounded-xl bg-primary/10 p-2 shrink-0">
+                <Brain className="h-6 w-6 text-primary" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-semibold text-sm leading-tight">Study Mode</h3>
+                <p className="text-xs text-muted-foreground leading-tight truncate">
+                  AI-powered coaching, tasks &amp; exam prep
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Label htmlFor="study-mode-toggle" className="text-xs font-medium cursor-pointer select-none">
+                {studyModeActive ? "On" : "Off"}
+              </Label>
+              <Switch
+                id="study-mode-toggle"
+                checked={studyModeActive}
+                onCheckedChange={setStudyModeActive}
+                className="data-[state=checked]:bg-primary"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Search Header */}
       <div className="flex gap-2">
         <div className="relative flex-1">

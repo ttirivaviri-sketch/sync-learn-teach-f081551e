@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award } from "lucide-react";
+import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award, Zap, Settings, ChevronRight } from "lucide-react";
+import { useDevMode } from "@/contexts/DevModeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,8 +36,10 @@ import { PendingPaymentCard } from '@/components/PendingPaymentCard';
 import LearnerSyllabusManager from '@/components/LearnerSyllabusManager';
 import { useLearnerSubjects } from '@/hooks/useLearnerSubjects';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
+import { RescheduleDialog } from '@/components/RescheduleDialog';
 
 const LearnerApp = () => {
+  const { isDevMode, devRole, devUserName, bypassPayments, bypassSchedule, devSessionActive, setDevSessionActive, launchDevSession } = useDevMode();
   const [activeTab, setActiveTab] = useState("home");
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
   const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
@@ -58,6 +61,11 @@ const LearnerApp = () => {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [selectedTutor, setSelectedTutor] = useState<any>(null);
   const [showPaymentForBooking, setShowPaymentForBooking] = useState<any>(null);
+  const [showReschedule, setShowReschedule] = useState(false);
+  const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false);
+  const [showAllPayments, setShowAllPayments] = useState(false);
+  const [showMyReviews, setShowMyReviews] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, isSlowConnection } = useNetworkStatus();
@@ -91,8 +99,36 @@ const LearnerApp = () => {
     b => b.status === 'confirmed' && needsPayment(b.id)
   );
 
+  // ── Dev mode: respond to launchDevSession trigger ──
+  useEffect(() => {
+    if (isDevMode && devRole === 'learner' && devSessionActive) {
+      setVideoMeetingData({
+        partnerName: 'Dev Tutor',
+        subject: 'Dev Test Session',
+        booking: {
+          id: 'dev-booking-001',
+          room_name: 'StudySync-Dev-Test-Room',
+          duration_minutes: 60,
+          scheduled_at: new Date().toISOString(),
+          tutor_profile: { full_name: 'Dev Tutor' },
+          tutor_subjects: { subject: 'Dev Test Session' },
+        },
+      });
+      setShowVideoMeeting(true);
+      setDevSessionActive(false);
+    }
+  }, [devSessionActive, isDevMode, devRole]);
+
   useEffect(() => {
     analytics.pageView('learner-app');
+
+    // Dev mode: skip auth entirely
+    if (isDevMode && devRole === 'learner') {
+      setLoading(false);
+      setShowLaunchScreen(false);
+      setProfile({ full_name: devUserName, user_type: 'learner', study_level: 'senior_high' });
+      return;
+    }
     
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -115,7 +151,7 @@ const LearnerApp = () => {
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, loading]);
+  }, [navigate, loading, isDevMode, devRole]);
 
   // Load user profile and upcoming sessions
   useEffect(() => {
@@ -326,12 +362,20 @@ const LearnerApp = () => {
       return;
     }
     
+    if (action === "reschedule") {
+      const upcoming = getUpcomingSessions();
+      if (upcoming.length > 0) {
+        setRescheduleBooking(upcoming[0]);
+        setShowReschedule(true);
+      } else {
+        toast({ title: "No upcoming sessions", description: "Nothing to reschedule right now." });
+      }
+      return;
+    }
     toast({
-      title: action === "reschedule" ? "Reschedule Session" : "Cancel Session",
-      description: action === "reschedule" 
-        ? "Reschedule options will be available soon" 
-        : "Session cancellation processed",
-      variant: action === "cancel" ? "destructive" : "default"
+      title: "Cancel Session",
+      description: "Session cancellation processed",
+      variant: "destructive"
     });
   };
 
@@ -359,15 +403,18 @@ const LearnerApp = () => {
   // handleRateAndReview is now inline in the past sessions section
 
   const handlePayNow = (booking: any) => {
+    if (bypassPayments) {
+      toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." });
+      return;
+    }
     setShowPaymentForBooking(booking);
     setActiveTab("activity");
   };
 
   const handleQuickProfileAction = (action: string) => {
-    toast({
-      title: action,
-      description: "Feature coming soon!",
-    });
+    if (action === 'Payment Methods') { setShowPaymentMethods(true); return; }
+    if (action === 'My Reviews') { setShowMyReviews(true); setActiveTab('activity'); return; }
+    toast({ title: action, description: "Feature coming soon!" });
   };
 
   const handleStartChat = (tutor: any) => {
@@ -380,11 +427,12 @@ const LearnerApp = () => {
     return <LoadingScreen message="Loading your account..." />;
   }
 
-  if (!session?.user) {
-    return null; // Will redirect to auth
+  // In dev mode skip auth gate entirely
+  if (!isDevMode && !session?.user) {
+    return null;
   }
 
-  if (showLaunchScreen) {
+  if (showLaunchScreen && !isDevMode) {
     return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
   }
 
@@ -832,7 +880,7 @@ const LearnerApp = () => {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => toast({ title: "Feature coming soon!", description: "Payment methods will be available in the next update." })}
+                    onClick={() => setShowPaymentMethods(true)}
                   >
                     <CreditCard className="h-4 w-4 mr-2" />
                     Payment Methods
@@ -848,7 +896,7 @@ const LearnerApp = () => {
                   <Button 
                     variant="outline" 
                     className="w-full justify-start"
-                    onClick={() => toast({ title: "Feature coming soon!", description: "Review system will be available in the next update." })}
+                    onClick={() => { setShowMyReviews(true); setActiveTab("activity"); }}
                   >
                     <Star className="h-4 w-4 mr-2" />
                     My Reviews
@@ -872,7 +920,7 @@ const LearnerApp = () => {
                 userId={session.user.id}
                 limit={5}
                 showViewAll={true}
-                onViewAll={() => toast({ title: "Full History", description: "Complete payment history coming soon!" })}
+                onViewAll={() => setShowAllPayments(true)}
               />
             )}
 
@@ -968,6 +1016,66 @@ const LearnerApp = () => {
         otherUserId={chatWithUserId || undefined}
         otherUserName={chatWithUserName || undefined}
       />
+
+      {/* Reschedule Dialog */}
+      <RescheduleDialog
+        booking={rescheduleBooking}
+        open={showReschedule}
+        onOpenChange={(open) => { setShowReschedule(open); if (!open) setRescheduleBooking(null); }}
+        onReschedule={async (bookingId, newTime) => {
+          toast({ title: "Session rescheduled!", description: "Your tutor has been notified of the new time." });
+        }}
+      />
+
+      {/* Payment Methods Modal */}
+      {showPaymentMethods && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowPaymentMethods(false)}>
+          <div className="bg-background w-full rounded-t-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-lg">Payment Methods</h3>
+              <button onClick={() => setShowPaymentMethods(false)} className="text-muted-foreground text-sm">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">PayFast</p>
+                  <p className="text-xs text-muted-foreground">South Africa's trusted payment gateway</p>
+                </div>
+                <Badge variant="default" className="bg-green-500">Active</Badge>
+              </div>
+              {bypassPayments && (
+                <div className="flex items-center gap-3 p-3 border border-yellow-300 rounded-lg bg-yellow-50">
+                  <Zap className="h-5 w-5 text-yellow-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-sm text-yellow-800">Dev Bypass</p>
+                    <p className="text-xs text-yellow-600">Payments skipped in dev mode</p>
+                  </div>
+                  <Badge variant="outline" className="border-yellow-400 text-yellow-700">Dev</Badge>
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground text-center pt-2">
+                Additional payment methods (Ozow, bank EFT) coming soon.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Payment History Modal */}
+      {showAllPayments && session?.user?.id && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowAllPayments(false)}>
+          <div className="bg-background w-full rounded-t-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-background flex items-center justify-between px-5 pt-5 pb-3 border-b">
+              <h3 className="font-bold text-lg">Full Payment History</h3>
+              <button onClick={() => setShowAllPayments(false)} className="text-muted-foreground text-sm">✕</button>
+            </div>
+            <div className="p-4">
+              <PaymentHistory userId={session.user.id} limit={50} showViewAll={false} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Review Modal */}
       {reviewData && (

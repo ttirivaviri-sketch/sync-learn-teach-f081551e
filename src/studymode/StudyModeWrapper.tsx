@@ -1,0 +1,119 @@
+/**
+ * StudyModeWrapper
+ *
+ * Lazy-loads the STUDYMODE feature module only when the user activates it.
+ * An error boundary ensures that if STUDYMODE fails to load for any reason,
+ * the rest of the Library (and Study Sync) continues to work normally.
+ *
+ * Usage:
+ *   <StudyModeWrapper onDeactivate={fn} />
+ */
+
+import React, { lazy, Suspense, Component } from 'react';
+import './studymode.css';
+import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+
+// ── Lazy import of the heavy StudyMode component ──────────────────────────────
+const StudyModeInner = lazy(() =>
+  import('./components/StudyMode').catch((err) => {
+    console.error('[StudyMode] Failed to load StudyMode component:', err);
+    throw err;
+  })
+);
+
+// ── Loading skeleton shown while the lazy chunk is being fetched ──────────────
+function StudyModeLoadingFallback() {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <p className="text-sm text-muted-foreground">Loading Study Mode…</p>
+    </div>
+  );
+}
+
+// ── Error state shown if the chunk or any sub-component throws ───────────────
+interface ErrorStateProps {
+  error: Error;
+  onRetry: () => void;
+  onDeactivate: () => void;
+}
+function StudyModeErrorState({ error, onRetry, onDeactivate }: ErrorStateProps) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 gap-4 text-center px-4">
+      <div className="rounded-full bg-destructive/10 p-4">
+        <AlertCircle className="h-10 w-10 text-destructive" />
+      </div>
+      <h3 className="text-lg font-semibold">Study Mode couldn't load</h3>
+      <p className="text-sm text-muted-foreground max-w-xs">
+        {error?.message || 'An unexpected error occurred. Your Library is still fully available.'}
+      </p>
+      <div className="flex gap-3 mt-2">
+        <Button variant="outline" size="sm" onClick={onRetry} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Try again
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onDeactivate}>
+          Return to Library
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Error boundary that catches render errors from StudyMode ──────────────────
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+  onDeactivate: () => void;
+}
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+  key: number;
+}
+
+class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null, key: 0 };
+
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error('[StudyMode] Component error caught by boundary:', error, info);
+  }
+
+  handleRetry = () => {
+    this.setState((prev) => ({ hasError: false, error: null, key: prev.key + 1 }));
+  };
+
+  render() {
+    if (this.state.hasError && this.state.error) {
+      return (
+        <StudyModeErrorState
+          error={this.state.error}
+          onRetry={this.handleRetry}
+          onDeactivate={this.props.onDeactivate}
+        />
+      );
+    }
+    return <React.Fragment key={this.state.key}>{this.props.children}</React.Fragment>;
+  }
+}
+
+// ── Public wrapper component ──────────────────────────────────────────────────
+interface StudyModeWrapperProps {
+  onDeactivate: () => void;
+}
+
+export function StudyModeWrapper({ onDeactivate }: StudyModeWrapperProps) {
+  return (
+    <div className="studymode-root">
+      <StudyModeErrorBoundary onDeactivate={onDeactivate}>
+        <Suspense fallback={<StudyModeLoadingFallback />}>
+          <StudyModeInner />
+        </Suspense>
+      </StudyModeErrorBoundary>
+    </div>
+  );
+}

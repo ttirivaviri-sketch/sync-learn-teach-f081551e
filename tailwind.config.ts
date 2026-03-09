@@ -50,6 +50,20 @@ export default {
 					DEFAULT:    'hsl(var(--accent))',
 					foreground: 'hsl(var(--accent-foreground))',
 				},
+				// ── STUDYMODE extra colour tokens ──────────────────────────────────
+				warning: {
+					DEFAULT: 'hsl(38 92% 50%)',
+					foreground: 'hsl(0 0% 98%)',
+				},
+				gold: {
+					DEFAULT: 'hsl(45 93% 47%)',
+					foreground: 'hsl(0 0% 98%)',
+				},
+				success: {
+					DEFAULT: 'hsl(var(--success, 142.1 76.2% 36.3%))',
+					foreground: 'hsl(0 0% 98%)',
+				},
+				// ──────────────────────────────────────────────────────────────────
 				popover: {
 					DEFAULT:    'hsl(var(--popover))',
 					foreground: 'hsl(var(--popover-foreground))',
@@ -93,6 +107,10 @@ export default {
 				'gradient-tutor':     'var(--gradient-tutor)',
 				'gradient-card':      'var(--gradient-card)',
 				'gradient-mesh':      'var(--gradient-mesh)',
+				// STUDYMODE gradient utilities
+				'gradient-primary':   'linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(262.1 83.3% 57.8%))',
+				'gradient-accent':    'linear-gradient(135deg, hsl(24.6 95% 53.1%), hsl(38 95% 60%))',
+				'gradient-secondary': 'linear-gradient(135deg, hsl(262.1 83.3% 57.8%), hsl(280 80% 60%))',
 			},
 			keyframes: {
 				'accordion-down': {

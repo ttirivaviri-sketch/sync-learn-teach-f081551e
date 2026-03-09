@@ -654,6 +654,7 @@ const TutorApp = () => {
                 size="lg"
                 onClick={() => handleQuickAction("Download Tax Report")}
               >
+                <Download className="h-4 w-4 mr-2" />
                 Download Tax Report
               </Button>
             </div>

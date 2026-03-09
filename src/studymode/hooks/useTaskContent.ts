@@ -1,0 +1,116 @@
+import { useState, useCallback } from 'react';
+
+interface UseTaskContentReturn {
+  content: string;
+  isLoading: boolean;
+  error: string | null;
+  generateContent: (params: {
+    taskType: string;
+    subject: string;
+    topic: string;
+    subtopics?: string[];
+  }) => Promise<void>;
+  reset: () => void;
+}
+
+export function useTaskContent(): UseTaskContentReturn {
+  const [content, setContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const reset = useCallback(() => {
+    setContent('');
+    setError(null);
+    setIsLoading(false);
+  }, []);
+
+  const generateContent = useCallback(async (params: {
+    taskType: string;
+    subject: string;
+    topic: string;
+    subtopics?: string[];
+  }) => {
+    setIsLoading(true);
+    setContent('');
+    setError(null);
+
+    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-task-content`;
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify(params),
+      });
+
+      if (!resp.ok) {
+        const errData = await resp.json().catch(() => ({ error: 'Failed to generate content' }));
+        throw new Error(errData.error || `Error ${resp.status}`);
+      }
+
+      if (!resp.body) throw new Error('No response body');
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+          let line = buffer.slice(0, newlineIndex);
+          buffer = buffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              accumulated += delta;
+              setContent(accumulated);
+            }
+          } catch {
+            buffer = line + '\n' + buffer;
+            break;
+          }
+        }
+      }
+
+      // Flush remaining
+      if (buffer.trim()) {
+        for (let raw of buffer.split('\n')) {
+          if (!raw || !raw.startsWith('data: ')) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const delta = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              accumulated += delta;
+              setContent(accumulated);
+            }
+          } catch { /* ignore */ }
+        }
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  return { content, isLoading, error, generateContent, reset };
+}
