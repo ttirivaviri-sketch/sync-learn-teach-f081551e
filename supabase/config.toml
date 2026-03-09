@@ -5,3 +5,15 @@ verify_jwt = true
 
 [functions.payfast-itn]
 verify_jwt = false
+
+[functions.parse-document]
+verify_jwt = false
+
+[functions.generate-task-content]
+verify_jwt = false
+
+[functions.generate-quiz]
+verify_jwt = false
+
+[functions.ai-tutor]
+verify_jwt = false
