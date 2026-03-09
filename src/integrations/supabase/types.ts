@@ -105,6 +105,158 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          is_completed: boolean
+          is_locked: boolean
+          subject_id: string | null
+          task_date: string
+          task_type: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          is_locked?: boolean
+          subject_id?: string | null
+          task_date?: string
+          task_type: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_completed?: boolean
+          is_locked?: boolean
+          subject_id?: string | null
+          task_date?: string
+          task_type?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_tasks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      documents: {
+        Row: {
+          created_at: string
+          file_path: string
+          file_size: number | null
+          id: string
+          is_processed: boolean
+          name: string
+          parsed_content: Json | null
+          subject: string
+          type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          file_size?: number | null
+          id?: string
+          is_processed?: boolean
+          name: string
+          parsed_content?: Json | null
+          subject: string
+          type?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          file_size?: number | null
+          id?: string
+          is_processed?: boolean
+          name?: string
+          parsed_content?: Json | null
+          subject?: string
+          type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      exam_patterns: {
+        Row: {
+          avg_marks: number | null
+          created_at: string
+          difficulty_level: string | null
+          document_id: string | null
+          frequency_score: number
+          id: string
+          question_types: Json | null
+          subject_id: string
+          topic_name: string
+          user_id: string
+          year: string | null
+        }
+        Insert: {
+          avg_marks?: number | null
+          created_at?: string
+          difficulty_level?: string | null
+          document_id?: string | null
+          frequency_score?: number
+          id?: string
+          question_types?: Json | null
+          subject_id: string
+          topic_name: string
+          user_id: string
+          year?: string | null
+        }
+        Update: {
+          avg_marks?: number | null
+          created_at?: string
+          difficulty_level?: string | null
+          document_id?: string | null
+          frequency_score?: number
+          id?: string
+          question_types?: Json | null
+          subject_id?: string
+          topic_name?: string
+          user_id?: string
+          year?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "exam_patterns_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_patterns_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learner_subjects: {
         Row: {
           created_at: string
@@ -648,6 +800,39 @@ export type Database = {
         }
         Relationships: []
       }
+      subjects: {
+        Row: {
+          created_at: string
+          exam_patterns: Json | null
+          id: string
+          name: string
+          syllabus_code: string | null
+          topics: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_patterns?: Json | null
+          id?: string
+          name: string
+          syllabus_code?: string | null
+          topics?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_patterns?: Json | null
+          id?: string
+          name?: string
+          syllabus_code?: string | null
+          topics?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       support_tickets: {
         Row: {
           assignee_id: string | null
@@ -695,6 +880,59 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_mastery: {
+        Row: {
+          correct_attempts: number
+          created_at: string
+          id: string
+          is_locked: boolean
+          last_reviewed_at: string | null
+          mastery_percentage: number
+          next_review_at: string | null
+          subject_id: string
+          topic_name: string
+          total_attempts: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          correct_attempts?: number
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          last_reviewed_at?: string | null
+          mastery_percentage?: number
+          next_review_at?: string | null
+          subject_id: string
+          topic_name: string
+          total_attempts?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          correct_attempts?: number
+          created_at?: string
+          id?: string
+          is_locked?: boolean
+          last_reviewed_at?: string | null
+          mastery_percentage?: number
+          next_review_at?: string | null
+          subject_id?: string
+          topic_name?: string
+          total_attempts?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_mastery_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
