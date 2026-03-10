@@ -141,6 +141,16 @@ export function useDailyTasks(subjects: Subject[]) {
           {
             user_id: userId,
             subject_id: subject.id,
+            task_type: 'flashcards',
+            title: 'Flashcard Review',
+            description: `Key terms & concepts for ${topicName}`,
+            is_completed: false,
+            is_locked: true,
+            task_date: today,
+          },
+          {
+            user_id: userId,
+            subject_id: subject.id,
             task_type: 'active-recall',
             title: 'Active Recall',
             description: `Test yourself on ${topicName}`,
