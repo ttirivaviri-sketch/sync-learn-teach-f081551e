@@ -20,7 +20,7 @@ export interface Topic {
 
 export interface DailyTask {
   id: string;
-  type: 'micro-revision' | 'concept-learning' | 'active-recall' | 'exam-question';
+  type: 'micro-revision' | 'concept-learning' | 'active-recall' | 'exam-question' | 'flashcards' | 'summary' | 'revision-checklist';
   title: string;
   description: string;
   isCompleted: boolean;
