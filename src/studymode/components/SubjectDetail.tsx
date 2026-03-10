@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { TaskList } from './TaskList';
 import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
+import { FlashcardPanel } from './FlashcardPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
