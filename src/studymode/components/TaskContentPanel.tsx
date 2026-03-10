@@ -17,6 +17,8 @@ const taskLabels: Record<string, string> = {
   'micro-revision': 'Micro Revision',
   'concept-learning': 'Concept Learning',
   'active-recall': 'Active Recall',
+  'summary': 'Topic Summary',
+  'revision-checklist': 'Revision Checklist',
 };
 
 export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
