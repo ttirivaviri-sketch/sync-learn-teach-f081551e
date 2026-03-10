@@ -79,6 +79,15 @@ export function useDailyTasks(subjects: Subject[]) {
       },
       {
         id: `${subject.id}-t3`,
+        type: 'flashcards',
+        title: 'Flashcard Review',
+        description: `Key terms & concepts for ${topicName}`,
+        isCompleted: false,
+        isLocked: true,
+        subjectId: subject.id,
+      },
+      {
+        id: `${subject.id}-t4`,
         type: 'active-recall',
         title: 'Active Recall',
         description: `Test yourself on ${topicName}`,
@@ -87,7 +96,7 @@ export function useDailyTasks(subjects: Subject[]) {
         subjectId: subject.id,
       },
       {
-        id: `${subject.id}-t4`,
+        id: `${subject.id}-t5`,
         type: 'exam-question',
         title: 'AI Exam Question',
         description: `Exam-style question (${subject.currentTopic?.examWeight || 5}% exam weight)`,
@@ -127,6 +136,16 @@ export function useDailyTasks(subjects: Subject[]) {
             description: `Deep dive into ${topicName}`,
             is_completed: false,
             is_locked: false,
+            task_date: today,
+          },
+          {
+            user_id: userId,
+            subject_id: subject.id,
+            task_type: 'flashcards',
+            title: 'Flashcard Review',
+            description: `Key terms & concepts for ${topicName}`,
+            is_completed: false,
+            is_locked: true,
             task_date: today,
           },
           {

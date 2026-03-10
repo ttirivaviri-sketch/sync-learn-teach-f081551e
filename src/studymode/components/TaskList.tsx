@@ -1,4 +1,4 @@
-import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight } from 'lucide-react';
+import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight, Layers, FileText, ClipboardList } from 'lucide-react';
 import { DailyTask } from '../types/study';
 import { cn } from '../lib/utils';
 
@@ -7,18 +7,24 @@ interface TaskListProps {
   onTaskClick: (task: DailyTask) => void;
 }
 
-const taskIcons = {
+const taskIcons: Record<string, typeof BookOpen> = {
   'micro-revision': RotateCcw,
   'concept-learning': BookOpen,
   'active-recall': Brain,
   'exam-question': FileQuestion,
+  'flashcards': Layers,
+  'summary': FileText,
+  'revision-checklist': ClipboardList,
 };
 
-const taskColors = {
+const taskColors: Record<string, string> = {
   'micro-revision': 'from-blue-500 to-blue-600',
   'concept-learning': 'from-violet-500 to-purple-600',
   'active-recall': 'from-amber-500 to-orange-500',
   'exam-question': 'from-rose-500 to-red-600',
+  'flashcards': 'from-teal-500 to-emerald-600',
+  'summary': 'from-indigo-500 to-blue-600',
+  'revision-checklist': 'from-pink-500 to-rose-600',
 };
 
 export function TaskList({ tasks, onTaskClick }: TaskListProps) {

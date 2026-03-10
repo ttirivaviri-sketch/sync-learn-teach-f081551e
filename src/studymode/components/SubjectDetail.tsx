@@ -5,6 +5,7 @@ import { Button } from './ui/button';
 import { TaskList } from './TaskList';
 import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
+import { FlashcardPanel } from './FlashcardPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
@@ -84,8 +85,20 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
     );
   }
 
-  // AI-powered content for non-exam tasks
-  if (selectedTask && (selectedTask.type === 'micro-revision' || selectedTask.type === 'concept-learning' || selectedTask.type === 'active-recall')) {
+  // Flashcard interactive panel
+  if (selectedTask?.type === 'flashcards') {
+    return (
+      <FlashcardPanel
+        task={selectedTask}
+        subject={subject}
+        onComplete={handleTaskComplete}
+        onBack={() => setSelectedTask(null)}
+      />
+    );
+  }
+
+  // AI-powered content for streaming text tasks
+  if (selectedTask && ['micro-revision', 'concept-learning', 'active-recall', 'summary', 'revision-checklist'].includes(selectedTask.type)) {
     return (
       <TaskContentPanel
         task={selectedTask}
