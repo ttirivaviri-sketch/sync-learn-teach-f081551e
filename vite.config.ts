@@ -9,6 +9,14 @@ export default defineConfig(({ mode }) => ({
     host: "0.0.0.0",
     port: 8080,
     hmr: false,
+    proxy: {
+      // Proxy all /api/ai/* requests to the local AI proxy server
+      '/api/ai': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
   },
   plugins: [
     react(),

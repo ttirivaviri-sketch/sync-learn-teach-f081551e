@@ -58,14 +58,9 @@ export function StreakCelebration() {
   const generateMessage = useCallback(async (milestone: number) => {
     setIsLoading(true);
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/streak-celebration`,
-        {
+      const resp = await fetch('/api/ai/streak-celebration', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             milestone,
             streak: progress?.streak || milestone,
@@ -73,8 +68,7 @@ export function StreakCelebration() {
             badgeCount: progress?.badges?.length || 0,
             tasksCompletedToday: dailyStats.tasksCompletedToday,
           }),
-        }
-      );
+        });
 
       if (resp.ok) {
         const data = await resp.json();

@@ -53,14 +53,9 @@ export function DailySummary({ onClose }: DailySummaryProps) {
     setAiMessage('');
 
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/daily-summary`,
-        {
+      const resp = await fetch('/api/ai/daily-summary', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             tasksCompleted: dailyStats.tasksCompletedToday,
             totalTasks: dailyStats.totalTasksToday,
@@ -70,8 +65,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
             totalXp,
             badgeCount,
           }),
-        }
-      );
+        });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));
