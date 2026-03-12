@@ -3,6 +3,9 @@ import { supabase } from '../../integrations/supabase/client';
 import { useUserProgress } from './useUserProgress';
 import { useExamSettings } from './useExamSettings';
 
+// Local AI proxy endpoint
+const GREETING_URL = '/api/ai/greeting';
+
 export function useAIGreeting() {
   const [greeting, setGreeting] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
@@ -20,8 +23,10 @@ export function useAIGreeting() {
 
         const daysUntilExam = getDaysUntilExam();
 
-        const { data, error } = await supabase.functions.invoke('ai-greeting', {
-          body: {
+        const resp = await fetch(GREETING_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             studentName,
             hour,
             streak: progress?.streak || 0,
@@ -33,17 +38,23 @@ export function useAIGreeting() {
             scheduleAdherence: dailyStats.totalTasksToday > 0
               ? `${Math.round((dailyStats.tasksCompletedToday / dailyStats.totalTasksToday) * 100)}%`
               : 'no tasks yet',
-          },
+          }),
         });
 
-        if (error || data?.fallback) {
+        if (!resp.ok) {
+          setGreeting(getFallbackGreeting(hour, studentName));
+          return;
+        }
+
+        const data = await resp.json();
+        if (data?.fallback || !data?.greeting) {
           setGreeting(getFallbackGreeting(hour, studentName));
         } else {
           setGreeting(data.greeting);
         }
       } catch {
-        const hour = new Date().getHours();
-        setGreeting(getFallbackGreeting(hour, ''));
+        const h = new Date().getHours();
+        setGreeting(getFallbackGreeting(h, ''));
       } finally {
         setIsLoading(false);
       }

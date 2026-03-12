@@ -137,19 +137,40 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
         // Read file content for parsing
         const fileContent = await uploadedFile.file.text();
 
-        // Call parse function
-        const { data: parseData, error: parseError } = await supabase.functions.invoke('parse-document', {
-          body: {
-            documentId: docData.id,
-            content: fileContent.substring(0, 50000), // Limit content size
-            documentType,
-            subject: subject.trim(),
-          },
-        });
+        // Call AI parse function via local proxy
+        try {
+          const parseResp = await fetch('/api/ai/parse-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              documentId: docData.id,
+              content: fileContent.substring(0, 50000), // Limit content size
+              documentType,
+              subject: subject.trim(),
+            }),
+          });
 
-        if (parseError) {
-          console.error("Parse error:", parseError);
-          // Still mark as done even if parsing fails - document is uploaded
+          if (!parseResp.ok) {
+            const errData = await parseResp.json().catch(() => ({}));
+            console.error('Parse error:', errData.error || parseResp.status);
+            // Still continue — document is uploaded even if AI parsing fails
+          } else {
+            const parseData = await parseResp.json();
+            // If syllabus was parsed successfully, update the document record
+            if (parseData?.success && parseData?.parsed) {
+              await supabase
+                .from('documents')
+                .update({
+                  is_processed: true,
+                  parsed_content: parseData.parsed,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq('id', docData.id);
+            }
+          }
+        } catch (parseErr) {
+          console.error('Parse request failed:', parseErr);
+          // Non-fatal — document is still uploaded
         }
 
         // Update status to done

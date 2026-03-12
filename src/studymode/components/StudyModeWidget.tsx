@@ -26,27 +26,23 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionActive, setSessionActive] = useState(false);
 
-  // Fetch tutor assignments
+  // Fetch tutor assignments directly from Supabase
   useEffect(() => {
     const fetchAssignments = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studymode-api?action=get-my-assignments`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({}),
-          }
-        );
-        if (resp.ok) {
-          const data = await resp.json();
-          setAssignments(Array.isArray(data) ? data : []);
+        // Query tutor assignments table directly (no edge function needed)
+        const { data, error } = await supabase
+          .from('tutor_assignments' as any)
+          .select('id, subject, topic, focus_area, difficulty_override, notes, due_date')
+          .eq('learner_id', session.user.id)
+          .order('created_at', { ascending: false })
+          .limit(10);
+
+        if (!error && Array.isArray(data)) {
+          setAssignments(data as TutorAssignment[]);
         }
       } catch {
         // Silent fail - assignments are optional
@@ -69,21 +65,16 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
   const startSession = useCallback(async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) { onOpenStudyMode(); return; }
 
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/studymode-api?action=track-session`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ end: false }),
-        }
-      );
-      if (resp.ok) {
-        const data = await resp.json();
+      // Track session start directly in Supabase (no edge function needed)
+      const { data } = await supabase
+        .from('study_sessions' as any)
+        .insert({ user_id: session.user.id, started_at: new Date().toISOString() })
+        .select('id')
+        .single();
+
+      if (data?.id) {
         setSessionId(data.id);
         setSessionActive(true);
       }

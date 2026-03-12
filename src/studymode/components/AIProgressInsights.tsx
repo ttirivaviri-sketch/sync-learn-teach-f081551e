@@ -25,17 +25,11 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
     setError(null);
 
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/progress-insights`,
-        {
+      const resp = await fetch('/api/ai/progress-insights', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ subjects, dailyStats, streak, xp, quizHistory, masteryData }),
-        }
-      );
+        });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({ error: 'Failed to generate insights' }));

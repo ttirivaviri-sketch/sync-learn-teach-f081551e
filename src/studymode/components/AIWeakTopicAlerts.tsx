@@ -71,14 +71,9 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
     setError(null);
 
     try {
-      const resp = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/detect-weak-topics`,
-        {
+      const resp = await fetch('/api/ai/detect-weak-topics', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             topicStats: topicStats.map(t => ({
               topic_name: t.topic_name,
@@ -89,8 +84,7 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
             })),
             subjects,
           }),
-        }
-      );
+        });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));

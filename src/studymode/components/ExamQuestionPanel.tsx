@@ -92,23 +92,18 @@ export function ExamQuestionPanel({ question: staticQuestion, subject, topic, on
      setAiExplanation('');
  
      try {
-       const response = await fetch(
-         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/explain-answer`,
-         {
-           method: 'POST',
-           headers: {
-             'Content-Type': 'application/json',
-             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-           },
-           body: JSON.stringify({
-             question: activeQuestion.text,
-             studentAnswer: answer,
-             modelAnswer: generatedModelAnswer,
-             topic: activeQuestion.topic,
-             subject: subject?.name || 'Unknown',
-           }),
-         }
-       );
+       // Local AI proxy endpoint
+       const response = await fetch('/api/ai/explain-answer', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({
+           question: activeQuestion.text,
+           studentAnswer: answer,
+           modelAnswer: generatedModelAnswer,
+           topic: activeQuestion.topic,
+           subject: subject?.name || 'Unknown',
+         }),
+       });
  
        if (!response.ok) {
          const errorData = await response.json().catch(() => ({}));

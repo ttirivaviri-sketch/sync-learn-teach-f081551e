@@ -9,9 +9,14 @@ interface UseTaskContentReturn {
     subject: string;
     topic: string;
     subtopics?: string[];
+    examWeight?: number;
+    curriculumContext?: string;
   }) => Promise<void>;
   reset: () => void;
 }
+
+// Local AI proxy endpoint
+const TASK_CONTENT_URL = '/api/ai/generate-task-content';
 
 export function useTaskContent(): UseTaskContentReturn {
   const [content, setContent] = useState('');
@@ -29,20 +34,17 @@ export function useTaskContent(): UseTaskContentReturn {
     subject: string;
     topic: string;
     subtopics?: string[];
+    examWeight?: number;
+    curriculumContext?: string;
   }) => {
     setIsLoading(true);
     setContent('');
     setError(null);
 
-    const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-task-content`;
-
     try {
-      const resp = await fetch(url, {
+      const resp = await fetch(TASK_CONTENT_URL, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(params),
       });
 
@@ -89,7 +91,7 @@ export function useTaskContent(): UseTaskContentReturn {
         }
       }
 
-      // Flush remaining
+      // Flush remaining buffer
       if (buffer.trim()) {
         for (let raw of buffer.split('\n')) {
           if (!raw || !raw.startsWith('data: ')) continue;
