@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award, Zap, Settings, ChevronRight } from "lucide-react";
+import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award, Zap, Settings, ChevronRight, GraduationCap } from "lucide-react";
 import { useDevMode } from "@/contexts/DevModeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,8 @@ import LearnerSyllabusManager from '@/components/LearnerSyllabusManager';
 import { useLearnerSubjects } from '@/hooks/useLearnerSubjects';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 import { RescheduleDialog } from '@/components/RescheduleDialog';
+import { AcademicProfileSetup } from '@/components/AcademicProfileSetup';
+import { useAcademicProfile } from '@/hooks/useAcademicProfile';
 
 const LearnerApp = () => {
   const { isDevMode, devRole, devUserName, bypassPayments, bypassSchedule, devSessionActive, setDevSessionActive, launchDevSession } = useDevMode();
@@ -47,6 +49,7 @@ const LearnerApp = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAcademicSetup, setShowAcademicSetup] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState("");
   const [userLocationName, setUserLocationName] = useState("Johannesburg Central");
   const [profile, setProfile] = useState<any>(null);
@@ -87,6 +90,14 @@ const LearnerApp = () => {
     studyLevel: profile?.study_level || undefined,
   });
   const { isUserOnline } = usePresenceTracking(session);
+
+  // Academic Profile (drives library personalisation)
+  const {
+    profile: academicProfile,
+    loading: academicProfileLoading,
+    saving: academicProfileSaving,
+    saveProfile: saveAcademicProfile,
+  } = useAcademicProfile(session?.user?.id || (isDevMode ? 'dev-user' : undefined));
 
   // Get confirmed bookings that need payment
   const confirmedBookingIds = bookings
@@ -161,6 +172,14 @@ const LearnerApp = () => {
       requestLocation();
     }
   }, [session]);
+
+  // Show academic profile setup prompt if profile is missing (after a short delay)
+  useEffect(() => {
+    if (!academicProfileLoading && !academicProfile && (session?.user || isDevMode)) {
+      const timer = setTimeout(() => setShowAcademicSetup(true), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [academicProfileLoading, academicProfile, session, isDevMode]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
@@ -681,11 +700,36 @@ const LearnerApp = () => {
 
           {/* Library Tab */}
           <TabsContent value="library" className="space-y-4 p-4 mt-0">
-            <div className="flex items-center gap-2 mb-4">
-              <ShoppingBag className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold">StudySync Library</h3>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <ShoppingBag className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">StudySync Library</h3>
+              </div>
+              {!academicProfile && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-xs"
+                  onClick={() => setShowAcademicSetup(true)}
+                >
+                  <GraduationCap className="h-3.5 w-3.5 mr-1" />
+                  Set Profile
+                </Button>
+              )}
             </div>
-            <StudySyncLibrary />
+            <StudySyncLibrary
+              academicProfile={academicProfile}
+              onBookTutor={(tutorId, tutorName) => {
+                // Navigate to home tab and pre-fill tutor search
+                setSearchQuery(tutorName);
+                setActiveTab("home");
+                toast({
+                  title: "Find Tutor",
+                  description: `Searching for ${tutorName}...`,
+                });
+              }}
+              onNeedHelp={() => setActiveTab("home")}
+            />
           </TabsContent>
 
           {/* Activity Tab - Bookings and History Combined */}
@@ -905,6 +949,56 @@ const LearnerApp = () => {
               </CardContent>
             </Card>
 
+            {/* Academic Profile */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <GraduationCap className="h-4 w-4 text-primary" />
+                  Academic Profile
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {academicProfile ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                      <span className="text-muted-foreground">Curriculum</span>
+                      <span className="font-medium">{academicProfile.curriculum}</span>
+                      <span className="text-muted-foreground">Grade</span>
+                      <span className="font-medium">{academicProfile.grade}</span>
+                      {academicProfile.exam_year && (
+                        <>
+                          <span className="text-muted-foreground">Exam Year</span>
+                          <span className="font-medium">{academicProfile.exam_year}</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {academicProfile.subjects.map((s) => (
+                        <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
+                      ))}
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAcademicSetup(true)}
+                    >
+                      Edit Profile
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center py-3">
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Set your curriculum & subjects to personalise your library.
+                    </p>
+                    <Button size="sm" onClick={() => setShowAcademicSetup(true)}>
+                      <GraduationCap className="h-4 w-4 mr-1" />
+                      Set Academic Profile
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Syllabus Manager */}
             {session?.user?.id && (
               <LearnerSyllabusManager
@@ -1073,6 +1167,38 @@ const LearnerApp = () => {
             <div className="p-4">
               <PaymentHistory userId={session.user.id} limit={50} showViewAll={false} />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Academic Profile Setup Modal */}
+      {showAcademicSetup && (
+        <div
+          className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center"
+          onClick={() => setShowAcademicSetup(false)}
+        >
+          <div
+            className="bg-background w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <AcademicProfileSetup
+              userId={session?.user?.id || 'dev-user'}
+              existingProfile={academicProfile}
+              onSave={async (data) => {
+                const ok = await saveAcademicProfile(data);
+                if (ok) {
+                  setShowAcademicSetup(false);
+                  toast({
+                    title: "Profile saved!",
+                    description: "Your library has been personalised.",
+                  });
+                }
+                return ok;
+              }}
+              saving={academicProfileSaving}
+              onSkip={() => setShowAcademicSetup(false)}
+              compact
+            />
           </div>
         </div>
       )}

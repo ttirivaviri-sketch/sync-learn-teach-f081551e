@@ -10,7 +10,13 @@ import { MessageCircle, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
 
-export default function StudyMode() {
+export default function StudyMode({
+  onNeedHelp,
+  onBrowseLibrary,
+}: {
+  onNeedHelp?: () => void;
+  onBrowseLibrary?: () => void;
+}) {
   const [readiness, setReadiness] = useState<ReadinessCheckType | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -51,6 +57,8 @@ export default function StudyMode() {
             readiness={readiness}
             onUploadClick={handleUploadClick}
             onOpenChat={handleOpenChat}
+            onNeedHelp={onNeedHelp}
+            onBrowseLibrary={onBrowseLibrary}
           />
         </main>
       )}
