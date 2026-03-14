@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TopicTutorRack } from "@/components/TopicTutorRack";
 import { useLibraryResources } from "@/hooks/useLibraryResources";
 import { AcademicProfile, LibraryResource } from "@/types/academicProfile";
+import { VideoEmbedPlayer } from "@/components/VideoEmbedPlayer";
 
 // ── Lazy-load Study Mode only when the toggle is activated ────────────────────
 const StudyModeWrapper = lazy(() =>
@@ -38,6 +39,7 @@ const StudySyncLibrary = ({
   const [studyModeActive, setStudyModeActive] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
 
   const {
     allResources,
@@ -83,6 +85,11 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
+    if (resource.type === "video" && resource.videoUrl) {
+      setActiveVideoResource(resource);
+      return;
+    }
+
     dispatchToast("Opening Resource", `Opening ${resource.title}`);
   };
 
@@ -744,6 +751,29 @@ const StudySyncLibrary = ({
             </TabsContent>
           </Tabs>
         </>
+      )}
+
+      {activeVideoResource && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+          <div className="bg-background border border-border p-4 rounded-xl w-[95%] max-w-4xl shadow-2xl">
+            <div className="flex items-center justify-between mb-3 gap-3">
+              <h3 className="font-semibold text-foreground truncate">{activeVideoResource.title}</h3>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setActiveVideoResource(null)}
+                className="shrink-0"
+              >
+                <X className="h-4 w-4 mr-1" /> Close
+              </Button>
+            </div>
+
+            <VideoEmbedPlayer
+              url={activeVideoResource.videoUrl || ""}
+              title={activeVideoResource.title}
+            />
+          </div>
+        </div>
       )}
 
       {/* ── Featured Banner ── */}

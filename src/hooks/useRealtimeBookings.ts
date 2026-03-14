@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { security } from '@/utils/security';
@@ -29,68 +29,121 @@ export interface BookingRequest {
   };
 }
 
+type SyncStatus = 'connecting' | 'synced' | 'degraded' | 'error';
+
+const bookingTransitions: Record<BookingRequest['status'], BookingRequest['status'][]> = {
+  requested: ['confirmed', 'canceled'],
+  confirmed: ['completed', 'canceled'],
+  completed: [],
+  canceled: [],
+};
+
 export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: string) => {
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('connecting');
+  const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const { toast } = useToast();
+
+  const bookingSelect = `
+    *,
+    learner_profile:profiles!bookings_learner_id_fkey(full_name, email, study_level),
+    tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
+    tutor_subjects(subject, level)
+  `;
+
+  const mergeBooking = useCallback((booking: BookingRequest) => {
+    setBookings((prev) => {
+      const existingIndex = prev.findIndex((item) => item.id === booking.id);
+
+      if (existingIndex === -1) {
+        return [booking, ...prev];
+      }
+
+      const next = [...prev];
+      next[existingIndex] = booking;
+      return next;
+    });
+  }, []);
+
+  const fetchBookingById = useCallback(async (bookingId: string) => {
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(bookingSelect)
+      .eq('id', bookingId)
+      .single();
+
+    if (error) {
+      console.error('Error fetching booking details:', error);
+      return null;
+    }
+
+    return data as BookingRequest;
+  }, [bookingSelect]);
+
+  const loadBookings = useCallback(async () => {
+    if (!userId) return;
+
+    try {
+      setSyncStatus('connecting');
+
+      // Validate session before loading sensitive data
+      const validation = await security.validateSession();
+      if (!validation.valid) {
+        console.error('Invalid session for booking access');
+        setSyncStatus('error');
+        return;
+      }
+
+      const query = supabase
+        .from('bookings')
+        .select(bookingSelect);
+
+      if (userType === 'learner') {
+        query.eq('learner_id', userId);
+      } else {
+        query.eq('tutor_id', userId);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error loading bookings:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load bookings',
+          variant: 'destructive',
+        });
+        setSyncStatus('error');
+        return;
+      }
+
+      setBookings((data || []) as BookingRequest[]);
+      setLastSyncedAt(new Date());
+      setSyncStatus('synced');
+    } catch (error) {
+      console.error('Error in loadBookings:', error);
+      setSyncStatus('error');
+    } finally {
+      setLoading(false);
+    }
+  }, [bookingSelect, toast, userId, userType]);
 
   // Load initial bookings
   useEffect(() => {
     if (!userId) return;
 
-    const loadBookings = async () => {
-      try {
-        // Validate session before loading sensitive data
-        const validation = await security.validateSession();
-        if (!validation.valid) {
-          console.error('Invalid session for booking access');
-          return;
-        }
-        
-        const query = supabase
-          .from('bookings')
-          .select(`
-            *,
-            learner_profile:profiles!bookings_learner_id_fkey(full_name, email, study_level),
-            tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
-            tutor_subjects(subject, level)
-          `);
-
-        if (userType === 'learner') {
-          query.eq('learner_id', userId);
-        } else {
-          query.eq('tutor_id', userId);
-        }
-
-        const { data, error } = await query.order('created_at', { ascending: false });
-
-        if (error) {
-          console.error('Error loading bookings:', error);
-          toast({
-            title: 'Error',
-            description: 'Failed to load bookings',
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        setBookings(data || []);
-      } catch (error) {
-        console.error('Error in loadBookings:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadBookings();
-  }, [userId, userType, toast]);
+  }, [loadBookings, userId]);
 
-  // Set up real-time subscriptions
+  // Set up real-time subscriptions with fallback resync
   useEffect(() => {
     if (!userId) return;
 
+    let reconnectAttempts = 0;
+
     const channel = supabase
-      .channel('booking-changes')
+      .channel(`booking-changes-${userType}-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -101,28 +154,19 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
         },
         async (payload) => {
           console.log('New booking received:', payload);
-          
-          // Fetch the complete booking with relations
-          const { data: newBooking } = await supabase
-            .from('bookings')
-            .select(`
-              *,
-              learner_profile:profiles!bookings_learner_id_fkey(full_name, email, study_level),
-              tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
-              tutor_subjects(subject, level)
-            `)
-            .eq('id', payload.new.id)
-            .single();
 
-          if (newBooking) {
-            setBookings(prev => [newBooking, ...prev]);
-            
-            if (userType === 'tutor' && payload.new.status === 'requested') {
-              toast({
-                title: 'New Booking Request!',
-                description: `${newBooking.learner_profile?.full_name} wants to book a session`,
-              });
-            }
+          const newBooking = await fetchBookingById(payload.new.id as string);
+          if (!newBooking) return;
+
+          mergeBooking(newBooking);
+          setLastSyncedAt(new Date());
+          setSyncStatus('synced');
+
+          if (userType === 'tutor' && payload.new.status === 'requested') {
+            toast({
+              title: 'New Booking Request!',
+              description: `${newBooking.learner_profile?.full_name} wants to book a session`,
+            });
           }
         }
       )
@@ -136,52 +180,52 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
         },
         async (payload) => {
           console.log('Booking updated:', payload);
-          
-          // Fetch the updated booking with relations
-          const { data: updatedBooking } = await supabase
-            .from('bookings')
-            .select(`
-              *,
-              learner_profile:profiles!bookings_learner_id_fkey(full_name, email, study_level),
-              tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
-              tutor_subjects(subject, level)
-            `)
-            .eq('id', payload.new.id)
-            .single();
 
-          if (updatedBooking) {
-            setBookings(prev => 
-              prev.map(booking => 
-                booking.id === payload.new.id ? updatedBooking : booking
-              )
-            );
+          const updatedBooking = await fetchBookingById(payload.new.id as string);
+          if (!updatedBooking) return;
 
-            // Show notification for status changes
-            if (payload.old.status !== payload.new.status) {
-              const statusMessages = {
-                confirmed: 'Your booking has been confirmed!',
-                completed: 'Session completed',
-                canceled: 'Session cancelled',
-              };
+          mergeBooking(updatedBooking);
+          setLastSyncedAt(new Date());
+          setSyncStatus('synced');
 
-              const message = statusMessages[payload.new.status as keyof typeof statusMessages];
-              if (message) {
-                toast({
-                  title: 'Booking Update',
-                  description: message,
-                  variant: payload.new.status === 'canceled' ? 'destructive' : 'default',
-                });
-              }
+          if (payload.old.status !== payload.new.status) {
+            const statusMessages = {
+              confirmed: 'Your booking has been confirmed!',
+              completed: 'Session completed',
+              canceled: 'Session cancelled',
+            };
+
+            const message = statusMessages[payload.new.status as keyof typeof statusMessages];
+            if (message) {
+              toast({
+                title: 'Booking Update',
+                description: message,
+                variant: payload.new.status === 'canceled' ? 'destructive' : 'default',
+              });
             }
           }
         }
       )
-      .subscribe();
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          reconnectAttempts = 0;
+          setSyncStatus('synced');
+          return;
+        }
+
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          reconnectAttempts += 1;
+          setSyncStatus(reconnectAttempts >= 3 ? 'error' : 'degraded');
+
+          // Always trigger a reload, even if realtime is unstable.
+          await loadBookings();
+        }
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [userId, userType, toast]);
+  }, [fetchBookingById, loadBookings, mergeBooking, toast, userId, userType]);
 
   const createBooking = async (bookingData: {
     tutor_id: string;
@@ -197,7 +241,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
     if (!validation.valid) {
       throw new Error('Authentication required');
     }
-    
+
     if (!security.checkRateLimit(`booking_${userId}`, 10, 60000)) {
       throw new Error('Too many booking requests. Please wait a moment.');
     }
@@ -228,6 +272,15 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   };
 
   const updateBookingStatus = async (bookingId: string, status: BookingRequest['status']) => {
+    const currentBooking = bookings.find((booking) => booking.id === bookingId);
+
+    if (currentBooking) {
+      const allowedNextStatus = bookingTransitions[currentBooking.status];
+      if (!allowedNextStatus.includes(status)) {
+        throw new Error(`Invalid status transition: ${currentBooking.status} -> ${status}`);
+      }
+    }
+
     const { error } = await supabase
       .from('bookings')
       .update({ status })
@@ -240,16 +293,16 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   };
 
   const getIncomingRequests = () => {
-    return bookings.filter(booking => booking.status === 'requested');
+    return bookings.filter((booking) => booking.status === 'requested');
   };
 
   const getUpcomingSessions = () => {
     const now = new Date();
-    const upcoming = bookings.filter(booking => {
+    const upcoming = bookings.filter((booking) => {
       const isConfirmed = booking.status === 'confirmed';
       const sessionTime = new Date(booking.scheduled_at);
       const isUpcoming = sessionTime > now;
-      
+
       console.log('📅 Session check:', {
         id: booking.id,
         scheduled_at: booking.scheduled_at,
@@ -257,12 +310,12 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
         now: now.toISOString(),
         isConfirmed,
         isUpcoming,
-        willShow: isConfirmed && isUpcoming
+        willShow: isConfirmed && isUpcoming,
       });
-      
+
       return isConfirmed && isUpcoming;
     });
-    
+
     console.log('📊 Total bookings:', bookings.length, 'Upcoming sessions:', upcoming.length);
     return upcoming;
   };
@@ -270,9 +323,12 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   return {
     bookings,
     loading,
+    syncStatus,
+    lastSyncedAt,
     createBooking,
     updateBookingStatus,
     getIncomingRequests,
     getUpcomingSessions,
+    refreshBookings: loadBookings,
   };
 };
