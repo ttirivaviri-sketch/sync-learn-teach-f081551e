@@ -474,40 +474,34 @@ const LearnerApp = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
+        className="fixed top-0 left-0 right-0 z-40 overflow-hidden text-white shadow-md"
         style={{
           background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
         }}
       >
-        <div className="flex items-center justify-between px-4 py-2.5 sm:px-5">
-          <div className="flex items-center gap-2 min-w-0">
-        {/* Row 1: Logo + Icons */}
-        <div className="flex items-center justify-between px-6 pt-5 pb-1">
-          {/* Logo */}
-          <div className="flex items-center shrink-0">
+        <div className="mx-auto flex h-16 items-center justify-between gap-2.5 px-4 sm:px-5">
+          <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
-              className="w-auto object-contain"
-              style={{ height: "34px", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))" }}
-              style={{ height: "78px", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+              className="h-[60px] w-[190px] max-w-[190px] shrink-0 object-contain"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
             />
             <p
-              className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.12em] truncate"
+              className="truncate whitespace-nowrap text-[10px] font-medium uppercase leading-tight tracking-[0.12em] sm:text-xs"
               style={{ color: "rgba(255,255,255,0.82)" }}
             >
               Education, in sync with your future
             </p>
           </div>
 
-          {/* Action Icons */}
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <NotificationCenter />
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setShowChat(true)}
-              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15"
               aria-label="Open Chat"
             >
               <MessageCircle className="h-5 w-5" />
@@ -516,7 +510,7 @@ const LearnerApp = () => {
               variant="ghost"
               size="sm"
               onClick={() => setActiveTab("profile")}
-              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15"
               aria-label="Profile"
             >
               <User className="h-5 w-5" />
@@ -526,31 +520,7 @@ const LearnerApp = () => {
       </header>
 
       {/* Main Content */}
-      <div className="pt-[56px] pb-20">
-
-        {/* Row 2: Slogan */}
-        <div className="px-6 pt-1 pb-5">
-          <p
-            className="text-sm font-semibold tracking-widest uppercase mb-2"
-            style={{ color: "rgba(255,255,255,0.7)", letterSpacing: "0.12em" }}
-          >
-            Education, in sync with your future
-          </p>
-          <h1
-            className="text-5xl font-extrabold leading-tight text-white"
-          >
-            Confidence Starts Here
-          </h1>
-          {!isOnline && (
-            <span className="inline-block mt-1 text-xs font-medium bg-red-500/80 text-white px-2 py-0.5 rounded-full">
-              Offline
-            </span>
-          )}
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <div className="pt-[176px] pb-20">
+      <div className="pt-[64px] pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
           {/* Home Tab - Search Content */}
