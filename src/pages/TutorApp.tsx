@@ -285,6 +285,24 @@ const TutorApp = () => {
           background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
         }}
       >
+        <div className="flex items-center justify-between px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2 min-w-0">
+        {/* Row 1: Logo + Icons */}
+        <div className="flex items-center justify-between px-6 pt-5 pb-1">
+          {/* Logo */}
+          <div className="flex items-center shrink-0">
+            <img
+              src="/lovable-uploads/studysync-logo.png"
+              alt="StudySync"
+              className="w-auto object-contain"
+              style={{ height: "52px", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.24))" }}
+              style={{ height: "78px", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+            />
+            <p
+              className="text-xs sm:text-sm font-semibold tracking-[0.08em] whitespace-nowrap"
+              style={{ color: "rgba(255,255,255,0.82)" }}
+            >
+              EDUCATION, IN SYNC WITH YOUR FUTURE
         <div className="mx-auto flex min-h-[64px] items-center justify-between gap-3 px-4 sm:px-5">
           <div className="flex min-w-0 items-center gap-3">
             <img
@@ -334,6 +352,26 @@ const TutorApp = () => {
               <LogOut className="h-5 w-5" />
             </Button>
           </div>
+        </div>
+
+      </header>
+
+      {/* Status Banner */}
+      <div className="pt-[76px]" />
+        {/* Row 2: Slogan */}
+        <div className="px-6 pt-1 pb-5">
+          <p
+            className="text-sm font-semibold tracking-widest uppercase mb-2"
+            style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.12em" }}
+          >
+            Education, in sync with your future
+          </p>
+          <h1
+            className="text-5xl font-extrabold leading-tight"
+            style={{ color: "#ffffff" }}
+          >
+            Confidence Starts Here
+          </h1>
         </div>
       </header>
 
