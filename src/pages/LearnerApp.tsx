@@ -479,6 +479,8 @@ const LearnerApp = () => {
           background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
         }}
       >
+        <div className="flex items-center justify-between px-4 py-2.5 sm:px-5">
+          <div className="flex items-center gap-2 min-w-0">
         {/* Row 1: Logo + Icons */}
         <div className="flex items-center justify-between px-6 pt-5 pb-1">
           {/* Logo */}
@@ -487,8 +489,15 @@ const LearnerApp = () => {
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
               className="w-auto object-contain"
+              style={{ height: "34px", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))" }}
               style={{ height: "78px", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
             />
+            <p
+              className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.12em] truncate"
+              style={{ color: "rgba(255,255,255,0.82)" }}
+            >
+              Education, in sync with your future
+            </p>
           </div>
 
           {/* Action Icons */}
@@ -498,22 +507,26 @@ const LearnerApp = () => {
               variant="ghost"
               size="sm"
               onClick={() => setShowChat(true)}
-              className="text-white hover:bg-white/15 rounded-full w-10 h-10 p-0 flex items-center justify-center"
+              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
               aria-label="Open Chat"
             >
-              <MessageCircle className="h-6 w-6" />
+              <MessageCircle className="h-5 w-5" />
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setActiveTab("profile")}
-              className="text-white hover:bg-white/15 rounded-full w-10 h-10 p-0 flex items-center justify-center"
+              className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
               aria-label="Profile"
             >
-              <User className="h-6 w-6" />
+              <User className="h-5 w-5" />
             </Button>
           </div>
         </div>
+      </header>
+
+      {/* Main Content */}
+      <div className="pt-[56px] pb-20">
 
         {/* Row 2: Slogan */}
         <div className="px-6 pt-1 pb-5">
