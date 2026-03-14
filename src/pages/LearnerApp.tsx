@@ -497,10 +497,22 @@ const LearnerApp = () => {
               style={{ color: "rgba(255,255,255,0.82)" }}
             >
               EDUCATION, IN SYNC WITH YOUR FUTURE
+        <div className="mx-auto flex min-h-[64px] items-center justify-between gap-3 px-4 sm:px-5">
+          <div className="flex min-w-0 items-center gap-3">
+            <img
+              src="/lovable-uploads/studysync-logo.png"
+              alt="StudySync"
+              className="h-[52px] w-[150px] shrink-0 object-contain"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+            />
+            <p
+              className="truncate text-[10px] font-medium uppercase tracking-[0.12em] sm:text-xs"
+              style={{ color: "rgba(255,255,255,0.82)" }}
+            >
+              Education, in sync with your future
             </p>
           </div>
 
-          {/* Action Icons */}
           <div className="flex items-center gap-2">
             <NotificationCenter />
             <Button
@@ -508,6 +520,7 @@ const LearnerApp = () => {
               size="sm"
               onClick={() => setShowChat(true)}
               className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15"
               aria-label="Open Chat"
             >
               <MessageCircle className="h-5 w-5" />
@@ -517,6 +530,7 @@ const LearnerApp = () => {
               size="sm"
               onClick={() => setActiveTab("profile")}
               className="text-white hover:bg-white/15 rounded-full w-9 h-9 p-0 flex items-center justify-center"
+              className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15"
               aria-label="Profile"
             >
               <User className="h-5 w-5" />
@@ -550,7 +564,7 @@ const LearnerApp = () => {
       </header>
 
       {/* Main Content */}
-      <div className="pt-[176px] pb-20">
+      <div className="pt-[64px] pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
           {/* Home Tab - Search Content */}
