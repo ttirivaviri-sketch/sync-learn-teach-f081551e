@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { analytics } from '@/utils/analytics';
@@ -220,6 +220,13 @@ export const useTutorData = (
     return R * c;
   };
 
+  // Debounced wrapper — collapses multiple rapid realtime events into one fetch
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedFetch = () => {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => { fetchTutors(); }, 800);
+  };
+
   useEffect(() => {
     fetchTutors();
 
@@ -228,16 +235,19 @@ export const useTutorData = (
       .on('postgres_changes', {
         event: 'UPDATE', schema: 'public', table: 'profiles',
         filter: 'user_type=eq.tutor',
-      }, () => fetchTutors())
+      }, debouncedFetch)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tutor_subjects',
-      }, () => fetchTutors())
+      }, debouncedFetch)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'reviews',
-      }, () => fetchTutors())
+      }, debouncedFetch)
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      supabase.removeChannel(channel);
+    };
   }, [options?.subjectFilter, options?.searchQuery, options?.studyLevel]);
 
   return {
