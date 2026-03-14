@@ -13,6 +13,7 @@ import { AIProgressInsights } from './AIProgressInsights';
 import { AIWeakTopicAlerts } from './AIWeakTopicAlerts';
 import { DailySummary } from './DailySummary';
 import { Button } from './ui/button';
+import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '../lib/utils';
 import { useSubjects } from '../hooks/useSubjects';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
@@ -30,9 +31,11 @@ interface DashboardProps {
   readiness: ReadinessCheckType;
   onUploadClick?: () => void;
   onOpenChat?: (subject: string, topic: string) => void;
+  onNeedHelp?: () => void;  // navigates user to tutor search
+  onBrowseLibrary?: () => void;  // navigates to library tab
 }
 
-export function Dashboard({ readiness, onUploadClick, onOpenChat }: DashboardProps) {
+export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
@@ -317,6 +320,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat }: DashboardPro
                 if (matchingSubject) setSelectedSubject(matchingSubject);
               }}
             />
+
+            {/* Stuck → Get Help prompt (shows if weak topics exist) */}
+            {strugglingTopics.length > 1 && (
+              <StuckHelpPrompt
+                topic={strugglingTopics[0]?.topic_name}
+                subject={subjects[0]?.name}
+                failedAttempts={strugglingTopics.length}
+                variant="after-quiz"
+                onWatchMore={onBrowseLibrary}
+                onBookTutor={onNeedHelp}
+                onBrowseLibrary={onBrowseLibrary}
+              />
+            )}
 
             <SpacedRepetitionWidget
               strugglingTopics={strugglingTopics}

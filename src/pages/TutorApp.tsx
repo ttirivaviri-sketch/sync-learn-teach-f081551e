@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp, Home, Activity } from "lucide-react";
+import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp, Home, Activity, BookOpen, Download } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
@@ -25,6 +25,7 @@ import { TutorSubjectManager } from '@/components/TutorSubjectManager';
 import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useTutorStats } from '@/hooks/useTutorStats';
 import TutorAvailabilitySchedule from '@/components/TutorAvailabilitySchedule';
+import { TutorCreatorDashboard } from '@/components/TutorCreatorDashboard';
 
 
 const TutorApp = () => {
@@ -365,10 +366,14 @@ const TutorApp = () => {
       {/* Main Content */}
       <div className="p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="home" className="flex flex-col gap-1">
               <Home className="h-4 w-4" />
               <span className="text-xs">Home</span>
+            </TabsTrigger>
+            <TabsTrigger value="tutorials" className="flex flex-col gap-1">
+              <BookOpen className="h-4 w-4" />
+              <span className="text-xs">Tutorials</span>
             </TabsTrigger>
             <TabsTrigger value="activity" className="flex flex-col gap-1">
               <Activity className="h-4 w-4" />
@@ -477,6 +482,20 @@ const TutorApp = () => {
             </Card>
           </TabsContent>
 
+
+          {/* ── Tutorials Tab (Tutor Creator Dashboard) ── */}
+          <TabsContent value="tutorials" className="space-y-4">
+            {session?.user?.id ? (
+              <TutorCreatorDashboard
+                tutorId={session.user.id}
+                tutorName={session.user.email?.split('@')[0] || 'Tutor'}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Sign in to manage your tutorials.
+              </p>
+            )}
+          </TabsContent>
 
           <TabsContent value="activity" className="space-y-4">
             {/* Comprehensive Booking Manager */}
@@ -658,6 +677,25 @@ const TutorApp = () => {
                 Download Tax Report
               </Button>
             </div>
+
+            {/* Creator shortcut */}
+            <Card className="bg-gradient-to-r from-emerald-500/10 to-primary/10 border-emerald-200">
+              <CardContent className="p-4 flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-sm">Earn More as a Creator</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Upload tutorials · reach thousands of students
+                  </p>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => setActiveTab("tutorials")}
+                >
+                  <Video className="h-3.5 w-3.5 mr-1" />
+                  My Tutorials
+                </Button>
+              </CardContent>
+            </Card>
 
             <TutorSubjectManager 
               subjects={mySubjects}

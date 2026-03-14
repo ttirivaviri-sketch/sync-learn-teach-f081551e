@@ -104,14 +104,16 @@ class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
 // ── Public wrapper component ──────────────────────────────────────────────────
 interface StudyModeWrapperProps {
   onDeactivate: () => void;
+  onNeedHelp?: () => void;      // Navigate to tutor search (Home tab)
+  onBrowseLibrary?: () => void; // Navigate to library resource browser
 }
 
-export function StudyModeWrapper({ onDeactivate }: StudyModeWrapperProps) {
+export function StudyModeWrapper({ onDeactivate, onNeedHelp, onBrowseLibrary }: StudyModeWrapperProps) {
   return (
     <div className="studymode-root">
       <StudyModeErrorBoundary onDeactivate={onDeactivate}>
         <Suspense fallback={<StudyModeLoadingFallback />}>
-          <StudyModeInner />
+          <StudyModeInner onNeedHelp={onNeedHelp} onBrowseLibrary={onBrowseLibrary} />
         </Suspense>
       </StudyModeErrorBoundary>
     </div>
