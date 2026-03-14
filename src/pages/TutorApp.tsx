@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin, Star, Video, LogOut, MessageCircle, BarChart3, User, History, TrendingUp, Home, Activity, BookOpen, Download } from "lucide-react";
+import {
+  DollarSign, Clock, Users, Settings, Bell, Calendar, MapPin,
+  Star, Video, LogOut, MessageCircle, BarChart3, User, History,
+  TrendingUp, Home, Activity, BookOpen, Download
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Session } from "@supabase/supabase-js";
 import { useToast } from "@/hooks/use-toast";
-import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
+import { useRealtimeBookings, BookingRequest } from "@/hooks/useRealtimeBookings";
 import { TutorBookingManager } from "@/components/TutorBookingManager";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { Skeleton } from "@/components/ui/skeleton";
 import VideoMeeting from "@/components/VideoMeeting";
 import DirectionsMap from "@/components/DirectionsMap";
 import ChatInterface from "@/components/ChatInterface";
@@ -27,63 +30,70 @@ import { useTutorStats } from '@/hooks/useTutorStats';
 import TutorAvailabilitySchedule from '@/components/TutorAvailabilitySchedule';
 import { TutorCreatorDashboard } from '@/components/TutorCreatorDashboard';
 
+// ── Type definitions ──────────────────────────────────────────────────────────
+interface VideoMeetingData {
+  partnerName: string;
+  subject: string;
+  booking: Record<string, unknown>;
+}
+
+interface DirectionsRequest {
+  address: string;
+  student: string;
+  subject: string;
+}
 
 const TutorApp = () => {
-  const [mySubjects, setMySubjects] = useState<any[]>([]);
+  const [mySubjects, setMySubjects] = useState<unknown[]>([]);
   const [activeTab, setActiveTab] = useState("home");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
-  const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
+  const [videoMeetingData, setVideoMeetingData] = useState<VideoMeetingData | null>(null);
   const [showDirections, setShowDirections] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<any>(null);
+  const [selectedRequest, setSelectedRequest] = useState<DirectionsRequest | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [weeklyAvailability, setWeeklyAvailability] = useState({
-    Monday: true,
-    Tuesday: true, 
-    Wednesday: true,
-    Thursday: true,
-    Friday: true
-  });
   const [showChat, setShowChat] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState<string | null>(null);
   const [chatWithUserName, setChatWithUserName] = useState<string | null>(null);
+
   const navigate = useNavigate();
   const { toast } = useToast();
-  
+
   // Real-time bookings hook
-  const { 
-    bookings, 
-    loading: bookingsLoading, 
+  const {
+    bookings,
+    loading: bookingsLoading,
     updateBookingStatus,
     getIncomingRequests,
-    getUpcomingSessions 
+    getUpcomingSessions
   } = useRealtimeBookings('tutor', session?.user?.id);
 
-  // Initialize tutor data management
+  // Tutor data management
   const { updateOnlineStatus } = useTutorManagement();
 
-  // Initialize presence tracking for real-time online status
+  // Presence tracking for real-time online status
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
 
   // Real tutor stats from database
   const { formattedStats, weeklyData, recentEarnings, loading: statsLoading } = useTutorStats(session?.user?.id);
 
+  // ── Auth effect ───────────────────────────────────────────────────────────
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
+      (_event, newSession) => {
+        setSession(newSession);
         setLoading(false);
-        if (!session?.user) {
+        if (!newSession?.user) {
           navigate("/tutor/auth");
         }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
       setLoading(false);
-      if (!session?.user) {
+      if (!existingSession?.user) {
         navigate("/tutor/auth");
       }
     });
@@ -91,9 +101,10 @@ const TutorApp = () => {
     return () => subscription.unsubscribe();
   }, [navigate]);
 
-  // Load tutor's own subjects
+  // Load tutor's own subjects with real-time updates
   useEffect(() => {
     if (!session?.user?.id) return;
+
     const loadSubjects = async () => {
       const { data } = await supabase
         .from('tutor_subjects')
@@ -108,12 +119,13 @@ const TutorApp = () => {
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'tutor_subjects',
         filter: `user_id=eq.${session.user.id}`,
-      }, () => loadSubjects())
+      }, loadSubjects)
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, [session?.user?.id]);
 
+  // ── Handlers ─────────────────────────────────────────────────────────────
   const handleSignOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -122,7 +134,7 @@ const TutorApp = () => {
         description: "You have been logged out of your tutor account.",
       });
       navigate("/tutor/auth");
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to sign out. Please try again.",
@@ -131,51 +143,26 @@ const TutorApp = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!session?.user) {
-    return null;
-  }
-
-  // Use real stats from database
-  const todayStats = {
-    earnings: formattedStats.todayEarnings,
-    sessions: formattedStats.todaySessions,
-    hours: formattedStats.todayHours,
-    rating: formattedStats.averageRating || 0
-  };
-
-  const handleAcceptRequest = async (booking: any) => {
+  const handleAcceptRequest = async (booking: BookingRequest) => {
     try {
       await updateBookingStatus(booking.id, 'confirmed');
       toast({
         title: "Request Accepted!",
         description: `Session confirmed with ${booking.learner_profile?.full_name}`,
       });
-      
-      // For immediate sessions, start video meeting
+
+      // If session is within the next 15 minutes, open video right away
       const sessionTime = new Date(booking.scheduled_at);
-      const now = new Date();
-      const isNow = Math.abs(sessionTime.getTime() - now.getTime()) < 15 * 60 * 1000;
-      
+      const isNow = Math.abs(sessionTime.getTime() - Date.now()) < 15 * 60 * 1000;
       if (isNow) {
         setVideoMeetingData({
           partnerName: booking.learner_profile?.full_name || "Student",
           subject: booking.tutor_subjects?.subject || "Study Session",
-          booking: booking
+          booking: booking as unknown as Record<string, unknown>,
         });
         setShowVideoMeeting(true);
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to accept booking request",
@@ -184,23 +171,23 @@ const TutorApp = () => {
     }
   };
 
-  const handleJoinVideoSession = (booking: any) => {
+  const handleJoinVideoSession = (booking: BookingRequest) => {
     setVideoMeetingData({
       partnerName: booking.learner_profile?.full_name || "Student",
       subject: booking.tutor_subjects?.subject || "Study Session",
-      booking: booking
+      booking: booking as unknown as Record<string, unknown>,
     });
     setShowVideoMeeting(true);
   };
 
-  const handleDeclineRequest = async (booking: any) => {
+  const handleDeclineRequest = async (booking: BookingRequest) => {
     try {
       await updateBookingStatus(booking.id, 'canceled');
       toast({
         title: "Request Declined",
         description: `Declined session with ${booking.learner_profile?.full_name}`,
       });
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to decline booking request",
@@ -211,41 +198,32 @@ const TutorApp = () => {
 
   const handleOnlineToggle = async (checked: boolean) => {
     setIsOnline(checked);
-    
-    // Update both database and presence tracking
     await Promise.all([
       updateOnlineStatus(checked),
-      setOnlineStatus(checked)
+      setOnlineStatus(checked),
     ]);
-  };
-
-  const handleUpdateAvailability = () => {
-    toast({
-      title: "Availability Updated",
-      description: "Your weekly schedule has been saved",
-    });
-  };
-
-  const handleQuickAction = (action: string) => {
-    toast({
-      title: action,
-      description: "Feature coming soon!",
-    });
   };
 
   const handleRequestPayout = () => {
     toast({
       title: "Payout Requested",
-      description: "Your payout request has been submitted and will be processed within 2-3 business days",
+      description: "Your payout request has been submitted and will be processed within 2–3 business days.",
     });
   };
 
-  const toggleDayAvailability = (day: string) => {
-    setWeeklyAvailability(prev => ({
-      ...prev,
-      [day]: !prev[day as keyof typeof prev]
-    }));
-  };
+  // ── Early returns ─────────────────────────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" />
+          <p className="mt-2 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!session?.user) return null;
 
   if (showVideoMeeting && videoMeetingData) {
     return (
@@ -254,10 +232,7 @@ const TutorApp = () => {
         partnerName={videoMeetingData.partnerName}
         subject={videoMeetingData.subject}
         booking={videoMeetingData.booking}
-        onEndCall={() => {
-          setShowVideoMeeting(false);
-          setVideoMeetingData(null);
-        }}
+        onEndCall={() => { setShowVideoMeeting(false); setVideoMeetingData(null); }}
       />
     );
   }
@@ -268,41 +243,47 @@ const TutorApp = () => {
         learnerAddress={selectedRequest.address}
         learnerName={selectedRequest.student}
         subject={selectedRequest.subject}
-        onBack={() => {
-          setShowDirections(false);
-          setSelectedRequest(null);
-        }}
+        onBack={() => { setShowDirections(false); setSelectedRequest(null); }}
       />
     );
   }
 
+  // Real stats
+  const todayStats = {
+    earnings: formattedStats.todayEarnings,
+    sessions: formattedStats.todaySessions,
+    hours: formattedStats.todayHours,
+    rating: formattedStats.averageRating || 0,
+  };
+
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* ── Header ── */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 overflow-hidden text-white shadow-md"
-        style={{
-          background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
-        }}
+        className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
+        style={{ background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)" }}
       >
-        <div className="mx-auto flex h-16 items-center justify-between gap-2.5 px-4 sm:px-5">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+        <div className="mx-auto flex min-h-[64px] items-center justify-between gap-3 px-4 sm:px-5">
+          {/* Logo + tagline */}
+          <div className="flex min-w-0 items-center gap-3">
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
-              className="h-[60px] w-[190px] max-w-[190px] shrink-0 object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+              className="h-[52px] w-[150px] shrink-0 object-contain"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
             />
             <p
-              className="truncate whitespace-nowrap text-[10px] font-medium uppercase leading-tight tracking-[0.12em] sm:text-xs"
+              className="hidden sm:block truncate text-[10px] font-medium uppercase tracking-[0.12em]"
               style={{ color: "rgba(255,255,255,0.82)" }}
             >
               Education, in sync with your future
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
-            {/* Online Toggle */}
+          {/* Actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Online toggle */}
             <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1">
               <div className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-400" : "bg-gray-400"}`} />
               <span className="text-xs font-medium text-white">
@@ -338,20 +319,20 @@ const TutorApp = () => {
       </header>
 
       {/* Status Banner */}
-      <div className="pt-[64px]" />
+      <div className="pt-16" />
       {isOnline && (
         <div className="bg-emerald-500 text-white px-5 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
           <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
           You're online and available for booking requests
           {onlineUsers.length > 1 && (
             <span className="opacity-80 text-xs">
-              • {onlineUsers.length - 1} other users online
+              • {onlineUsers.length - 1} other user{onlineUsers.length - 1 !== 1 ? 's' : ''} online
             </span>
           )}
         </div>
       )}
 
-      {/* Main Content */}
+      {/* ── Main Content ── */}
       <div className="p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
@@ -373,37 +354,46 @@ const TutorApp = () => {
             </TabsTrigger>
           </TabsList>
 
+          {/* ── Home Tab ── */}
           <TabsContent value="home" className="space-y-4">
             {/* Today's Stats */}
             <div className="grid grid-cols-2 gap-4">
               <Card>
                 <CardContent className="p-4 text-center">
                   <DollarSign className="h-8 w-8 mx-auto text-primary mb-2" />
-                  <p className="text-2xl font-bold text-primary">{todayStats.earnings}</p>
+                  {statsLoading ? <Skeleton className="h-8 w-20 mx-auto" /> : (
+                    <p className="text-2xl font-bold text-primary">{todayStats.earnings}</p>
+                  )}
                   <p className="text-sm text-muted-foreground">Today's Earnings</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-4 text-center">
                   <Users className="h-8 w-8 mx-auto text-secondary mb-2" />
-                  <p className="text-2xl font-bold text-secondary">{todayStats.sessions}</p>
+                  {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : (
+                    <p className="text-2xl font-bold text-secondary">{todayStats.sessions}</p>
+                  )}
                   <p className="text-sm text-muted-foreground">Sessions Today</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-4 text-center">
                   <Clock className="h-8 w-8 mx-auto text-accent mb-2" />
-                  <p className="text-2xl font-bold text-accent">{todayStats.hours}h</p>
+                  {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : (
+                    <p className="text-2xl font-bold text-accent">{todayStats.hours}h</p>
+                  )}
                   <p className="text-sm text-muted-foreground">Hours Taught</p>
                 </CardContent>
               </Card>
-              
+
               <Card>
                 <CardContent className="p-4 text-center">
                   <Star className="h-8 w-8 mx-auto text-yellow-500 mb-2" />
-                  <p className="text-2xl font-bold text-yellow-600">{todayStats.rating}</p>
+                  {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : (
+                    <p className="text-2xl font-bold text-yellow-600">{todayStats.rating}</p>
+                  )}
                   <p className="text-sm text-muted-foreground">Rating</p>
                 </CardContent>
               </Card>
@@ -415,18 +405,18 @@ const TutorApp = () => {
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-2 gap-3">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto p-4 flex-col"
-                  onClick={() => handleQuickAction("Update Availability")}
+                  onClick={() => setActiveTab("activity")}
                 >
                   <Bell className="h-6 w-6 mb-2" />
                   <span className="text-sm">Update Availability</span>
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="h-auto p-4 flex-col"
-                  onClick={() => handleQuickAction("Profile Settings")}
+                  onClick={() => setActiveTab("profile")}
                 >
                   <Settings className="h-6 w-6 mb-2" />
                   <span className="text-sm">Profile Settings</span>
@@ -434,13 +424,13 @@ const TutorApp = () => {
               </CardContent>
             </Card>
 
-            {/* Today's Schedule - uses real booking data */}
+            {/* Today's Schedule */}
             <Card>
               <CardHeader>
                 <CardTitle>Today's Schedule</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {statsLoading ? (
+                {bookingsLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-16 w-full" />
                     <Skeleton className="h-16 w-full" />
@@ -470,8 +460,7 @@ const TutorApp = () => {
             </Card>
           </TabsContent>
 
-
-          {/* ── Tutorials Tab (Tutor Creator Dashboard) ── */}
+          {/* ── Tutorials Tab ── */}
           <TabsContent value="tutorials" className="space-y-4">
             {session?.user?.id ? (
               <TutorCreatorDashboard
@@ -485,8 +474,9 @@ const TutorApp = () => {
             )}
           </TabsContent>
 
+          {/* ── Activity Tab ── */}
           <TabsContent value="activity" className="space-y-4">
-            {/* Comprehensive Booking Manager */}
+            {/* Booking Manager */}
             <TutorBookingManager
               bookings={bookings}
               loading={bookingsLoading}
@@ -500,42 +490,10 @@ const TutorApp = () => {
               }}
             />
 
-            {/* Schedule Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Weekly Availability</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => (
-                    <div key={day} className="flex items-center justify-between p-3 border rounded-lg">
-                      <span className="font-medium">{day}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">
-                          {weeklyAvailability[day as keyof typeof weeklyAvailability] 
-                            ? "Available 2:00 PM - 8:00 PM" 
-                            : "Not available"
-                          }
-                        </span>
-                        <Switch 
-                          checked={weeklyAvailability[day as keyof typeof weeklyAvailability]}
-                          onCheckedChange={() => toggleDayAvailability(day)}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                
-                <Button 
-                  className="w-full mt-4"
-                  onClick={handleUpdateAvailability}
-                >
-                  Update Availability
-                </Button>
-              </CardContent>
-            </Card>
+            {/* Availability Schedule — persisted to database via TutorAvailabilitySchedule */}
+            <TutorAvailabilitySchedule tutorId={session?.user?.id || ''} />
 
-            {/* Session History Section */}
+            {/* Session History */}
             <Card>
               <CardHeader>
                 <CardTitle>Session History</CardTitle>
@@ -546,70 +504,35 @@ const TutorApp = () => {
             </Card>
           </TabsContent>
 
+          {/* ── Profile Tab ── */}
           <TabsContent value="profile" className="space-y-4">
-            {/* Earnings Section - Real Data */}
+            {/* Earnings Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card>
-                <CardContent className="p-4 text-center">
-                  {statsLoading ? (
-                    <Skeleton className="h-20 w-full" />
-                  ) : (
-                    <>
-                      <TrendingUp className="h-8 w-8 mx-auto text-primary mb-2" />
-                      <p className="text-2xl font-bold text-primary">{formattedStats.weekEarnings}</p>
-                      <p className="text-sm text-muted-foreground">This Week</p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-              
-              <Card>
-                <CardContent className="p-4 text-center">
-                  {statsLoading ? (
-                    <Skeleton className="h-20 w-full" />
-                  ) : (
-                    <>
-                      <DollarSign className="h-8 w-8 mx-auto text-green-500 mb-2" />
-                      <p className="text-2xl font-bold text-green-600">{formattedStats.monthEarnings}</p>
-                      <p className="text-sm text-muted-foreground">This Month</p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4 text-center">
-                  {statsLoading ? (
-                    <Skeleton className="h-20 w-full" />
-                  ) : (
-                    <>
-                      <BarChart3 className="h-8 w-8 mx-auto text-blue-500 mb-2" />
-                      <p className="text-2xl font-bold text-blue-600">{formattedStats.totalEarnings}</p>
-                      <p className="text-sm text-muted-foreground">Total Earned</p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardContent className="p-4 text-center">
-                  {statsLoading ? (
-                    <Skeleton className="h-20 w-full" />
-                  ) : (
-                    <>
-                      <Clock className="h-8 w-8 mx-auto text-purple-500 mb-2" />
-                      <p className="text-2xl font-bold text-purple-600">{formattedStats.totalHours}h</p>
-                      <p className="text-sm text-muted-foreground">Total Hours</p>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
+              {[
+                { label: "This Week", value: formattedStats.weekEarnings, Icon: TrendingUp, color: "text-primary" },
+                { label: "This Month", value: formattedStats.monthEarnings, Icon: DollarSign, color: "text-green-600" },
+                { label: "Total Earned", value: formattedStats.totalEarnings, Icon: BarChart3, color: "text-blue-600" },
+                { label: "Total Hours", value: `${formattedStats.totalHours}h`, Icon: Clock, color: "text-purple-600" },
+              ].map(({ label, value, Icon, color }) => (
+                <Card key={label}>
+                  <CardContent className="p-4 text-center">
+                    {statsLoading ? (
+                      <Skeleton className="h-20 w-full" />
+                    ) : (
+                      <>
+                        <Icon className={`h-8 w-8 mx-auto mb-2 ${color}`} />
+                        <p className={`text-2xl font-bold ${color}`}>{value}</p>
+                        <p className="text-sm text-muted-foreground">{label}</p>
+                      </>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
             </div>
 
-            {weeklyData.length > 0 && (
-              <TutorEarningsChart data={weeklyData} />
-            )}
-            
+            {weeklyData.length > 0 && <TutorEarningsChart data={weeklyData} />}
+
+            {/* Recent Earnings */}
             <Card>
               <CardHeader>
                 <CardTitle>Recent Earnings</CardTitle>
@@ -646,20 +569,17 @@ const TutorApp = () => {
                 )}
               </CardContent>
             </Card>
-            
+
+            {/* Payout / Tax Report */}
             <div className="grid md:grid-cols-2 gap-4">
-              <Button 
-                className="w-full" 
-                size="lg"
-                onClick={handleRequestPayout}
-              >
+              <Button className="w-full" size="lg" onClick={handleRequestPayout}>
                 Request Payout
               </Button>
-              <Button 
+              <Button
                 variant="outline"
-                className="w-full" 
+                className="w-full"
                 size="lg"
-                onClick={() => handleQuickAction("Download Tax Report")}
+                onClick={() => toast({ title: "Tax Report", description: "Feature coming soon!" })}
               >
                 <Download className="h-4 w-4 mr-2" />
                 Download Tax Report
@@ -671,42 +591,28 @@ const TutorApp = () => {
               <CardContent className="p-4 flex items-center justify-between">
                 <div>
                   <h4 className="font-semibold text-sm">Earn More as a Creator</h4>
-                  <p className="text-xs text-muted-foreground">
-                    Upload tutorials · reach thousands of students
-                  </p>
+                  <p className="text-xs text-muted-foreground">Upload tutorials · reach thousands of students</p>
                 </div>
-                <Button
-                  size="sm"
-                  onClick={() => setActiveTab("tutorials")}
-                >
+                <Button size="sm" onClick={() => setActiveTab("tutorials")}>
                   <Video className="h-3.5 w-3.5 mr-1" />
                   My Tutorials
                 </Button>
               </CardContent>
             </Card>
 
-            <TutorSubjectManager 
-              subjects={mySubjects}
-            />
-            
-            {/* Availability Schedule - persisted to database */}
-            <TutorAvailabilitySchedule tutorId={session?.user?.id || ''} />
-            
+            <TutorSubjectManager subjects={mySubjects} />
+
             <TutorProfile user={session?.user} />
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Chat Interface */}
+      {/* ── Chat Interface ── */}
       <ChatInterface
         session={session}
         userType="tutor"
         isOpen={showChat}
-        onClose={() => {
-          setShowChat(false);
-          setChatWithUserId(null);
-          setChatWithUserName(null);
-        }}
+        onClose={() => { setShowChat(false); setChatWithUserId(null); setChatWithUserName(null); }}
         otherUserId={chatWithUserId || undefined}
         otherUserName={chatWithUserName || undefined}
       />

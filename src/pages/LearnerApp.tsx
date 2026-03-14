@@ -1,12 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award, Zap, Settings, ChevronRight, GraduationCap } from "lucide-react";
+import { Home, BookOpen, Activity, MapPin, Star, Clock, CreditCard, User, Video, ShoppingBag, LogOut, MessageCircle, Search, Award, Zap, GraduationCap } from "lucide-react";
 import { useDevMode } from "@/contexts/DevModeContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
 import StudySyncLibrary from "@/components/StudySyncLibrary";
@@ -40,49 +41,98 @@ import { RescheduleDialog } from '@/components/RescheduleDialog';
 import { AcademicProfileSetup } from '@/components/AcademicProfileSetup';
 import { useAcademicProfile } from '@/hooks/useAcademicProfile';
 
+// ── Type definitions ──────────────────────────────────────────────────────────
+interface UserProfile {
+  id: string;
+  full_name?: string;
+  email?: string;
+  user_type?: string;
+  study_level?: string;
+  avatar_url?: string;
+}
+
+interface VideoMeetingData {
+  partnerName: string;
+  subject: string;
+  booking: Record<string, unknown>;
+}
+
+// ── Skeleton card for loading state ──────────────────────────────────────────
+const TutorCardSkeleton = () => (
+  <Card className="shadow-sm">
+    <CardContent className="p-4">
+      <div className="flex items-start gap-3">
+        <Skeleton className="h-10 w-10 rounded-full shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-3 w-48" />
+          <Skeleton className="h-3 w-24" />
+          <div className="grid grid-cols-3 gap-2 mt-3">
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
+          </div>
+        </div>
+      </div>
+    </CardContent>
+  </Card>
+);
+
 const LearnerApp = () => {
   const { isDevMode, devRole, devUserName, bypassPayments, bypassSchedule, devSessionActive, setDevSessionActive, launchDevSession } = useDevMode();
   const [activeTab, setActiveTab] = useState("home");
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
-  const [videoMeetingData, setVideoMeetingData] = useState<any>(null);
+  const [videoMeetingData, setVideoMeetingData] = useState<VideoMeetingData | null>(null);
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAcademicSetup, setShowAcademicSetup] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState("");
-  const [userLocationName, setUserLocationName] = useState("Johannesburg Central");
-  const [profile, setProfile] = useState<any>(null);
-  const [upcomingSession, setUpcomingSession] = useState<any>(null);
-  const [bookingRequests, setBookingRequests] = useState<any[]>([]);
+  const [userLocationName] = useState("Johannesburg Central");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [bookingRequests, setBookingRequests] = useState<unknown[]>([]);
   const [showChat, setShowChat] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState<string | null>(null);
   const [chatWithUserName, setChatWithUserName] = useState<string | null>(null);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [reviewData, setReviewData] = useState<any>(null);
+  const [reviewData, setReviewData] = useState<{
+    bookingId: string;
+    reviewedId: string;
+    reviewedName: string;
+    userType: 'learner' | 'tutor';
+  } | null>(null);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [selectedTutor, setSelectedTutor] = useState<any>(null);
-  const [showPaymentForBooking, setShowPaymentForBooking] = useState<any>(null);
+  const [selectedTutor, setSelectedTutor] = useState<{
+    id: string;
+    name: string;
+    subject: string;
+    level: string;
+    price: number;
+    subjectId: string;
+    avatar?: string;
+  } | null>(null);
+  const [showPaymentForBooking, setShowPaymentForBooking] = useState<unknown>(null);
   const [showReschedule, setShowReschedule] = useState(false);
-  const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
+  const [rescheduleBooking, setRescheduleBooking] = useState<unknown>(null);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [showAllPayments, setShowAllPayments] = useState(false);
-  const [showMyReviews, setShowMyReviews] = useState(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline, isSlowConnection } = useNetworkStatus();
-  
+
   // Real-time bookings hook
-  const { 
-    bookings, 
-    loading: bookingsLoading, 
-    createBooking, 
+  const {
+    bookings,
+    loading: bookingsLoading,
+    createBooking,
     updateBookingStatus,
-    getUpcomingSessions 
+    getUpcomingSessions
   } = useRealtimeBookings('learner', session?.user?.id);
 
-  // Initialize geolocation, tutor data and presence tracking  
+  // Geolocation, tutor data and presence tracking
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
   const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
     subjectFilter: selectedSubject,
@@ -100,17 +150,19 @@ const LearnerApp = () => {
   } = useAcademicProfile(session?.user?.id || (isDevMode ? 'dev-user' : undefined));
 
   // Get confirmed bookings that need payment
-  const confirmedBookingIds = bookings
-    .filter(b => b.status === 'confirmed')
-    .map(b => b.id);
-  const { needsPayment, isPaid } = useBookingPayments(confirmedBookingIds);
+  const confirmedBookingIds = useMemo(
+    () => bookings.filter(b => b.status === 'confirmed').map(b => b.id),
+    [bookings]
+  );
+  const { needsPayment } = useBookingPayments(confirmedBookingIds);
 
-  // Get bookings that need payment (confirmed but not paid)
-  const bookingsNeedingPayment = bookings.filter(
-    b => b.status === 'confirmed' && needsPayment(b.id)
+  // Bookings that need payment (confirmed but not paid)
+  const bookingsNeedingPayment = useMemo(
+    () => bookings.filter(b => b.status === 'confirmed' && needsPayment(b.id)),
+    [bookings, needsPayment]
   );
 
-  // ── Dev mode: respond to launchDevSession trigger ──
+  // ── Dev mode: respond to launchDevSession trigger ────────────────────────
   useEffect(() => {
     if (isDevMode && devRole === 'learner' && devSessionActive) {
       setVideoMeetingData({
@@ -128,8 +180,9 @@ const LearnerApp = () => {
       setShowVideoMeeting(true);
       setDevSessionActive(false);
     }
-  }, [devSessionActive, isDevMode, devRole]);
+  }, [devSessionActive, isDevMode, devRole, setDevSessionActive]);
 
+  // ── Auth effect (no `loading` in deps to avoid infinite re-render) ────────
   useEffect(() => {
     analytics.pageView('learner-app');
 
@@ -137,61 +190,56 @@ const LearnerApp = () => {
     if (isDevMode && devRole === 'learner') {
       setLoading(false);
       setShowLaunchScreen(false);
-      setProfile({ full_name: devUserName, user_type: 'learner', study_level: 'senior_high' });
+      setProfile({ id: 'dev-user', full_name: devUserName, user_type: 'learner', study_level: 'senior_high' });
       return;
     }
-    
-    // Set up auth state listener
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
+      (_event, newSession) => {
+        setSession(newSession);
         setLoading(false);
-        if (!session?.user && !loading) {
+        if (!newSession?.user) {
           navigate("/learner/auth");
         }
       }
     );
 
-    // Check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+      setSession(existingSession);
       setLoading(false);
-      if (!session?.user) {
+      if (!existingSession?.user) {
         navigate("/learner/auth");
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate, loading, isDevMode, devRole]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, isDevMode, devRole]);
 
   // Load user profile and upcoming sessions
   useEffect(() => {
     if (session?.user) {
       loadUserProfile();
-      loadUpcomingSession();
-      requestLocation();
+      getCurrentLocation();
     }
-  }, [session]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.id]);
 
-  // Show academic profile setup prompt if profile is missing (after a short delay)
+  // Show academic profile setup prompt if profile is missing
   useEffect(() => {
     if (!academicProfileLoading && !academicProfile && (session?.user || isDevMode)) {
       const timer = setTimeout(() => setShowAcademicSetup(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [academicProfileLoading, academicProfile, session, isDevMode]);
+  }, [academicProfileLoading, academicProfile, session?.user, isDevMode]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
-    const handleToastEvent = (event: any) => {
-      toast({
-        title: event.detail.title,
-        description: event.detail.description,
-      });
+    const handleToastEvent = (event: CustomEvent<{ title: string; description: string }>) => {
+      toast({ title: event.detail.title, description: event.detail.description });
     };
-
-    window.addEventListener('show-toast', handleToastEvent);
-    return () => window.removeEventListener('show-toast', handleToastEvent);
+    window.addEventListener('show-toast', handleToastEvent as EventListener);
+    return () => window.removeEventListener('show-toast', handleToastEvent as EventListener);
   }, [toast]);
 
   // Track tab changes
@@ -200,18 +248,19 @@ const LearnerApp = () => {
   }, [activeTab]);
 
   const loadUserProfile = async () => {
+    if (!session?.user?.id) return;
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('id', session?.user?.id)
+        .eq('id', session.user.id)
         .single();
-      
+
       if (error && error.code !== 'PGRST116') {
         console.error('Error loading profile:', error);
         return;
       }
-      
+
       setProfile(data);
       if (!data?.study_level) {
         toast({
@@ -225,32 +274,7 @@ const LearnerApp = () => {
     }
   };
 
-  const loadUpcomingSession = async () => {
-    // Upcoming session is now derived from real-time bookings
-    const upcoming = getUpcomingSessions();
-    if (upcoming.length > 0) {
-      const next = upcoming[0];
-      setUpcomingSession({
-        tutor: next.tutor_profile?.full_name || 'Tutor',
-        subject: `${next.tutor_subjects?.subject || 'Session'} • ${next.tutor_subjects?.level || ''}`,
-        time: new Date(next.scheduled_at).toLocaleString(),
-        price: `R${next.price}/hour`,
-        sessionId: next.id,
-      });
-    } else {
-      setUpcomingSession(null);
-    }
-  };
-
-  const requestLocation = () => {
-    getCurrentLocation();
-  };
-
-  // Real tutor data is now handled by useTutorData hook
-
-  const handleSignOut = () => {
-    setShowSignOutConfirm(true);
-  };
+  const handleSignOut = () => setShowSignOutConfirm(true);
 
   const confirmSignOut = async () => {
     try {
@@ -273,7 +297,8 @@ const LearnerApp = () => {
     }
   };
 
-  const handleBookInPerson = (tutor: TutorProfile) => {
+  // ── Unified booking handler (replaces handleBookInPerson & handleBookOnline) ──
+  const handleBookTutor = (tutor: TutorProfile) => {
     if (!isOnline) {
       toast({
         title: "No connection",
@@ -282,9 +307,7 @@ const LearnerApp = () => {
       });
       return;
     }
-
-    // Check if user is authenticated before booking
-    if (!session?.user) {
+    if (!session?.user && !isDevMode) {
       toast({
         title: "Authentication required",
         description: "Please sign in to book sessions.",
@@ -293,7 +316,6 @@ const LearnerApp = () => {
       navigate("/learner/auth");
       return;
     }
-
     if (!tutor.subjects || tutor.subjects.length === 0) {
       toast({
         title: "No subjects available",
@@ -303,8 +325,8 @@ const LearnerApp = () => {
       return;
     }
 
-    analytics.track('booking_initiated', { type: 'in-person', tutorId: tutor.id });
-    
+    analytics.track('booking_initiated', { tutorId: tutor.id });
+
     const firstSubject = tutor.subjects[0];
     setSelectedTutor({
       id: tutor.id,
@@ -313,55 +335,17 @@ const LearnerApp = () => {
       level: firstSubject.level,
       price: firstSubject.hourly_rate,
       subjectId: firstSubject.id,
-      avatar: tutor.avatar_url
-    });
-    setShowBookingModal(true);
-  };
-
-  const handleBookOnline = (tutor: TutorProfile) => {
-    // Check if user is authenticated before booking
-    if (!session?.user) {
-      toast({
-        title: "Authentication required", 
-        description: "Please sign in to book sessions.",
-        variant: "destructive",
-      });
-      navigate("/learner/auth");
-      return;
-    }
-
-    if (!tutor.subjects || tutor.subjects.length === 0) {
-      toast({
-        title: "No subjects available",
-        description: "This tutor hasn't set up their subjects yet.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    analytics.track('booking_initiated', { type: 'online', tutorId: tutor.id });
-    
-    const firstSubject = tutor.subjects[0];
-    setSelectedTutor({
-      id: tutor.id,
-      name: tutor.full_name || 'Tutor',
-      subject: firstSubject.subject,
-      level: firstSubject.level,
-      price: firstSubject.hourly_rate,
-      subjectId: firstSubject.id,
-      avatar: tutor.avatar_url
+      avatar: tutor.avatar_url,
     });
     setShowBookingModal(true);
   };
 
   const handleSessionAction = (action: string) => {
     if (action === "join") {
-      // Get the actual upcoming booking from real-time data
       const upcomingSessions = getUpcomingSessions();
       const nextSession = upcomingSessions.length > 0 ? upcomingSessions[0] : null;
-      
+
       if (!nextSession) {
-        console.error('❌ No upcoming session found');
         toast({
           title: "No Session Found",
           description: "Unable to find an upcoming session to join.",
@@ -370,17 +354,15 @@ const LearnerApp = () => {
         return;
       }
 
-      console.log('🎥 Learner joining session with booking ID:', nextSession.id);
-      
       setVideoMeetingData({
-        partnerName: nextSession.tutor_profile?.full_name || "Tutor",
-        subject: nextSession.tutor_subjects?.subject || "Study Session",
-        booking: nextSession
+        partnerName: (nextSession.tutor_profile as { full_name?: string })?.full_name || "Tutor",
+        subject: (nextSession.tutor_subjects as { subject?: string })?.subject || "Study Session",
+        booking: nextSession as unknown as Record<string, unknown>,
       });
       setShowVideoMeeting(true);
       return;
     }
-    
+
     if (action === "reschedule") {
       const upcoming = getUpcomingSessions();
       if (upcoming.length > 0) {
@@ -391,6 +373,7 @@ const LearnerApp = () => {
       }
       return;
     }
+
     toast({
       title: "Cancel Session",
       description: "Session cancellation processed",
@@ -398,9 +381,9 @@ const LearnerApp = () => {
     });
   };
 
-  const handleJoinVideoSession = (booking: any) => {
-    if (!booking?.id) {
-      console.error('❌ No booking ID provided to handleJoinVideoSession');
+  const handleJoinVideoSession = (booking: unknown) => {
+    const b = booking as { id?: string; tutor_profile?: { full_name?: string }; tutor_subjects?: { subject?: string } };
+    if (!b?.id) {
       toast({
         title: "Invalid Session",
         description: "Unable to join session. Missing booking information.",
@@ -409,19 +392,15 @@ const LearnerApp = () => {
       return;
     }
 
-    console.log('🎥 Learner joining video session with booking ID:', booking.id);
-    
     setVideoMeetingData({
-      partnerName: booking.tutor_profile?.full_name || "Tutor",
-      subject: booking.tutor_subjects?.subject || "Study Session",
-      booking: booking
+      partnerName: b.tutor_profile?.full_name || "Tutor",
+      subject: b.tutor_subjects?.subject || "Study Session",
+      booking: booking as Record<string, unknown>,
     });
     setShowVideoMeeting(true);
   };
 
-  // handleRateAndReview is now inline in the past sessions section
-
-  const handlePayNow = (booking: any) => {
+  const handlePayNow = (booking: unknown) => {
     if (bypassPayments) {
       toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." });
       return;
@@ -430,30 +409,16 @@ const LearnerApp = () => {
     setActiveTab("activity");
   };
 
-  const handleQuickProfileAction = (action: string) => {
-    if (action === 'Payment Methods') { setShowPaymentMethods(true); return; }
-    if (action === 'My Reviews') { setShowMyReviews(true); setActiveTab('activity'); return; }
-    toast({ title: action, description: "Feature coming soon!" });
-  };
-
-  const handleStartChat = (tutor: any) => {
+  const handleStartChat = (tutor: { id: string | number; full_name?: string; name?: string }) => {
     setChatWithUserId(tutor.id.toString());
-    setChatWithUserName(tutor.name);
+    setChatWithUserName(tutor.full_name || tutor.name || 'Tutor');
     setShowChat(true);
   };
 
-  if (loading) {
-    return <LoadingScreen message="Loading your account..." />;
-  }
-
-  // In dev mode skip auth gate entirely
-  if (!isDevMode && !session?.user) {
-    return null;
-  }
-
-  if (showLaunchScreen && !isDevMode) {
-    return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
-  }
+  // ── Early returns ─────────────────────────────────────────────────────────
+  if (loading) return <LoadingScreen message="Loading your account..." />;
+  if (!isDevMode && !session?.user) return null;
+  if (showLaunchScreen && !isDevMode) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
 
   if (showVideoMeeting && videoMeetingData) {
     return (
@@ -470,32 +435,33 @@ const LearnerApp = () => {
     );
   }
 
+  // ── Main render ───────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
+      {/* ── Header ── */}
       <header
-        className="fixed top-0 left-0 right-0 z-40 overflow-hidden text-white shadow-md"
-        style={{
-          background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
-        }}
+        className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
+        style={{ background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)" }}
       >
-        <div className="mx-auto flex h-16 items-center justify-between gap-2.5 px-4 sm:px-5">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+        <div className="mx-auto flex min-h-[64px] items-center justify-between gap-3 px-4 sm:px-5">
+          {/* Logo + tagline */}
+          <div className="flex min-w-0 items-center gap-3">
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
-              className="h-[60px] w-[190px] max-w-[190px] shrink-0 object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+              className="h-[52px] w-[150px] shrink-0 object-contain"
+              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
             />
             <p
-              className="truncate whitespace-nowrap text-[10px] font-medium uppercase leading-tight tracking-[0.12em] sm:text-xs"
+              className="hidden sm:block truncate text-[10px] font-medium uppercase tracking-[0.12em]"
               style={{ color: "rgba(255,255,255,0.82)" }}
             >
               Education, in sync with your future
             </p>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          {/* Action buttons */}
+          <div className="flex items-center gap-2 shrink-0">
             <NotificationCenter />
             <Button
               variant="ghost"
@@ -519,11 +485,11 @@ const LearnerApp = () => {
         </div>
       </header>
 
-      {/* Main Content */}
-      <div className="pt-[64px] pb-20">
+      {/* ── Main Content ── */}
+      <div className="pt-16 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
 
-          {/* Home Tab - Search Content */}
+          {/* ── Home Tab ── */}
           <TabsContent value="home" className="space-y-4 p-4 mt-0">
             <AdvancedBooking />
 
@@ -538,7 +504,7 @@ const LearnerApp = () => {
               />
             </div>
 
-            {/* Quick Filters - Dynamic from DB */}
+            {/* Quick Subject Filters */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {allSubjects.map((subject) => (
                 <Badge
@@ -555,7 +521,7 @@ const LearnerApp = () => {
               )}
             </div>
 
-            {/* Location with refresh button */}
+            {/* Location */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
@@ -564,124 +530,132 @@ const LearnerApp = () => {
                   {locationLoading && ' (updating...)'}
                 </span>
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={requestLocation}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={getCurrentLocation}
                 disabled={locationLoading}
               >
                 {locationLoading ? 'Updating...' : 'Update Location'}
               </Button>
             </div>
 
-            {/* Available Tutors - filtered by hook */}
+            {/* Available Tutors */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">
                   {selectedSubject ? `${selectedSubject} Tutors` : 'Available Tutors'}
                 </h3>
-                <p className="text-sm text-muted-foreground">
-                  {tutors.length} tutors found
-                </p>
+                {!tutorsLoading && (
+                  <p className="text-sm text-muted-foreground">{tutors.length} found</p>
+                )}
               </div>
+
               {tutorsLoading ? (
-                <div className="text-center py-4">Loading tutors...</div>
+                <div className="space-y-3">
+                  <TutorCardSkeleton />
+                  <TutorCardSkeleton />
+                  <TutorCardSkeleton />
+                </div>
               ) : tutors.length === 0 ? (
                 <EmptyState
                   title={selectedSubject ? `No ${selectedSubject} tutors found` : 'No tutors available'}
-                  description={selectedSubject 
-                    ? 'Try a different subject or clear your filter' 
+                  description={selectedSubject
+                    ? 'Try a different subject or clear your filter'
                     : 'Check back soon for available tutors'}
                 />
               ) : (
-                tutors.map((tutor) => (
-                <Card key={tutor.id} className="shadow-sm">
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-3">
-                      <Avatar>
-                        <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} />
-                        <AvatarFallback>{tutor.full_name?.split(' ').map(n => n[0]).join('') || 'T'}</AvatarFallback>
-                      </Avatar>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <h4 className="font-medium">{tutor.full_name}</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {tutor.subjects.map(s => s.subject).join(", ")} • {tutor.subjects[0]?.level}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold text-primary">R{tutor.subjects[0]?.hourly_rate}/hour</p>
-                            <p className="text-xs text-muted-foreground">{tutor.distance}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center gap-1 mt-2">
-                          <StarRating rating={tutor.rating} readonly size="sm" />
-                          <span className="text-sm font-medium">{tutor.rating > 0 ? tutor.rating : 'New'}</span>
-                          {tutor.totalReviews > 0 && (
-                            <span className="text-sm text-muted-foreground">({tutor.totalReviews})</span>
-                          )}
-                          {isUserOnline(tutor.id) && (
-                            <Badge variant="secondary" className="ml-2 text-xs">Available</Badge>
-                          )}
-                          {isUserOnline(tutor.id) && (
-                            <Badge variant="outline" className="ml-2 text-xs">
-                              <div className="w-2 h-2 bg-green-500 rounded-full mr-1"></div>
-                              Online now
-                            </Badge>
-                          )}
-                        </div>
+                tutors.map((tutor) => {
+                  // Cache isUserOnline result once per tutor card render
+                  const online = isUserOnline(tutor.id);
+                  return (
+                    <Card key={tutor.id} className="shadow-sm">
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar>
+                            <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} />
+                            <AvatarFallback>
+                              {tutor.full_name?.split(' ').map(n => n[0]).join('') || 'T'}
+                            </AvatarFallback>
+                          </Avatar>
 
-                        {/* Qualifications */}
-                        {tutor.qualifications && tutor.qualifications.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {tutor.qualifications.slice(0, 3).map((q) => (
-                              <Badge key={q.id} variant="outline" className="text-xs">
-                                <Award className="h-3 w-3 mr-1" />
-                                {q.qualification_type}
-                              </Badge>
-                            ))}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div>
+                                <h4 className="font-medium">{tutor.full_name}</h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {tutor.subjects.map(s => s.subject).join(", ")} • {tutor.subjects[0]?.level}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-primary">R{tutor.subjects[0]?.hourly_rate}/hour</p>
+                                <p className="text-xs text-muted-foreground">{tutor.distance}</p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1 mt-2 flex-wrap">
+                              <StarRating rating={tutor.rating} readonly size="sm" />
+                              <span className="text-sm font-medium">{tutor.rating > 0 ? tutor.rating : 'New'}</span>
+                              {tutor.totalReviews > 0 && (
+                                <span className="text-sm text-muted-foreground">({tutor.totalReviews})</span>
+                              )}
+                              {online && (
+                                <Badge variant="outline" className="ml-2 text-xs">
+                                  <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                                  Online now
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* Qualifications */}
+                            {tutor.qualifications && tutor.qualifications.length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {tutor.qualifications.slice(0, 3).map((q) => (
+                                  <Badge key={q.id} variant="outline" className="text-xs">
+                                    <Award className="h-3 w-3 mr-1" />
+                                    {q.qualification_type}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-3 gap-2 mt-3">
+                              <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => handleBookTutor(tutor)}
+                              >
+                                <MapPin className="h-3 w-3 mr-1" />
+                                In-Person
+                              </Button>
+                              <Button
+                                variant="default"
+                                className="flex-1"
+                                onClick={() => handleBookTutor(tutor)}
+                              >
+                                <Video className="h-4 w-4 mr-1" />
+                                Book Online
+                              </Button>
+                              <Button
+                                variant="secondary"
+                                className="flex-1"
+                                onClick={() => handleStartChat(tutor)}
+                              >
+                                <MessageCircle className="h-4 w-4 mr-1" />
+                                Chat
+                              </Button>
+                            </div>
                           </div>
-                        )}
-                        
-                        <div className="grid grid-cols-3 gap-2 mt-3">
-                          <Button 
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => handleBookInPerson(tutor)}
-                          >
-                            <MapPin className="h-3 w-3 mr-1" />
-                            In-Person
-                          </Button>
-                          <Button 
-                            variant="default"
-                            className="flex-1"
-                            onClick={() => handleBookOnline(tutor)}
-                          >
-                            <Video className="h-4 w-4 mr-1" />
-                            Book Online
-                          </Button>
-                          <Button 
-                            variant="secondary"
-                            className="flex-1"
-                            onClick={() => handleStartChat(tutor)}
-                          >
-                            <MessageCircle className="h-4 w-4 mr-1" />
-                            Chat
-                          </Button>
                         </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))
+                      </CardContent>
+                    </Card>
+                  );
+                })
               )}
             </div>
           </TabsContent>
 
-          {/* Library Tab */}
+          {/* ── Library Tab ── */}
           <TabsContent value="library" className="space-y-4 p-4 mt-0">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
@@ -703,42 +677,39 @@ const LearnerApp = () => {
             <StudySyncLibrary
               academicProfile={academicProfile}
               onBookTutor={(tutorId, tutorName) => {
-                // Navigate to home tab and pre-fill tutor search
                 setSearchQuery(tutorName);
                 setActiveTab("home");
-                toast({
-                  title: "Find Tutor",
-                  description: `Searching for ${tutorName}...`,
-                });
+                toast({ title: "Find Tutor", description: `Searching for ${tutorName}...` });
               }}
               onNeedHelp={() => setActiveTab("home")}
             />
           </TabsContent>
 
-          {/* Activity Tab - Bookings and History Combined */}
+          {/* ── Activity Tab ── */}
           <TabsContent value="activity" className="space-y-4 p-4 mt-0">
-            {/* Pending Payments Section */}
+            {/* Pending Payment (active payment flow) */}
             {showPaymentForBooking && (
               <div className="mb-4">
-                <PendingPaymentCard 
+                <PendingPaymentCard
                   booking={showPaymentForBooking}
                   onPaymentComplete={() => setShowPaymentForBooking(null)}
                 />
               </div>
             )}
 
+            {/* Other bookings needing payment */}
             {!showPaymentForBooking && bookingsNeedingPayment.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
                   </span>
-                  Action Required - Complete Payment
+                  Action Required — Complete Payment
                 </h3>
                 <div className="space-y-3">
                   {bookingsNeedingPayment.map((booking) => (
-                    <PendingPaymentCard 
+                    <PendingPaymentCard
                       key={booking.id}
                       booking={booking}
                       onPaymentComplete={() => {}}
@@ -748,16 +719,16 @@ const LearnerApp = () => {
               </div>
             )}
 
-            {/* Upcoming Bookings Section */}
+            {/* Upcoming Sessions */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Upcoming Sessions</h3>
                 <Badge variant="outline">{bookings.length} active</Badge>
               </div>
-              
+
               {bookingsLoading ? (
                 <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
                   <p className="text-muted-foreground">Loading bookings...</p>
                 </div>
               ) : bookings.length === 0 ? (
@@ -776,8 +747,8 @@ const LearnerApp = () => {
                       onJoinSession={handleJoinVideoSession}
                       onPayNow={handlePayNow}
                       hasPendingPayment={needsPayment(booking.id)}
-                      onStartChat={(booking) => {
-                        setChatWithUserId(booking.tutor_id);
+                      onStartChat={(b) => {
+                        setChatWithUserId(b.tutor_id);
                         setChatWithUserName("Tutor");
                         setShowChat(true);
                       }}
@@ -787,10 +758,9 @@ const LearnerApp = () => {
               )}
             </div>
 
-            {/* Past Sessions Section - from real bookings */}
+            {/* Past Sessions */}
             <div className="mt-6">
               <h3 className="font-semibold mb-3">Past Sessions</h3>
-              
               {bookings.filter(b => b.status === 'completed' || b.status === 'canceled').length === 0 ? (
                 <Card className="p-6">
                   <div className="text-center text-muted-foreground">
@@ -813,20 +783,23 @@ const LearnerApp = () => {
                           </div>
                           <div className="text-right">
                             <p className="font-semibold">R{pastBooking.price}</p>
-                            <Badge variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'} className="mt-1">
+                            <Badge
+                              variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'}
+                              className="mt-1"
+                            >
                               {pastBooking.status === 'completed' ? 'Completed' : 'Cancelled'}
                             </Badge>
                             {pastBooking.status === 'completed' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
+                              <Button
+                                variant="outline"
+                                size="sm"
                                 className="mt-2"
                                 onClick={() => {
                                   setReviewData({
                                     bookingId: pastBooking.id,
                                     reviewedId: pastBooking.tutor_id,
                                     reviewedName: pastBooking.tutor_profile?.full_name || 'Tutor',
-                                    userType: 'learner'
+                                    userType: 'learner',
                                   });
                                   setShowReviewModal(true);
                                 }}
@@ -843,7 +816,7 @@ const LearnerApp = () => {
             </div>
           </TabsContent>
 
-          {/* Profile Tab */}
+          {/* ── Profile Tab ── */}
           <TabsContent value="profile" className="space-y-4 p-4 mt-0">
             <Card>
               <CardHeader>
@@ -859,7 +832,7 @@ const LearnerApp = () => {
                     currentAvatarUrl={profile?.avatar_url}
                     fullName={profile?.full_name}
                     size="md"
-                    onUploaded={() => loadUserProfile()}
+                    onUploaded={loadUserProfile}
                   />
                   <div>
                     <h3 className="font-semibold">
@@ -870,18 +843,17 @@ const LearnerApp = () => {
                     </p>
                     <p className="text-xs text-muted-foreground">{session?.user?.email}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Study Level: {
-                        profile?.study_level === 'junior_primary' ? 'Junior Primary (Grades 1-4)' :
-                        profile?.study_level === 'senior_primary' ? 'Senior Primary (Grades 5-7)' :
-                        profile?.study_level === 'junior_high' ? 'Junior High (Grades 8-9)' :
-                        profile?.study_level === 'senior_high' ? 'Senior High (Grades 10-12)' :
-                        profile?.study_level === 'tertiary' ? 'College & University' : 'Not set'
-                      }
+                      Study Level:{' '}
+                      {profile?.study_level === 'junior_primary' ? 'Junior Primary (Grades 1–4)' :
+                        profile?.study_level === 'senior_primary' ? 'Senior Primary (Grades 5–7)' :
+                        profile?.study_level === 'junior_high' ? 'Junior High (Grades 8–9)' :
+                        profile?.study_level === 'senior_high' ? 'Senior High (Grades 10–12)' :
+                        profile?.study_level === 'tertiary' ? 'College & University' : 'Not set'}
                     </p>
                   </div>
                 </div>
 
-                {/* Profile Stats - from real bookings */}
+                {/* Profile Stats */}
                 <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
                   <div className="text-center">
                     <p className="text-lg font-semibold">
@@ -902,29 +874,17 @@ const LearnerApp = () => {
                     <p className="text-xs text-muted-foreground">Spent</p>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => setShowPaymentMethods(true)}
-                  >
+                  <Button variant="outline" className="w-full justify-start" onClick={() => setShowPaymentMethods(true)}>
                     <CreditCard className="h-4 w-4 mr-2" />
                     Payment Methods
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => setActiveTab("activity")}
-                  >
+                  <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("activity")}>
                     <Clock className="h-4 w-4 mr-2" />
                     Booking History
                   </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start"
-                    onClick={() => { setShowMyReviews(true); setActiveTab("activity"); }}
-                  >
+                  <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("activity")}>
                     <Star className="h-4 w-4 mr-2" />
                     My Reviews
                   </Button>
@@ -960,11 +920,7 @@ const LearnerApp = () => {
                         <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
                       ))}
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowAcademicSetup(true)}
-                    >
+                    <Button variant="outline" size="sm" onClick={() => setShowAcademicSetup(true)}>
                       Edit Profile
                     </Button>
                   </div>
@@ -991,12 +947,12 @@ const LearnerApp = () => {
               />
             )}
 
-            {/* Payment History Section */}
+            {/* Payment History */}
             {session?.user?.id && (
               <PaymentHistory
                 userId={session.user.id}
                 limit={5}
-                showViewAll={true}
+                showViewAll
                 onViewAll={() => setShowAllPayments(true)}
               />
             )}
@@ -1007,32 +963,16 @@ const LearnerApp = () => {
                 <CardTitle className="text-sm">Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab("home")}
-                >
+                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("home")}>
                   Find New Tutor
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => setActiveTab("library")}
-                >
+                <Button variant="outline" className="w-full justify-start" onClick={() => setActiveTab("library")}>
                   Browse Study Materials
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start"
-                  onClick={() => navigate('/learner/choose-level')}
-                >
+                <Button variant="outline" className="w-full justify-start" onClick={() => navigate('/learner/choose-level')}>
                   Change Study Level
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start text-destructive"
-                  onClick={handleSignOut}
-                >
+                <Button variant="outline" className="w-full justify-start text-destructive" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
                 </Button>
@@ -1041,55 +981,46 @@ const LearnerApp = () => {
           </TabsContent>
         </Tabs>
 
-        {/* Bottom Navigation */}
+        {/* ── Bottom Navigation ── */}
         <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg">
           <div className="grid grid-cols-4 gap-1 p-2">
-            <Button
-              variant={activeTab === "home" ? "default" : "ghost"}
-              className="flex flex-col h-auto py-2 px-1"
-              onClick={() => setActiveTab("home")}
-            >
-              <Home className="h-5 w-5 mb-1" />
-              <span className="text-xs">Home</span>
-            </Button>
-            <Button
-              variant={activeTab === "library" ? "default" : "ghost"}
-              className="flex flex-col h-auto py-2 px-1"
-              onClick={() => setActiveTab("library")}
-            >
-              <BookOpen className="h-5 w-5 mb-1" />
-              <span className="text-xs">Library</span>
-            </Button>
-            <Button
-              variant={activeTab === "activity" ? "default" : "ghost"}
-              className="flex flex-col h-auto py-2 px-1"
-              onClick={() => setActiveTab("activity")}
-            >
-              <Activity className="h-5 w-5 mb-1" />
-              <span className="text-xs">Activity</span>
-            </Button>
-            <Button
-              variant={activeTab === "profile" ? "default" : "ghost"}
-              className="flex flex-col h-auto py-2 px-1"
-              onClick={() => setActiveTab("profile")}
-            >
-              <User className="h-5 w-5 mb-1" />
-              <span className="text-xs">Profile</span>
-            </Button>
+            {[
+              { id: "home", label: "Home", Icon: Home },
+              { id: "library", label: "Library", Icon: BookOpen },
+              { id: "activity", label: "Activity", Icon: Activity },
+              { id: "profile", label: "Profile", Icon: User },
+            ].map(({ id, label, Icon }) => (
+              <Button
+                key={id}
+                variant={activeTab === id ? "default" : "ghost"}
+                className="flex flex-col h-auto py-2 px-1"
+                onClick={() => setActiveTab(id)}
+              >
+                <Icon className="h-5 w-5 mb-1" />
+                <span className="text-xs">{label}</span>
+              </Button>
+            ))}
           </div>
         </div>
       </div>
+
+      {/* ── Modals & Overlays ── */}
+
+      {/* Sign-out confirmation */}
+      <ConfirmDialog
+        open={showSignOutConfirm}
+        onOpenChange={setShowSignOutConfirm}
+        title="Sign Out"
+        description="Are you sure you want to sign out?"
+        onConfirm={confirmSignOut}
+      />
 
       {/* Chat Interface */}
       <ChatInterface
         session={session}
         userType="learner"
         isOpen={showChat}
-        onClose={() => {
-          setShowChat(false);
-          setChatWithUserId(null);
-          setChatWithUserName(null);
-        }}
+        onClose={() => { setShowChat(false); setChatWithUserId(null); setChatWithUserName(null); }}
         otherUserId={chatWithUserId || undefined}
         otherUserName={chatWithUserName || undefined}
       />
@@ -1099,15 +1030,21 @@ const LearnerApp = () => {
         booking={rescheduleBooking}
         open={showReschedule}
         onOpenChange={(open) => { setShowReschedule(open); if (!open) setRescheduleBooking(null); }}
-        onReschedule={async (bookingId, newTime) => {
+        onReschedule={async () => {
           toast({ title: "Session rescheduled!", description: "Your tutor has been notified of the new time." });
         }}
       />
 
       {/* Payment Methods Modal */}
       {showPaymentMethods && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowPaymentMethods(false)}>
-          <div className="bg-background w-full rounded-t-2xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end"
+          onClick={() => setShowPaymentMethods(false)}
+        >
+          <div
+            className="bg-background w-full rounded-t-2xl p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between">
               <h3 className="font-bold text-lg">Payment Methods</h3>
               <button onClick={() => setShowPaymentMethods(false)} className="text-muted-foreground text-sm">✕</button>
@@ -1141,8 +1078,14 @@ const LearnerApp = () => {
 
       {/* Full Payment History Modal */}
       {showAllPayments && session?.user?.id && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowAllPayments(false)}>
-          <div className="bg-background w-full rounded-t-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-end"
+          onClick={() => setShowAllPayments(false)}
+        >
+          <div
+            className="bg-background w-full rounded-t-2xl max-h-[80vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="sticky top-0 bg-background flex items-center justify-between px-5 pt-5 pb-3 border-b">
               <h3 className="font-bold text-lg">Full Payment History</h3>
               <button onClick={() => setShowAllPayments(false)} className="text-muted-foreground text-sm">✕</button>
@@ -1171,10 +1114,7 @@ const LearnerApp = () => {
                 const ok = await saveAcademicProfile(data);
                 if (ok) {
                   setShowAcademicSetup(false);
-                  toast({
-                    title: "Profile saved!",
-                    description: "Your library has been personalised.",
-                  });
+                  toast({ title: "Profile saved!", description: "Your library has been personalised." });
                 }
                 return ok;
               }}
@@ -1190,19 +1130,13 @@ const LearnerApp = () => {
       {reviewData && (
         <ReviewModal
           isOpen={showReviewModal}
-          onClose={() => {
-            setShowReviewModal(false);
-            setReviewData(null);
-          }}
+          onClose={() => { setShowReviewModal(false); setReviewData(null); }}
           bookingId={reviewData.bookingId}
           reviewedId={reviewData.reviewedId}
           reviewedName={reviewData.reviewedName}
           userType={reviewData.userType}
           onReviewSubmitted={() => {
-            toast({
-              title: "Review Submitted!",
-              description: "Thank you for your feedback.",
-            });
+            toast({ title: "Review Submitted!", description: "Thank you for your feedback." });
           }}
         />
       )}
@@ -1211,10 +1145,7 @@ const LearnerApp = () => {
       {showBookingModal && selectedTutor && (
         <QuickBookingModal
           isOpen={showBookingModal}
-          onClose={() => {
-            setShowBookingModal(false);
-            setSelectedTutor(null);
-          }}
+          onClose={() => { setShowBookingModal(false); setSelectedTutor(null); }}
           tutor={selectedTutor}
           onSubmit={createBooking}
         />
