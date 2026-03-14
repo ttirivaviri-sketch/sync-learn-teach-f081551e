@@ -9,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { Session } from "@supabase/supabase-js";
 import { Upload, Shield, GraduationCap, FileText } from "lucide-react";
-import { Textarea } from "@/components/ui/textarea";
 import { security } from "@/utils/security";
 
 const TutorAuth = () => {
@@ -24,83 +23,65 @@ const TutorAuth = () => {
     idDocument: null as File | null,
     profilePhoto: null as File | null,
     policeClearance: null as File | null,
-    qualifications: [] as File[]
+    qualifications: [] as File[],
   });
   const [qualificationDetails, setQualificationDetails] = useState({
     type: "",
     institution: "",
-    year: ""
+    year: "",
   });
+
+  // Forgot-password state
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
 
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        if (session?.user && currentStep === 1) {
-          setCurrentStep(2); // Move to verification step after successful signup
+      (_event, s) => {
+        setSession(s);
+        // After signing up, advance to verification step
+        if (s?.user && currentStep === 1) {
+          setCurrentStep(2);
         }
       }
     );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        navigate("/tutor");
-      }
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s?.user) navigate("/tutor");
     });
-
     return () => subscription.unsubscribe();
   }, [navigate, currentStep]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const redirectUrl = `${window.location.origin}/tutor`;
-      
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: fullName,
-            user_type: 'tutor'
-          }
-        }
+          emailRedirectTo: `${window.location.origin}/tutor`,
+          data: { full_name: fullName, user_type: 'tutor' },
+        },
       });
-
       if (error) {
-        if (error.message.includes("already registered")) {
-          toast({
-            title: "Account exists",
-            description: "This email is already registered. Please sign in instead.",
-            variant: "destructive",
-          });
-        } else {
-          toast({
-            title: "Sign up failed",
-            description: error.message,
-            variant: "destructive",
-          });
-        }
-      } else {
         toast({
-          title: "Account created!",
-          description: "Please complete your verification documents.",
+          title: error.message.includes("already registered") ? "Account exists" : "Sign up failed",
+          description: error.message.includes("already registered")
+            ? "This email is already registered. Please sign in instead."
+            : error.message,
+          variant: "destructive",
         });
+      } else {
+        toast({ title: "Account created!", description: "Please complete your verification documents." });
         setCurrentStep(2);
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -109,141 +90,103 @@ const TutorAuth = () => {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
-        toast({
-          title: "Sign in failed",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: "Sign in failed", description: error.message, variant: "destructive" });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+        redirectTo: `${window.location.origin}/tutor`,
+      });
+      if (error) {
+        toast({ title: "Error", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Reset link sent!", description: "Check your email for a password reset link." });
+        setShowForgotPassword(false);
+        setForgotEmail("");
+      }
+    } catch {
+      toast({ title: "Error", description: "An unexpected error occurred.", variant: "destructive" });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   const uploadFile = async (file: File, bucket: string, folder: string) => {
     if (!session?.user) return null;
-    
     const fileExt = file.name.split('.').pop();
     const fileName = `${folder}/${session.user.id}/${Date.now()}.${fileExt}`;
-    
-    const { data, error } = await supabase.storage
-      .from(bucket)
-      .upload(fileName, file);
-
+    const { data, error } = await supabase.storage.from(bucket).upload(fileName, file);
     if (error) throw error;
     return data.path;
   };
 
   const handleVerificationSubmit = async () => {
     if (!session?.user) return;
-    
-    // Validate all uploaded files
+
     const allowedImageTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     const allowedDocTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
-    
+
     if (files.idDocument) {
-      const validation = security.validateFileUpload(files.idDocument, allowedDocTypes, 10);
-      if (!validation.valid) {
-        toast({
-          title: "Invalid file",
-          description: `ID Document: ${validation.error}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      const v = security.validateFileUpload(files.idDocument, allowedDocTypes, 10);
+      if (!v.valid) { toast({ title: "Invalid file", description: `ID Document: ${v.error}`, variant: "destructive" }); return; }
     }
-    
     if (files.profilePhoto) {
-      const validation = security.validateFileUpload(files.profilePhoto, allowedImageTypes, 5);
-      if (!validation.valid) {
-        toast({
-          title: "Invalid file",
-          description: `Profile Photo: ${validation.error}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      const v = security.validateFileUpload(files.profilePhoto, allowedImageTypes, 5);
+      if (!v.valid) { toast({ title: "Invalid file", description: `Profile Photo: ${v.error}`, variant: "destructive" }); return; }
     }
-    
     if (files.policeClearance) {
-      const validation = security.validateFileUpload(files.policeClearance, allowedDocTypes, 10);
-      if (!validation.valid) {
-        toast({
-          title: "Invalid file",
-          description: `Police Clearance: ${validation.error}`,
-          variant: "destructive",
-        });
-        return;
-      }
+      const v = security.validateFileUpload(files.policeClearance, allowedDocTypes, 10);
+      if (!v.valid) { toast({ title: "Invalid file", description: `Police Clearance: ${v.error}`, variant: "destructive" }); return; }
     }
-    
+
     setLoading(true);
     try {
-      let idDocumentUrl = null;
-      let profilePhotoUrl = null;
-      let policeClearanceUrl = null;
+      const idDocumentUrl = files.idDocument
+        ? await uploadFile(files.idDocument, 'tutor-documents', 'id-documents') : null;
+      const profilePhotoUrl = files.profilePhoto
+        ? await uploadFile(files.profilePhoto, 'profile-photos', 'photos') : null;
+      const policeClearanceUrl = files.policeClearance
+        ? await uploadFile(files.policeClearance, 'tutor-documents', 'police-clearance') : null;
 
-      // Upload files
-      if (files.idDocument) {
-        idDocumentUrl = await uploadFile(files.idDocument, 'tutor-documents', 'id-documents');
-      }
-      if (files.profilePhoto) {
-        profilePhotoUrl = await uploadFile(files.profilePhoto, 'profile-photos', 'photos');
-      }
-      if (files.policeClearance) {
-        policeClearanceUrl = await uploadFile(files.policeClearance, 'tutor-documents', 'police-clearance');
-      }
-
-      // Save verification data
-      const { error: verificationError } = await supabase
-        .from('tutor_verifications')
-        .insert({
-          user_id: session.user.id,
-          id_number: idNumber,
-          id_document_url: idDocumentUrl,
-          profile_photo_url: profilePhotoUrl,
-          police_clearance_url: policeClearanceUrl,
-          verification_status: 'pending'
-        });
-
+      const { error: verificationError } = await supabase.from('tutor_verifications').insert({
+        user_id: session.user.id,
+        id_number: idNumber,
+        id_document_url: idDocumentUrl,
+        profile_photo_url: profilePhotoUrl,
+        police_clearance_url: policeClearanceUrl,
+        verification_status: 'pending',
+      });
       if (verificationError) throw verificationError;
 
-      // Upload qualifications
       for (const qualFile of files.qualifications) {
         const qualUrl = await uploadFile(qualFile, 'tutor-documents', 'qualifications');
-        
-        await supabase
-          .from('qualifications')
-          .insert({
-            user_id: session.user.id,
-            qualification_type: qualificationDetails.type,
-            institution: qualificationDetails.institution,
-            document_url: qualUrl,
-            year_obtained: parseInt(qualificationDetails.year)
-          });
+        await supabase.from('qualifications').insert({
+          user_id: session.user.id,
+          qualification_type: qualificationDetails.type,
+          institution: qualificationDetails.institution,
+          document_url: qualUrl,
+          year_obtained: parseInt(qualificationDetails.year) || undefined,
+        });
       }
 
       toast({
         title: "Verification submitted!",
         description: "Your documents have been uploaded for review. You'll be notified once verified.",
       });
-
       navigate("/tutor");
-    } catch (error) {
+    } catch {
       toast({
         title: "Upload failed",
         description: "Failed to upload verification documents. Please try again.",
@@ -262,22 +205,34 @@ const TutorAuth = () => {
     }
   };
 
+  // ── Shared logo block ────────────────────────────────────────────────────
+  const LogoBlock = () => (
+    <div className="text-center mb-8">
+      <div className="flex items-center justify-center mb-3">
+        <img
+          src="/lovable-uploads/studysync-logo.png"
+          alt="StudySync"
+          className="w-auto object-contain"
+          style={{
+            height: "160px",
+            filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.3))",
+            mixBlendMode: "screen",
+          }}
+        />
+      </div>
+      <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1">
+        Education, in sync with your future
+      </p>
+    </div>
+  );
+
+  // ── Step 2: Verification ─────────────────────────────────────────────────
   if (currentStep === 2 && session?.user) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
         <div className="w-full max-w-2xl">
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-0.5">
-              <img 
-                src="/lovable-uploads/studysync-logo.png" 
-                alt="StudySync" 
-                className="w-auto object-contain"
-                style={{ height: "325px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
-              />
-            </div>
-            <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
-              Education, in sync with your future
-            </p>
+          <LogoBlock />
+          <div className="text-center mb-6">
             <h1 className="text-2xl font-extrabold text-white mb-1">Tutor Verification</h1>
             <p className="text-white/80">Complete your verification to start tutoring</p>
           </div>
@@ -293,7 +248,7 @@ const TutorAuth = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* ID Number & Document */}
+              {/* Identity */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <FileText className="w-4 h-4" />
@@ -393,9 +348,9 @@ const TutorAuth = () => {
                 </div>
               </div>
 
-              <Button 
-                onClick={handleVerificationSubmit} 
-                className="w-full" 
+              <Button
+                onClick={handleVerificationSubmit}
+                className="w-full"
                 disabled={loading || !idNumber || !files.idDocument || !files.profilePhoto || !files.policeClearance}
               >
                 {loading ? "Uploading..." : "Submit Verification"}
@@ -407,23 +362,12 @@ const TutorAuth = () => {
     );
   }
 
+  // ── Step 1: Sign In / Sign Up ─────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center mb-0.5">
-            <img 
-              src="/lovable-uploads/studysync-logo.png" 
-              alt="StudySync" 
-              className="w-auto object-contain"
-              style={{ height: "325px", filter: 'drop-shadow(0 2px 6px rgba(0,0,0,0.3))' }}
-            />
-          </div>
-          <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1" style={{ letterSpacing: "0.12em" }}>
-            Education, in sync with your future
-          </p>
-          <p className="text-2xl font-extrabold text-white">Confidence Starts Here</p>
-        </div>
+        <LogoBlock />
+        <p className="text-center text-2xl font-extrabold text-white mb-8">Confidence Starts Here</p>
 
         <Card className="bg-white/95 backdrop-blur-sm">
           <CardHeader>
@@ -433,94 +377,129 @@ const TutorAuth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Become a Tutor</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
-                    <Input
-                      id="signin-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
-                    <Input
-                      id="signin-password"
-                      type="password"
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Signing in..." : "Sign In"}
-                  </Button>
-                </form>
-              </TabsContent>
-              
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-name">Full Name</Label>
-                    <Input
-                      id="signup-name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input
-                      id="signup-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input
-                      id="signup-password"
-                      type="password"
-                      placeholder="Create a password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      minLength={6}
-                    />
-                  </div>
-                  
-                  <div className="bg-blue-50 p-3 rounded-lg">
-                    <div className="flex items-start gap-2">
-                      <Shield className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <div className="text-xs text-blue-800">
-                        <strong>Next Steps:</strong> After registration, you'll need to upload verification documents including ID, photo, police clearance, and qualifications.
+            {showForgotPassword ? (
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Enter your email to receive a password reset link
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email-tutor">Email</Label>
+                  <Input
+                    id="forgot-email-tutor"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={forgotLoading}>
+                  {forgotLoading ? "Sending..." : "Send Reset Link"}
+                </Button>
+                <Button type="button" variant="ghost" className="w-full" onClick={() => setShowForgotPassword(false)}>
+                  ← Back to Sign In
+                </Button>
+              </form>
+            ) : (
+              <Tabs defaultValue="signin" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="signin">Sign In</TabsTrigger>
+                  <TabsTrigger value="signup">Become a Tutor</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="signin">
+                  <form onSubmit={handleSignIn} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signin-email">Email</Label>
+                      <Input
+                        id="signin-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="signin-password">Password</Label>
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => setShowForgotPassword(true)}
+                        >
+                          Forgot password?
+                        </button>
+                      </div>
+                      <Input
+                        id="signin-password"
+                        type="password"
+                        placeholder="Enter your password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Signing in..." : "Sign In"}
+                    </Button>
+                  </form>
+                </TabsContent>
+
+                <TabsContent value="signup">
+                  <form onSubmit={handleSignUp} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-name">Full Name</Label>
+                      <Input
+                        id="signup-name"
+                        type="text"
+                        placeholder="Enter your full name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-email">Email</Label>
+                      <Input
+                        id="signup-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="signup-password">Password</Label>
+                      <Input
+                        id="signup-password"
+                        type="password"
+                        placeholder="Create a password (min. 6 characters)"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        minLength={6}
+                      />
+                    </div>
+
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="flex items-start gap-2">
+                        <Shield className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                        <p className="text-xs text-blue-800">
+                          <strong>Next Steps:</strong> After registration, you'll need to upload verification
+                          documents including ID, photo, police clearance, and qualifications.
+                        </p>
                       </div>
                     </div>
-                  </div>
-                  
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? "Creating account..." : "Create Tutor Account"}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+
+                    <Button type="submit" className="w-full" disabled={loading}>
+                      {loading ? "Creating account..." : "Create Tutor Account"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>
