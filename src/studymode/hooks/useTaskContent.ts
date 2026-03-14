@@ -1,21 +1,43 @@
+/**
+ * useTaskContent
+ *
+ * Generates study task content that is grounded in the student's actual:
+ *   - Parsed syllabus (subtopics, learning objectives, concepts)
+ *   - Past paper patterns (exam weight, command words, question types)
+ *   - Topic performance (mastery level, weak areas)
+ *
+ * Streams the response as SSE chunks for a live typing effect.
+ */
+
 import { useState, useCallback } from 'react';
+
+export interface TaskContentParams {
+  taskType: string;
+  subject: string;
+  subjectId?: string;
+  topic: string;
+  subtopics?: string[];
+  learningObjectives?: string[];
+  concepts?: string[];
+  examWeight?: number;
+  /** Rich curriculum context string from useSyllabusContext */
+  curriculumContext?: string;
+  /** Student performance context for adaptive content */
+  performanceContext?: string;
+  /** Mastery level affects depth of content */
+  masteryStatus?: 'mastered' | 'needs-practice' | 'not-started';
+  /** Difficulty level for exam questions within tasks */
+  difficulty?: 'easy' | 'medium' | 'hard';
+}
 
 interface UseTaskContentReturn {
   content: string;
   isLoading: boolean;
   error: string | null;
-  generateContent: (params: {
-    taskType: string;
-    subject: string;
-    topic: string;
-    subtopics?: string[];
-    examWeight?: number;
-    curriculumContext?: string;
-  }) => Promise<void>;
+  generateContent: (params: TaskContentParams) => Promise<void>;
   reset: () => void;
 }
 
-// Local AI proxy endpoint
 const TASK_CONTENT_URL = '/api/ai/generate-task-content';
 
 export function useTaskContent(): UseTaskContentReturn {
@@ -29,14 +51,7 @@ export function useTaskContent(): UseTaskContentReturn {
     setIsLoading(false);
   }, []);
 
-  const generateContent = useCallback(async (params: {
-    taskType: string;
-    subject: string;
-    topic: string;
-    subtopics?: string[];
-    examWeight?: number;
-    curriculumContext?: string;
-  }) => {
+  const generateContent = useCallback(async (params: TaskContentParams) => {
     setIsLoading(true);
     setContent('');
     setError(null);

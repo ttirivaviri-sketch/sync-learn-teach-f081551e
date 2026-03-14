@@ -202,301 +202,289 @@ const fallback = {
   },
 
   // ── task content ────────────────────────────────────────────────────────────
-  taskContent({ taskType, subject, topic, subtopics }) {
-    const subs = subtopics?.length ? subtopics.slice(0, 4) : ['Core concepts', 'Key principles', 'Applications', 'Exam technique'];
+  taskContent({ taskType, subject, topic, subtopics, learningObjectives, concepts, commandWords, examWeight, masteryStatus, hasCurriculumData }) {
+    // Use real curriculum data if available
+    const subs = subtopics?.length ? subtopics.slice(0, 6) : ['Core concepts', 'Key principles', 'Applications', 'Exam technique'];
+    const objs = learningObjectives?.length ? learningObjectives : [];
+    const concs = concepts?.length ? concepts : subs.slice(0, 3);
+    const cmdWords = commandWords?.length ? commandWords : ['Explain', 'Describe', 'Evaluate', 'Calculate'];
     const subList = subs.map(s => `- ${s}`).join('\n');
+    const objList = objs.slice(0, 4).map(o => `  • ${o}`).join('\n');
+    const conceptList = concs.slice(0, 4).join(', ');
+    const primaryCmd = cmdWords[0] || 'Explain';
+    const evalCmd = cmdWords.find(w => /eval|assess|discuss|analys/i.test(w)) || 'Evaluate';
+    const descCmd = cmdWords.find(w => /describ|state|identif/i.test(w)) || 'Describe';
+    const hasCurriculum = hasCurriculumData || !!(subtopics?.length || objs.length);
+    const examWeightStr = examWeight ? ` (${examWeight}% of exam paper)` : '';
+    const masteryNote = masteryStatus === 'mastered' ? '**Advanced mode** — focus on exam application and edge cases.' : masteryStatus === 'needs-practice' ? '**Practice mode** — focus on clarity and exam technique.' : '';
 
     const templates = {
       'micro-revision': () => `## ⚡ Micro-Revision: ${topic}
-*Subject: ${subject}*
+*Subject: ${subject}${examWeightStr}*${masteryNote ? '\n\n' + masteryNote : ''}
 
-**Quick Refresh (30 seconds):**
-${topic} is a core topic in ${subject} that commonly appears in exam questions. Focus on the fundamentals before diving into questions.
+**Quick Refresh:**
+${hasCurriculum ? `${topic} covers: **${subs.slice(0, 3).join(', ')}**. Focus on these for the exam.` : `${topic} is a core topic in ${subject} that commonly appears in exam questions.`}
 
 ---
 
 ### 🎯 Rapid-Fire Review Questions
 
-**Q1: Define the key concept**
-What is the central principle of ${topic} and why is it significant in ${subject}?
-
-*Model answer:* ${topic} refers to the fundamental principles governing this area of ${subject}. It is significant because examiners frequently test students' ability to explain and apply these principles in structured questions.
-
----
-
-**Q2: Application question**
-How would you apply your knowledge of ${topic} to solve a problem in ${subject}?
-
-*Model answer:* To apply ${topic}, you would first identify the relevant principles, then set up the appropriate method or framework, and finally evaluate your answer against the expected outcome. Always show working in exam conditions.
-
----
-
-**Q3: Exam-style short answer**
-State TWO key features of ${topic}. [2 marks]
+**Q1: ${descCmd}**
+${subs[0] !== 'Core concepts' ? `${descCmd} the key features of **${subs[0]}** as part of ${topic}. [2 marks]` : `${descCmd} the main principle behind ${topic} in ${subject}. [2 marks]`}
 
 *Model answer:*
-1. The first key feature relates to the core mechanism or definition of ${topic}
-2. The second key feature highlights the practical application or consequence
+${objs[0] ? `• ${objs[0]}\n• Supporting detail with correct terminology` : `• Identification of the key feature with correct terminology\n• Supporting detail or mechanism explaining its significance`}
 
 ---
 
-### 📌 Key Subtopics to Remember:
-${subList}
+**Q2: ${primaryCmd}**
+${subs[1] && subs[1] !== 'Key principles' ? `${primaryCmd} how **${subs[1]}** relates to ${topic} in ${subject}. [3 marks]` : `${primaryCmd} the relationship between the main components of ${topic}. [3 marks]`}
 
-> **Exam tip:** Questions on ${topic} often begin with "State," "Describe," or "Explain" — know what each command word requires!`,
+*Model answer:*
+${objs[1] ? `• ${objs[1]}\n• Mechanism or process explanation\n• Supporting example` : `• Clear statement of the relationship with correct terminology\n• Explanation of the mechanism or process involved\n• Relevant example or application`}
+
+---
+
+**Q3: Exam-style application**
+${evalCmd !== 'Evaluate' ? `${evalCmd} ${subs[2] && subs[2] !== 'Applications' ? `the role of **${subs[2]}**` : 'the significance of ' + topic} in ${subject}. [4 marks]` : `${evalCmd} the importance of ${concs[0] || topic} in determining outcomes in ${subject}. [4 marks]`}
+
+*Model answer:*
+• Point 1: ${concs[0] ? `Define/identify ${concs[0]} accurately` : `Knowledge — definition with correct terminology`}
+• Point 2: ${concs[1] ? `Explain the mechanism of ${concs[1]}` : `Explain the mechanism or process involved`}
+• Point 3: Specific example or application from ${subject}
+• Point 4: Conclusion with supported judgement
+
+---
+
+### 📌 Key Items to Remember:
+${subList}
+${concs.length > 0 ? `\n**Core concepts:** ${conceptList}` : ''}
+
+> **Exam tip:** Questions on ${topic} commonly use command words: *${cmdWords.slice(0, 3).join(', ')}* — know what each requires!`,
 
       'concept-learning': () => `## 📘 Concept Deep-Dive: ${topic}
-*Subject: ${subject}*
+*Subject: ${subject}${examWeightStr}*${masteryNote ? '\n\n' + masteryNote : ''}
 
 ---
 
 ### 🎯 Why This Topic Matters for Your Exam
-${topic} is a frequently examined area in ${subject}. Examiners test this because it requires students to demonstrate genuine understanding — not just recall. Expect 1-2 questions on this in your paper.
+${hasCurriculum ? `${topic} is a frequently examined area in ${subject} covering **${subs.slice(0, 3).join(', ')}**. Examiners use command words like *${cmdWords.slice(0, 3).join(', ')}* to test this topic — meaning you must be able to explain mechanisms, apply concepts, and evaluate significance.` : `${topic} is a frequently examined area in ${subject}. Expect 1-2 questions on this in your paper.`}
 
 ---
 
-### 📖 Core Concept Explained
-
-**What is ${topic}?**
-${topic} is a fundamental concept in ${subject} that encompasses the following principles:
-
-${subs.map((s, i) => `**${i + 1}. ${s}**\nThis aspect of ${topic} forms the basis for exam questions testing your ability to analyse and evaluate. Understanding it means you can answer questions that ask you to "explain," "describe," or "evaluate" with confidence.`).join('\n\n')}
+### 📖 Core Concepts Explained
+${subs.map((s, i) => `**${i + 1}. ${s}**\n${objs[i] ? objs[i] : `This aspect of ${topic} forms the basis for exam questions. Understanding it allows you to answer "${primaryCmd}" and "${descCmd}" questions with precision.`}\n`).join('\n')}
 
 ---
 
-### 🔗 Real-World Connection
-Think of ${topic} like a system in everyday life — the principles you study in ${subject} reflect patterns that exist in the real world. When you understand *why* something works, exam questions become far easier to decode.
-
----
-
-### ⚠️ Common Exam Mistakes to Avoid
-1. **Vague answers** — Don't just state the concept, explain the mechanism
-2. **Missing the command word** — "Describe" and "Explain" require different depth of answer
-3. **Skipping context** — Always link your answer back to the question scenario
-4. **No supporting evidence** — Use specific terminology from ${subject}
+${concs.length > 0 ? `### 🔑 Key Terminology\n${concs.map(c => `- **${c}**: [definition relating to ${topic} in ${subject}]`).join('\n')}\n\n---\n\n` : ''}### ⚠️ Common Exam Mistakes to Avoid
+1. **Vague definitions** — Examiners require precise terminology from the ${subject} syllabus
+2. **Missing the command word** — *${cmdWords[0] || 'Explain'}* and *${cmdWords[1] || 'Describe'}* require different levels of detail
+3. **No mechanism** — Always explain *how* and *why*, not just *what*
+4. **Ignoring context** — Link answers back to the specific scenario in the question
 
 ---
 
 ### ✅ Two Key Takeaways
-1. Master the definition and be able to apply ${topic} in unfamiliar contexts
-2. Practice using the correct ${subject} terminology — examiners reward precise language`,
+1. ${objs[0] ? objs[0] : `Master the definition and mechanism of ${subs[0]} — this forms the foundation for all ${topic} questions`}
+2. ${objs[1] ? objs[1] : `Practise applying ${topic} to unfamiliar scenarios — examiners reward students who can transfer knowledge`}`,
 
       'active-recall': () => `## 🧠 Active Recall Exercise: ${topic}
-*Subject: ${subject}*
+*Subject: ${subject}${examWeightStr}*${masteryNote ? '\n\n' + masteryNote : ''}
 
-Test yourself on these questions — cover the answers and try first!
+Test yourself — cover the answers first!
 
 ---
 
-### Level 1: Knowledge (What do you know?)
+### Level 1: Knowledge — *What do you know?*
 
-**Question 1:** Define ${topic} in one clear sentence.
+**Question 1:** ${descCmd} what is meant by ${subs[0] !== 'Core concepts' ? `**${subs[0]}**` : `**${topic}**`}${objs.length ? ` in relation to "${objs[0]?.substring(0, 50)}..."` : ''}. [2 marks]
 
 <details>
 <summary>Model Answer</summary>
-${topic} is defined by its core principles within the context of ${subject}, focusing on the fundamental relationships and mechanisms that govern this area of study.
+${objs[0] ? `• ${objs[0]}\n• Supporting detail with correct ${subject} terminology` : `• ${subs[0] !== 'Core concepts' ? subs[0] : topic}: clear definition with correct terminology\n• Supporting detail explaining its role or significance in ${subject}`}
 </details>
 
 ---
 
-### Level 2: Understanding (Can you explain it?)
+### Level 2: Understanding — *Can you explain it?*
 
-**Question 2:** Explain why ${topic} is important in the context of ${subject}. [3 marks]
+**Question 2:** ${primaryCmd} why **${subs[1] && subs[1] !== 'Key principles' ? subs[1] : topic}** is important in ${subject}. [3 marks]
 
 <details>
 <summary>Model Answer (3 marking points)</summary>
-• Point 1: ${topic} underpins several other concepts in ${subject}, making it foundational to understanding the subject as a whole
-• Point 2: It provides the framework for analysing and solving problems that appear across multiple question types  
-• Point 3: Examiners use ${topic} to differentiate between students who have surface knowledge and those with genuine understanding
+• Point 1: ${concs[0] ? `Define/identify ${concs[0]} accurately with correct terminology` : `Clear statement of the key principle`}
+• Point 2: ${objs[1] ? objs[1] : `Explanation of the mechanism or process involved`}
+• Point 3: ${concs[1] ? `How ${concs[1]} contributes to this` : `Specific example or application demonstrating importance`}
 </details>
 
 ---
 
-### Level 3: Application (Can you use it?)
+### Level 3: Application — *Can you use it?*
 
-**Question 3:** Using your knowledge of ${topic}, analyse the following scenario and explain the outcome.
-
-*Scenario: A student is asked to apply the principles of ${topic} to solve a structured exam question in ${subject}.*
+**Question 3:** Apply your knowledge of **${subs[2] && subs[2] !== 'Applications' ? subs[2] : topic}** to a structured exam question in ${subject}. [4 marks]
 
 <details>
 <summary>Model Answer</summary>
-Step 1 — Identify the relevant aspect of ${topic}
-Step 2 — Apply the appropriate method or framework
-Step 3 — Evaluate the result against expected outcomes
-Step 4 — State a clear, evidence-based conclusion using ${subject} terminology
+1. Identify the relevant aspect: ${concs[0] || subs[0]}
+2. Apply the appropriate method/framework from ${topic}
+3. Show the mechanism or process with correct terminology
+4. State a clear, justified conclusion linked to ${subject}
 </details>
 
 ---
 
-### Level 4: Analysis (Can you evaluate?)
+### Level 4: Analysis — *Can you evaluate?*
 
-**Question 4:** Compare TWO approaches related to ${topic}. What are the advantages and limitations of each? [4 marks]
+**Question 4:** Compare TWO ${subs.length >= 2 ? `aspects of ${topic}: **${subs[0]}** and **${subs[1]}**` : `approaches to studying ${topic}`}. Identify the advantages and limitations of each. [4 marks]
 
 <details>
 <summary>Model Answer (4 marking points)</summary>
-• Approach 1 advantage: More direct and easier to apply in time-pressured exams
-• Approach 1 limitation: May oversimplify complex scenarios
-• Approach 2 advantage: More comprehensive and earns higher marks for analysis questions
-• Approach 2 limitation: Requires deeper understanding and more time in exams
+• ${subs[0]} advantage: ${objs[0] ? objs[0].substring(0, 60) + '...' : 'More direct and applies core principles clearly'}
+• ${subs[0]} limitation: May not account for all variables or edge cases in ${subject}
+• ${subs[1] || 'Alternative'} advantage: ${objs[1] ? objs[1].substring(0, 60) + '...' : 'More comprehensive — accounts for broader context'}
+• ${subs[1] || 'Alternative'} limitation: Requires deeper analysis and more time under exam conditions
 </details>
 
 ---
 
-### Level 5: Synthesis (Can you evaluate deeper?)
+### Level 5: Evaluation — *Can you argue and conclude?*
 
-**Question 5:** "Mastering ${topic} is essential for success in ${subject}." Evaluate this statement. [6 marks]
+**Question 5:** "${evalCmd !== 'Evaluate' ? evalCmd : 'Evaluate'} the significance of **${concs[0] || topic}** in ${subject}." [6 marks]
 
 <details>
 <summary>Model Answer</summary>
 **Agree points:**
-- ${topic} appears in multiple question types and mark allocations
-- Understanding it allows transfer of knowledge to unfamiliar contexts
-- It is foundational to related subtopics: ${subs.slice(0, 2).join(', ')}
+${subs.slice(0, 2).map(s => `- ${s !== 'Core concepts' && s !== 'Key principles' ? s : topic} demonstrates clear evidence of importance`).join('\n')}
+- Appears across multiple exam question types and mark allocations
 
-**Partial disagreement:**
-- Other topics like ${subs[2] || 'applications'} are equally important
-- Exam technique and time management also determine success
+**Consider alternatives:**
+- ${subs[2] && subs[2] !== 'Applications' ? subs[2] : 'Other aspects'} must also be considered for a complete answer
+- Context and application vary depending on the exam scenario
 
-**Conclusion:** ${topic} is a high-priority topic that provides significant leverage across the exam paper. Mastering it is essential but must be combined with broader subject knowledge.
+**Conclusion:** ${concs[0] || topic} is a high-priority concept in ${subject} — mastering it provides significant leverage across the exam paper.
 </details>`,
 
       'flashcards': () => `## 🃏 Flashcards: ${topic}
-*Subject: ${subject} | ${subs.length} subtopics covered*
+*Subject: ${subject}${examWeightStr} | ${subs.length} subtopics*
+
+${subs.map((s, i) => `---
+
+**Card ${i + 1}: ${s}**
+**Front:** ${objs[i] ? `What does this learning objective mean: "${objs[i].substring(0, 60)}..."?` : `What is **${s}** and how does it relate to ${topic} in ${subject}?`}
+**Back:** ${objs[i] ? `${objs[i]} — This means students must be able to define, apply, and evaluate ${s} in exam answers.` : `${s} is a key component of ${topic} that relates to [specific mechanism/principle]. It is tested using command words: ${cmdWords.slice(0, 2).join(', ')}.`}`).join('\n')}
 
 ---
 
-**Card 1**
-**Front:** What is the definition of ${topic}?
-**Back:** ${topic} is the study/principle of [core concept] within ${subject}. It covers the fundamental mechanisms, relationships, and applications that examiners test in structured and essay questions.
+**Card ${subs.length + 1}: Command Words**
+**Front:** What do the command words *${cmdWords.slice(0, 3).join('*, *')}* require in ${subject} exam answers?
+**Back:** ${cmdWords.slice(0, 3).map(w => {
+  const defs = {
+    'Define': 'State the precise meaning',
+    'Describe': 'State the key features/characteristics',
+    'Explain': 'State AND give reasons/mechanisms',
+    'Evaluate': 'Discuss evidence for and against, reach a conclusion',
+    'Calculate': 'Use numbers/formula to find a value',
+    'Outline': 'Give a brief summary of main points',
+    'Assess': 'Weigh up evidence and form a judgement',
+    'Analyse': 'Break down into components and examine',
+    'Discuss': 'Consider different aspects and viewpoints',
+  };
+  return `**${w}**: ${defs[w] || 'Give a structured, precise answer using correct terminology'}`;
+}).join('\n')}
 
 ---
 
-**Card 2**
-**Front:** What are the ${subs.length} main subtopics within ${topic}?
-**Back:** ${subs.map((s, i) => `${i + 1}. ${s}`).join(' | ')}
+**Card ${subs.length + 2}: High-Priority Concepts**
+**Front:** Name the key concepts for ${topic} in ${subject} that most frequently appear in exams.
+**Back:** ${concs.join(', ')}${examWeight ? `\n\nExam weight: ${examWeight}% — this topic is worth significant marks.` : ''}
 
 ---
 
-**Card 3**
-**Front:** What command word indicates you need to apply ${topic}?
-**Back:** "Apply," "Calculate," "Determine," or "Use [concept] to explain..." — these require you to use the mechanism/formula of ${topic} in context.
-
----
-
-**Card 4**
-**Front:** State a common exam mistake in ${topic} questions.
-**Back:** Stating the concept without explaining the mechanism. Examiners require you to show *how* and *why*, not just *what*. Always follow a definition with an explanation of the process.
-
----
-
-**Card 5**
-**Front:** How does ${subs[0] || 'this subtopic'} relate to ${topic}?
-**Back:** It is a component of ${topic} that focuses on [specific aspect]. It typically appears in [mark allocation] mark questions and requires [approach: description/calculation/evaluation].
-
----
-
-**Card 6**
-**Front:** Write one exam-style question you might be asked about ${topic}.
-**Back:** Example: "Explain how ${topic} affects [related process] in ${subject}. [4 marks]" — Answer by defining, explaining mechanism, giving example, and linking to context.
-
----
-
-**Card 7**
-**Front:** What is the highest-level question type for ${topic}?
-**Back:** Evaluation questions: "Assess," "Evaluate," "To what extent..." — require balanced argument, evidence, and a supported conclusion. Worth 6-8 marks.
-
----
-
-**Card 8**
-**Front:** Name two real-world applications of ${topic}.
-**Back:** 1. [Application in a professional/scientific context relevant to ${subject}] 2. [Application in everyday life or cross-disciplinary context]`,
+**Card ${subs.length + 3}: Common Mistakes**
+**Front:** What are the most common exam mistakes in ${topic} questions?
+**Back:**
+1. **Vague answers** — State the mechanism, not just the fact
+2. **Missing command word** — *${cmdWords[0]}* ≠ *${cmdWords[1] || 'Describe'}* — adjust depth accordingly
+3. **No terminology** — Use precise ${subject} vocabulary throughout
+4. **Skipping examples** — Higher-mark questions require specific applications`,
 
       'summary': () => `## 📋 Exam Summary: ${topic}
-*Subject: ${subject}*
+*Subject: ${subject}${examWeightStr}*${masteryNote ? '\n\n' + masteryNote : ''}
 
 ---
 
-### 🔑 Key Definitions & Terms
-- **${topic}**: The core concept in ${subject} that examines [fundamental principle]
-${subs.map(s => `- **${s}**: A key component of ${topic} that relates to [specific function or principle]`).join('\n')}
+### 🔑 Key Definitions & Concepts
+${concs.map(c => `- **${c}**: [precise definition for ${topic} in ${subject}]`).join('\n')}
+${subs.filter(s => !concs.includes(s)).slice(0, 2).map(s => `- **${s}**: [definition linking to ${topic}]`).join('\n')}
 
 ---
 
 ### 📌 Essential Points (Must Know for Exam)
-1. ⭐ The definition and fundamental mechanism of ${topic}
+${objs.length ? objs.slice(0, 5).map((o, i) => `${i < 2 ? '⭐ ' : ''}${i + 1}. ${o}`).join('\n') : `1. ⭐ The definition and fundamental mechanism of ${topic}
 2. ⭐ How to apply ${topic} in structured exam questions  
-3. ⭐ The relationship between ${subs[0] || 'subtopic 1'} and ${subs[1] || 'subtopic 2'}
-4. Common examples and real-world applications
+3. ⭐ The relationship between ${subs[0]} and ${subs[1] || 'its applications'}
+4. Common examples and real-world applications in ${subject}
 5. Potential sources of error or limitations
-6. How ${topic} connects to other areas of ${subject}
+6. How ${topic} connects to other areas of ${subject}`}
 
 ---
 
 ### 📊 Subtopic Breakdown
-${subs.map((s, i) => `**${i + 1}. ${s}**\n- Key principle: [what students must know]\n- Exam relevance: Frequently tested in [question type] questions\n- Common question: "Explain/Describe/Calculate [aspect of ${s}]"`).join('\n\n')}
+${subs.map((s, i) => `**${i + 1}. ${s}**
+- Key principle: ${objs[i] ? objs[i] : `[what students must know for exam]`}
+- Command word: Likely "*${cmdWords[i % cmdWords.length] || 'Explain'}*" questions
+- Mark allocation: Typically 3-5 marks in structured questions`).join('\n\n')}
 
 ---
 
 ### 📝 Common Exam Questions
-1. "Define ${topic} and explain its significance in ${subject}." [2-3 marks]
-2. "Describe how ${subs[0] || 'the main component'} functions within ${topic}." [4 marks]
-3. "Evaluate the importance of ${topic} in [context]." [6 marks]
-4. "Using ${topic}, explain why [scenario occurs]." [4-6 marks]
+${cmdWords.slice(0, 4).map((cw, i) => `${i + 1}. "${cw} ${subs[i] && subs[i] !== 'Core concepts' ? subs[i].toLowerCase() : topic.toLowerCase()}..." [${[2, 3, 4, 6][i]} marks]`).join('\n')}
 
 ---
 
 ### ✅ Quick Self-Test
-1. Can you define ${topic} without looking at your notes?
-2. Can you explain the mechanism of ${subs[0] || 'the key subtopic'} in 3 sentences?
-3. Can you write a model answer for a 4-mark question on ${topic}?`,
+1. Can you define ${concs[0] || topic} without notes?
+2. Can you explain ${subs[0] !== 'Core concepts' ? subs[0] : 'the main mechanism'} in 3 sentences?
+3. Can you write a model answer for a 4-mark question using "*${primaryCmd}*"?
+4. Can you ${evalCmd.toLowerCase()} the importance of ${topic} in ${subject}?`,
 
       'revision-checklist': () => `## ✅ Revision Checklist: ${topic}
-*Subject: ${subject}*
+*Subject: ${subject}${examWeightStr}*${masteryNote ? '\n\n' + masteryNote : ''}
 
-Track your progress through every key concept. Tick each item only when you can explain it confidently!
+Tick each item only when you can confidently explain it!
 
 ---
 
 ### Core Definitions
-- [ ] ⭐ I can define **${topic}** accurately in my own words
-- [ ] ⭐ I can list the ${subs.length} main subtopics: ${subs.join(', ')}
-- [ ] I can explain the difference between key related terms
-- [ ] I know the correct subject-specific vocabulary for ${subject}
+- [ ] ⭐ I can define **${topic}** accurately using correct ${subject} terminology
+- [ ] ⭐ I can list all ${subs.length} subtopics: ${subs.join(', ')}
+${concs.slice(0, 3).map(c => `- [ ] ⭐ I can define **${c}** precisely`).join('\n')}
+- [ ] I can explain the difference between related terms in ${topic}
 
 ---
 
 ### Understanding (Can I explain it?)
-${subs.map(s => `- [ ] ⭐ I can explain **${s}** and its role within ${topic}
-- [ ] I can give a real-world example of **${s}**`).join('\n')}
+${subs.map((s, i) => `- [ ] ${i < 2 ? '⭐ ' : ''}I can explain **${s}** and its role within ${topic}
+${objs[i] ? `- [ ] I can demonstrate: "${objs[i].substring(0, 70)}..."` : `- [ ] I can give a real-world example of **${s}** in ${subject}`}`).join('\n')}
 
 ---
 
-### Application (Can I use it in exam questions?)
-- [ ] ⭐ I can answer a 2-mark "State" question on ${topic}
-- [ ] ⭐ I can answer a 4-mark "Explain" question on ${topic}
-- [ ] I can answer a 6-mark "Evaluate" or "Assess" question on ${topic}
+### Exam Application (Can I answer exam questions?)
+- [ ] ⭐ I can answer a 2-mark "${descCmd}" question on ${topic}
+- [ ] ⭐ I can answer a 4-mark "${primaryCmd}" question on ${topic}
+- [ ] I can answer a 6-mark "${evalCmd}" question on ${topic}
 - [ ] I can apply ${topic} to an unfamiliar exam scenario
 
 ---
 
-### Analysis & Evaluation
-- [ ] I can compare two approaches or aspects within ${topic}
-- [ ] I can evaluate the significance of ${topic} in ${subject}
-- [ ] I can construct a balanced argument with evidence
-- [ ] I can write a supported conclusion
+### Command Word Mastery
+${cmdWords.slice(0, 4).map(cw => `- [ ] I know what "*${cw}*" requires and can answer ${cw.toLowerCase()} questions on ${topic}`).join('\n')}
 
 ---
 
-### Exam Technique
-- [ ] I know what "Describe," "Explain," and "Evaluate" require
-- [ ] I allocate time correctly (1 min per mark)
-- [ ] I use ${subject}-specific terminology throughout my answers
-- [ ] I check my answers include all marking points
-
----
-
-### ⭐ Priority Items (do these first!)
-The starred items (⭐) above are high-priority — master these before moving on to lower-weight topics.`,
+### ⭐ Priority Revision Order
+${hasCurriculum ? `Focus on these first (highest exam weight):\n${subs.slice(0, 2).map((s, i) => `${i + 1}. **${s}** — ${objs[i] ? objs[i].substring(0, 60) + '...' : 'core exam concept'}`).join('\n')}` : `Focus on starred items first — they cover the highest-mark question types.`}`,
     };
 
     const fn = templates[taskType] || templates['concept-learning'];
@@ -504,70 +492,138 @@ The starred items (⭐) above are high-priority — master these before moving o
   },
 
   // ── quiz question ──────────────────────────────────────────────────────────
-  generateQuiz({ subject, topic, subtopics }) {
-    const subs = subtopics || ['Core concepts', 'Key principles', 'Applications'];
-    const questionTypes = [
-      {
-        question: `Explain the significance of ${topic} in ${subject}, referring to at least TWO key principles. [4 marks]`,
-        marks: 4,
-        modelAnswer: `Award 1 mark each for up to 4 valid points:\n• Correct definition of ${topic} in the context of ${subject}\n• Explanation of the first key principle with supporting detail\n• Explanation of the second key principle with supporting detail\n• Application to a relevant context or real-world example`,
-        keyPoints: [
-          `Definition of ${topic} within ${subject}`,
-          `First key principle with explanation`,
-          `Second key principle with explanation`,
-          `Application or contextual example`,
-        ],
-        difficulty: 'medium',
-        commandWords: ['Explain', 'Referring to'],
-        conceptsTested: [topic, subs[0]],
-      },
-      {
-        question: `Describe how ${subs[0] || 'the main component'} functions within the context of ${topic}. [3 marks]`,
-        marks: 3,
-        modelAnswer: `Award 1 mark each for:\n• What ${subs[0]} is (definition/identification)\n• How it functions or operates within ${topic}\n• The effect or outcome of this function`,
-        keyPoints: [
-          `Definition/identification of ${subs[0]}`,
-          `Mechanism of function within ${topic}`,
-          `Effect or outcome`,
-        ],
-        difficulty: 'low',
-        commandWords: ['Describe'],
-        conceptsTested: [topic, subs[0]],
-      },
-      {
-        question: `Evaluate the importance of ${topic} in determining outcomes in ${subject}. Use evidence to support your answer. [6 marks]`,
-        marks: 6,
-        modelAnswer: `Award up to 6 marks:\n• AO1 (2 marks): Accurate knowledge — define ${topic}, state 2+ key features\n• AO2 (2 marks): Application — use specific examples showing how ${topic} affects outcomes\n• AO3 (2 marks): Evaluation — identify limitations, compare to alternative explanations, reach a supported conclusion`,
-        keyPoints: [
-          `Knowledge: definition and key features of ${topic}`,
-          `Application: specific example(s) of ${topic} in action`,
-          `Analysis: explanation of how ${topic} determines outcomes`,
-          `Evaluation: consideration of limitations or alternative factors`,
-          `Conclusion: supported judgement on the importance of ${topic}`,
-        ],
-        difficulty: 'high',
-        commandWords: ['Evaluate', 'Use evidence'],
-        conceptsTested: [topic, subs[0], subs[1] || 'Applications'],
-      },
-      {
-        question: `Calculate or determine the outcome when ${topic} principles are applied to the following scenario: A student is asked to demonstrate understanding of ${subs[0] || 'the key concept'} in an unfamiliar context. Outline the steps you would take. [5 marks]`,
-        marks: 5,
-        modelAnswer: `Award 1 mark each for:\n• Identify the relevant aspect of ${topic}\n• State the appropriate method or framework\n• Apply the method correctly to the scenario\n• Check or verify the result\n• State a clear, justified conclusion`,
-        keyPoints: [
-          `Identify relevant aspect of ${topic}`,
-          `State appropriate method/framework`,
-          `Correct application of method`,
-          `Verification of result`,
-          `Clear justified conclusion`,
-        ],
-        difficulty: 'medium',
-        commandWords: ['Calculate', 'Determine', 'Outline'],
-        conceptsTested: [topic, subs[0]],
-      },
-    ];
-    // Rotate question type based on topic hash for variety
-    const idx = topic.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % questionTypes.length;
-    const q = questionTypes[idx];
+  generateQuiz({ subject, topic, subtopics, learningObjectives, concepts, commandWords, difficulty, performanceContext }) {
+    // Use real curriculum data if available, fallback to generic placeholders
+    const subs = subtopics?.length ? subtopics : ['Core concepts', 'Key principles', 'Applications'];
+    const objs = learningObjectives || [];
+    const concs = concepts?.length ? concepts : subs;
+    const cmdWords = commandWords?.length ? commandWords : ['Explain', 'Describe', 'Calculate', 'Evaluate', 'Outline'];
+    const hasCurriculum = !!(subtopics?.length || learningObjectives?.length || concepts?.length);
+
+    // Pick a command word from actual past paper patterns
+    const primaryCmd = cmdWords[0] || 'Explain';
+    const secondaryCmd = cmdWords[1] || 'Describe';
+    const evalCmd = cmdWords.find(w => /eval|assess|discuss|analys/i.test(w)) || 'Evaluate';
+
+    // Build objective-specific content for questions
+    const mainObj = objs[0] || `understand the core principles of ${topic}`;
+    const sub1 = subs[0] || topic;
+    const sub2 = subs[1] || `the application of ${topic}`;
+    const sub3 = subs[2] || `evaluation of ${topic}`;
+    const conc1 = concs[0] || sub1;
+    const conc2 = concs[1] || sub2;
+
+    // Determine marks based on difficulty
+    const diffLevel = difficulty || 'medium';
+    let questionTypes;
+
+    if (diffLevel === 'easy') {
+      questionTypes = [
+        {
+          question: `State the meaning of ${conc1} in the context of ${subject}. [2 marks]`,
+          marks: 2,
+          modelAnswer: `Award 1 mark each for up to 2 valid points:\n• A correct identification/definition of ${conc1} within ${subject}\n• A supporting detail, example, or clarification`,
+          keyPoints: [`Definition of ${conc1}`, `Supporting detail or example`],
+          difficulty: 'easy',
+          commandWords: ['State'],
+          conceptsTested: [conc1, topic],
+        },
+        {
+          question: `${secondaryCmd} what is meant by ${sub1} as part of ${topic} in ${subject}. [3 marks]`,
+          marks: 3,
+          modelAnswer: `Award 1 mark each for:\n• What ${sub1} is (definition with correct terminology)\n• How it operates or functions within ${topic}\n• An example or real-world application`,
+          keyPoints: [`Definition of ${sub1}`, `Mechanism or process`, `Example or application`],
+          difficulty: 'easy',
+          commandWords: [secondaryCmd],
+          conceptsTested: [sub1, conc1],
+        },
+      ];
+    } else if (diffLevel === 'hard') {
+      questionTypes = [
+        {
+          question: `${evalCmd} the significance of ${conc1} in ${topic} for ${subject}. Refer to ${sub1} and ${sub2} in your answer. [6 marks]`,
+          marks: 6,
+          modelAnswer: hasCurriculum
+            ? `Award up to 6 marks:\n• AO1 (2 marks): Accurate knowledge — define ${conc1}, state 2+ key features linked to ${sub1} and ${sub2}\n• AO2 (2 marks): Application — specific examples showing how ${conc1} determines outcomes in ${topic}\n• AO3 (2 marks): Evaluation — limitations, alternative perspectives, supported conclusion`
+            : `Award up to 6 marks:\n• AO1 (2 marks): Accurate knowledge — define ${topic}, state 2+ key features\n• AO2 (2 marks): Application — specific examples showing ${topic} in action\n• AO3 (2 marks): Evaluation — limitations, comparison to alternatives, supported conclusion`,
+          keyPoints: [
+            `Knowledge: definition and key features of ${conc1}`,
+            `Link to ${sub1}: specific mechanism or principle`,
+            `Link to ${sub2}: specific mechanism or principle`,
+            `Application: example showing significance in context`,
+            `Evaluation: limitation or counterargument considered`,
+            `Conclusion: supported judgement with evidence`,
+          ],
+          difficulty: 'hard',
+          commandWords: [evalCmd, 'Refer to'],
+          conceptsTested: [conc1, sub1, sub2, topic],
+        },
+      ];
+    } else {
+      // Medium difficulty — the default
+      questionTypes = [
+        {
+          question: `${primaryCmd} the significance of ${conc1} in ${subject}, referring to ${sub1}${sub2 !== sub1 ? ' and ' + sub2 : ''}. [4 marks]`,
+          marks: 4,
+          modelAnswer: hasCurriculum
+            ? `Award 1 mark each for up to 4 valid points:\n• Correct definition or identification of ${conc1} in ${subject}\n• Explanation of how ${sub1} relates to ${conc1}, with mechanism\n${sub2 !== sub1 ? `• Explanation of ${sub2}'s role or contribution\n` : ''}• Application to a relevant context or example`
+            : `Award 1 mark each for up to 4 valid points:\n• Correct definition of ${topic} in the context of ${subject}\n• Explanation of the first key principle with supporting detail\n• Explanation of the second key principle with supporting detail\n• Application to a relevant context or real-world example`,
+          keyPoints: hasCurriculum ? [
+            `Definition/identification of ${conc1} within ${subject}`,
+            `${sub1}: mechanism and significance`,
+            sub2 !== sub1 ? `${sub2}: role or contribution` : `Application of ${conc1} in context`,
+            `Supporting example or real-world application`,
+          ] : [
+            `Definition of ${topic} within ${subject}`,
+            `First key principle with explanation`,
+            `Second key principle with explanation`,
+            `Application or contextual example`,
+          ],
+          difficulty: 'medium',
+          commandWords: [primaryCmd],
+          conceptsTested: hasCurriculum ? [conc1, sub1, topic] : [topic, sub1],
+        },
+        {
+          question: `${secondaryCmd} the process by which ${sub1} contributes to ${topic} in ${subject}. [3 marks]`,
+          marks: 3,
+          modelAnswer: `Award 1 mark each for:\n• What ${sub1} is (definition with correct terminology)\n• How it functions or operates within ${topic}\n• The effect or outcome this produces`,
+          keyPoints: [
+            `Definition/identification of ${sub1}`,
+            `Mechanism of function within ${topic}`,
+            `Effect or outcome`,
+          ],
+          difficulty: 'medium',
+          commandWords: [secondaryCmd],
+          conceptsTested: [sub1, topic],
+        },
+        {
+          question: objs.length
+            ? (() => {
+                // Strip leading verb from learning objective to avoid duplication (e.g., "Describe the stages" → "the stages")
+                const obj0 = objs[0].replace(/^(Describe|Explain|Define|Identify|Outline|State|Analyse|Evaluate|Compare|Discuss|Calculate|Determine|Suggest)\s+/i, '');
+                return `${primaryCmd} ${obj0.charAt(0).toLowerCase() + obj0.slice(1)}. Use examples from ${sub1}${sub2 !== sub1 ? ' and ' + sub2 : ''}. [5 marks]`;
+              })()
+            : `${primaryCmd} how ${sub1} and ${sub2 !== sub1 ? sub2 : 'its applications'} relate to ${topic} in ${subject}. [5 marks]`,
+          marks: 5,
+          modelAnswer: `Award 1 mark each for:\n• Identification of the relevant aspect of ${topic}\n• Explanation of ${sub1} with mechanism\n${sub2 !== sub1 ? `• Explanation of ${sub2} with mechanism\n` : ''}• Application with specific example\n• Clear, justified conclusion linking back to the question`,
+          keyPoints: [
+            `Relevant aspect of ${topic} identified`,
+            `${sub1}: explanation with mechanism`,
+            sub2 !== sub1 ? `${sub2}: explanation with mechanism` : `Application with specific example`,
+            `Specific example from ${subject}`,
+            `Justified conclusion`,
+          ],
+          difficulty: 'medium',
+          commandWords: [primaryCmd],
+          conceptsTested: hasCurriculum ? [conc1, conc2, topic] : [topic, sub1],
+        },
+      ];
+    }
+
+    // Select question type with variety via hash
+    const availableTypes = questionTypes;
+    const idx = topic.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % availableTypes.length;
+    const q = availableTypes[idx];
     return { id: `q-${Date.now()}`, subject, topic, ...q };
   },
 
@@ -836,25 +892,26 @@ app.post('/api/ai/tutor', async (req, res) => {
     }
 
     let contextInfo = '';
-    if (subject) contextInfo += `The student is currently studying ${subject}.`;
-    if (topic) contextInfo += ` They are on the topic: ${topic}.`;
+    if (subject) contextInfo += `The student is studying **${subject}**.`;
+    if (topic) contextInfo += ` Current topic: **${topic}**.`;
 
-    const systemPrompt = `You are StudySync AI, a personal exam strategist and tutor. ${contextInfo}${syllabusContext || ''}
+    const systemPrompt = `You are StudySync AI — a personal exam preparation tutor and strategist.
+${contextInfo}
 
-Core principles:
-1. **Syllabus Authority**: All teaching must map to syllabus topics.
-2. **Exam Focus**: Prioritise what examiners test most frequently.
-3. **Efficient Learning**: Help students study smarter.
+CORE RULES:
+1. **Topic-First**: Only teach content relevant to the current topic (${topic || 'the active topic'}). Do not introduce new topics.
+2. **Exam-Oriented**: Frame ALL explanations in terms of how they appear in exams — command words, mark allocations, marking criteria.
+3. **Syllabus Authority**: If curriculum/syllabus data is provided below, ALL your answers must align with it precisely.
+4. **Teaching Method**: For each concept: (a) brief explanation, (b) exam relevance, (c) exam-style question, (d) model answer with marking points.
+5. **Adaptive**: If student is struggling, simplify and break into steps. If performing well, introduce complexity.
+6. **Marking Simulation**: When evaluating answers, give feedback in examiner style: "Method correct. Missing [specific step]. Estimated: [x]/[y] marks."
 
-Teaching style:
-- Be encouraging but direct
-- Use precise academic terminology with simple language
-- Give examples that connect to real life
-- Highlight common exam mistakes
-- Structure answers with headers and bullet points
-- Use markdown formatting
-
-When answering: 1) Explain the concept 2) Show exam application 3) Mention related topics`;
+TEACHING STYLE:
+- Encouraging but direct and exam-focused
+- Use precise ${subject || 'subject'} terminology
+- Use markdown formatting (headers, bold, bullet points)
+- Highlight common exam mistakes specific to this topic
+${syllabusContext || ''}`;
 
     const stream = await callAIStream([{ role: 'system', content: systemPrompt }, ...messages]);
 
@@ -899,19 +956,137 @@ Feel free to ask a follow-up question or request a specific exam question on thi
 // ─────────────────────────────────────────────────────────────────────────────
 //  POST /api/ai/generate-quiz  (JSON)
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Parse curriculum context string to extract structured data for quiz generation.
+ * This lets the fallback engine use real syllabus data even without the AI API.
+ */
+function parseCurriculumContext(curriculumContext) {
+  if (!curriculumContext) return {};
+  const ctx = String(curriculumContext);
+  const result = {};
+
+  // Extract subtopics
+  const subtopicMatch = ctx.match(/Subtopics:\s*(.+)/);
+  if (subtopicMatch) {
+    result.subtopics = subtopicMatch[1].split(/\s*\|\s*/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Extract learning objectives
+  const objectives = [];
+  const objSection = ctx.match(/Learning Objectives:\n([\s\S]*?)(?:\n===|\n[A-Z]|$)/);
+  if (objSection) {
+    const lines = objSection[1].split('\n').filter(l => l.trim().startsWith('•'));
+    objectives.push(...lines.map(l => l.replace(/^\s*•\s*/, '').trim()));
+  }
+  if (objectives.length) result.learningObjectives = objectives;
+
+  // Extract key concepts
+  const conceptMatch = ctx.match(/Key Concepts:\s*(.+)/);
+  if (conceptMatch) {
+    result.concepts = conceptMatch[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Extract command words from past paper patterns
+  const cmdMatch = ctx.match(/Most Frequent Command Words:\s*(.+)/);
+  if (cmdMatch) {
+    result.commandWords = cmdMatch[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Extract question types
+  const qtMatch = ctx.match(/Question Types Seen:\s*(.+)/);
+  if (qtMatch) {
+    result.questionTypes = qtMatch[1].split(/,\s*/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // Extract avg marks
+  const marksMatch = ctx.match(/Average Marks per Paper:\s*(\d+)/);
+  if (marksMatch) result.avgMarks = parseInt(marksMatch[1]);
+
+  // Extract difficulty distribution
+  const diffMatch = ctx.match(/Difficulty Distribution:\s*(.+)/);
+  if (diffMatch) result.difficultyHint = diffMatch[1];
+
+  // Extract past paper question patterns
+  const pastQs = [];
+  const qMatches = ctx.matchAll(/Q(\d+):\s*\[([^\]]+)\]\s*Command words:\s*([^|]+)\|\s*Concepts:\s*(.+)/g);
+  for (const m of qMatches) {
+    pastQs.push({
+      info: m[2].trim(),
+      commandWords: m[3].trim().split(/,\s*/),
+      concepts: m[4].trim().split(/,\s*/),
+    });
+  }
+  if (pastQs.length) result.pastPaperQuestions = pastQs;
+
+  return result;
+}
+
 app.post('/api/ai/generate-quiz', async (req, res) => {
   try {
-    const { subject, topic, topicContext, curriculumContext, examWeight } = req.body;
+    const {
+      subject, topic, topicContext,
+      curriculumContext, examWeight,
+      difficulty, preferredQuestionType,
+      performanceContext, avoidQuestionTypes,
+    } = req.body;
     if (!subject || !topic) return res.status(400).json({ error: 'subject and topic are required' });
 
-    const systemPrompt = `You are an expert exam question generator for ${subject}.
-Create realistic exam-style questions. Respond with ONLY valid JSON:
-{"question":"string","marks":5,"modelAnswer":"string","keyPoints":["string"],"difficulty":"medium","commandWords":["string"],"conceptsTested":["string"]}`;
+    // Parse curriculum context to extract structured data
+    const parsed = parseCurriculumContext(curriculumContext);
+    const subtopics = parsed.subtopics || (topicContext ? [topicContext] : []);
+    const learningObjs = parsed.learningObjectives || [];
+    const concepts = parsed.concepts || [];
+    const pastCmdWords = parsed.commandWords || [];
+    const pastQTypes = parsed.questionTypes || [];
+    const hasCurriculumData = !!(curriculumContext && (subtopics.length || learningObjs.length || pastCmdWords.length));
 
-    let userPrompt = `Generate one exam-style question:\nSubject: ${subject}\nTopic: ${topic}`;
-    if (topicContext) userPrompt += `\n${topicContext}`;
-    if (examWeight) userPrompt += `\nExam weight: ${examWeight}%`;
-    if (curriculumContext) userPrompt += `\n\nCurriculum:\n${String(curriculumContext).substring(0, 3000)}`;
+    const systemPrompt = `You are an expert Cambridge/IB/A-Level exam question generator specialising in ${subject}.
+
+Your task: Generate ONE realistic exam-style question grounded in the student's ACTUAL syllabus and past paper patterns.
+
+STRICT RULES:
+1. The question MUST be specific to the exact topic/subtopics provided — NOT generic
+2. Use the exact command words, mark allocations, and question types from the past paper patterns below
+3. The model answer MUST match the question precisely with mark-point-by-mark-point breakdown
+4. If subtopics/concepts are provided, the question MUST test those specifically
+5. Vary the question from generic "explain X" — use real exam scenarios, data, diagrams descriptions, calculations
+
+Respond with ONLY valid JSON (no markdown wrapping):
+{"question":"string","marks":number,"modelAnswer":"string","keyPoints":["string"],"difficulty":"easy|medium|hard","commandWords":["string"],"conceptsTested":["string"]}`;
+
+    // Build a rich, curriculum-grounded user prompt
+    let userPrompt = `Generate one exam-style question for:\nSubject: ${subject}\nTopic: ${topic}`;
+
+    if (subtopics.length) userPrompt += `\nSubtopics to test: ${subtopics.slice(0, 6).join(', ')}`;
+    if (learningObjs.length) userPrompt += `\nLearning objectives:\n${learningObjs.slice(0, 4).map(o => `  • ${o}`).join('\n')}`;
+    if (concepts.length) userPrompt += `\nKey concepts: ${concepts.slice(0, 6).join(', ')}`;
+    if (examWeight) userPrompt += `\nExam weight: ${examWeight}% of paper`;
+    if (difficulty) userPrompt += `\nRequired difficulty: ${difficulty}`;
+    if (preferredQuestionType) userPrompt += `\nPreferred question type: ${preferredQuestionType}`;
+
+    if (pastCmdWords.length) {
+      userPrompt += `\n\nPAST PAPER DATA (use these patterns):`;
+      userPrompt += `\nCommand words used in past papers: ${pastCmdWords.join(', ')}`;
+    }
+    if (pastQTypes.length) userPrompt += `\nQuestion types from past papers: ${pastQTypes.join(', ')}`;
+    if (parsed.avgMarks) userPrompt += `\nTypical mark allocation: ${parsed.avgMarks} marks`;
+    if (parsed.difficultyHint) userPrompt += `\nPast paper difficulty: ${parsed.difficultyHint}`;
+
+    if (parsed.pastPaperQuestions?.length) {
+      userPrompt += `\n\nSAMPLE PAST PAPER QUESTION PATTERNS (model your question after these):`;
+      parsed.pastPaperQuestions.slice(0, 3).forEach((q, i) => {
+        userPrompt += `\nPattern ${i+1}: [${q.info}] Command: ${q.commandWords.join('/')} | Tests: ${q.concepts.join(', ')}`;
+      });
+    }
+
+    if (performanceContext) userPrompt += `\n\nSTUDENT PERFORMANCE:\n${performanceContext}`;
+    if (avoidQuestionTypes?.length) userPrompt += `\nAVOID repeating these question types: ${avoidQuestionTypes.join(', ')}`;
+
+    if (curriculumContext && !hasCurriculumData) {
+      // Pass raw context as last resort
+      userPrompt += `\n\nSyllabus context:\n${String(curriculumContext).substring(0, 2000)}`;
+    }
 
     const completion = await callAI(
       [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }],
@@ -931,15 +1106,27 @@ Create realistic exam-style questions. Respond with ONLY valid JSON:
       return res.json(questionData);
     }
 
-    // Local fallback
-    const subtopics = topicContext ? [topicContext.substring(0, 50)] : undefined;
-    const questionData = fallback.generateQuiz({ subject, topic, subtopics });
+    // ── Local curriculum-aware fallback ───────────────────────────────────────
+    const questionData = fallback.generateQuiz({
+      subject, topic,
+      subtopics: subtopics.length ? subtopics : undefined,
+      learningObjectives: learningObjs.length ? learningObjs : undefined,
+      concepts: concepts.length ? concepts : undefined,
+      commandWords: pastCmdWords.length ? pastCmdWords : undefined,
+      difficulty,
+      performanceContext,
+    });
     res.json(questionData);
   } catch (err) {
-    // Even on error, return a local fallback question
     const { subject = 'Your Subject', topic = 'This Topic' } = req.body || {};
     console.error('[generate-quiz] Falling back to local:', err?.message);
-    res.json(fallback.generateQuiz({ subject, topic }));
+    const parsed = parseCurriculumContext(req.body?.curriculumContext);
+    res.json(fallback.generateQuiz({
+      subject, topic,
+      subtopics: parsed.subtopics,
+      concepts: parsed.concepts,
+      commandWords: parsed.commandWords,
+    }));
   }
 });
 
@@ -947,27 +1134,99 @@ Create realistic exam-style questions. Respond with ONLY valid JSON:
 //  POST /api/ai/generate-task-content  (streaming SSE)
 // ─────────────────────────────────────────────────────────────────────────────
 const TASK_PROMPTS = {
-  'micro-revision': `You are an expert tutor. Create a 2-3 minute micro-revision session with 3 questions and brief model answers. Start with a 1-sentence refresher. Use markdown.`,
-  'concept-learning': `You are an expert tutor. Create a concept deep-dive: WHY it matters for exams, step-by-step explanation, real example, common mistakes, 2 key takeaways. Use markdown headers.`,
-  'active-recall': `You are an expert tutor. Create 5 active-recall questions (increasing difficulty): definitions → applications → analysis. Each has a hidden model answer. Use markdown.`,
-  'exam-question': `You are an expert exam writer. Write one realistic exam question with marks, command word, and a full model answer / marking scheme. Use markdown.`,
-  'flashcards': `You are an expert tutor. Create 6-8 flashcards: Front (question/term) → Back (answer). Cover key vocabulary and concepts. Format: **Front:** ... | **Back:** ...`,
-  'summary': `You are an expert tutor. Create a comprehensive exam summary: key definitions, essential points (⭐ for high priority), common exam questions, self-test at the end. Use markdown.`,
-  'revision-checklist': `You are an expert tutor. Create a revision checklist with checkboxes (- [ ]), grouped by subtopic, high-priority items marked ⭐. Include "I can explain..." and "I can apply..." items. Use markdown.`,
+  'micro-revision': `You are an expert exam tutor. Create a focused 2-3 minute micro-revision session.
+CRITICAL: Use ONLY the exact subtopics, learning objectives, and concepts provided — do NOT generate generic content.
+Include 3 exam-style questions with model answers. Use the past paper patterns (command words, mark allocations) provided.
+Format: markdown with headers. Start with a 1-sentence refresher for the specific topic.`,
+
+  'concept-learning': `You are an expert exam tutor. Create a concept deep-dive for exam preparation.
+CRITICAL: Base ALL content on the exact subtopics and learning objectives provided — NOT generic explanations.
+Structure: WHY this specific topic matters in exams → step-by-step explanation of each subtopic → real exam-style example → common mistakes for THIS topic → 2 key takeaways.
+If past paper data is provided, reference the actual exam patterns. Use markdown headers.`,
+
+  'active-recall': `You are an expert exam tutor. Create 5 active-recall questions in increasing difficulty.
+CRITICAL: Questions MUST test the specific subtopics, concepts, and learning objectives provided.
+Use command words from the past paper patterns if available (e.g., "Define", "Explain", "Evaluate").
+Format: Level 1 (Knowledge) → Level 2 (Understanding) → Level 3 (Application) → Level 4 (Analysis) → Level 5 (Evaluation).
+Each question has a hidden model answer using <details><summary>Model Answer</summary>...</details>. Use markdown.`,
+
+  'exam-question': `You are an expert exam question writer. Write ONE realistic exam question.
+CRITICAL: The question MUST be specific to the subtopics and concepts provided — NOT generic.
+Use the command words and mark allocations from past paper patterns if provided.
+Include: the question, mark allocation, full model answer with mark-by-mark breakdown, and examiner tips.
+Use markdown.`,
+
+  'flashcards': `You are an expert tutor. Create 6-8 revision flashcards.
+CRITICAL: Each flashcard MUST cover a specific subtopic, concept, or learning objective from the data provided.
+If subtopics are given, create at least one card per subtopic.
+Format each as:
+**Card N: [Subtopic/Concept Name]**
+**Front:** [question or term]
+**Back:** [precise answer using subject terminology]
+---`,
+
+  'summary': `You are an expert exam tutor. Create a comprehensive revision summary.
+CRITICAL: The summary MUST be structured around the exact subtopics and learning objectives provided.
+Include: key definitions for each subtopic, essential exam points (⭐ high priority), exam-style questions modelled on past paper patterns, quick self-test.
+If past paper command words are provided, include them in the exam questions section. Use markdown.`,
+
+  'revision-checklist': `You are an expert tutor. Create a detailed revision checklist.
+CRITICAL: Checkboxes MUST reference the exact subtopics and learning objectives provided — NOT generic items.
+Group by subtopic (use the actual subtopic names). Mark highest-priority items ⭐.
+Include "I can define...", "I can explain...", "I can apply..." and "I can evaluate..." items for each subtopic.
+If past paper data is provided, include exam technique items referencing the actual command words. Use markdown.`,
 };
 
 app.post('/api/ai/generate-task-content', async (req, res) => {
   try {
-    const { taskType, subject, topic, subtopics, examWeight, curriculumContext } = req.body;
+    const {
+      taskType, subject, topic,
+      subtopics, learningObjectives, concepts,
+      examWeight, curriculumContext, performanceContext, masteryStatus, difficulty,
+    } = req.body;
     if (!taskType || !subject || !topic) {
       return res.status(400).json({ error: 'taskType, subject, and topic are required' });
     }
 
+    // Parse curriculum context for structured data
+    const parsed = parseCurriculumContext(curriculumContext);
+    const effectiveSubtopics = subtopics?.length ? subtopics : (parsed.subtopics || []);
+    const effectiveObjectives = learningObjectives?.length ? learningObjectives : (parsed.learningObjectives || []);
+    const effectiveConcepts = concepts?.length ? concepts : (parsed.concepts || []);
+    const effectiveCmdWords = parsed.commandWords || [];
+    const hasCurriculumData = !!(effectiveSubtopics.length || effectiveObjectives.length || effectiveCmdWords.length);
+
     const systemPrompt = TASK_PROMPTS[taskType] || TASK_PROMPTS['concept-learning'];
+
+    // Build a rich, curriculum-grounded user prompt
     let userPrompt = `Subject: ${subject}\nTopic: ${topic}`;
-    if (subtopics?.length) userPrompt += `\nSubtopics: ${subtopics.join(', ')}`;
-    if (examWeight) userPrompt += `\nExam weight: ${examWeight}%`;
-    if (curriculumContext) userPrompt += `\n\nCurriculum context:\n${String(curriculumContext).substring(0, 3000)}`;
+    if (effectiveSubtopics.length) userPrompt += `\nSubtopics: ${effectiveSubtopics.join(', ')}`;
+    if (effectiveObjectives.length) userPrompt += `\nLearning Objectives:\n${effectiveObjectives.slice(0, 5).map(o => `  • ${o}`).join('\n')}`;
+    if (effectiveConcepts.length) userPrompt += `\nKey Concepts: ${effectiveConcepts.join(', ')}`;
+    if (examWeight) userPrompt += `\nExam Weight: ${examWeight}% of paper`;
+
+    if (effectiveCmdWords.length) {
+      userPrompt += `\n\nPast Paper Patterns:`;
+      userPrompt += `\nCommand Words Used: ${effectiveCmdWords.join(', ')}`;
+    }
+    if (parsed.questionTypes?.length) userPrompt += `\nQuestion Types: ${parsed.questionTypes.join(', ')}`;
+    if (parsed.avgMarks) userPrompt += `\nTypical Marks: ${parsed.avgMarks}`;
+
+    if (parsed.pastPaperQuestions?.length) {
+      userPrompt += `\nPast Question Patterns:`;
+      parsed.pastPaperQuestions.slice(0, 2).forEach((q, i) => {
+        userPrompt += `\n  [${q.info}] ${q.commandWords.join('/')} — Tests: ${q.concepts.join(', ')}`;
+      });
+    }
+
+    if (masteryStatus) userPrompt += `\nStudent Mastery: ${masteryStatus}`;
+    if (difficulty) userPrompt += `\nContent Difficulty: ${difficulty}`;
+    if (performanceContext) userPrompt += `\n\nPerformance Context: ${performanceContext}`;
+
+    // Always include raw curriculum context for extra grounding
+    if (curriculumContext) {
+      userPrompt += `\n\nFULL CURRICULUM DATA:\n${String(curriculumContext).substring(0, 2500)}`;
+    }
 
     const stream = await callAIStream([
       { role: 'system', content: systemPrompt },
@@ -977,14 +1236,29 @@ app.post('/api/ai/generate-task-content', async (req, res) => {
     if (stream) {
       await streamToResponse(stream, res);
     } else {
-      const content = fallback.taskContent({ taskType, subject, topic, subtopics, examWeight });
+      // Use curriculum-aware fallback
+      const content = fallback.taskContent({
+        taskType, subject, topic,
+        subtopics: effectiveSubtopics.length ? effectiveSubtopics : undefined,
+        learningObjectives: effectiveObjectives.length ? effectiveObjectives : undefined,
+        concepts: effectiveConcepts.length ? effectiveConcepts : undefined,
+        commandWords: effectiveCmdWords.length ? effectiveCmdWords : undefined,
+        examWeight,
+        masteryStatus,
+        hasCurriculumData,
+      });
       await streamString(content, res);
     }
   } catch (err) {
-    // Even on error, stream local fallback
     const { taskType = 'concept-learning', subject = 'Your Subject', topic = 'This Topic', subtopics } = req.body || {};
     console.error('[generate-task-content] Falling back to local:', err?.message);
-    const content = fallback.taskContent({ taskType, subject, topic, subtopics });
+    const parsed = parseCurriculumContext(req.body?.curriculumContext);
+    const content = fallback.taskContent({
+      taskType, subject, topic,
+      subtopics: subtopics?.length ? subtopics : parsed.subtopics,
+      concepts: parsed.concepts,
+      commandWords: parsed.commandWords,
+    });
     if (!res.headersSent) await streamString(content, res);
     else res.end();
   }

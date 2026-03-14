@@ -1,21 +1,32 @@
 import { useState, useRef, useEffect } from 'react';
-import { Send, Loader2, Bot, User, Sparkles, Trash2 } from 'lucide-react';
+import { Send, Loader2, Bot, User, Sparkles, Trash2, BookOpen } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { ScrollArea } from './ui/scroll-area';
 import { useAITutor } from '../hooks/useAITutor';
+import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
 
 interface ChatPanelProps {
   subject?: string;
+  subjectId?: string;
   topic?: string;
   className?: string;
 }
 
-export function ChatPanel({ subject, topic, className }: ChatPanelProps) {
+export function ChatPanel({ subject, subjectId, topic, className }: ChatPanelProps) {
   const [input, setInput] = useState('');
-  const { messages, isLoading, error, sendMessage, clearMessages } = useAITutor({ subject, topic });
+
+  // Fetch curriculum context so the tutor can give topic-specific answers
+  const { curriculumContext, isLoaded: contextLoaded } = useSyllabusContext(subjectId, topic);
+
+  // Build a concise tutor system context from the curriculum data
+  const syllabusContext = curriculumContext
+    ? `\n\nCURRICULUM CONTEXT FOR THIS SESSION:\n${curriculumContext.substring(0, 2000)}`
+    : '';
+
+  const { messages, isLoading, error, sendMessage, clearMessages } = useAITutor({ subject, topic, syllabusContext });
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const prevContextRef = useRef({ subject, topic });
@@ -72,6 +83,11 @@ export function ChatPanel({ subject, topic, className }: ChatPanelProps) {
             {subject && (
               <p className="text-xs text-muted-foreground">
                 {subject}{topic ? ` • ${topic}` : ''}
+                {curriculumContext && (
+                  <span className="ml-1 text-accent inline-flex items-center gap-0.5">
+                    <BookOpen className="h-2.5 w-2.5" /> syllabus loaded
+                  </span>
+                )}
               </p>
             )}
           </div>
