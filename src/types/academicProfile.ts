@@ -69,6 +69,7 @@ export interface LibraryResource {
   isTutorial?: boolean;
   watchCount?: number;
   completionRate?: number;
+  videoUrl?: string;
 }
 
 // ─── Tutor Ranking ────────────────────────────────────────────────────────────

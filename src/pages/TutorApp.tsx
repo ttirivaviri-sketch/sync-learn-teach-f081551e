@@ -280,21 +280,25 @@ const TutorApp = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header
-        className="text-white shadow-md"
+        className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
         style={{
           background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)",
         }}
       >
-        {/* Row 1: Logo + Icons */}
-        <div className="flex items-center justify-between px-5 pt-4 pb-0">
-          {/* Logo */}
-          <div className="flex items-center shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 sm:px-5">
+          <div className="flex items-center gap-2 min-w-0">
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
               className="w-auto object-contain"
-              style={{ height: "175px", filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))" }}
+              style={{ height: "34px", filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.2))" }}
             />
+            <p
+              className="text-[10px] sm:text-xs font-medium uppercase tracking-[0.12em] truncate"
+              style={{ color: "rgba(255,255,255,0.82)" }}
+            >
+              Education, in sync with your future
+            </p>
           </div>
 
           {/* Action Icons */}
@@ -333,24 +337,10 @@ const TutorApp = () => {
           </div>
         </div>
 
-        {/* Row 2: Slogan */}
-        <div className="px-5 pt-0 pb-3">
-          <p
-            className="text-xs font-semibold tracking-widest uppercase mb-1"
-            style={{ color: "rgba(255,255,255,0.75)", letterSpacing: "0.12em" }}
-          >
-            Education, in sync with your future
-          </p>
-          <h1
-            className="text-2xl font-extrabold leading-tight"
-            style={{ color: "#ffffff", maxWidth: "80%" }}
-          >
-            Confidence Starts Here
-          </h1>
-        </div>
       </header>
 
       {/* Status Banner */}
+      <div className="pt-[56px]" />
       {isOnline && (
         <div className="bg-emerald-500 text-white px-5 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
           <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
