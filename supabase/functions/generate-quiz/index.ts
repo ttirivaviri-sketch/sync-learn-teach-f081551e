@@ -20,38 +20,66 @@ function getAIConfig(): { url: string; key: string; model: string } {
   throw new Error("No AI API key configured.");
 }
 
+function normalizeArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => String(item).trim()).filter(Boolean);
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const ai = getAIConfig();
-    const { subject, topic, topicContext, curriculumContext, examWeight } = await req.json();
+    const {
+      subject,
+      topic,
+      topicContext,
+      curriculumContext,
+      examWeight,
+      preferredQuestionType,
+      avoidQuestionTypes,
+      performanceContext,
+      difficulty,
+      pastPaperStyleNotes,
+    } = await req.json();
 
     if (!subject || !topic) {
       return new Response(JSON.stringify({ error: "subject and topic are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const systemPrompt = `You are an expert exam question generator for ${subject}.
+    const systemPrompt = `You are an elite exam question setter for ${subject}.\n
+Your job is to create ONE exam-style question that mirrors real past-paper style while reinforcing syllabus outcomes.
 
-Create realistic exam-style questions that test understanding, not memorization.
-Use appropriate command words. Include clear mark allocation.
-Provide detailed model answers and key marking points.
+Rules:
+1) Anchor to syllabus outline and topic scope only.
+2) Mimic past-paper patterns: command words, mark allocations, and structure.
+3) Prefer applied and reasoning-heavy questions over recall-only.
+4) If weak areas are provided, target those concepts.
+5) Do not copy any past-paper question verbatim.
 
-IMPORTANT: Respond with ONLY valid JSON matching this schema:
+Return ONLY valid JSON with this exact shape:
 {
-  "question": "Full exam question text [X marks]",
-  "marks": <number>,
-  "modelAnswer": "Detailed model answer",
-  "keyPoints": ["point 1", "point 2"],
+  "question": "string",
+  "marks": 6,
+  "modelAnswer": "string",
+  "keyPoints": ["string"],
   "difficulty": "easy|medium|hard",
-  "commandWords": ["word1"],
-  "conceptsTested": ["concept1"]
+  "commandWords": ["string"],
+  "conceptsTested": ["string"],
+  "syllabusLinks": ["specific syllabus objective or subtopic"]
 }`;
 
-    let userPrompt = `Generate one exam-style question for:\nSubject: ${subject}\nTopic: ${topic}`;
-    if (topicContext) userPrompt += `\n${topicContext}`;
-    if (examWeight) userPrompt += `\nExam weight: ${examWeight}%`;
-    if (curriculumContext) userPrompt += `\n\nCurriculum data:\n${String(curriculumContext).substring(0, 3000)}`;
+    let userPrompt = `Generate one past-paper-style question for:\nSubject: ${subject}\nTopic: ${topic}`;
+    if (topicContext) userPrompt += `\n\nTopic context:\n${String(topicContext).substring(0, 1500)}`;
+    if (curriculumContext) userPrompt += `\n\nSyllabus and past-paper context:\n${String(curriculumContext).substring(0, 3500)}`;
+    if (examWeight) userPrompt += `\n\nExam weighting: ${examWeight}% of total marks.`;
+    if (difficulty) userPrompt += `\nTarget difficulty: ${difficulty}.`;
+    if (preferredQuestionType) userPrompt += `\nPrefer this question style: ${preferredQuestionType}.`;
+    if (Array.isArray(avoidQuestionTypes) && avoidQuestionTypes.length > 0) {
+      userPrompt += `\nAvoid repeating these recent styles: ${avoidQuestionTypes.join(", ")}.`;
+    }
+    if (performanceContext) userPrompt += `\n\nStudent performance context:\n${String(performanceContext).substring(0, 1500)}`;
+    if (pastPaperStyleNotes) userPrompt += `\n\nPast-paper style summary:\n${String(pastPaperStyleNotes).substring(0, 1200)}`;
 
     const response = await fetch(ai.url, {
       method: "POST",
@@ -78,13 +106,28 @@ IMPORTANT: Respond with ONLY valid JSON matching this schema:
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error("AI did not return a question");
 
-    let questionData;
+    let parsed;
     try {
-      questionData = JSON.parse(content);
+      parsed = JSON.parse(content);
     } catch {
       const match = content.match(/\{[\s\S]*\}/);
-      if (match) questionData = JSON.parse(match[0]);
+      if (match) parsed = JSON.parse(match[0]);
       else throw new Error("Could not parse AI response");
+    }
+
+    const questionData = {
+      question: String(parsed?.question || "").trim(),
+      marks: Number(parsed?.marks || 0),
+      modelAnswer: String(parsed?.modelAnswer || "").trim(),
+      keyPoints: normalizeArray(parsed?.keyPoints),
+      difficulty: ["easy", "medium", "hard"].includes(String(parsed?.difficulty)) ? parsed.difficulty : (difficulty || "medium"),
+      commandWords: normalizeArray(parsed?.commandWords),
+      conceptsTested: normalizeArray(parsed?.conceptsTested),
+      syllabusLinks: normalizeArray(parsed?.syllabusLinks),
+    };
+
+    if (!questionData.question || questionData.marks <= 0) {
+      throw new Error("Generated question payload is incomplete");
     }
 
     return new Response(JSON.stringify(questionData), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

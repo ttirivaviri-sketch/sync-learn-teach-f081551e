@@ -20,6 +20,13 @@ function getAIConfig(): { url: string; key: string; model: string } {
   throw new Error("No AI API key configured.");
 }
 
+const GLOBAL_ALIGNMENT_PROMPT = `
+Always align to the provided syllabus context and past-paper patterns.
+- Reinforce learning objectives and core examinable concepts.
+- Mirror exam language (command words, mark-style phrasing), but do not copy questions verbatim.
+- Keep output practical, exam-focused, and age/level appropriate.
+`;
+
 const TASK_PROMPTS: Record<string, string> = {
   "micro-revision": `You are an expert tutor creating a quick micro-revision session.
 Generate 2-3 focused review questions with brief answers for the given topic.
@@ -38,8 +45,9 @@ Create a clear, engaging explanation that:
 
   "active-recall": `You are an expert tutor creating an active recall exercise.
 Generate a self-testing exercise with:
-- 4-5 questions of increasing difficulty
-- Mix of definitions, applications, and analysis
+- 5-6 questions of increasing difficulty
+- At least 3 questions written in past-paper command-word style (e.g., define, explain, compare, calculate, justify)
+- Questions mapped to syllabus subtopics where possible
 - Clear model answers for each
 - Format: Question → Model Answer
 - Use markdown formatting`,
@@ -49,22 +57,24 @@ Generate one realistic exam-style question:
 - Clear mark allocation in brackets
 - Tests higher-order thinking
 - Includes detailed marking scheme
-- Uses command words
+- Uses command words and structure seen in past papers
+- Ends with a short "Syllabus link" line
 - Use markdown formatting`,
 
   "flashcards": `You are an expert tutor creating study flashcards.
-Generate 6-8 flashcards:
-- Front: A question or term
-- Back: Concise answer or definition
-- Focus on key exam vocabulary
-- Format each as: **Front:** ... | **Back:** ...
+Generate 8 flashcards that reinforce syllabus outcomes and past-paper readiness.
+Requirements:
+- At least 4 cards should be past-paper style prompts using command words.
+- At least 4 cards should target key definitions/formulas/concepts from syllabus outline.
+- Keep each answer concise and exam-scoring focused.
+- Format each as exactly: **Front:** ... | **Back:** ...
 - Use markdown formatting`,
 
   "summary": `You are an expert tutor creating exam-focused topic summaries.
 Create a comprehensive yet concise summary that:
 - Lists ALL key points an examiner would expect
 - Highlights definitions, formulas, key terms in bold
-- Includes a "Common Exam Questions" section
+- Includes a "Common Exam Questions" section with past-paper-like stems
 - Ends with a quick self-test (3 questions)
 - Uses markdown formatting`,
 
@@ -74,6 +84,7 @@ Generate a comprehensive checklist that:
 - Groups by sub-topic
 - Marks high-priority items with ⭐
 - Includes "I can explain..." and "I can calculate..." items
+- Includes at least 2 "past-paper practice" checklist items
 - Uses markdown formatting`,
 };
 
@@ -82,18 +93,31 @@ serve(async (req) => {
 
   try {
     const ai = getAIConfig();
-    const { taskType, subject, topic, subtopics, examWeight, curriculumContext } = await req.json();
+    const {
+      taskType,
+      subject,
+      topic,
+      subtopics,
+      examWeight,
+      curriculumContext,
+      performanceContext,
+      masteryStatus,
+      difficulty,
+    } = await req.json();
 
     if (!taskType || !subject || !topic) {
       return new Response(JSON.stringify({ error: "taskType, subject, and topic are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const systemPrompt = TASK_PROMPTS[taskType] || TASK_PROMPTS["concept-learning"];
+    const systemPrompt = `${TASK_PROMPTS[taskType] || TASK_PROMPTS["concept-learning"]}\n\n${GLOBAL_ALIGNMENT_PROMPT}`;
 
     let userPrompt = `Subject: ${subject}\nTopic: ${topic}`;
     if (subtopics?.length) userPrompt += `\nSubtopics: ${subtopics.join(", ")}`;
     if (examWeight) userPrompt += `\nExam weight: ${examWeight}% of total marks`;
-    if (curriculumContext) userPrompt += `\n\nCurriculum context:\n${curriculumContext}`;
+    if (difficulty) userPrompt += `\nTarget difficulty: ${difficulty}`;
+    if (masteryStatus) userPrompt += `\nStudent mastery status: ${masteryStatus}`;
+    if (performanceContext) userPrompt += `\nStudent performance context: ${String(performanceContext).substring(0, 1200)}`;
+    if (curriculumContext) userPrompt += `\n\nCurriculum and past-paper context:\n${String(curriculumContext).substring(0, 4000)}`;
 
     const response = await fetch(ai.url, {
       method: "POST",
