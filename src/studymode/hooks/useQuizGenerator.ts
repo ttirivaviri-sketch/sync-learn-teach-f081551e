@@ -29,6 +29,7 @@ export interface QuizQuestion {
   commandWord?: string;
   /** Concepts being tested */
   conceptsTested?: string[];
+  syllabusLinks?: string[];
 }
 
 interface UseQuizGeneratorOptions {
@@ -103,6 +104,15 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         }
       }
 
+      const topExamPatterns = topicPatterns
+        .slice(0, 4)
+        .map((pattern) => `${pattern.question_types?.join('/') || 'mixed'} | avg ${Math.round(pattern.avg_marks || 0)} marks | freq ${Math.round(pattern.frequency_score || 0)}%`)
+        .join('; ');
+
+      const pastPaperStyleNotes = topExamPatterns
+        ? `Most common past-paper styles for this topic: ${topExamPatterns}`
+        : undefined;
+
       const payload = {
         subject: subject.name,
         topic: topicData.name,
@@ -112,6 +122,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         examWeight: examWeightFromPapers || topicData.examWeight,
         curriculumContext: curriculumContext || undefined,
         performanceContext: performanceContext || undefined,
+        pastPaperStyleNotes,
         avoidQuestionTypes: recentQuestionTypes.current.slice(-2),
       };
 
@@ -147,6 +158,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         difficulty: data.difficulty || difficulty,
         commandWord: data.commandWords?.[0],
         conceptsTested: data.conceptsTested,
+        syllabusLinks: data.syllabusLinks,
       });
     } catch (err) {
       console.error('Quiz generation error:', err);

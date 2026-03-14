@@ -3,6 +3,8 @@ import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, C
 import { Button } from './ui/button';
 import { DailyTask, Subject } from '../types/study';
 import { useTaskContent } from '../hooks/useTaskContent';
+import { useSyllabusContext } from '../hooks/useSyllabusContext';
+import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { cn } from '../lib/utils';
 
 interface FlashcardPanelProps {
@@ -118,17 +120,43 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cards, setCards] = useState<Flashcard[]>([]);
 
+  const {
+    curriculumContext,
+    examWeightFromPapers,
+    pastPaperQuestions,
+    isLoaded: contextLoaded,
+  } = useSyllabusContext(subject.id, subject.currentTopic.name);
+
+  const { performance } = useTopicPerformance(subject.id, subject.currentTopic.name);
+
   useEffect(() => {
+    if (!contextLoaded) return;
+
     reset();
     setCurrentIndex(0);
     setCards([]);
+
+    let performanceContext = '';
+    if (performance && performance.totalAttempts > 0) {
+      performanceContext = `Accuracy: ${Math.round(performance.accuracy * 100)}%. Mastery: ${performance.masteryStatus}.`;
+      if (performance.weakConcepts.length > 0) {
+        performanceContext += ` Reinforce these weak concepts: ${performance.weakConcepts.join(', ')}.`;
+      }
+    }
+
     generateContent({
       taskType: 'flashcards',
       subject: subject.name,
+      subjectId: subject.id,
       topic: subject.currentTopic.name,
       subtopics: subject.currentTopic.subtopics,
+      examWeight: examWeightFromPapers || subject.currentTopic.examWeight,
+      curriculumContext: curriculumContext || undefined,
+      performanceContext: performanceContext || undefined,
+      masteryStatus: performance?.masteryStatus,
+      difficulty: performance?.recommendedDifficulty,
     });
-  }, [task.id]);
+  }, [task.id, contextLoaded, curriculumContext, examWeightFromPapers, performance, reset, generateContent, subject.id, subject.name, subject.currentTopic.name, subject.currentTopic.examWeight, subject.currentTopic.subtopics]);
 
   // Parse flashcards as content streams in
   useEffect(() => {
@@ -150,11 +178,26 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
     reset();
     setCards([]);
     setCurrentIndex(0);
+
+    let performanceContext = '';
+    if (performance && performance.totalAttempts > 0) {
+      performanceContext = `Accuracy: ${Math.round(performance.accuracy * 100)}%. Mastery: ${performance.masteryStatus}.`;
+      if (performance.weakConcepts.length > 0) {
+        performanceContext += ` Reinforce these weak concepts: ${performance.weakConcepts.join(', ')}.`;
+      }
+    }
+
     generateContent({
       taskType: 'flashcards',
       subject: subject.name,
+      subjectId: subject.id,
       topic: subject.currentTopic.name,
       subtopics: subject.currentTopic.subtopics,
+      examWeight: examWeightFromPapers || subject.currentTopic.examWeight,
+      curriculumContext: curriculumContext || undefined,
+      performanceContext: performanceContext || undefined,
+      masteryStatus: performance?.masteryStatus,
+      difficulty: performance?.recommendedDifficulty,
     });
   };
 
@@ -171,6 +214,19 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
             Flashcards • {subject.currentTopic.name}
           </p>
         </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 px-1">
+        {curriculumContext && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+            📚 Syllabus aligned
+          </span>
+        )}
+        {pastPaperQuestions.length > 0 && (
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+            📝 {pastPaperQuestions.length} past-paper patterns
+          </span>
+        )}
       </div>
 
       {/* Content Area */}
@@ -223,7 +279,7 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
           <div className="flex flex-col items-center gap-3 py-12">
             <Loader2 className="h-8 w-8 animate-spin text-accent" />
             <p className="text-sm text-muted-foreground">
-              {isLoading ? 'Generating flashcards...' : 'Preparing...'}
+              {!contextLoaded ? 'Loading syllabus and past-paper context...' : isLoading ? 'Generating exam-style flashcards...' : 'Preparing...'}
             </p>
           </div>
         )}

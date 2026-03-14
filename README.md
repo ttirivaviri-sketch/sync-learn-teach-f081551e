@@ -145,6 +145,10 @@ npm run build
 # Deploy the dist/ folder to your hosting provider
 ```
 
+## 📈 Improvement Roadmap
+
+If you are planning the next iteration of StudySync, start with the prioritized improvement plan in [`docs/study-sync-improvements.md`](docs/study-sync-improvements.md).
+
 ## 🤝 Contributing
 
 1. Fork the repository
