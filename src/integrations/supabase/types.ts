@@ -1137,6 +1137,309 @@ export type Database = {
           },
         ]
       }
+      academic_profiles: {
+        Row: {
+          id: string
+          user_id: string
+          curriculum: string
+          study_level: string
+          subjects: string[]
+          exam_board: string | null
+          school_name: string | null
+          target_grade: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          curriculum: string
+          study_level: string
+          subjects?: string[]
+          exam_board?: string | null
+          school_name?: string | null
+          target_grade?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          curriculum?: string
+          study_level?: string
+          subjects?: string[]
+          exam_board?: string | null
+          school_name?: string | null
+          target_grade?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      quiz_attempts: {
+        Row: {
+          id: string
+          user_id: string
+          subject_id: string | null
+          topic_name: string
+          question: string
+          model_answer: string | null
+          user_answer: string | null
+          was_correct: boolean
+          marks_awarded: number | null
+          marks_possible: number | null
+          difficulty_rating: number | null
+          command_word: string | null
+          concepts_tested: string[] | null
+          next_review_date: string | null
+          review_count: number
+          ease_factor: number
+          interval_days: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject_id?: string | null
+          topic_name: string
+          question: string
+          model_answer?: string | null
+          user_answer?: string | null
+          was_correct?: boolean
+          marks_awarded?: number | null
+          marks_possible?: number | null
+          difficulty_rating?: number | null
+          command_word?: string | null
+          concepts_tested?: string[] | null
+          next_review_date?: string | null
+          review_count?: number
+          ease_factor?: number
+          interval_days?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject_id?: string | null
+          topic_name?: string
+          question?: string
+          model_answer?: string | null
+          user_answer?: string | null
+          was_correct?: boolean
+          marks_awarded?: number | null
+          marks_possible?: number | null
+          difficulty_rating?: number | null
+          command_word?: string | null
+          concepts_tested?: string[] | null
+          next_review_date?: string | null
+          review_count?: number
+          ease_factor?: number
+          interval_days?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      user_progress: {
+        Row: {
+          id: string
+          user_id: string
+          xp: number
+          streak: number
+          badges: Json
+          last_study_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          xp?: number
+          streak?: number
+          badges?: Json
+          last_study_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          xp?: number
+          streak?: number
+          badges?: Json
+          last_study_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      study_schedule: {
+        Row: {
+          id: string
+          user_id: string
+          subject_id: string | null
+          topic_name: string | null
+          scheduled_date: string
+          duration_minutes: number
+          task_type: string
+          is_completed: boolean
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject_id?: string | null
+          topic_name?: string | null
+          scheduled_date: string
+          duration_minutes?: number
+          task_type?: string
+          is_completed?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject_id?: string | null
+          topic_name?: string | null
+          scheduled_date?: string
+          duration_minutes?: number
+          task_type?: string
+          is_completed?: boolean
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subject_exams: {
+        Row: {
+          id: string
+          user_id: string
+          subject_id: string | null
+          subject_name: string
+          exam_name: string
+          exam_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject_id?: string | null
+          subject_name: string
+          exam_name: string
+          exam_date: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject_id?: string | null
+          subject_name?: string
+          exam_name?: string
+          exam_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      exam_settings: {
+        Row: {
+          id: string
+          user_id: string
+          exam_name: string
+          exam_date: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          exam_name: string
+          exam_date: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          exam_name?: string
+          exam_date?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tutor_tutorials: {
+        Row: {
+          id: string
+          tutor_id: string
+          title: string
+          description: string | null
+          subject: string
+          topic: string | null
+          subtopic: string | null
+          grade: string | null
+          curriculum: string | null
+          video_url: string | null
+          thumbnail_url: string | null
+          duration_label: string | null
+          status: string
+          rating: number | null
+          review_count: number | null
+          watch_count: number | null
+          completion_rate: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          tutor_id: string
+          title: string
+          description?: string | null
+          subject: string
+          topic?: string | null
+          subtopic?: string | null
+          grade?: string | null
+          curriculum?: string | null
+          video_url?: string | null
+          thumbnail_url?: string | null
+          duration_label?: string | null
+          status?: string
+          rating?: number | null
+          review_count?: number | null
+          watch_count?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          tutor_id?: string
+          title?: string
+          description?: string | null
+          subject?: string
+          topic?: string | null
+          subtopic?: string | null
+          grade?: string | null
+          curriculum?: string | null
+          video_url?: string | null
+          thumbnail_url?: string | null
+          duration_label?: string | null
+          status?: string
+          rating?: number | null
+          review_count?: number | null
+          watch_count?: number | null
+          completion_rate?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

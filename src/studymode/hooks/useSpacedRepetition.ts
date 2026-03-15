@@ -81,7 +81,7 @@ export function useSpacedRepetition(userId: string | null) {
       const today = new Date().toISOString().split('T')[0];
 
       const { data, error: fetchError } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_attempts' as any)
         .select('*')
         .eq('user_id', userId)
         .lte('next_review_date', today)
@@ -106,7 +106,7 @@ export function useSpacedRepetition(userId: string | null) {
       const today = new Date().toISOString().split('T')[0];
 
       const { data, error: fetchError } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_attempts' as any)
         .select('*')
         .eq('user_id', userId);
 
@@ -179,7 +179,7 @@ export function useSpacedRepetition(userId: string | null) {
     try {
       // Check if this question was asked before (for review)
       const { data: existingAttempts } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_attempts' as any)
         .select('*')
         .eq('user_id', userId)
         .eq('topic_name', topicName)
@@ -202,7 +202,7 @@ export function useSpacedRepetition(userId: string | null) {
         nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
 
         const { data, error: updateError } = await supabase
-          .from('quiz_attempts')
+          .from('quiz_attempts' as any)
           .update({
             was_correct: wasCorrect,
             ease_factor: newEaseFactor,
@@ -233,7 +233,7 @@ export function useSpacedRepetition(userId: string | null) {
         nextReviewDate.setDate(nextReviewDate.getDate() + newInterval);
 
         const { data, error: insertError } = await supabase
-          .from('quiz_attempts')
+          .from('quiz_attempts' as any)
           .insert({
             user_id: userId,
             subject_id: subjectId || null,

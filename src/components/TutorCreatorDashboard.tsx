@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Video, Upload, Plus, Trash2, Eye, Edit, CheckCircle2,
   Clock, TrendingUp, Star, Users, BookOpen, AlertCircle, X
@@ -88,6 +88,52 @@ export function TutorCreatorDashboard({
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [loadingTutorials, setLoadingTutorials] = useState(true);
+
+  // ── Load existing tutorials from Supabase on mount ─────────────────────────
+  useEffect(() => {
+    const load = async () => {
+      setLoadingTutorials(true);
+      try {
+        const { data, error } = await supabase
+          .from("tutor_tutorials")
+          .select("*")
+          .eq("tutor_id", tutorId)
+          .order("created_at", { ascending: false });
+        if (error) {
+          console.warn("tutor_tutorials load error:", error.message);
+        } else if (data) {
+          setTutorials(
+            (data as unknown as Array<{
+              id: string; title: string; subject: string; topic: string;
+              grade: string | null; curriculum: string | null; status: string;
+              watch_count: number | null; rating: number | null;
+              review_count: number | null; completion_rate: number | null;
+              created_at: string;
+            }>).map(row => ({
+              id: row.id,
+              title: row.title,
+              subject: row.subject,
+              topic: row.topic,
+              grade: row.grade || "",
+              curriculum: row.curriculum || "ZIMSEC",
+              status: (row.status as "draft" | "published" | "archived") || "draft",
+              watchCount: row.watch_count ?? 0,
+              rating: row.rating ?? 0,
+              reviewCount: row.review_count ?? 0,
+              completionRate: row.completion_rate ?? 0,
+              createdAt: row.created_at,
+            }))
+          );
+        }
+      } catch (err) {
+        console.warn("Error loading tutorials:", err);
+      } finally {
+        setLoadingTutorials(false);
+      }
+    };
+    if (tutorId) load();
+  }, [tutorId]);
 
   // Derived
   const availableSubjects = CURRICULUM_SUBJECTS[form.curriculum];

@@ -123,6 +123,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
             subject: subject.trim(),
             file_path: filePath,
             file_size: uploadedFile.file.size,
+            is_processed: false,
           })
           .select()
           .single();
@@ -181,6 +182,84 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
                 updated_at: new Date().toISOString(),
               })
               .eq('id', docData.id);
+
+            // For syllabi: also upsert into subjects table so StudyMode can use topics
+            if (documentType === 'syllabus' && parsedPayload.topics?.length) {
+              const subjectName = parsedPayload.subject_name || subject.trim();
+              const { data: existingSubject } = await supabase
+                .from('subjects')
+                .select('id')
+                .eq('user_id', user.id)
+                .ilike('name', subjectName)
+                .maybeSingle();
+
+              const topicsJson = (parsedPayload.topics as unknown[]).map((t: Record<string, unknown>, idx: number) => ({
+                id: t.id || `topic-${idx + 1}`,
+                name: t.name || `Topic ${idx + 1}`,
+                subtopics: Array.isArray(t.subtopics) ? t.subtopics : [],
+                learningObjectives: Array.isArray(t.learningObjectives) ? t.learningObjectives : [],
+                concepts: Array.isArray(t.concepts) ? t.concepts : [],
+                examWeight: Number(t.examWeight) || 0,
+                prerequisites: Array.isArray(t.prerequisites) ? t.prerequisites : [],
+              }));
+
+              if (existingSubject?.id) {
+                await supabase
+                  .from('subjects')
+                  .update({ topics: topicsJson, syllabus_code: parsedPayload.syllabus_code || null })
+                  .eq('id', existingSubject.id);
+              } else {
+                await supabase.from('subjects').insert({
+                  user_id: user.id,
+                  name: subjectName,
+                  syllabus_code: parsedPayload.syllabus_code || null,
+                  topics: topicsJson,
+                });
+              }
+            }
+
+            // For past papers / mark schemes: upsert into exam_patterns table
+            if ((documentType === 'past_paper' || documentType === 'mark_scheme') && parsedPayload.topic_frequency?.length) {
+              const { data: subjectRow } = await supabase
+                .from('subjects')
+                .select('id')
+                .eq('user_id', user.id)
+                .ilike('name', subject.trim())
+                .maybeSingle();
+
+              if (subjectRow?.id) {
+                const patterns = (parsedPayload.topic_frequency as Array<{topic: string; total_marks: number; question_count: number; percentage_of_paper: number}>)
+                  .map(tf => ({
+                    user_id: user.id,
+                    subject_id: subjectRow.id,
+                    topic_name: tf.topic,
+                    frequency_score: tf.percentage_of_paper || 0,
+                    avg_marks: tf.total_marks / Math.max(1, tf.question_count),
+                    question_types: (parsedPayload.questions as Array<{topic: string; question_type: string}> || [])
+                      .filter(q => q.topic === tf.topic)
+                      .map(q => q.question_type)
+                      .filter((v, i, a) => a.indexOf(v) === i),
+                    year: parsedPayload.paper_year || null,
+                  }));
+
+                for (const pattern of patterns) {
+                  const { data: existing } = await supabase
+                    .from('exam_patterns')
+                    .select('id')
+                    .eq('user_id', pattern.user_id)
+                    .eq('subject_id', pattern.subject_id)
+                    .eq('topic_name', pattern.topic_name)
+                    .eq('year', pattern.year || '')
+                    .maybeSingle();
+
+                  if (existing?.id) {
+                    await supabase.from('exam_patterns').update(pattern).eq('id', existing.id);
+                  } else {
+                    await supabase.from('exam_patterns').insert(pattern);
+                  }
+                }
+              }
+            }
           }
         } catch (parseErr) {
           console.error('Parse request failed:', parseErr);

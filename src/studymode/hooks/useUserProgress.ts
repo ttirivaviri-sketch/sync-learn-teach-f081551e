@@ -21,6 +21,13 @@ interface DailyProgressStats {
   xpToday: number;
 }
 
+const DEFAULT_DAILY: DailyProgressStats = {
+  tasksCompletedToday: 0,
+  totalTasksToday: 0,
+  examQuestionsToday: 0,
+  xpToday: 0,
+};
+
 export function useUserProgress() {
   const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -31,95 +38,102 @@ export function useUserProgress() {
     });
   }, []);
 
-  // Fetch user progress from database
+  // Fetch user progress from database (gracefully handles missing table)
   const { data: progress, isLoading, error } = useQuery({
     queryKey: ['user-progress', userId],
     queryFn: async (): Promise<UserProgressData | null> => {
       if (!userId) return null;
 
-      const { data, error } = await supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      try {
+        const { data, error } = await supabase
+          .from('user_progress' as any)
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
 
-      if (error) throw error;
-      
-      // If no progress exists, create initial record
-      if (!data) {
-        const { data: newProgress, error: insertError } = await supabase
-          .from('user_progress')
-          .insert({
-            user_id: userId,
-            xp: 0,
-            streak: 0,
-            badges: [],
-          })
-          .select()
-          .single();
-        
-        if (insertError) throw insertError;
-        
-        // Parse badges from JSON
+        if (error) {
+          // Table may not exist yet in this Supabase instance
+          console.warn('[useUserProgress] user_progress table unavailable:', error.message);
+          return null;
+        }
+
+        // If no progress record exists, create initial one
+        if (!data) {
+          try {
+            const { data: newProgress, error: insertError } = await supabase
+              .from('user_progress' as any)
+              .insert({ user_id: userId, xp: 0, streak: 0, badges: [] })
+              .select()
+              .single();
+
+            if (insertError) {
+              console.warn('[useUserProgress] Could not create progress record:', insertError.message);
+              return null;
+            }
+            return {
+              ...(newProgress as UserProgressData),
+              badges: [],
+            };
+          } catch {
+            return null;
+          }
+        }
+
         return {
-          ...newProgress,
-          badges: Array.isArray(newProgress.badges) 
-            ? (newProgress.badges as unknown as Badge[]) 
+          ...(data as UserProgressData),
+          badges: Array.isArray((data as UserProgressData).badges)
+            ? ((data as UserProgressData).badges as unknown as Badge[])
             : [],
         };
+      } catch {
+        return null;
       }
-      
-      // Parse badges from JSON
-      return {
-        ...data,
-        badges: Array.isArray(data.badges) 
-          ? (data.badges as unknown as Badge[]) 
-          : [],
-      };
     },
     enabled: !!userId,
   });
 
-  // Calculate daily stats from study_schedule and quiz_attempts
+  // Calculate daily stats
   const { data: dailyStats } = useQuery({
     queryKey: ['daily-stats', userId],
     queryFn: async (): Promise<DailyProgressStats> => {
-      if (!userId) return { tasksCompletedToday: 0, totalTasksToday: 0, examQuestionsToday: 0, xpToday: 0 };
+      if (!userId) return DEFAULT_DAILY;
 
       const today = new Date().toISOString().split('T')[0];
 
-      // Get today's scheduled tasks
-      const { data: scheduledTasks } = await supabase
-        .from('study_schedule')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('scheduled_date', today);
+      try {
+        // Get today's completed tasks from study_schedule
+        const { data: scheduledTasks } = await supabase
+          .from('study_schedule' as any)
+          .select('is_completed')
+          .eq('user_id', userId)
+          .eq('scheduled_date', today);
 
-      const tasksCompletedToday = scheduledTasks?.filter(t => t.is_completed).length || 0;
-      const totalTasksToday = scheduledTasks?.length || 0;
+        const tasksCompletedToday = (scheduledTasks as Array<{ is_completed: boolean }> | null)?.filter(t => t.is_completed).length ?? 0;
+        const totalTasksToday = scheduledTasks?.length ?? 0;
 
-      // Get today's quiz attempts
-      const { data: quizAttempts } = await supabase
-        .from('quiz_attempts')
-        .select('*')
-        .eq('user_id', userId)
-        .gte('created_at', `${today}T00:00:00`)
-        .lt('created_at', `${today}T23:59:59`);
+        // Get today's quiz attempts
+        const { data: quizAttempts } = await supabase
+          .from('quiz_attempts' as any)
+          .select('was_correct')
+          .eq('user_id', userId)
+          .gte('created_at', `${today}T00:00:00Z`);
 
-      const examQuestionsToday = quizAttempts?.length || 0;
-      
-      // Calculate XP earned today (10 XP per task, 25 XP per correct quiz, 10 XP per incorrect)
-      const xpFromTasks = tasksCompletedToday * 10;
-      const xpFromQuizzes = quizAttempts?.reduce((acc, q) => {
-        return acc + (q.was_correct ? 25 : 10);
-      }, 0) || 0;
+        const examQuestionsToday = quizAttempts?.length ?? 0;
+        const xpFromTasks = tasksCompletedToday * 10;
+        const xpFromQuizzes = (quizAttempts as Array<{ was_correct: boolean }> | null)?.reduce(
+          (acc, q) => acc + (q.was_correct ? 25 : 10),
+          0
+        ) ?? 0;
 
-      return {
-        tasksCompletedToday,
-        totalTasksToday,
-        examQuestionsToday,
-        xpToday: xpFromTasks + xpFromQuizzes,
-      };
+        return {
+          tasksCompletedToday,
+          totalTasksToday,
+          examQuestionsToday,
+          xpToday: xpFromTasks + xpFromQuizzes,
+        };
+      } catch {
+        return DEFAULT_DAILY;
+      }
     },
     enabled: !!userId,
   });
@@ -127,16 +141,27 @@ export function useUserProgress() {
   // Add XP mutation
   const addXp = useMutation({
     mutationFn: async (xpAmount: number) => {
-      if (!userId || !progress) throw new Error('Not authenticated');
+      if (!userId) return 0;
 
-      const newXp = progress.xp + xpAmount;
-      const { error } = await supabase
-        .from('user_progress')
-        .update({ xp: newXp })
-        .eq('user_id', userId);
+      try {
+        const current = progress?.xp ?? 0;
+        const newXp = current + xpAmount;
 
-      if (error) throw error;
-      return newXp;
+        if (progress?.id) {
+          await supabase
+            .from('user_progress' as any)
+            .update({ xp: newXp })
+            .eq('user_id', userId);
+        } else {
+          await supabase
+            .from('user_progress' as any)
+            .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] });
+        }
+        return newXp;
+      } catch (err) {
+        console.warn('[addXp] Failed:', err);
+        return progress?.xp ?? 0;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-progress', userId] });
@@ -146,42 +171,38 @@ export function useUserProgress() {
   // Update streak mutation
   const updateStreak = useMutation({
     mutationFn: async () => {
-      if (!userId || !progress) throw new Error('Not authenticated');
+      if (!userId) return 0;
 
-      const today = new Date().toISOString().split('T')[0];
-      const lastStudy = progress.last_study_date;
-      
-      let newStreak = progress.streak;
-      
-      if (!lastStudy) {
-        // First study session
-        newStreak = 1;
-      } else {
-        const lastDate = new Date(lastStudy);
-        const todayDate = new Date(today);
-        const diffDays = Math.floor((todayDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-        
-        if (diffDays === 0) {
-          // Same day, no change
-        } else if (diffDays === 1) {
-          // Consecutive day
-          newStreak += 1;
-        } else {
-          // Streak broken
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const lastStudy = progress?.last_study_date;
+
+        let newStreak = progress?.streak ?? 0;
+
+        if (!lastStudy) {
           newStreak = 1;
+        } else {
+          const diffDays = Math.floor(
+            (new Date(today).getTime() - new Date(lastStudy).getTime()) / 86_400_000
+          );
+          if (diffDays === 0) {
+            // Same day
+          } else if (diffDays === 1) {
+            newStreak += 1;
+          } else {
+            newStreak = 1;
+          }
         }
+
+        await supabase
+          .from('user_progress' as any)
+          .upsert({ user_id: userId, streak: newStreak, last_study_date: today, xp: progress?.xp ?? 0, badges: [] });
+
+        return newStreak;
+      } catch (err) {
+        console.warn('[updateStreak] Failed:', err);
+        return progress?.streak ?? 0;
       }
-
-      const { error } = await supabase
-        .from('user_progress')
-        .update({ 
-          streak: newStreak, 
-          last_study_date: today,
-        })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-      return newStreak;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-progress', userId] });
@@ -191,31 +212,30 @@ export function useUserProgress() {
   // Award badge mutation
   const awardBadge = useMutation({
     mutationFn: async (badge: Badge) => {
-      if (!userId || !progress) throw new Error('Not authenticated');
+      if (!userId) return [];
 
-      // Check if badge already earned
-      if (progress.badges.some(b => b.id === badge.id)) {
-        return progress.badges;
+      try {
+        const current = progress?.badges ?? [];
+        if (current.some(b => b.id === badge.id)) return current;
+
+        const newBadges = [...current, { ...badge, earnedAt: new Date() }];
+        const badgesJson = newBadges.map(b => ({
+          id: b.id,
+          name: b.name,
+          description: b.description,
+          icon: b.icon,
+          earnedAt: b.earnedAt?.toISOString?.() ?? null,
+        }));
+
+        await supabase
+          .from('user_progress' as any)
+          .upsert({ user_id: userId, badges: badgesJson, xp: progress?.xp ?? 0, streak: progress?.streak ?? 0 });
+
+        return newBadges;
+      } catch (err) {
+        console.warn('[awardBadge] Failed:', err);
+        return progress?.badges ?? [];
       }
-
-      const newBadges = [...progress.badges, { ...badge, earnedAt: new Date() }];
-      
-      // Convert to JSON-safe format
-      const badgesJson = newBadges.map(b => ({
-        id: b.id,
-        name: b.name,
-        description: b.description,
-        icon: b.icon,
-        earnedAt: b.earnedAt?.toISOString() || null,
-      }));
-      
-      const { error } = await supabase
-        .from('user_progress')
-        .update({ badges: badgesJson })
-        .eq('user_id', userId);
-
-      if (error) throw error;
-      return newBadges;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['user-progress', userId] });
@@ -224,7 +244,7 @@ export function useUserProgress() {
 
   return {
     progress,
-    dailyStats: dailyStats || { tasksCompletedToday: 0, totalTasksToday: 0, examQuestionsToday: 0, xpToday: 0 },
+    dailyStats: dailyStats ?? DEFAULT_DAILY,
     isLoading,
     error,
     addXp,

@@ -200,24 +200,52 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       // Try saving to DB if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        for (const subjectName of selectedSubjects) {
-          const { data: subject } = await supabase
-            .from('subjects')
-            .insert({
-              user_id: user.id,
-              name: subjectName,
-              syllabus_code: selectedLevel?.id || 'custom',
-              topics: [],
-            })
-            .select()
-            .single();
+        // Save academic profile
+        const studyLevel = selectedLevel?.id || selectedBoard?.id || 'secondary';
+        await (supabase.from('academic_profiles' as any) as ReturnType<typeof supabase.from>).upsert({
+          user_id: user.id,
+          curriculum: (selectedBoard?.id || 'other').toUpperCase(),
+          study_level: studyLevel,
+          subjects: selectedSubjects,
+          updated_at: new Date().toISOString(),
+        } as never, { onConflict: 'user_id' });
 
-          if (subject && examDates[subjectName]) {
-            await supabase.from('exam_settings').insert({
+        for (const subjectName of selectedSubjects) {
+          // Check if subject already exists for this user
+          const { data: existingSubject } = await supabase
+            .from('subjects')
+            .select('id')
+            .eq('user_id', user.id)
+            .ilike('name', subjectName)
+            .maybeSingle();
+
+          if (!existingSubject) {
+            await supabase
+              .from('subjects')
+              .insert({
+                user_id: user.id,
+                name: subjectName,
+                syllabus_code: selectedLevel?.id || 'custom',
+                topics: [],
+              });
+          }
+
+          if (examDates[subjectName]) {
+            // Upsert exam settings (one per user)
+            await (supabase.from('exam_settings' as any) as ReturnType<typeof supabase.from>).upsert({
               user_id: user.id,
               exam_name: `${subjectName} Exam`,
-              exam_date: examDates[subjectName].toISOString(),
-            });
+              exam_date: examDates[subjectName].toISOString().split('T')[0],
+              updated_at: new Date().toISOString(),
+            } as never, { onConflict: 'user_id' });
+
+            // Also save per-subject exam in subject_exams table
+            await (supabase.from('subject_exams' as any) as ReturnType<typeof supabase.from>).insert({
+              user_id: user.id,
+              subject_name: subjectName,
+              exam_name: `${subjectName} Exam`,
+              exam_date: examDates[subjectName].toISOString().split('T')[0],
+            } as never);
           }
         }
       }

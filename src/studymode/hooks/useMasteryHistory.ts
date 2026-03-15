@@ -28,7 +28,7 @@ export function useMasteryHistory() {
 
       // Get quiz attempts grouped by date and subject to build trend data
       const { data: attempts, error: attemptsError } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_attempts' as any)
         .select('created_at, was_correct, subject_id, topic_name')
         .eq('user_id', userId)
         .order('created_at', { ascending: true });

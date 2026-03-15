@@ -39,18 +39,21 @@ export function useStudySchedule(month?: Date) {
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
       const { data, error } = await supabase
-        .from('study_schedule')
-        .select(`
+          .from('study_schedule' as any)
+          .select(`
           *,
           subject:subjects(name)
         `)
-        .eq('user_id', userId)
-        .gte('scheduled_date', startDate)
-        .lte('scheduled_date', endDate)
-        .order('scheduled_date', { ascending: true });
+          .eq('user_id', userId)
+          .gte('scheduled_date', startDate)
+          .lte('scheduled_date', endDate)
+          .order('scheduled_date', { ascending: true });
 
-      if (error) throw error;
-      return (data || []) as StudyScheduleItem[];
+        if (error) {
+          console.warn('[useStudySchedule] Table unavailable:', error.message);
+          return [];
+        }
+        return (data || []) as StudyScheduleItem[];
     },
     enabled: !!userId,
   });
@@ -67,7 +70,7 @@ export function useStudySchedule(month?: Date) {
       if (!user) throw new Error('Not authenticated');
 
       const { error } = await supabase
-        .from('study_schedule')
+        .from('study_schedule' as any)
         .insert({
           user_id: user.id,
           subject_id: item.subject_id,
@@ -87,7 +90,7 @@ export function useStudySchedule(month?: Date) {
   const toggleComplete = useMutation({
     mutationFn: async ({ id, isCompleted }: { id: string; isCompleted: boolean }) => {
       const { error } = await supabase
-        .from('study_schedule')
+        .from('study_schedule' as any)
         .update({ is_completed: isCompleted })
         .eq('id', id);
 
@@ -101,7 +104,7 @@ export function useStudySchedule(month?: Date) {
   const deleteScheduleItem = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('study_schedule')
+        .from('study_schedule' as any)
         .delete()
         .eq('id', id);
 
@@ -189,7 +192,7 @@ export function useStudySchedule(month?: Date) {
       // Insert all schedule items
       if (scheduleItems.length > 0) {
         const { error } = await supabase
-          .from('study_schedule')
+          .from('study_schedule' as any)
           .insert(scheduleItems);
 
         if (error) throw error;
