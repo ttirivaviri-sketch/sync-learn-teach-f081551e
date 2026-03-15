@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,37 +9,40 @@ import { LoadingScreen } from "@/components/LoadingSpinner";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { DevModeProvider } from "@/contexts/DevModeContext";
 import { DevModeBanner } from "@/components/DevModeBanner";
-import Index from "./pages/Index";
-import LearnerApp from "./pages/LearnerApp";
-import LearnerAuth from "./pages/LearnerAuth";
-import TutorApp from "./pages/TutorApp";
-import TutorAuth from "./pages/TutorAuth";
-import NotFound from "./pages/NotFound";
-import ChooseStudyLevel from "./pages/ChooseStudyLevel";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import PaymentCancelled from "./pages/PaymentCancelled";
-import AdminLayout from "./pages/admin/AdminLayout";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminUsers from "./pages/admin/Users";
-import AdminBookings from "./pages/admin/Bookings";
-import AdminPayments from "./pages/admin/Payments";
-import AdminSupport from "./pages/admin/Support";
-import AdminReports from "./pages/admin/Reports";
-import AdminRoles from "./pages/admin/Roles";
-import AdminSecurity from "./pages/admin/Security";
-import AdminRefunds from "./pages/admin/Refunds";
-import AdminAuth from "./pages/AdminAuth";
-import DevMode from "./pages/DevMode";
 
+// ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
+const Index = lazy(() => import("./pages/Index"));
+const LearnerApp = lazy(() => import("./pages/LearnerApp"));
+const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
+const TutorApp = lazy(() => import("./pages/TutorApp"));
+const TutorAuth = lazy(() => import("./pages/TutorAuth"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ChooseStudyLevel = lazy(() => import("./pages/ChooseStudyLevel"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const PaymentCancelled = lazy(() => import("./pages/PaymentCancelled"));
+const AdminAuth = lazy(() => import("./pages/AdminAuth"));
+const DevMode = lazy(() => import("./pages/DevMode"));
+
+// Admin sub-pages
+const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminUsers = lazy(() => import("./pages/admin/Users"));
+const AdminBookings = lazy(() => import("./pages/admin/Bookings"));
+const AdminPayments = lazy(() => import("./pages/admin/Payments"));
+const AdminSupport = lazy(() => import("./pages/admin/Support"));
+const AdminReports = lazy(() => import("./pages/admin/Reports"));
+const AdminRoles = lazy(() => import("./pages/admin/Roles"));
+const AdminSecurity = lazy(() => import("./pages/admin/Security"));
+const AdminRefunds = lazy(() => import("./pages/admin/Refunds"));
+
+// ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
-      retry: (failureCount, error: any) => {
-        // Don't retry auth errors
-        if (error?.status === 401 || error?.status === 403) {
-          return false;
-        }
+      retry: (failureCount, error: unknown) => {
+        const e = error as { status?: number };
+        if (e?.status === 401 || e?.status === 403) return false;
         return failureCount < 3;
       },
     },
@@ -63,7 +66,7 @@ const App = () => (
                 <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
                 <Route path="/tutor" element={<TutorApp />} />
                 <Route path="/tutor/auth" element={<TutorAuth />} />
-                
+
                 {/* Payment routes */}
                 <Route path="/payment-success" element={<PaymentSuccess />} />
                 <Route path="/payment-cancelled" element={<PaymentCancelled />} />

@@ -60,12 +60,15 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
           updated_at: new Date().toISOString(),
         };
 
-        const { error } = await supabase.rpc("upsert_academic_profile", {
-          p_curriculum: payload.curriculum,
-          p_grade: payload.grade,
-          p_subjects: payload.subjects,
-          p_exam_year: payload.exam_year,
-        });
+        const { error } = await supabase
+          .from("academic_profiles")
+          .upsert(
+            {
+              ...payload,
+              created_at: profile?.created_at ?? new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
         if (error) throw error;
 
         await fetchProfile();

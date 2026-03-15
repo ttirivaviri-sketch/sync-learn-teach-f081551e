@@ -227,7 +227,7 @@ export function useLibraryResources(
         const mapped: LibraryResource[] = (data || []).map((row: any) => ({
           id: row.id,
           title: row.title,
-          author: row.tutor_full_name || "Tutor",
+          author: row.tutor_profile?.full_name || "Tutor",
           type: "video" as const,
           category: row.subject,
           gradeLevel: row.grade || "All Grades",
@@ -249,9 +249,9 @@ export function useLibraryResources(
             curriculum: row.curriculum,
           },
           tutor: {
-            id: row.tutor_id,
-            name: row.tutor_full_name || "Tutor",
-            avatar_url: row.tutor_avatar_url,
+            id: row.tutor_profile?.id || row.tutor_id,
+            name: row.tutor_profile?.full_name || "Tutor",
+            avatar_url: row.tutor_profile?.avatar_url,
             rating: row.rating || 0,
             reviews: row.review_count || 0,
           },
@@ -281,7 +281,7 @@ export function useLibraryResources(
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [academicProfile?.curriculum]);
+  }, []);
 
   // ── Personalization logic ─────────────────────────────────────────────────
 
