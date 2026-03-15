@@ -137,36 +137,50 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
         // Read file content for parsing
         const fileContent = await uploadedFile.file.text();
 
-        // Call AI parse function via local proxy
+        // Parse using backend edge function first, then local proxy fallback
         try {
-          const parseResp = await fetch('/api/ai/parse-document', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              documentId: docData.id,
-              content: fileContent.substring(0, 50000), // Limit content size
-              documentType,
-              subject: subject.trim(),
-            }),
+          const parsePayload = {
+            documentId: docData.id,
+            content: fileContent.substring(0, 50000), // Limit content size
+            documentType,
+            subject: subject.trim(),
+          };
+
+          const edgeResult = await supabase.functions.invoke('parse-document', {
+            body: parsePayload,
           });
 
-          if (!parseResp.ok) {
-            const errData = await parseResp.json().catch(() => ({}));
-            console.error('Parse error:', errData.error || parseResp.status);
-            // Still continue — document is uploaded even if AI parsing fails
+          let parsedPayload: any = null;
+
+          if (!edgeResult.error && edgeResult.data?.parsed) {
+            parsedPayload = edgeResult.data.parsed;
           } else {
-            const parseData = await parseResp.json();
-            // If syllabus was parsed successfully, update the document record
-            if (parseData?.success && parseData?.parsed) {
-              await supabase
-                .from('documents')
-                .update({
-                  is_processed: true,
-                  parsed_content: parseData.parsed,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq('id', docData.id);
+            const parseResp = await fetch('/api/ai/parse-document', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(parsePayload),
+            });
+
+            if (parseResp.ok) {
+              const parseData = await parseResp.json();
+              if (parseData?.success && parseData?.parsed) {
+                parsedPayload = parseData.parsed;
+              }
+            } else {
+              const errData = await parseResp.json().catch(() => ({}));
+              console.error('Parse error:', edgeResult.error?.message || errData.error || parseResp.status);
             }
+          }
+
+          if (parsedPayload) {
+            await supabase
+              .from('documents')
+              .update({
+                is_processed: true,
+                parsed_content: parsedPayload,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', docData.id);
           }
         } catch (parseErr) {
           console.error('Parse request failed:', parseErr);

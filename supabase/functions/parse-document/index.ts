@@ -9,6 +9,45 @@ const corsHeaders = {
 
 const AI_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
+
+function getSubjectVisuals(subjectName: string) {
+  const key = subjectName.trim().toLowerCase();
+  const map: Record<string, { icon_emoji: string; icon_gradient: string }> = {
+    "mathematics": { icon_emoji: "📐", icon_gradient: "from-purple-500 to-violet-600" },
+    "maths": { icon_emoji: "📐", icon_gradient: "from-purple-500 to-violet-600" },
+    "math": { icon_emoji: "📐", icon_gradient: "from-purple-500 to-violet-600" },
+    "physics": { icon_emoji: "⚛️", icon_gradient: "from-blue-500 to-indigo-600" },
+    "chemistry": { icon_emoji: "🧪", icon_gradient: "from-green-500 to-emerald-600" },
+    "biology": { icon_emoji: "🧬", icon_gradient: "from-pink-500 to-rose-600" },
+    "english": { icon_emoji: "📖", icon_gradient: "from-orange-500 to-amber-600" },
+    "english language": { icon_emoji: "📖", icon_gradient: "from-orange-500 to-amber-600" },
+    "literature": { icon_emoji: "🪶", icon_gradient: "from-red-500 to-rose-600" },
+    "geography": { icon_emoji: "🌍", icon_gradient: "from-lime-500 to-green-600" },
+    "history": { icon_emoji: "🏛️", icon_gradient: "from-stone-500 to-amber-700" },
+    "computer science": { icon_emoji: "💻", icon_gradient: "from-cyan-500 to-sky-600" },
+    "ict": { icon_emoji: "💻", icon_gradient: "from-cyan-500 to-sky-600" },
+    "economics": { icon_emoji: "📢", icon_gradient: "from-teal-500 to-cyan-600" },
+    "accounting": { icon_emoji: "🧮", icon_gradient: "from-blue-500 to-indigo-600" },
+    "business studies": { icon_emoji: "💼", icon_gradient: "from-teal-500 to-cyan-600" },
+    "agriculture": { icon_emoji: "🚜", icon_gradient: "from-green-500 to-lime-600" },
+    "foreign languages": { icon_emoji: "🗣️", icon_gradient: "from-yellow-500 to-amber-600" },
+    "design & technology": { icon_emoji: "🛠️", icon_gradient: "from-purple-500 to-indigo-600" },
+    "engineering graphics": { icon_emoji: "📘", icon_gradient: "from-blue-600 to-indigo-800" },
+    "sociology": { icon_emoji: "👥", icon_gradient: "from-fuchsia-500 to-pink-600" },
+    "psychology": { icon_emoji: "🧠", icon_gradient: "from-violet-500 to-purple-700" },
+    "religious studies": { icon_emoji: "✝️", icon_gradient: "from-yellow-500 to-amber-600" },
+    "law": { icon_emoji: "⚖️", icon_gradient: "from-slate-500 to-gray-700" },
+    "music": { icon_emoji: "🎵", icon_gradient: "from-indigo-500 to-violet-600" },
+    "health": { icon_emoji: "🩺", icon_gradient: "from-cyan-400 to-teal-500" },
+    "environmental science": { icon_emoji: "🌱", icon_gradient: "from-emerald-400 to-teal-500" },
+    "physical education": { icon_emoji: "⚽", icon_gradient: "from-green-500 to-lime-600" },
+    "first aid": { icon_emoji: "🛡️", icon_gradient: "from-red-500 to-rose-600" },
+    "art": { icon_emoji: "🎨", icon_gradient: "from-yellow-500 to-amber-600" },
+  };
+
+  return map[key] || { icon_emoji: "📚", icon_gradient: "from-gray-500 to-slate-600" };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -210,6 +249,7 @@ Rules:
     // If syllabus, create/update the subject
     if (documentType === "syllabus") {
       const subjectName = parsedContent.subject_name || subject;
+      const visuals = getSubjectVisuals(subjectName);
 
       // Check if subject exists
       const { data: existingSubjects } = await supabase
@@ -236,6 +276,8 @@ Rules:
             .update({
               topics: parsedContent.topics,
               syllabus_code: parsedContent.syllabus_code || null,
+              icon_emoji: visuals.icon_emoji,
+              icon_gradient: visuals.icon_gradient,
               updated_at: new Date().toISOString(),
             })
             .eq("id", existingSub.id);
@@ -261,6 +303,8 @@ Rules:
               name: subjectName,
               syllabus_code: parsedContent.syllabus_code || null,
               topics: parsedContent.topics,
+              icon_emoji: visuals.icon_emoji,
+              icon_gradient: visuals.icon_gradient,
             })
             .select("id")
             .single();

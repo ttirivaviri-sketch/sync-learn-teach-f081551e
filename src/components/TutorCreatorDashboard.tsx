@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Video, Upload, Plus, Trash2, Eye, Edit, CheckCircle2,
   Clock, TrendingUp, Star, Users, BookOpen, AlertCircle, X
@@ -101,6 +101,43 @@ export function TutorCreatorDashboard({
       ? (tutorials.reduce((sum, t) => sum + t.rating, 0) / tutorials.length).toFixed(1)
       : "–";
   const published = tutorials.filter((t) => t.status === "published").length;
+
+  useEffect(() => {
+    const fetchTutorials = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("tutor_tutorials")
+          .select("*")
+          .eq("tutor_id", tutorId)
+          .order("created_at", { ascending: false });
+
+        if (error) throw error;
+
+        const mapped: Tutorial[] = (data || []).map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          subject: row.subject,
+          topic: row.topic,
+          grade: row.grade || "",
+          curriculum: row.curriculum || "ZIMSEC",
+          status: row.status as "draft" | "published" | "archived",
+          watchCount: row.watch_count || 0,
+          rating: row.rating || 0,
+          reviewCount: row.review_count || 0,
+          completionRate: row.completion_rate || 0,
+          createdAt: row.created_at,
+        }));
+
+        setTutorials(mapped);
+      } catch (error) {
+        console.warn("Failed to load tutor tutorials:", error);
+      }
+    };
+
+    if (tutorId) {
+      fetchTutorials();
+    }
+  }, [tutorId]);
 
   // ── Form helpers ───────────────────────────────────────────────────────────
 
