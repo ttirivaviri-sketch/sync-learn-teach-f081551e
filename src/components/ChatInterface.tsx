@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-console.log("ChatInterface module loading...");
 import { Send, MessageCircle, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +56,6 @@ const ChatInterface = ({
   otherUserId,
   otherUserName 
 }: ChatInterfaceProps) => {
-  console.log("ChatInterface component defined");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(initialConversationId || null);
   const [messages, setMessages] = useState<Message[]>([]);

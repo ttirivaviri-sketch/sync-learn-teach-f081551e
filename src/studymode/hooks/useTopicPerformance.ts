@@ -71,7 +71,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
 
       // Fetch all attempts for this topic
       const { data: attempts } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_attempts' as any)
         .select('topic_name, question, was_correct, difficulty_rating, created_at')
         .eq('user_id', user.id)
         .eq('subject_id', subjectId)

@@ -29,12 +29,17 @@ export function useExamSettings() {
       }
 
       const { data, error: fetchError } = await supabase
-        .from('exam_settings')
+        .from('exam_settings' as any)
         .select('*')
         .eq('user_id', session.user.id)
         .maybeSingle();
 
-      if (fetchError) throw fetchError;
+      if (fetchError) {
+        // Table may not exist yet — treat as no settings
+        console.warn('[useExamSettings] exam_settings unavailable:', fetchError.message);
+        setIsLoading(false);
+        return;
+      }
 
       setSettings(data as ExamSettings | null);
     } catch (err) {
@@ -59,7 +64,7 @@ export function useExamSettings() {
       if (settings) {
         // Update existing
         const { data, error: updateError } = await supabase
-          .from('exam_settings')
+          .from('exam_settings' as any)
           .update({
             exam_name: examName.trim(),
             exam_date: examDateStr,
@@ -73,7 +78,7 @@ export function useExamSettings() {
       } else {
         // Insert new
         const { data, error: insertError } = await supabase
-          .from('exam_settings')
+          .from('exam_settings' as any)
           .insert({
             user_id: session.user.id,
             exam_name: examName.trim(),
