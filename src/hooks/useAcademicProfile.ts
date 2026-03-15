@@ -80,7 +80,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         setSaving(false);
       }
     },
-    [userId, profile, fetchProfile]
+    [userId, fetchProfile]
   );
 
   return { profile, loading, saving, saveProfile, refetch: fetchProfile };

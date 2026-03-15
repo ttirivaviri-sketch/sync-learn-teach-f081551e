@@ -213,15 +213,14 @@ export function useLibraryResources(
     const fetchTutorials = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("tutor_tutorials")
-          .select("*, tutor_profile:profiles(id, full_name, avatar_url)")
-          .eq("status", "published")
-          .order("created_at", { ascending: false });
+        const { data, error } = await supabase.rpc("get_published_tutorials", {
+          p_curriculum: academicProfile?.curriculum ?? null,
+          p_subject: null,
+        });
 
         if (error) {
-          // Table may not exist yet — silently ignore
-          console.warn("tutor_tutorials table not yet created:", error.message);
+          // RPC/table may not exist yet — silently ignore
+          console.warn("published tutorials backend not available:", error.message);
           return;
         }
 
