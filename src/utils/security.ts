@@ -1,5 +1,8 @@
 // Security utilities for production readiness
 
+// Import supabase client — must be at top so all functions below can use it
+import { supabase } from '@/integrations/supabase/client';
+
 export const security = {
   // Validate and sanitize user input
   sanitizeInput: (input: string): string => {
@@ -11,7 +14,7 @@ export const security = {
   },
 
   // Check if request is from a suspicious source
-  isRequestSuspicious: (userAgent?: string, referer?: string): boolean => {
+  isRequestSuspicious: (userAgent?: string, _referer?: string): boolean => {
     if (!userAgent) return true;
     
     const suspiciousPatterns = [
@@ -43,9 +46,9 @@ export const security = {
       
       // Clean up old entries
       for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('rate_limit_') && key !== windowKey) {
-          localStorage.removeItem(key);
+        const storageKey = localStorage.key(i);
+        if (storageKey?.startsWith('rate_limit_') && storageKey !== windowKey) {
+          localStorage.removeItem(storageKey);
         }
       }
       
@@ -68,7 +71,7 @@ export const security = {
         const { data: hasRole, error: roleError } = await supabase
           .rpc('has_role', { 
             _user_id: session.user.id, 
-            _role: requiredRole as any
+            _role: requiredRole as never
           });
         
         if (roleError || !hasRole) {
@@ -83,7 +86,7 @@ export const security = {
   },
 
   // Log security events
-  logSecurityEvent: async (action: string, details: any = {}) => {
+  logSecurityEvent: async (action: string, details: Record<string, unknown> = {}) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
@@ -130,6 +133,3 @@ export const security = {
     return { valid: true };
   }
 };
-
-// Import supabase client for security functions
-import { supabase } from '@/integrations/supabase/client';
