@@ -225,41 +225,40 @@ export function useLibraryResources(
           return;
         }
 
-        if (data) {
-          const mapped: LibraryResource[] = data.map((row: any) => ({
-            id: row.id,
-            title: row.title,
-            author: row.tutor_profile?.full_name || "Tutor",
-            type: "video" as const,
-            category: row.subject,
-            gradeLevel: row.grade || "All Grades",
-            summary: row.description || "",
+        const mapped: LibraryResource[] = (data || []).map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          author: row.tutor_profile?.full_name || "Tutor",
+          type: "video" as const,
+          category: row.subject,
+          gradeLevel: row.grade || "All Grades",
+          summary: row.description || "",
+          rating: row.rating || 0,
+          reviews: row.review_count || 0,
+          thumbnail: row.thumbnail_url || "/placeholder.svg",
+          isOffline: false,
+          duration: row.duration_label || "Video",
+          isTutorial: true,
+          watchCount: row.watch_count || 0,
+          completionRate: row.completion_rate || 0,
+          videoUrl: row.video_url || undefined,
+          tags: {
+            subject: row.subject,
+            topic: row.topic,
+            subtopic: row.subtopic,
+            grade: row.grade,
+            curriculum: row.curriculum,
+          },
+          tutor: {
+            id: row.tutor_profile?.id || row.tutor_id,
+            name: row.tutor_profile?.full_name || "Tutor",
+            avatar_url: row.tutor_profile?.avatar_url,
             rating: row.rating || 0,
             reviews: row.review_count || 0,
-            thumbnail: row.thumbnail_url || "/placeholder.svg",
-            isOffline: false,
-            duration: row.duration_label || "Video",
-            isTutorial: true,
-            watchCount: row.watch_count || 0,
-            completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || undefined,
-            tags: {
-              subject: row.subject,
-              topic: row.topic,
-              subtopic: row.subtopic,
-              grade: row.grade,
-              curriculum: row.curriculum,
-            },
-            tutor: {
-              id: row.tutor_profile?.id || row.tutor_id,
-              name: row.tutor_profile?.full_name || "Tutor",
-              avatar_url: row.tutor_profile?.avatar_url,
-              rating: row.rating || 0,
-              reviews: row.review_count || 0,
-            },
-          }));
-          setDbResources(mapped);
-        }
+          },
+        }));
+
+        setDbResources(mapped);
       } catch (err) {
         console.warn("Tutorial fetch error (non-critical):", err);
       } finally {
@@ -268,6 +267,21 @@ export function useLibraryResources(
     };
 
     fetchTutorials();
+
+    const channel = supabase
+      .channel("library-tutorials-sync")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "tutor_tutorials" },
+        () => {
+          fetchTutorials();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // ── Personalization logic ─────────────────────────────────────────────────
