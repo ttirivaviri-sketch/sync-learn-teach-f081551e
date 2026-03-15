@@ -25,12 +25,14 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         .from("academic_profiles")
         .select("*")
         .eq("user_id", userId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
         console.error("Error loading academic profile:", error);
       }
-      setProfile(data as AcademicProfile | null);
+      setProfile((data as AcademicProfile | null) ?? null);
     } catch (err) {
       console.error("Academic profile fetch error:", err);
     } finally {
@@ -58,20 +60,16 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
           updated_at: new Date().toISOString(),
         };
 
-        if (profile?.id) {
-          // Update existing
-          const { error } = await supabase
-            .from("academic_profiles")
-            .update(payload)
-            .eq("id", profile.id);
-          if (error) throw error;
-        } else {
-          // Insert new
-          const { error } = await supabase
-            .from("academic_profiles")
-            .insert({ ...payload, created_at: new Date().toISOString() });
-          if (error) throw error;
-        }
+        const { error } = await supabase
+          .from("academic_profiles")
+          .upsert(
+            {
+              ...payload,
+              created_at: profile?.created_at ?? new Date().toISOString(),
+            },
+            { onConflict: "user_id" }
+          );
+        if (error) throw error;
 
         await fetchProfile();
         return true;
