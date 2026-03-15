@@ -175,154 +175,32 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        setData(prev => ({ ...prev, isLoaded: true }));
+        return;
+      }
 
-      // 1. Fetch subject row for topics JSON + exam_patterns aggregate
-      const { data: subjectRow } = await supabase
-        .from('subjects')
-        .select('topics, exam_patterns')
-        .eq('id', subjectId)
-        .single();
-
-      const allTopics: DbTopic[] = (Array.isArray(subjectRow?.topics) ? subjectRow!.topics : []) as DbTopic[];
-      const topic = allTopics.find(t =>
-        t.name?.toLowerCase() === topicName.toLowerCase() ||
-        t.name?.toLowerCase().includes(topicName.toLowerCase())
-      ) || null;
-
-      // 2. Fetch exam patterns from exam_patterns table
-      const { data: patternRows } = await supabase
-        .from('exam_patterns')
-        .select('topic_name, frequency_score, avg_marks, question_types, year')
-        .eq('subject_id', subjectId)
-        .eq('user_id', user.id);
-
-      const examPatterns: ExamPatternRow[] = (patternRows || []).map(r => ({
-        topic_name: r.topic_name,
-        frequency_score: Number(r.frequency_score) || 0,
-        avg_marks: Number(r.avg_marks) || 0,
-        question_types: Array.isArray(r.question_types) ? r.question_types : [],
-        year: r.year || null,
-      }));
-
-      // 3. Fetch ALL processed documents for this subject/user (both past papers AND syllabus)
-      const { data: docs } = await supabase
-        .from('documents')
-        .select('parsed_content, document_type, subject_id')
-        .eq('user_id', user.id)
-        .eq('is_processed', true)
-        .in('document_type', ['past_paper', 'syllabus']);
-
-      const pastPaperQuestions: PastPaperQuestion[] = [];
-
-      // Also extract syllabus-level topic data from syllabus documents
-      let syllabusTopicData: DbTopic | null = null;
-
-      (docs || []).forEach(doc => {
-        if (!doc.parsed_content) return;
-        const parsed = doc.parsed_content as Record<string, unknown>;
-
-        if (doc.document_type === 'past_paper') {
-          // Extract question patterns from past papers
-          const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
-          questions.forEach((q: Record<string, unknown>) => {
-            if (q.topic) {
-              pastPaperQuestions.push({
-                question_number: String(q.question_number || ''),
-                topic: String(q.topic || ''),
-                subtopic: q.subtopic ? String(q.subtopic) : undefined,
-                marks: Number(q.marks) || 1,
-                question_type: String(q.question_type || 'structured'),
-                difficulty: String(q.difficulty || 'medium'),
-                command_words: Array.isArray(q.command_words) ? q.command_words : [],
-                concepts_tested: Array.isArray(q.concepts_tested) ? q.concepts_tested : [],
-              });
-            }
-          });
-        } else if (doc.document_type === 'syllabus') {
-          // Extract topic-level data from syllabus documents
-          const syllabusTopics = Array.isArray(parsed.topics) ? parsed.topics : [];
-          const matchedTopic = syllabusTopics.find((t: Record<string, unknown>) =>
-            String(t.name || '').toLowerCase().includes(topicName!.toLowerCase()) ||
-            topicName!.toLowerCase().includes(String(t.name || '').toLowerCase())
-          );
-          if (matchedTopic && !syllabusTopicData) {
-            // Merge parsed syllabus data with the Supabase topic row
-            syllabusTopicData = {
-              id: String(matchedTopic.id || ''),
-              name: String(matchedTopic.name || topicName),
-              subtopics: Array.isArray(matchedTopic.subtopics)
-                ? matchedTopic.subtopics.map(String)
-                : [],
-              learningObjectives: Array.isArray(matchedTopic.learningObjectives)
-                ? matchedTopic.learningObjectives.map(String)
-                : (Array.isArray(matchedTopic.learning_objectives)
-                    ? (matchedTopic.learning_objectives as unknown[]).map(String)
-                    : []),
-              concepts: Array.isArray(matchedTopic.concepts)
-                ? matchedTopic.concepts.map(String)
-                : (Array.isArray(matchedTopic.key_concepts)
-                    ? (matchedTopic.key_concepts as unknown[]).map(String)
-                    : []),
-              examWeight: Number(matchedTopic.examWeight || matchedTopic.exam_weight || 0),
-              prerequisites: Array.isArray(matchedTopic.prerequisites)
-                ? matchedTopic.prerequisites.map(String)
-                : [],
-            } as DbTopic;
-          }
-        }
+      const { data: contextData, error } = await supabase.rpc('get_subject_context', {
+        p_subject_id: subjectId,
+        p_topic_name: topicName,
       });
 
-      // 4. Fetch topic mastery to calculate syllabus progress
-      const { data: masteryRows } = await supabase
-        .from('topic_mastery')
-        .select('topic_name, mastery_percentage')
-        .eq('subject_id', subjectId)
-        .eq('user_id', user.id);
+      if (error) throw error;
 
-      const masteredTopicCount = (masteryRows || []).filter(m => (m.mastery_percentage || 0) >= 70).length;
-      const totalTopicCount = allTopics.length;
-      const syllabusProgress = totalTopicCount > 0
-        ? Math.round((masteredTopicCount / totalTopicCount) * 100)
-        : 0;
-
-      // 5. Get exam weight from past paper patterns for this specific topic
-      const topicPats = examPatterns.filter(p =>
-        p.topic_name?.toLowerCase().includes(topicName.toLowerCase()) ||
-        topicName.toLowerCase().includes(p.topic_name?.toLowerCase() || '')
-      );
-      const examWeightFromPapers = topicPats.length > 0
-        ? Math.round(topicPats.reduce((a, p) => a + p.frequency_score, 0) / topicPats.length)
-        : topic?.examWeight || 0;
-
-      // 6. Merge syllabus document data into topic (syllabus doc data takes precedence for subtopics/objectives)
-      const mergedTopic: DbTopic | null = topic ? {
-        ...topic,
-        // If syllabus doc has more detailed subtopics/objectives, use them
-        subtopics: syllabusTopicData?.subtopics?.length
-          ? syllabusTopicData.subtopics
-          : (topic.subtopics || []),
-        learningObjectives: syllabusTopicData?.learningObjectives?.length
-          ? syllabusTopicData.learningObjectives
-          : (topic.learningObjectives || []),
-        concepts: syllabusTopicData?.concepts?.length
-          ? syllabusTopicData.concepts
-          : (topic.concepts || []),
-      } : syllabusTopicData;
-
-      // 7. Build curriculum context string using merged topic data
-      const curriculumContext = buildCurriculumContext(topicName, mergedTopic, examPatterns, pastPaperQuestions);
+      const payload = (contextData || {}) as Partial<SyllabusContextData>;
 
       setData({
-        topic: mergedTopic,
-        allTopics,
-        examPatterns,
-        pastPaperQuestions,
-        examWeightFromPapers,
-        masteredTopicCount,
-        totalTopicCount,
-        syllabusProgress,
-        curriculumContext,
+        topic: (payload.topic as DbTopic | null) || null,
+        allTopics: Array.isArray(payload.allTopics) ? (payload.allTopics as DbTopic[]) : [],
+        examPatterns: Array.isArray(payload.examPatterns) ? (payload.examPatterns as ExamPatternRow[]) : [],
+        pastPaperQuestions: Array.isArray(payload.pastPaperQuestions)
+          ? (payload.pastPaperQuestions as PastPaperQuestion[])
+          : [],
+        examWeightFromPapers: Number(payload.examWeightFromPapers || 0),
+        masteredTopicCount: Number(payload.masteredTopicCount || 0),
+        totalTopicCount: Number(payload.totalTopicCount || 0),
+        syllabusProgress: Number(payload.syllabusProgress || 0),
+        curriculumContext: String(payload.curriculumContext || ''),
         isLoaded: true,
       });
     } catch (err) {

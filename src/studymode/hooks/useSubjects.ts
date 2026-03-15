@@ -18,6 +18,8 @@ interface DbSubject {
   name: string;
   syllabus_code: string | null;
   topics: DbTopic[];
+  icon_emoji?: string | null;
+  icon_gradient?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -76,7 +78,7 @@ export function useSubjects() {
         masteryData?.map(m => [`${m.subject_id}-${m.topic_name}`, m]) ?? []
       );
 
-      return subjects.map((subject) => {
+      return subjects.map((subject: any) => {
         // Parse topics from JSON - handle both array and object formats
         const rawTopics = subject.topics as unknown;
         const dbTopics: DbTopic[] = Array.isArray(rawTopics) ? rawTopics : [];
@@ -100,8 +102,8 @@ export function useSubjects() {
           : 0;
 
         const subjectName = subject.name;
-        const color = subjectColors[subjectName] || 'from-gray-500 to-slate-600';
-        const icon = subjectIcons[subjectName] || '📖';
+        const color = subject.icon_gradient || subjectColors[subjectName] || 'from-gray-500 to-slate-600';
+        const icon = subject.icon_emoji || subjectIcons[subjectName] || '📖';
 
         return {
           id: subject.id,
