@@ -12,6 +12,7 @@ import { useState, useCallback, useRef } from 'react';
 import { Subject, Topic } from '../types/study';
 import { useSyllabusContext } from './useSyllabusContext';
 import { useTopicPerformance } from './useTopicPerformance';
+import { aiRequestJSON } from '../lib/aiClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -37,7 +38,7 @@ interface UseQuizGeneratorOptions {
   topic?: Topic;
 }
 
-const QUIZ_URL = '/api/ai/generate-quiz';
+const QUIZ_ENDPOINT = 'generate-quiz';
 
 export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
   const [question, setQuestion] = useState<QuizQuestion | null>(null);
@@ -126,18 +127,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         avoidQuestionTypes: recentQuestionTypes.current.slice(-2),
       };
 
-      const resp = await fetch(QUIZ_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!resp.ok) {
-        const errorData = await resp.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to generate question');
-      }
-
-      const data = await resp.json();
+      const data = await aiRequestJSON<any>(QUIZ_ENDPOINT, payload);
 
       // Track question type to enforce variety next time
       if (data.commandWords?.[0]) {

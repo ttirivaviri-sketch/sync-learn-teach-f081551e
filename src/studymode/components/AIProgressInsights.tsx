@@ -3,6 +3,7 @@ import { Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
+import { aiRequest } from '../lib/aiClient';
 
 interface AIProgressInsightsProps {
   subjects: Array<{ name: string; currentTopic: string; mastery: number }>;
@@ -25,11 +26,7 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
     setError(null);
 
     try {
-      const resp = await fetch('/api/ai/progress-insights', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ subjects, dailyStats, streak, xp, quizHistory, masteryData }),
-        });
+      const resp = await aiRequest('progress-insights', { subjects, dailyStats, streak, xp, quizHistory, masteryData });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({ error: 'Failed to generate insights' }));

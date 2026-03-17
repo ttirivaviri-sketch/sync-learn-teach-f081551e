@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
+import { aiRequest } from '../lib/aiClient';
 
 type Message = {
   role: 'user' | 'assistant';
   content: string;
 };
 
-// Local AI proxy endpoint (proxied by Vite dev server → ai-server.js)
-const CHAT_URL = '/api/ai/tutor';
+// Primary: Supabase Edge Function "ai-tutor"; fallback: local /api/ai/tutor proxy
+const CHAT_ENDPOINT = 'tutor';
 
 interface UseAITutorOptions {
   subject?: string;
@@ -41,16 +42,12 @@ export function useAITutor(options: UseAITutorOptions = {}) {
     try {
       const allMessages = [...messages, userMsg];
 
-      const resp = await fetch(CHAT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const resp = await aiRequest(CHAT_ENDPOINT, {
           messages: allMessages,
           subject: options.subject,
           topic: options.topic,
           syllabusContext: options.syllabusContext,
-        }),
-      });
+        });
 
       if (!resp.ok) {
         const errorData = await resp.json().catch(() => ({}));

@@ -3,6 +3,7 @@ import { Flame, X, Sparkles, Loader2, PartyPopper } from 'lucide-react';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { aiRequestJSON } from '../lib/aiClient';
 
 const MILESTONES = [7, 14, 30];
 const STORAGE_KEY = 'celebrated-streaks';
@@ -58,22 +59,14 @@ export function StreakCelebration() {
   const generateMessage = useCallback(async (milestone: number) => {
     setIsLoading(true);
     try {
-      const resp = await fetch('/api/ai/streak-celebration', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      const data = await aiRequestJSON<{ message?: string }>('streak-celebration', {
             milestone,
             streak: progress?.streak || milestone,
             totalXp: progress?.xp || 0,
             badgeCount: progress?.badges?.length || 0,
             tasksCompletedToday: dailyStats.tasksCompletedToday,
-          }),
-        });
-
-      if (resp.ok) {
-        const data = await resp.json();
-        setAiMessage(data.message || '');
-      }
+          });
+      setAiMessage(data.message || '');
     } catch (err) {
       console.error('Streak celebration error:', err);
     } finally {

@@ -16,6 +16,7 @@ import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { Subject, Topic } from '../types/study';
 import { supabase } from '../../integrations/supabase/client';
+import { aiRequest } from '../lib/aiClient';
 
 interface ExamQuestionPanelProps {
   question?: {
@@ -96,19 +97,15 @@ export function ExamQuestionPanel({
     setAiExplanation('');
 
     try {
-      const response = await fetch('/api/ai/explain-answer', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          question: activeQuestion.text,
-          studentAnswer: answer,
-          modelAnswer: generatedModelAnswer,
-          topic: activeQuestion.topic,
-          subject: subject?.name || 'Unknown',
-          // Pass key points so the AI can reference exact marking criteria
-          keyPoints: generatedKeyPoints,
-          conceptsTested: quizGenerator?.question?.conceptsTested,
-        }),
+      const response = await aiRequest('explain-answer', {
+        question: activeQuestion.text,
+        studentAnswer: answer,
+        modelAnswer: generatedModelAnswer,
+        topic: activeQuestion.topic,
+        subject: subject?.name || 'Unknown',
+        // Pass key points so the AI can reference exact marking criteria
+        keyPoints: generatedKeyPoints,
+        conceptsTested: quizGenerator?.question?.conceptsTested,
       });
 
       if (!response.ok) {

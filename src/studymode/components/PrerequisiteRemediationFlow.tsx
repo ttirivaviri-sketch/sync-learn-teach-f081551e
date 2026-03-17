@@ -5,11 +5,11 @@ import { Card } from './ui/card';
 import { Progress } from './ui/progress';
 import { Alert, AlertDescription } from './ui/alert';
 import { Skeleton } from './ui/skeleton';
-// Note: using local AI proxy — supabase kept for auth
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
 import ReactMarkdown from 'react-markdown';
+import { aiRequestJSON } from '../lib/aiClient';
 
 interface PrerequisiteGap {
   topic: string;
@@ -52,14 +52,7 @@ export function PrerequisiteRemediationFlow({
   const analyzePrerequisites = async () => {
     setIsLoading(true);
     try {
-      const resp = await fetch('/api/ai/analyze-prerequisites', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subject, topic: currentTopic }),
-      });
-
-      if (!resp.ok) throw new Error('Failed to analyze prerequisites');
-      const data = await resp.json();
+      const data = await aiRequestJSON<{ gaps?: PrerequisiteGap[] }>('analyze-prerequisites', { subject, topic: currentTopic });
 
       if (data.gaps && data.gaps.length > 0) {
         setGaps(data.gaps);
@@ -90,19 +83,12 @@ export function PrerequisiteRemediationFlow({
   const loadTheory = async (gap: PrerequisiteGap) => {
     setIsLoading(true);
     try {
-      const resp = await fetch('/api/ai/generate-prerequisite-theory', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject,
-          prerequisiteTopic: gap.topic,
-          missingConcepts: gap.missingConcepts,
-        }),
+      const data = await aiRequestJSON<{ theory?: string }>('generate-prerequisite-theory', {
+        subject,
+        prerequisiteTopic: gap.topic,
+        missingConcepts: gap.missingConcepts,
       });
-
-      if (!resp.ok) throw new Error('Failed to load theory');
-      const data = await resp.json();
-      setTheoryContent(data.theory);
+      setTheoryContent(data.theory ?? '');
     } catch (error) {
       console.error('Theory loading error:', error);
       toast({
@@ -121,20 +107,13 @@ export function PrerequisiteRemediationFlow({
     setPhase('quiz');
     try {
       const currentGap = gaps[currentGapIndex];
-      const resp = await fetch('/api/ai/generate-prerequisite-quiz', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          subject,
-          topic: currentGap.topic,
-          difficulty: 'basic',
-          questionCount: 3,
-        }),
+      const data = await aiRequestJSON<{ questions?: any[] }>('generate-prerequisite-quiz', {
+        subject,
+        topic: currentGap.topic,
+        difficulty: 'basic',
+        questionCount: 3,
       });
-
-      if (!resp.ok) throw new Error('Failed to load quiz');
-      const data = await resp.json();
-      setQuizQuestions(data.questions);
+      setQuizQuestions(data.questions ?? []);
       setCurrentQuestionIndex(0);
     } catch (error) {
       console.error('Quiz loading error:', error);

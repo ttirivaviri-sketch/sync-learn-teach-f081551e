@@ -213,49 +213,113 @@ export function useLibraryResources(
     const fetchTutorials = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase.rpc("get_published_tutorials", {
-          p_curriculum: academicProfile?.curriculum ?? null,
-          p_subject: null,
-        });
+        // ── Primary path: RPC that returns flat fields ──────────────────────
+        const { data: rpcData, error: rpcError } = await supabase.rpc(
+          "get_published_tutorials",
+          {
+            p_curriculum: academicProfile?.curriculum ?? null,
+            p_subject: null,
+          }
+        );
 
-        if (error) {
-          // RPC/table may not exist yet — silently ignore
-          console.warn("published tutorials backend not available:", error.message);
+        if (!rpcError && rpcData && rpcData.length > 0) {
+          const mapped: LibraryResource[] = (rpcData as any[]).map((row) => ({
+            id: row.id,
+            title: row.title,
+            // RPC returns flat columns, not a nested object
+            author: row.tutor_full_name || row.tutor_profile?.full_name || "Tutor",
+            type: "video" as const,
+            category: row.subject,
+            gradeLevel: row.grade || "All Grades",
+            summary: row.description || "",
+            rating: row.rating || 0,
+            reviews: row.review_count || 0,
+            thumbnail: row.thumbnail_url || "/placeholder.svg",
+            isOffline: false,
+            duration: row.duration_label || "Video",
+            isTutorial: true,
+            watchCount: row.watch_count || 0,
+            completionRate: row.completion_rate || 0,
+            videoUrl: row.video_url || undefined,
+            tags: {
+              subject: row.subject,
+              topic: row.topic,
+              subtopic: row.subtopic,
+              grade: row.grade,
+              curriculum: row.curriculum,
+            },
+            tutor: {
+              id: row.tutor_id,
+              name: row.tutor_full_name || row.tutor_profile?.full_name || "Tutor",
+              avatar_url: row.tutor_avatar_url || row.tutor_profile?.avatar_url,
+              rating: row.rating || 0,
+              reviews: row.review_count || 0,
+            },
+          }));
+
+          setDbResources(mapped);
           return;
         }
 
-        const mapped: LibraryResource[] = (data || []).map((row: any) => ({
-          id: row.id,
-          title: row.title,
-          author: row.tutor_profile?.full_name || "Tutor",
-          type: "video" as const,
-          category: row.subject,
-          gradeLevel: row.grade || "All Grades",
-          summary: row.description || "",
-          rating: row.rating || 0,
-          reviews: row.review_count || 0,
-          thumbnail: row.thumbnail_url || "/placeholder.svg",
-          isOffline: false,
-          duration: row.duration_label || "Video",
-          isTutorial: true,
-          watchCount: row.watch_count || 0,
-          completionRate: row.completion_rate || 0,
-          videoUrl: row.video_url || undefined,
-          tags: {
-            subject: row.subject,
-            topic: row.topic,
-            subtopic: row.subtopic,
-            grade: row.grade,
-            curriculum: row.curriculum,
-          },
-          tutor: {
-            id: row.tutor_profile?.id || row.tutor_id,
-            name: row.tutor_profile?.full_name || "Tutor",
-            avatar_url: row.tutor_profile?.avatar_url,
+        // ── Fallback: direct query to tutor_tutorials ───────────────────────
+        if (rpcError) {
+          console.warn(
+            "get_published_tutorials RPC unavailable, falling back to direct query:",
+            rpcError.message
+          );
+        }
+
+        const { data: directData, error: directError } = await supabase
+          .from("tutor_tutorials" as any)
+          .select(
+            `id, title, subject, topic, subtopic, grade, curriculum,
+             description, rating, review_count, thumbnail_url,
+             duration_label, video_url, watch_count, completion_rate,
+             tutor_id,
+             tutor_profile:profiles!tutor_id(id, full_name, avatar_url)`
+          )
+          .eq("status", "published")
+          .order("created_at", { ascending: false });
+
+        if (directError) {
+          console.warn("tutor_tutorials direct query failed:", directError.message);
+          return;
+        }
+
+        const mapped: LibraryResource[] = ((directData as any[]) || []).map(
+          (row) => ({
+            id: row.id,
+            title: row.title,
+            author: (row.tutor_profile as any)?.full_name || "Tutor",
+            type: "video" as const,
+            category: row.subject,
+            gradeLevel: row.grade || "All Grades",
+            summary: row.description || "",
             rating: row.rating || 0,
             reviews: row.review_count || 0,
-          },
-        }));
+            thumbnail: row.thumbnail_url || "/placeholder.svg",
+            isOffline: false,
+            duration: row.duration_label || "Video",
+            isTutorial: true,
+            watchCount: row.watch_count || 0,
+            completionRate: row.completion_rate || 0,
+            videoUrl: row.video_url || undefined,
+            tags: {
+              subject: row.subject,
+              topic: row.topic,
+              subtopic: row.subtopic,
+              grade: row.grade,
+              curriculum: row.curriculum,
+            },
+            tutor: {
+              id: row.tutor_id,
+              name: (row.tutor_profile as any)?.full_name || "Tutor",
+              avatar_url: (row.tutor_profile as any)?.avatar_url,
+              rating: row.rating || 0,
+              reviews: row.review_count || 0,
+            },
+          })
+        );
 
         setDbResources(mapped);
       } catch (err) {
