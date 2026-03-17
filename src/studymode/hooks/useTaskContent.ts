@@ -10,6 +10,7 @@
  */
 
 import { useState, useCallback } from 'react';
+import { aiRequest } from '../lib/aiClient';
 
 export interface TaskContentParams {
   taskType: string;
@@ -38,7 +39,7 @@ interface UseTaskContentReturn {
   reset: () => void;
 }
 
-const TASK_CONTENT_URL = '/api/ai/generate-task-content';
+const TASK_CONTENT_ENDPOINT = 'generate-task-content';
 
 export function useTaskContent(): UseTaskContentReturn {
   const [content, setContent] = useState('');
@@ -57,11 +58,7 @@ export function useTaskContent(): UseTaskContentReturn {
     setError(null);
 
     try {
-      const resp = await fetch(TASK_CONTENT_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(params),
-      });
+      const resp = await aiRequest(TASK_CONTENT_ENDPOINT, params);
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({ error: 'Failed to generate content' }));

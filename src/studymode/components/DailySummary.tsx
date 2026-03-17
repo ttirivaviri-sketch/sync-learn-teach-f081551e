@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import { Button } from './ui/button';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '../lib/utils';
+import { aiRequest } from '../lib/aiClient';
 
 interface DailySummaryProps {
   onClose: () => void;
@@ -53,10 +54,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
     setAiMessage('');
 
     try {
-      const resp = await fetch('/api/ai/daily-summary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      const resp = await aiRequest('daily-summary', {
             tasksCompleted: dailyStats.tasksCompletedToday,
             totalTasks: dailyStats.totalTasksToday,
             examQuestions: dailyStats.examQuestionsToday,
@@ -64,8 +62,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
             streak: progress?.streak || 0,
             totalXp,
             badgeCount,
-          }),
-        });
+          });
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({}));

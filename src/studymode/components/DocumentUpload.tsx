@@ -7,6 +7,7 @@ import { Label } from './ui/label';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
+import { aiRequest } from '../lib/aiClient';
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -156,11 +157,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
           if (!edgeResult.error && edgeResult.data?.parsed) {
             parsedPayload = edgeResult.data.parsed;
           } else {
-            const parseResp = await fetch('/api/ai/parse-document', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(parsePayload),
-            });
+            const parseResp = await aiRequest('parse-document', parsePayload);
 
             if (parseResp.ok) {
               const parseData = await parseResp.json();

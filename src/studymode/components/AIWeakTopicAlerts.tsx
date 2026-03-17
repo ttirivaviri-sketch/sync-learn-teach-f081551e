@@ -4,6 +4,7 @@ import { Button } from './ui/button';
 import { cn } from '../lib/utils';
 import { TopicReviewStatus } from '../hooks/useSpacedRepetition';
 import { TutorBriefing } from './TutorBriefing';
+import { aiRequestJSON } from '../lib/aiClient';
 
 interface WeakTopic {
   topic: string;
@@ -71,10 +72,7 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
     setError(null);
 
     try {
-      const resp = await fetch('/api/ai/detect-weak-topics', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+      const data: WeakTopicAnalysis = await aiRequestJSON('detect-weak-topics', {
             topicStats: topicStats.map(t => ({
               topic_name: t.topic_name,
               accuracy: t.accuracy,
@@ -83,15 +81,7 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
               due_for_review: t.due_for_review,
             })),
             subjects,
-          }),
-        });
-
-      if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({}));
-        throw new Error(errData.error || `Error ${resp.status}`);
-      }
-
-      const data: WeakTopicAnalysis = await resp.json();
+          });
       setAnalysis(data);
       setHasAnalyzed(true);
     } catch (e) {

@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { useUserProgress } from './useUserProgress';
 import { useExamSettings } from './useExamSettings';
+import { aiRequest } from '../lib/aiClient';
 
-// Local AI proxy endpoint
-const GREETING_URL = '/api/ai/greeting';
+// Primary: Supabase Edge Function "ai-greeting"; fallback: local /api/ai/greeting proxy
+const GREETING_ENDPOINT = 'greeting';
 
 export function useAIGreeting() {
   const [greeting, setGreeting] = useState<string>('');
@@ -23,22 +24,18 @@ export function useAIGreeting() {
 
         const daysUntilExam = getDaysUntilExam();
 
-        const resp = await fetch(GREETING_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            studentName,
-            hour,
-            streak: progress?.streak || 0,
-            daysUntilExam,
-            examName: examSettings?.exam_name || 'exams',
-            tasksCompletedToday: dailyStats.tasksCompletedToday,
-            totalTasksToday: dailyStats.totalTasksToday,
-            lastStudyDate: progress?.last_study_date || null,
-            scheduleAdherence: dailyStats.totalTasksToday > 0
-              ? `${Math.round((dailyStats.tasksCompletedToday / dailyStats.totalTasksToday) * 100)}%`
-              : 'no tasks yet',
-          }),
+        const resp = await aiRequest(GREETING_ENDPOINT, {
+          studentName,
+          hour,
+          streak: progress?.streak || 0,
+          daysUntilExam,
+          examName: examSettings?.exam_name || 'exams',
+          tasksCompletedToday: dailyStats.tasksCompletedToday,
+          totalTasksToday: dailyStats.totalTasksToday,
+          lastStudyDate: progress?.last_study_date || null,
+          scheduleAdherence: dailyStats.totalTasksToday > 0
+            ? `${Math.round((dailyStats.tasksCompletedToday / dailyStats.totalTasksToday) * 100)}%`
+            : 'no tasks yet',
         });
 
         if (!resp.ok) {
