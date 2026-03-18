@@ -8,6 +8,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
 import { aiRequest } from '../lib/aiClient';
+import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -24,6 +25,7 @@ interface UploadedFile {
 
 export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProps) {
   const { toast } = useToast();
+  const { onDocumentUploaded } = useAdaptiveLearningEngine();
   const [files, setFiles] = useState<UploadedFile[]>([]);
   const [documentType, setDocumentType] = useState<DocumentType>('syllabus');
   const [subject, setSubject] = useState('');
@@ -281,6 +283,11 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
       title: "Upload complete",
       description: `${files.length} document(s) uploaded and being processed.`,
     });
+
+    // Trigger adaptive plan regeneration with new document context (runs in background)
+    onDocumentUploaded().catch((err) =>
+      console.warn('[DocumentUpload] Adaptive plan regen failed:', err)
+    );
 
     onUploadComplete?.();
   };

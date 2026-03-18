@@ -936,6 +936,68 @@ ALTER TABLE public.documents
 
 
 -- ────────────────────────────────────────────────────────────
+-- 6. flashcards table (AI-generated, per-topic flashcard store)
+-- ────────────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS public.flashcards (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id          UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  subject_id       UUID REFERENCES public.subjects(id) ON DELETE SET NULL,
+  subject          TEXT NOT NULL,
+  topic            TEXT NOT NULL,
+  front            TEXT NOT NULL,
+  back             TEXT NOT NULL,
+  hint             TEXT,
+  difficulty       TEXT DEFAULT 'medium' CHECK (difficulty IN ('easy','medium','hard')),
+  tags             JSONB DEFAULT '[]',
+  -- SM-2 spaced-repetition fields
+  repetitions      INTEGER DEFAULT 0,
+  ease_factor      REAL DEFAULT 2.5,
+  interval_days    INTEGER DEFAULT 1,
+  next_review_date DATE DEFAULT CURRENT_DATE,
+  last_reviewed_at TIMESTAMPTZ,
+  created_at       TIMESTAMPTZ DEFAULT now(),
+  updated_at       TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.flashcards ENABLE ROW LEVEL SECURITY;
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname='public' AND tablename='flashcards'
+      AND policyname='Users can manage own flashcards'
+  ) THEN
+    CREATE POLICY "Users can manage own flashcards"
+      ON public.flashcards FOR ALL
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_flashcards_user_topic
+  ON public.flashcards (user_id, subject, topic);
+
+CREATE INDEX IF NOT EXISTS idx_flashcards_review_date
+  ON public.flashcards (user_id, next_review_date);
+
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_triggers
+    WHERE tgname = 'update_flashcards_updated_at'
+  ) THEN
+    CREATE TRIGGER update_flashcards_updated_at
+      BEFORE UPDATE ON public.flashcards
+      FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+  END IF;
+END $$;
+
+-- Add notes column to study_schedule if missing (stores AI task_description)
+ALTER TABLE public.study_schedule
+  ADD COLUMN IF NOT EXISTS notes TEXT;
+
+
+-- ────────────────────────────────────────────────────────────
 -- FINAL: Reload PostgREST schema cache
 -- ────────────────────────────────────────────────────────────
 NOTIFY pgrst, 'reload schema';

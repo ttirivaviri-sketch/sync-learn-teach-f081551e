@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { cn } from '../lib/utils';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
+import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 
 interface CurriculumLevel {
   id: string;
@@ -149,6 +150,7 @@ interface OnboardingFlowProps {
 }
 
 export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
+  const { onSignupComplete } = useAdaptiveLearningEngine();
   const [step, setStep] = useState<'board' | 'level' | 'subjects' | 'exams'>('board');
 
   const [selectedBoard, setSelectedBoard] = useState<CurriculumBoard | null>(null);
@@ -256,6 +258,11 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         title: '🎉 Welcome to STUDYMODE!',
         description: 'Your learning journey begins now.',
       });
+
+      // Trigger initial AI study plan generation in the background
+      onSignupComplete().catch((err) =>
+        console.warn('[OnboardingFlow] Initial plan generation failed:', err)
+      );
 
       onComplete();
     } catch (error) {
