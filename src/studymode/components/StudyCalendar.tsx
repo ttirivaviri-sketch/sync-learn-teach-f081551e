@@ -18,17 +18,27 @@ interface StudyCalendarProps {
 }
 
 const taskTypeColors: Record<string, string> = {
-  revision: 'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30',
-  concept_learning: 'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30',
-  exam_prep: 'bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30',
-  practice: 'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30',
+  revision:             'bg-blue-500/20 text-blue-700 dark:text-blue-300 border-blue-500/30',
+  concept_learning:     'bg-green-500/20 text-green-700 dark:text-green-300 border-green-500/30',
+  exam_prep:            'bg-orange-500/20 text-orange-700 dark:text-orange-300 border-orange-500/30',
+  practice:             'bg-purple-500/20 text-purple-700 dark:text-purple-300 border-purple-500/30',
+  active_recall:        'bg-violet-500/20 text-violet-700 dark:text-violet-300 border-violet-500/30',
+  exam_question:        'bg-red-500/20 text-red-700 dark:text-red-300 border-red-500/30',
+  past_paper_practice:  'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30',
+  micro_revision:       'bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30',
+  flashcard_review:     'bg-pink-500/20 text-pink-700 dark:text-pink-300 border-pink-500/30',
 };
 
 const taskTypeLabels: Record<string, string> = {
-  revision: 'Revision',
-  concept_learning: 'Concept Learning',
-  exam_prep: 'Exam Prep',
-  practice: 'Practice',
+  revision:             'Revision',
+  concept_learning:     'Concept Learning',
+  exam_prep:            'Exam Prep',
+  practice:             'Practice',
+  active_recall:        'Active Recall',
+  exam_question:        'Exam Question',
+  past_paper_practice:  'Past Paper',
+  micro_revision:       'Micro Revision',
+  flashcard_review:     'Flashcard Review',
 };
 
 export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSchedule }: StudyCalendarProps) {
@@ -310,21 +320,30 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
                 >
                   <div className="flex items-center gap-3">
                     <button
-                      onClick={() => toggleComplete.mutate({ id: item.id, isCompleted: !item.is_completed })}
+                      onClick={() => toggleComplete.mutate({
+                        id: item.id,
+                        isCompleted: !item.is_completed,
+                        taskType: item.task_type,
+                      })}
                       className={cn(
-                        'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors',
+                        'h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors shrink-0',
                         item.is_completed ? 'bg-success border-success' : 'border-current'
                       )}
                     >
                       {item.is_completed && <Check className="h-3 w-3 text-success-foreground" />}
                     </button>
-                    <div>
-                      <p className={cn('text-sm font-medium', item.is_completed && 'line-through opacity-60')}>
+                    <div className="min-w-0">
+                      <p className={cn('text-sm font-medium truncate', item.is_completed && 'line-through opacity-60')}>
                         {item.topic_name}
                       </p>
                       <p className="text-xs opacity-70">
-                        {taskTypeLabels[item.task_type]} • {item.duration_minutes} min
+                        {taskTypeLabels[item.task_type] || item.task_type} • {item.duration_minutes} min
                       </p>
+                      {(item as any).notes && (
+                        <p className="text-xs opacity-60 mt-0.5 line-clamp-2">
+                          {(item as any).notes}
+                        </p>
+                      )}
                     </div>
                   </div>
                   <Button

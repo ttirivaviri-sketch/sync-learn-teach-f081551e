@@ -12,6 +12,7 @@ import { ProgressCharts } from './ProgressCharts';
 import { AIProgressInsights } from './AIProgressInsights';
 import { AIWeakTopicAlerts } from './AIWeakTopicAlerts';
 import { DailySummary } from './DailySummary';
+import { AdaptivePlanBanner } from './AdaptivePlanBanner';
 import { Button } from './ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '../lib/utils';
@@ -286,11 +287,14 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             />
           )}
 
+          <AdaptivePlanBanner />
+
           <StudyCalendar 
             subjects={subjects} 
             examDate={getNextExam()?.exam_date ? new Date(getNextExam()!.exam_date) : examDate}
             subjectExams={subjectExams}
           />
+
         </TabsContent>
 
         <TabsContent value="review" className="mt-4">

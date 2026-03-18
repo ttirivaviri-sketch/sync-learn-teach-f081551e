@@ -40,6 +40,9 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   'analyze-prerequisites':       'analyze-prerequisites',
   'generate-prerequisite-theory':'generate-prerequisite-theory',
   'generate-prerequisite-quiz':  'generate-prerequisite-quiz',
+  // Adaptive learning engine
+  'generate-study-plan':         'generate-study-plan',
+  'generate-flashcards':         'generate-flashcards',
 };
 
 /**
