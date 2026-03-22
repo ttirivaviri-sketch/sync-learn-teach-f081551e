@@ -32,7 +32,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
       if (error && error.code !== "PGRST116") {
         console.error("Error loading academic profile:", error);
       }
-      setProfile((data as AcademicProfile | null) ?? null);
+      setProfile((data as unknown as AcademicProfile | null) ?? null);
     } catch (err) {
       console.error("Academic profile fetch error:", err);
     } finally {
