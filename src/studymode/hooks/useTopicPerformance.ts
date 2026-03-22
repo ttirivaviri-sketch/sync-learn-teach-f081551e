@@ -95,8 +95,8 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         return;
       }
 
-      const total = attempts.length;
-      const correct = attempts.filter(a => a.was_correct).length;
+      const total = (attempts as any[]).length;
+      const correct = (attempts as any[]).filter((a: any) => a.was_correct).length;
       const accuracy = total > 0 ? correct / total : 0;
 
       // Mastery status
