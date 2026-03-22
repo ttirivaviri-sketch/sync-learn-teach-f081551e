@@ -214,7 +214,7 @@ export function useLibraryResources(
       setLoading(true);
       try {
         // ── Primary path: RPC that returns flat fields ──────────────────────
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
+        const { data: rpcData, error: rpcError } = await (supabase.rpc as any)(
           "get_published_tutorials",
           {
             p_curriculum: academicProfile?.curriculum ?? null,
@@ -222,8 +222,8 @@ export function useLibraryResources(
           }
         );
 
-        if (!rpcError && rpcData && rpcData.length > 0) {
-          const mapped: LibraryResource[] = (rpcData as any[]).map((row) => ({
+        if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
+          const mapped: LibraryResource[] = (rpcData as any[]).map((row: any) => ({
             id: row.id,
             title: row.title,
             // RPC returns flat columns, not a nested object

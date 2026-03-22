@@ -93,7 +93,7 @@ export const security = {
         await supabase.rpc('log_security_event', {
           _user_id: session.user.id,
           _action: action,
-          _details: details,
+          _details: details as any,
           _ip_address: null,
           _user_agent: navigator.userAgent
         });

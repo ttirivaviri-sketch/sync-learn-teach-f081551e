@@ -54,10 +54,10 @@ export function AcademicProfileSetup({
     existingProfile ? "subjects" : "curriculum"
   );
   const [curriculum, setCurriculum] = useState<Curriculum>(
-    existingProfile?.curriculum || "ZIMSEC"
+    (existingProfile?.curriculum as Curriculum) || "ZIMSEC"
   );
   const [grade, setGrade] = useState<GradeLevel | "">(
-    existingProfile?.grade || ""
+    (existingProfile?.grade as GradeLevel) || ""
   );
   const [subjects, setSubjects] = useState<string[]>(
     existingProfile?.subjects || []

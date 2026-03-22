@@ -71,7 +71,7 @@ export function useUserProgress() {
               return null;
             }
             return {
-              ...(newProgress as UserProgressData),
+              ...(newProgress as unknown as UserProgressData),
               badges: [],
             };
           } catch {
@@ -80,9 +80,9 @@ export function useUserProgress() {
         }
 
         return {
-          ...(data as UserProgressData),
-          badges: Array.isArray((data as UserProgressData).badges)
-            ? ((data as UserProgressData).badges as unknown as Badge[])
+          ...(data as unknown as UserProgressData),
+          badges: Array.isArray((data as unknown as UserProgressData).badges)
+            ? ((data as unknown as UserProgressData).badges as unknown as Badge[])
             : [],
         };
       } catch {
@@ -108,7 +108,7 @@ export function useUserProgress() {
           .eq('user_id', userId)
           .eq('scheduled_date', today);
 
-        const tasksCompletedToday = (scheduledTasks as Array<{ is_completed: boolean }> | null)?.filter(t => t.is_completed).length ?? 0;
+        const tasksCompletedToday = (scheduledTasks as unknown as Array<{ is_completed: boolean }> | null)?.filter(t => t.is_completed).length ?? 0;
         const totalTasksToday = scheduledTasks?.length ?? 0;
 
         // Get today's quiz attempts
@@ -120,7 +120,7 @@ export function useUserProgress() {
 
         const examQuestionsToday = quizAttempts?.length ?? 0;
         const xpFromTasks = tasksCompletedToday * 10;
-        const xpFromQuizzes = (quizAttempts as Array<{ was_correct: boolean }> | null)?.reduce(
+        const xpFromQuizzes = (quizAttempts as unknown as Array<{ was_correct: boolean }> | null)?.reduce(
           (acc, q) => acc + (q.was_correct ? 25 : 10),
           0
         ) ?? 0;

@@ -20,7 +20,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
-import { aiRequestJSON } from './aiClient';
+import { aiRequestJSON } from '../lib/aiClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -244,8 +244,8 @@ export function useAdaptiveLearningEngine() {
       user,
       profile: profileData,
       subjects,
-      examDate: examData?.exam_date || null,
-      examName: examData?.exam_name || null,
+      examDate: (examData as any)?.exam_date || null,
+      examName: (examData as any)?.exam_name || null,
       syllabusContext,
       pastPaperContext,
       performanceContext: perfContext,

@@ -89,7 +89,7 @@ export function useSpacedRepetition(userId: string | null) {
 
       if (fetchError) throw fetchError;
 
-      setDueReviews((data as QuizAttempt[]) || []);
+      setDueReviews((data as unknown as QuizAttempt[]) || []);
     } catch (err) {
       console.error('Error fetching due reviews:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch reviews');
@@ -122,7 +122,7 @@ export function useSpacedRepetition(userId: string | null) {
         easeSum: number;
       }>();
 
-      (data as QuizAttempt[])?.forEach(attempt => {
+      (data as unknown as QuizAttempt[])?.forEach(attempt => {
         const key = `${attempt.subject_id || 'none'}-${attempt.topic_name}`;
         const existing = statsMap.get(key);
 
@@ -187,7 +187,7 @@ export function useSpacedRepetition(userId: string | null) {
         .order('created_at', { ascending: false })
         .limit(1);
 
-      const existingAttempt = existingAttempts?.[0] as QuizAttempt | undefined;
+      const existingAttempt = existingAttempts?.[0] as unknown as QuizAttempt | undefined;
 
       if (existingAttempt) {
         // Update existing attempt with new review

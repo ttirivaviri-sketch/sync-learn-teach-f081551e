@@ -180,7 +180,7 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
         return;
       }
 
-      const { data: contextData, error } = await supabase.rpc('get_subject_context', {
+      const { data: contextData, error } = await (supabase.rpc as any)('get_subject_context', {
         p_subject_id: subjectId,
         p_topic_name: topicName,
       });

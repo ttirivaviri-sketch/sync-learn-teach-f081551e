@@ -260,7 +260,7 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
             ✓ Topic mastered
           </span>
         )}
-        {performance?.masteryStatus === 'struggling' && (
+        {performance?.masteryStatus === 'needs-practice' && (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/30">
             ⚠ Needs work
           </span>

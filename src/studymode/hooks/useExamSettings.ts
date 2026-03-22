@@ -41,7 +41,7 @@ export function useExamSettings() {
         return;
       }
 
-      setSettings(data as ExamSettings | null);
+      setSettings(data as unknown as ExamSettings | null);
     } catch (err) {
       console.error('Error fetching exam settings:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch settings');
@@ -74,7 +74,7 @@ export function useExamSettings() {
           .single();
 
         if (updateError) throw updateError;
-        setSettings(data as ExamSettings);
+        setSettings(data as unknown as ExamSettings);
       } else {
         // Insert new
         const { data, error: insertError } = await supabase
@@ -88,7 +88,7 @@ export function useExamSettings() {
           .single();
 
         if (insertError) throw insertError;
-        setSettings(data as ExamSettings);
+        setSettings(data as unknown as ExamSettings);
       }
 
       return true;

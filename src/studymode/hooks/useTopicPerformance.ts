@@ -95,8 +95,8 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         return;
       }
 
-      const total = attempts.length;
-      const correct = attempts.filter(a => a.was_correct).length;
+      const total = (attempts as any[]).length;
+      const correct = (attempts as any[]).filter((a: any) => a.was_correct).length;
       const accuracy = total > 0 ? correct / total : 0;
 
       // Mastery status
@@ -112,7 +112,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
 
       // Find repeated mistakes: questions answered incorrectly 2+ times
       const incorrectQuestions: Record<string, number> = {};
-      attempts.filter(a => !a.was_correct).forEach(a => {
+      (attempts as any[]).filter((a: any) => !a.was_correct).forEach((a: any) => {
         const q = a.question?.substring(0, 100) || '';
         incorrectQuestions[q] = (incorrectQuestions[q] || 0) + 1;
       });
@@ -122,12 +122,12 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         .slice(0, 5);
 
       // Weak concepts: simple keyword extraction from wrong questions
-      const wrongTexts = attempts.filter(a => !a.was_correct).map(a => a.question || '').join(' ');
+      const wrongTexts = (attempts as any[]).filter((a: any) => !a.was_correct).map((a: any) => a.question || '').join(' ');
       const conceptKeywords = extractConceptKeywords(wrongTexts, topicName);
       const weakConcepts = conceptKeywords.slice(0, 4);
 
       // Topic test trigger: after N attempts with consistent results
-      const recentAttempts = attempts.slice(0, ATTEMPTS_FOR_TOPIC_TEST);
+      const recentAttempts = (attempts as any[]).slice(0, ATTEMPTS_FOR_TOPIC_TEST);
       const shouldTriggerTopicTest =
         total >= ATTEMPTS_FOR_TOPIC_TEST &&
         recentAttempts.length >= ATTEMPTS_FOR_TOPIC_TEST;

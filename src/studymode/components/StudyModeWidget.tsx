@@ -42,7 +42,7 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
           .limit(10);
 
         if (!error && Array.isArray(data)) {
-          setAssignments(data as TutorAssignment[]);
+          setAssignments(data as unknown as TutorAssignment[]);
         }
       } catch {
         // Silent fail - assignments are optional
@@ -74,8 +74,8 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
         .select('id')
         .single();
 
-      if (data?.id) {
-        setSessionId(data.id);
+      if ((data as any)?.id) {
+        setSessionId((data as any).id);
         setSessionActive(true);
       }
     } catch {
