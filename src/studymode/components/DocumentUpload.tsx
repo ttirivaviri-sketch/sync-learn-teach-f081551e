@@ -192,23 +192,23 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
                 .ilike('name', subjectName)
                 .maybeSingle();
 
-              const topicsJson = (parsedPayload.topics as unknown[]).map((t: Record<string, unknown>, idx: number) => ({
-                id: t.id || `topic-${idx + 1}`,
-                name: t.name || `Topic ${idx + 1}`,
-                subtopics: Array.isArray(t.subtopics) ? t.subtopics : [],
-                learningObjectives: Array.isArray(t.learningObjectives) ? t.learningObjectives : [],
-                concepts: Array.isArray(t.concepts) ? t.concepts : [],
+              const topicsJson = (parsedPayload.topics as any[]).map((t: any, idx: number) => ({
+                id: String(t.id || `topic-${idx + 1}`),
+                name: String(t.name || `Topic ${idx + 1}`),
+                subtopics: Array.isArray(t.subtopics) ? t.subtopics.map(String) : [],
+                learningObjectives: Array.isArray(t.learningObjectives) ? t.learningObjectives.map(String) : [],
+                concepts: Array.isArray(t.concepts) ? t.concepts.map(String) : [],
                 examWeight: Number(t.examWeight) || 0,
-                prerequisites: Array.isArray(t.prerequisites) ? t.prerequisites : [],
-              }));
+                prerequisites: Array.isArray(t.prerequisites) ? t.prerequisites.map(String) : [],
+              })) as any;
 
               if (existingSubject?.id) {
                 await supabase
                   .from('subjects')
-                  .update({ topics: topicsJson, syllabus_code: parsedPayload.syllabus_code || null })
+                  .update({ topics: topicsJson as any, syllabus_code: parsedPayload.syllabus_code || null })
                   .eq('id', existingSubject.id);
               } else {
-                await supabase.from('subjects').insert({
+                await (supabase.from('subjects') as any).insert({
                   user_id: user.id,
                   name: subjectName,
                   syllabus_code: parsedPayload.syllabus_code || null,

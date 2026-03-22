@@ -120,7 +120,7 @@ export function useUserProgress() {
 
         const examQuestionsToday = quizAttempts?.length ?? 0;
         const xpFromTasks = tasksCompletedToday * 10;
-        const xpFromQuizzes = (quizAttempts as Array<{ was_correct: boolean }> | null)?.reduce(
+        const xpFromQuizzes = (quizAttempts as unknown as Array<{ was_correct: boolean }> | null)?.reduce(
           (acc, q) => acc + (q.was_correct ? 25 : 10),
           0
         ) ?? 0;

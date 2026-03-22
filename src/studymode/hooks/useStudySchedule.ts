@@ -69,7 +69,7 @@ export function useStudySchedule(month?: Date) {
         console.warn('[useStudySchedule] Table unavailable:', error.message);
         return [];
       }
-      return (data || []) as StudyScheduleItem[];
+      return (data || []) as unknown as StudyScheduleItem[];
     },
     enabled: !!userId,
   });

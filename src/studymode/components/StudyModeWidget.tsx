@@ -74,8 +74,8 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
         .select('id')
         .single();
 
-      if (data?.id) {
-        setSessionId(data.id);
+      if ((data as any)?.id) {
+        setSessionId((data as any).id);
         setSessionActive(true);
       }
     } catch {

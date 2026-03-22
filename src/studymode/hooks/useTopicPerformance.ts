@@ -112,7 +112,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
 
       // Find repeated mistakes: questions answered incorrectly 2+ times
       const incorrectQuestions: Record<string, number> = {};
-      attempts.filter(a => !a.was_correct).forEach(a => {
+      (attempts as any[]).filter((a: any) => !a.was_correct).forEach((a: any) => {
         const q = a.question?.substring(0, 100) || '';
         incorrectQuestions[q] = (incorrectQuestions[q] || 0) + 1;
       });
@@ -122,7 +122,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         .slice(0, 5);
 
       // Weak concepts: simple keyword extraction from wrong questions
-      const wrongTexts = attempts.filter(a => !a.was_correct).map(a => a.question || '').join(' ');
+      const wrongTexts = (attempts as any[]).filter((a: any) => !a.was_correct).map((a: any) => a.question || '').join(' ');
       const conceptKeywords = extractConceptKeywords(wrongTexts, topicName);
       const weakConcepts = conceptKeywords.slice(0, 4);
 

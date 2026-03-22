@@ -187,7 +187,7 @@ export function useSpacedRepetition(userId: string | null) {
         .order('created_at', { ascending: false })
         .limit(1);
 
-      const existingAttempt = existingAttempts?.[0] as QuizAttempt | undefined;
+      const existingAttempt = existingAttempts?.[0] as unknown as QuizAttempt | undefined;
 
       if (existingAttempt) {
         // Update existing attempt with new review

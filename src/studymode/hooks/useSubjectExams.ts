@@ -59,7 +59,7 @@ export function useSubjectExams() {
 
       // Fetch quiz attempts for all subjects
       const { data: quizData } = await supabase
-        .from('quiz_attempts')
+        .from('quiz_attempts' as any)
         .select('*')
         .eq('user_id', userId)
         .in('subject_id', subjectIds);
