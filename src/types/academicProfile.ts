@@ -21,12 +21,18 @@ export type GradeLevel =
 export interface AcademicProfile {
   id?: string;
   user_id: string;
-  curriculum: Curriculum;
-  grade: GradeLevel;
-  subjects: string[];
+  curriculum?: string | null;
+  grade?: string | null;
+  study_level?: string | null;
+  subjects?: string[] | null;
   exam_year?: number | null;
-  created_at?: string;
-  updated_at?: string;
+  exam_board?: string | null;
+  school_name?: string | null;
+  target_grade?: string | null;
+  learning_style?: string | null;
+  goals?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 // ─── Library Resource Types ───────────────────────────────────────────────────

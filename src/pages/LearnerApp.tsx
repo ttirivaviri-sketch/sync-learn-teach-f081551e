@@ -113,9 +113,9 @@ const LearnerApp = () => {
     subjectId: string;
     avatar?: string;
   } | null>(null);
-  const [showPaymentForBooking, setShowPaymentForBooking] = useState<unknown>(null);
+  const [showPaymentForBooking, setShowPaymentForBooking] = useState<any>(null);
   const [showReschedule, setShowReschedule] = useState(false);
-  const [rescheduleBooking, setRescheduleBooking] = useState<unknown>(null);
+  const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
   const [showAllPayments, setShowAllPayments] = useState(false);
 

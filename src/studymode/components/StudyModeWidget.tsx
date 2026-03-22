@@ -42,7 +42,7 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
           .limit(10);
 
         if (!error && Array.isArray(data)) {
-          setAssignments(data as TutorAssignment[]);
+          setAssignments(data as unknown as TutorAssignment[]);
         }
       } catch {
         // Silent fail - assignments are optional

@@ -45,30 +45,25 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
   }, [fetchProfile]);
 
   const saveProfile = useCallback(
-    async (
-      data: Omit<AcademicProfile, "id" | "user_id" | "created_at" | "updated_at">
-    ): Promise<boolean> => {
+    async (data: Partial<AcademicProfile>): Promise<boolean> => {
       if (!userId) return false;
       setSaving(true);
       try {
-        const payload = {
+        const payload: Record<string, unknown> = {
           user_id: userId,
-          curriculum: data.curriculum,
-          grade: data.grade,
-          subjects: data.subjects,
-          exam_year: data.exam_year ?? null,
           updated_at: new Date().toISOString(),
         };
+        if (data.curriculum !== undefined) payload.curriculum = data.curriculum;
+        if (data.grade !== undefined) payload.grade = data.grade;
+        if (data.study_level !== undefined) payload.study_level = data.study_level;
+        if (data.subjects !== undefined) payload.subjects = data.subjects;
+        if (data.exam_board !== undefined) payload.exam_board = data.exam_board;
+        if (data.school_name !== undefined) payload.school_name = data.school_name;
+        if (data.target_grade !== undefined) payload.target_grade = data.target_grade;
 
         const { error } = await supabase
           .from("academic_profiles")
-          .upsert(
-            {
-              ...payload,
-              created_at: profile?.created_at ?? new Date().toISOString(),
-            },
-            { onConflict: "user_id" }
-          );
+          .upsert(payload as any, { onConflict: "user_id" });
         if (error) throw error;
 
         await fetchProfile();

@@ -88,7 +88,7 @@ export function useExamSettings() {
           .single();
 
         if (insertError) throw insertError;
-        setSettings(data as ExamSettings);
+        setSettings(data as unknown as ExamSettings);
       }
 
       return true;

@@ -44,7 +44,7 @@ interface DirectionsRequest {
 }
 
 const TutorApp = () => {
-  const [mySubjects, setMySubjects] = useState<unknown[]>([]);
+  const [mySubjects, setMySubjects] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState("home");
   const [isOnline, setIsOnline] = useState(true);
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);

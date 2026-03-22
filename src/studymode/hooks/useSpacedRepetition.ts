@@ -122,7 +122,7 @@ export function useSpacedRepetition(userId: string | null) {
         easeSum: number;
       }>();
 
-      (data as QuizAttempt[])?.forEach(attempt => {
+      (data as unknown as QuizAttempt[])?.forEach(attempt => {
         const key = `${attempt.subject_id || 'none'}-${attempt.topic_name}`;
         const existing = statsMap.get(key);
 

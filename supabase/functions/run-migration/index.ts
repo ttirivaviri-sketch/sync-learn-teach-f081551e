@@ -859,7 +859,8 @@ serve(async (req: Request) => {
 
   if (SUPABASE_DB_URL) {
     // ── Path A: direct postgres connection via postgres.js ──────────────
-    const { default: postgres } = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
+    const postgresModule = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
+    const postgres = (postgresModule as any).default ?? postgresModule;
     const sql = postgres(SUPABASE_DB_URL, { max: 1, idle_timeout: 30, connect_timeout: 10 });
 
     for (let i = 0; i < stepsToRun.length; i++) {

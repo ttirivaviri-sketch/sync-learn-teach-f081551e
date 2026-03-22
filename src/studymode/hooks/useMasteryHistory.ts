@@ -89,7 +89,7 @@ export function useMasteryHistory() {
       const dateSubjectMap: Map<string, Map<string, { correct: number; total: number }>> = new Map();
       const allSubjectNames = new Set<string>();
 
-      for (const attempt of attempts) {
+      for (const attempt of (attempts as any[])) {
         const date = new Date(attempt.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
         const subjectName = subjectMap.get(attempt.subject_id || '') || 'General';
         allSubjectNames.add(subjectName);
