@@ -127,7 +127,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
       const weakConcepts = conceptKeywords.slice(0, 4);
 
       // Topic test trigger: after N attempts with consistent results
-      const recentAttempts = attempts.slice(0, ATTEMPTS_FOR_TOPIC_TEST);
+      const recentAttempts = (attempts as any[]).slice(0, ATTEMPTS_FOR_TOPIC_TEST);
       const shouldTriggerTopicTest =
         total >= ATTEMPTS_FOR_TOPIC_TEST &&
         recentAttempts.length >= ATTEMPTS_FOR_TOPIC_TEST;
