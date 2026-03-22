@@ -40,8 +40,8 @@ export function useSubjectExams() {
       if (!userId) return [];
 
       // Fetch exams
-      const { data: exams, error: examsError } = await supabase
-        .from('subject_exams' as any)
+      const { data: exams, error: examsError } = await (supabase
+        .from('subject_exams') as any)
         .select('*, subject:subjects(name)')
         .eq('user_id', userId)
         .order('exam_date', { ascending: true });
