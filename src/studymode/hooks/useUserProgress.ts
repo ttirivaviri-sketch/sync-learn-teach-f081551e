@@ -71,7 +71,7 @@ export function useUserProgress() {
               return null;
             }
             return {
-              ...(newProgress as UserProgressData),
+              ...(newProgress as unknown as UserProgressData),
               badges: [],
             };
           } catch {
@@ -80,9 +80,9 @@ export function useUserProgress() {
         }
 
         return {
-          ...(data as UserProgressData),
-          badges: Array.isArray((data as UserProgressData).badges)
-            ? ((data as UserProgressData).badges as unknown as Badge[])
+          ...(data as unknown as UserProgressData),
+          badges: Array.isArray((data as unknown as UserProgressData).badges)
+            ? ((data as unknown as UserProgressData).badges as unknown as Badge[])
             : [],
         };
       } catch {
