@@ -89,7 +89,7 @@ export function useSpacedRepetition(userId: string | null) {
 
       if (fetchError) throw fetchError;
 
-      setDueReviews((data as QuizAttempt[]) || []);
+      setDueReviews((data as unknown as QuizAttempt[]) || []);
     } catch (err) {
       console.error('Error fetching due reviews:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch reviews');
