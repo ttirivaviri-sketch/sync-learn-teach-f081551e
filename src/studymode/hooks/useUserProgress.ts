@@ -108,7 +108,7 @@ export function useUserProgress() {
           .eq('user_id', userId)
           .eq('scheduled_date', today);
 
-        const tasksCompletedToday = (scheduledTasks as Array<{ is_completed: boolean }> | null)?.filter(t => t.is_completed).length ?? 0;
+        const tasksCompletedToday = (scheduledTasks as unknown as Array<{ is_completed: boolean }> | null)?.filter(t => t.is_completed).length ?? 0;
         const totalTasksToday = scheduledTasks?.length ?? 0;
 
         // Get today's quiz attempts
