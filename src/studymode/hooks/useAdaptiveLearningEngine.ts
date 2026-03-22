@@ -20,7 +20,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
-import { aiRequestJSON } from './aiClient';
+import { aiRequestJSON } from '../lib/aiClient';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
