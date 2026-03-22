@@ -6,7 +6,7 @@ interface UseAcademicProfileReturn {
   profile: AcademicProfile | null;
   loading: boolean;
   saving: boolean;
-  saveProfile: (data: Omit<AcademicProfile, "id" | "user_id" | "created_at" | "updated_at">) => Promise<boolean>;
+  saveProfile: (data: Partial<AcademicProfile>) => Promise<boolean>;
   refetch: () => void;
 }
 
