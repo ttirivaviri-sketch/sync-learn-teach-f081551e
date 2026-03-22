@@ -86,13 +86,13 @@ export function useNotifications() {
     // Check due spaced repetition reviews
     try {
       const { data: dueReviews } = await supabase
-        .from('quiz_attempts')
-        .select('topic_name')
+        .from('quiz_attempts' as any)
+        .select('command_word')
         .eq('user_id', user.id)
         .lte('next_review_date', today);
 
       if (dueReviews && dueReviews.length > 0) {
-        const uniqueTopics = [...new Set(dueReviews.map(r => r.topic_name))];
+        const uniqueTopics = [...new Set((dueReviews as any[]).map(r => r.command_word || 'Review'))];
         addNotification({
           type: 'review_due',
           title: `${uniqueTopics.length} topic${uniqueTopics.length > 1 ? 's' : ''} due for review`,
