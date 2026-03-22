@@ -74,7 +74,7 @@ export function useExamSettings() {
           .single();
 
         if (updateError) throw updateError;
-        setSettings(data as ExamSettings);
+        setSettings(data as unknown as ExamSettings);
       } else {
         // Insert new
         const { data, error: insertError } = await supabase
