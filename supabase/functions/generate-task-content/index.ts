@@ -1,98 +1,154 @@
+/**
+ * generate-task-content Edge Function (v2)
+ *
+ * Generates rich study task content (micro-revision, concept-learning, active-recall,
+ * exam-question, flashcards, summary, revision-checklist) using the unified context.
+ *
+ * Returns a streaming response for real-time rendering.
+ *
+ * POST body:
+ * {
+ *   taskType, subject, topic, subtopics?, examWeight?,
+ *   curriculumContext?, performanceContext?, masteryStatus?,
+ *   difficulty?, curriculum?, examLevel?, weakAreas?,
+ *   notesOrDocuments?, pastPaperContext?
+ * }
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import {
+  getAIConfig,
+  buildStudyModeContext,
+  STUDYMODE_SYSTEM_IDENTITY,
+  corsHeaders,
+  callAIStream,
+  errorResponse,
+  streamResponse,
+} from "../_shared/ai-config.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// ─── Task-specific prompt extensions ─────────────────────────────────────────
 
-function getAIConfig(): { url: string; key: string; model: string } {
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  const openaiBase = Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1";
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-
-  if (openaiKey) {
-    return { url: `${openaiBase}/chat/completions`, key: openaiKey, model: Deno.env.get("AI_MODEL") || "gpt-4o-mini" };
-  }
-  if (lovableKey) {
-    return { url: "https://ai.gateway.lovable.dev/v1/chat/completions", key: lovableKey, model: "google/gemini-2.0-flash" };
-  }
-  throw new Error("No AI API key configured.");
-}
-
-const GLOBAL_ALIGNMENT_PROMPT = `
+const GLOBAL_ALIGNMENT = `
 Always align to the provided syllabus context and past-paper patterns.
 - Reinforce learning objectives and core examinable concepts.
 - Mirror exam language (command words, mark-style phrasing), but do not copy questions verbatim.
 - Keep output practical, exam-focused, and age/level appropriate.
+- If weak areas are mentioned, prioritise those in your output.
 `;
 
 const TASK_PROMPTS: Record<string, string> = {
-  "micro-revision": `You are an expert tutor creating a quick micro-revision session.
-Generate 2-3 focused review questions with brief answers for the given topic.
-- Start with a 1-sentence topic refresher
-- Then list questions with answers
-- Keep it concise — 2-3 minutes
-- Use markdown formatting`,
+  "micro-revision": `${STUDYMODE_SYSTEM_IDENTITY}
 
-  "concept-learning": `You are an expert tutor creating a concept deep-dive lesson.
-Create a clear, engaging explanation that:
-- Starts with WHY this concept matters (exam relevance)
-- Explains step-by-step with simple language and analogies
-- Highlights common exam mistakes
-- Ends with 2 key takeaways
-- Uses markdown formatting with headers`,
+YOUR TASK: Create a quick micro-revision session (2-3 minutes).
 
-  "active-recall": `You are an expert tutor creating an active recall exercise.
-Generate a self-testing exercise with:
+FORMAT:
+1. One-sentence topic refresher
+2. 2-3 focused review questions with brief model answers
+3. One "exam tip" related to this topic
+
+Use markdown formatting. Be concise but exam-relevant.
+
+${GLOBAL_ALIGNMENT}`,
+
+  "concept-learning": `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Create a concept deep-dive lesson.
+
+FORMAT:
+1. WHY this concept matters (exam relevance, weighting)
+2. Step-by-step explanation with simple language, analogies, and diagrams described in text
+3. Worked example (exam-style where possible)
+4. Common exam mistakes to avoid
+5. 2 key takeaways for the exam
+
+Use markdown with clear headers. Ground in syllabus objectives.
+
+${GLOBAL_ALIGNMENT}`,
+
+  "active-recall": `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Create an active recall exercise.
+
+FORMAT:
 - 5-6 questions of increasing difficulty
-- At least 3 questions written in past-paper command-word style (e.g., define, explain, compare, calculate, justify)
-- Questions mapped to syllabus subtopics where possible
+- At least 3 questions in past-paper command-word style (define, explain, compare, calculate, justify)
+- Questions mapped to specific syllabus subtopics
 - Clear model answers for each
-- Format: Question → Model Answer
-- Use markdown formatting`,
+- Format: **Question → Model Answer**
 
-  "exam-question": `You are an expert exam question writer.
-Generate one realistic exam-style question:
-- Clear mark allocation in brackets
-- Tests higher-order thinking
-- Includes detailed marking scheme
+Use markdown formatting.
+
+${GLOBAL_ALIGNMENT}`,
+
+  "exam-question": `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Generate ONE realistic exam-style question.
+
+FORMAT:
+- Clear mark allocation in brackets [3]
+- Tests higher-order thinking where possible
+- Detailed marking scheme (point by point)
 - Uses command words and structure seen in past papers
-- Ends with a short "Syllabus link" line
-- Use markdown formatting`,
+- Ends with a "Syllabus link" line
 
-  "flashcards": `You are an expert tutor creating study flashcards.
-Generate 8 flashcards that reinforce syllabus outcomes and past-paper readiness.
-Requirements:
-- At least 4 cards should be past-paper style prompts using command words.
-- At least 4 cards should target key definitions/formulas/concepts from syllabus outline.
-- Keep each answer concise and exam-scoring focused.
-- Format each as exactly: **Front:** ... | **Back:** ...
-- Use markdown formatting`,
+Use markdown formatting.
 
-  "summary": `You are an expert tutor creating exam-focused topic summaries.
-Create a comprehensive yet concise summary that:
-- Lists ALL key points an examiner would expect
-- Highlights definitions, formulas, key terms in bold
-- Includes a "Common Exam Questions" section with past-paper-like stems
-- Ends with a quick self-test (3 questions)
-- Uses markdown formatting`,
+${GLOBAL_ALIGNMENT}`,
 
-  "revision-checklist": `You are an expert tutor creating a revision checklist.
-Generate a comprehensive checklist that:
-- Uses checkboxes (- [ ]) for each item
-- Groups by sub-topic
-- Marks high-priority items with ⭐
-- Includes "I can explain..." and "I can calculate..." items
-- Includes at least 2 "past-paper practice" checklist items
-- Uses markdown formatting`,
+  "flashcards": `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Create 8 study flashcards.
+
+RULES:
+- At least 4 cards should be past-paper style prompts using command words
+- At least 4 cards should target key definitions/formulas/concepts from syllabus
+- Keep answers concise and exam-scoring focused
+- Format: **Front:** ... | **Back:** ...
+
+Use markdown formatting.
+
+${GLOBAL_ALIGNMENT}`,
+
+  "summary": `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Create an exam-focused topic summary.
+
+FORMAT:
+1. ALL key points an examiner would expect
+2. Definitions, formulas, key terms in **bold**
+3. "Common Exam Questions" section with past-paper-like question stems
+4. Quick self-test (3 questions)
+
+Use markdown with clear organisation.
+
+${GLOBAL_ALIGNMENT}`,
+
+  "revision-checklist": `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Create a revision checklist.
+
+FORMAT:
+- Checkboxes (- [ ]) for each item
+- Grouped by sub-topic
+- High-priority items marked with star
+- Include "I can explain..." and "I can calculate..." items
+- Include at least 2 "past-paper practice" checklist items
+
+Use markdown formatting.
+
+${GLOBAL_ALIGNMENT}`,
 };
 
+// ─── Handler ─────────────────────────────────────────────────────────────────
+
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
 
   try {
     const ai = getAIConfig();
+    const body = await req.json();
+
     const {
       taskType,
       subject,
@@ -103,46 +159,53 @@ serve(async (req) => {
       performanceContext,
       masteryStatus,
       difficulty,
-    } = await req.json();
+      curriculum,
+      examLevel,
+      weakAreas,
+      notesOrDocuments,
+      pastPaperContext,
+    } = body;
 
     if (!taskType || !subject || !topic) {
-      return new Response(JSON.stringify({ error: "taskType, subject, and topic are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(
+        JSON.stringify({
+          error: "taskType, subject, and topic are required",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
     }
 
-    const systemPrompt = `${TASK_PROMPTS[taskType] || TASK_PROMPTS["concept-learning"]}\n\n${GLOBAL_ALIGNMENT_PROMPT}`;
+    // ── Select system prompt ──────────────────────────────────────────────
+    const systemPrompt =
+      TASK_PROMPTS[taskType] || TASK_PROMPTS["concept-learning"];
 
-    let userPrompt = `Subject: ${subject}\nTopic: ${topic}`;
-    if (subtopics?.length) userPrompt += `\nSubtopics: ${subtopics.join(", ")}`;
-    if (examWeight) userPrompt += `\nExam weight: ${examWeight}% of total marks`;
-    if (difficulty) userPrompt += `\nTarget difficulty: ${difficulty}`;
-    if (masteryStatus) userPrompt += `\nStudent mastery status: ${masteryStatus}`;
-    if (performanceContext) userPrompt += `\nStudent performance context: ${String(performanceContext).substring(0, 1200)}`;
-    if (curriculumContext) userPrompt += `\n\nCurriculum and past-paper context:\n${String(curriculumContext).substring(0, 4000)}`;
-
-    const response = await fetch(ai.url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${ai.key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ai.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-      }),
+    // ── Build unified context ─────────────────────────────────────────────
+    const context = buildStudyModeContext({
+      curriculum,
+      subject,
+      topic,
+      examLevel,
+      weakAreas,
+      notesOrDocuments,
+      performanceData: performanceContext,
+      syllabusContext: curriculumContext,
+      pastPaperContext,
+      examWeight,
+      subtopics,
+      difficulty,
+      masteryStatus,
     });
 
-    if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const t = await response.text();
-      console.error("AI error:", response.status, t);
-      throw new Error("AI generation failed");
-    }
+    const userPrompt = `Generate ${taskType} content.\n\n${context}`;
 
-    return new Response(response.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    // ── Stream response ────────────────────────────────────────────────────
+    const aiResp = await callAIStream(ai, systemPrompt, userPrompt);
+    return streamResponse(aiResp.body);
   } catch (e) {
     console.error("generate-task-content error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse(e);
   }
 });

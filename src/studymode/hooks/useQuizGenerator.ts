@@ -1,11 +1,14 @@
 /**
- * useQuizGenerator
+ * useQuizGenerator (v2)
  *
- * Generates exam-style questions that are:
+ * Generates exam-style quiz questions that are:
  *   1. Grounded in the student's parsed syllabus (subtopics, learning objectives)
  *   2. Modelled on their uploaded past paper patterns (command words, difficulty, question types)
  *   3. Adapted to the student's current performance (easier if struggling, harder if performing well)
  *   4. Varied — tracks recently used question types to avoid repetition
+ *
+ * Now supports multiple question types (multiple_choice, short_answer, structured)
+ * and returns full solutions, marking schemes, and explanations.
  */
 
 import { useState, useCallback, useRef } from 'react';
@@ -19,10 +22,19 @@ import { aiRequestJSON } from '../lib/aiClient';
 export interface QuizQuestion {
   id: string;
   question: string;
+  questionType: 'multiple_choice' | 'short_answer' | 'structured';
   marks: number;
   topic: string;
   subject: string;
+  /** For multiple choice */
+  options?: string[];
+  correctOption?: string;
+  /** Complete model answer */
   modelAnswer?: string;
+  /** Step-by-step solution */
+  stepByStepSolution?: string;
+  /** Point-by-point marking scheme */
+  markingScheme?: string[];
   keyPoints?: string[];
   /** Difficulty the AI was asked to generate at */
   difficulty?: string;
@@ -31,6 +43,8 @@ export interface QuizQuestion {
   /** Concepts being tested */
   conceptsTested?: string[];
   syllabusLinks?: string[];
+  /** Why this answer is correct */
+  explanation?: string;
 }
 
 interface UseQuizGeneratorOptions {
@@ -114,6 +128,9 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         ? `Most common past-paper styles for this topic: ${topExamPatterns}`
         : undefined;
 
+      // Build weak areas list
+      const weakAreas = performance?.weakConcepts || [];
+
       const payload = {
         subject: subject.name,
         topic: topicData.name,
@@ -125,30 +142,47 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         performanceContext: performanceContext || undefined,
         pastPaperStyleNotes,
         avoidQuestionTypes: recentQuestionTypes.current.slice(-2),
+        weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+        count: 1,
       };
 
       const data = await aiRequestJSON<any>(QUIZ_ENDPOINT, payload);
 
+      // Handle both v1 (flat) and v2 (quiz array) responses
+      let questionData: any;
+      if (data.quiz && Array.isArray(data.quiz) && data.quiz.length > 0) {
+        questionData = data.quiz[0];
+      } else {
+        questionData = data;
+      }
+
       // Track question type to enforce variety next time
-      if (data.commandWords?.[0]) {
+      const cmdWord = questionData.commandWord || questionData.commandWords?.[0];
+      if (cmdWord) {
         recentQuestionTypes.current = [
           ...recentQuestionTypes.current.slice(-3),
-          data.commandWords[0],
+          cmdWord,
         ];
       }
 
       setQuestion({
-        id: crypto.randomUUID(),
-        question: data.question,
-        marks: data.marks,
+        id: questionData.id || crypto.randomUUID(),
+        question: questionData.question,
+        questionType: questionData.questionType || 'structured',
+        marks: questionData.marks,
         topic: topicData.name,
         subject: subject.name,
-        modelAnswer: data.modelAnswer,
-        keyPoints: data.keyPoints,
-        difficulty: data.difficulty || difficulty,
-        commandWord: data.commandWords?.[0],
-        conceptsTested: data.conceptsTested,
-        syllabusLinks: data.syllabusLinks,
+        options: questionData.options,
+        correctOption: questionData.correctOption,
+        modelAnswer: questionData.modelAnswer,
+        stepByStepSolution: questionData.stepByStepSolution,
+        markingScheme: questionData.markingScheme,
+        keyPoints: questionData.keyPoints,
+        difficulty: questionData.difficulty || difficulty,
+        commandWord: cmdWord,
+        conceptsTested: questionData.conceptsTested,
+        syllabusLinks: questionData.syllabusLinks,
+        explanation: questionData.explanation,
       });
     } catch (err) {
       console.error('Quiz generation error:', err);
