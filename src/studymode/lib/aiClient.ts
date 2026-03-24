@@ -43,6 +43,10 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   // Adaptive learning engine
   'generate-study-plan':         'generate-study-plan',
   'generate-flashcards':         'generate-flashcards',
+  // New: exam-style question generator
+  'generate-exam-questions':     'generate-exam-questions',
+  // New: mark student answer
+  'mark-answer':                 'explain-answer',
 };
 
 /**

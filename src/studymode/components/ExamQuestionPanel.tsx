@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { useAdaptiveLearningEngine, MarkResult } from '../hooks/useAdaptiveLearningEngine';
 import { Subject, Topic } from '../types/study';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequest } from '../lib/aiClient';
@@ -30,7 +31,7 @@ interface ExamQuestionPanelProps {
   onBack: () => void;
 }
 
-type Phase = 'read' | 'analyze' | 'answer' | 'self-assess' | 'feedback';
+type Phase = 'read' | 'analyze' | 'answer' | 'marking' | 'self-assess' | 'feedback';
 
 export function ExamQuestionPanel({
   question: staticQuestion,
@@ -55,6 +56,8 @@ export function ExamQuestionPanel({
   const [isExplaining, setIsExplaining] = useState(false);
   const [explanationError, setExplanationError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [markResult, setMarkResult] = useState<MarkResult | null>(null);
+  const [isAIMarking, setIsAIMarking] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -64,6 +67,7 @@ export function ExamQuestionPanel({
 
   const { recordAttempt } = useSpacedRepetition(userId);
   const { addXp, updateStreak } = useUserProgress();
+  const { markAnswer } = useAdaptiveLearningEngine();
 
   // ── AI quiz generator with full syllabus context ───────────────────────────
   const quizGenerator = subject ? useQuizGenerator({ subject, topic }) : null;
@@ -158,7 +162,66 @@ export function ExamQuestionPanel({
     }
   }, [activeQuestion, answer, generatedModelAnswer, generatedKeyPoints, subject?.name]);
 
-  // ── Self-assessment ────────────────────────────────────────────────────────
+  // ── AI Marking ─────────────────────────────────────────────────────────────
+  const requestAIMarking = useCallback(async () => {
+    if (!activeQuestion || !answer.trim()) return;
+
+    setIsAIMarking(true);
+    setPhase('marking');
+
+    try {
+      const result = await markAnswer(
+        activeQuestion.text,
+        answer,
+        {
+          modelAnswer: generatedModelAnswer || undefined,
+          markingScheme: quizGenerator?.question?.markingScheme,
+          keyPoints: generatedKeyPoints,
+          totalMarks: activeQuestion.marks,
+          topic: activeQuestion.topic,
+          subject: subject?.name,
+          conceptsTested: quizGenerator?.question?.conceptsTested,
+        }
+      );
+
+      setMarkResult(result);
+
+      // Determine if the student passed (>= 50%)
+      const passed = result.percentage >= 50;
+      setSelfAssessment(passed ? 'correct' : 'incorrect');
+
+      // Record the attempt
+      if (userId) {
+        await recordAttempt(
+          activeQuestion.topic,
+          activeQuestion.text,
+          passed,
+          subject?.id,
+          activeQuestion.marks,
+        );
+      }
+
+      // XP based on score percentage
+      const xpEarned = Math.max(5, Math.round(result.percentage * 0.3));
+      addXp.mutate(xpEarned);
+      updateStreak.mutate();
+
+      // If failed, also get streaming explanation
+      if (!passed) {
+        requestExplanation();
+      }
+
+      setPhase('feedback');
+    } catch (err) {
+      console.error('AI marking error:', err);
+      // Fallback to self-assessment
+      setPhase('self-assess');
+    } finally {
+      setIsAIMarking(false);
+    }
+  }, [activeQuestion, answer, generatedModelAnswer, generatedKeyPoints, subject?.name, markAnswer, userId, recordAttempt, addXp, updateStreak, requestExplanation, quizGenerator]);
+
+  // ── Self-assessment (fallback) ─────────────────────────────────────────────
   const handleSelfAssess = async (assessment: 'correct' | 'incorrect') => {
     setSelfAssessment(assessment);
 
@@ -398,14 +461,27 @@ export function ExamQuestionPanel({
               className="min-h-[200px]"
             />
           </div>
-          <Button
-            onClick={() => setPhase('self-assess')}
-            disabled={!answer.trim()}
-            className="w-full gradient-primary"
-          >
-            Submit Answer
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Button>
+          <div className="flex gap-3">
+            <Button
+              onClick={requestAIMarking}
+              disabled={!answer.trim() || isAIMarking}
+              className="flex-1 gradient-primary"
+            >
+              {isAIMarking ? (
+                <><LoaderIcon className="mr-2 h-4 w-4 animate-spin" /> AI Marking...</>
+              ) : (
+                <>Submit for AI Marking <ArrowRight className="ml-2 h-4 w-4" /></>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => setPhase('self-assess')}
+              disabled={!answer.trim()}
+              className="flex-shrink-0"
+            >
+              Self-Mark
+            </Button>
+          </div>
         </div>
       )}
 
@@ -464,27 +540,112 @@ export function ExamQuestionPanel({
         </div>
       )}
 
+      {/* Phase: AI Marking in progress */}
+      {phase === 'marking' && (
+        <div className="flex flex-col items-center justify-center py-12 animate-fade-in gap-3">
+          <LoaderIcon className="h-8 w-8 animate-spin text-accent" />
+          <p className="text-sm font-medium text-foreground">AI is marking your answer...</p>
+          <p className="text-xs text-muted-foreground">Comparing against marking scheme and model answer</p>
+        </div>
+      )}
+
       {/* Phase: Feedback */}
       {phase === 'feedback' && (
         <div className="space-y-4">
-          {/* Score */}
-          <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
-            <p className="text-sm text-muted-foreground mb-1">
-              {selfAssessment === 'correct' ? 'Great work!' : 'Keep building!'}
-            </p>
-            <p className={cn(
-              'text-4xl font-bold',
-              selfAssessment === 'correct' ? 'text-success' : 'text-warning',
-            )}>
-              {selfAssessment === 'correct'
-                ? `${activeQuestion.marks}/${activeQuestion.marks}`
-                : `0/${activeQuestion.marks}`}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">marks</p>
-            <p className="text-xs text-accent mt-2">
-              +{selfAssessment === 'correct' ? 25 : 10} XP earned
-            </p>
-          </div>
+          {/* AI Mark Result */}
+          {markResult ? (
+            <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
+              <p className="text-sm text-muted-foreground mb-1">
+                {markResult.percentage >= 70 ? 'Excellent!' : markResult.percentage >= 50 ? 'Good effort!' : 'Keep practicing!'}
+              </p>
+              <p className={cn(
+                'text-4xl font-bold',
+                markResult.percentage >= 70 ? 'text-success' : markResult.percentage >= 50 ? 'text-warning' : 'text-destructive',
+              )}>
+                {markResult.score}/{markResult.totalMarks}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">{markResult.percentage}%</p>
+              <p className="text-xs text-accent mt-2">
+                +{Math.max(5, Math.round(markResult.percentage * 0.3))} XP earned
+              </p>
+            </div>
+          ) : (
+            <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
+              <p className="text-sm text-muted-foreground mb-1">
+                {selfAssessment === 'correct' ? 'Great work!' : 'Keep building!'}
+              </p>
+              <p className={cn(
+                'text-4xl font-bold',
+                selfAssessment === 'correct' ? 'text-success' : 'text-warning',
+              )}>
+                {selfAssessment === 'correct'
+                  ? `${activeQuestion.marks}/${activeQuestion.marks}`
+                  : `0/${activeQuestion.marks}`}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">marks</p>
+              <p className="text-xs text-accent mt-2">
+                +{selfAssessment === 'correct' ? 25 : 10} XP earned
+              </p>
+            </div>
+          )}
+
+          {/* AI Marking Breakdown */}
+          {markResult?.markBreakdown && markResult.markBreakdown.length > 0 && (
+            <div className="p-4 rounded-xl bg-muted/50 border border-border">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Mark Breakdown</p>
+              <div className="space-y-2">
+                {markResult.markBreakdown.map((item, i) => (
+                  <div key={i} className="flex items-start gap-2 text-sm">
+                    <span className={cn(
+                      'font-mono text-xs px-1.5 py-0.5 rounded',
+                      item.marksAwarded === item.marksAvailable ? 'bg-success/15 text-success' :
+                      item.marksAwarded > 0 ? 'bg-warning/15 text-warning' : 'bg-destructive/15 text-destructive'
+                    )}>
+                      {item.marksAwarded}/{item.marksAvailable}
+                    </span>
+                    <div>
+                      <span className="font-medium text-foreground">{item.criterion}</span>
+                      {item.comment && <p className="text-xs text-muted-foreground mt-0.5">{item.comment}</p>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* AI Feedback */}
+          {markResult?.feedback && (
+            <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
+              <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                <MessageCircle className="h-4 w-4 text-accent" />
+                AI Feedback
+              </h4>
+              <p className="text-sm text-foreground">{markResult.feedback}</p>
+            </div>
+          )}
+
+          {/* Mistakes */}
+          {markResult?.mistakes && markResult.mistakes.length > 0 && (
+            <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/30">
+              <h4 className="font-semibold text-destructive mb-2">Mistakes to Fix</h4>
+              <ul className="text-sm text-foreground space-y-1">
+                {markResult.mistakes.map((m, i) => <li key={i}>• {m}</li>)}
+              </ul>
+            </div>
+          )}
+
+          {/* Improvement Tips */}
+          {markResult?.improvementTips && markResult.improvementTips.length > 0 && (
+            <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
+              <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-accent" />
+                Improvement Tips
+              </h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                {markResult.improvementTips.map((tip, i) => <li key={i}>• {tip}</li>)}
+              </ul>
+            </div>
+          )}
 
           {/* AI explanation when incorrect */}
           {selfAssessment === 'incorrect' && (
@@ -595,6 +756,7 @@ export function ExamQuestionPanel({
                 setSelfAssessment(null);
                 setAiExplanation('');
                 setShowModelAnswer(false);
+                setMarkResult(null);
                 quizGenerator.clearQuestion();
                 quizGenerator.generateQuestion();
               }}

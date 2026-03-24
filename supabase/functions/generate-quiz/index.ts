@@ -1,35 +1,49 @@
+/**
+ * generate-quiz Edge Function (v2)
+ *
+ * Generates personalised quiz questions — multiple-choice, short answer, or
+ * structured — grounded in syllabus data and past-paper patterns.
+ *
+ * POST body:
+ * {
+ *   subject, topic, topicContext?, curriculumContext?, examWeight?,
+ *   preferredQuestionType?, avoidQuestionTypes?, performanceContext?,
+ *   difficulty?, pastPaperStyleNotes?, weakAreas?, curriculum?, examLevel?,
+ *   notesOrDocuments?, count?: number (default 1, max 5)
+ * }
+ *
+ * Returns:
+ * {
+ *   quiz: [{
+ *     id, question, questionType, marks, modelAnswer, stepByStepSolution,
+ *     markingScheme, keyPoints, difficulty, commandWord,
+ *     conceptsTested, syllabusLinks, explanation, options?
+ *   }],
+ *   weak_area_focus: string[]
+ * }
+ */
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
-
-function getAIConfig(): { url: string; key: string; model: string } {
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  const openaiBase = Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1";
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-
-  if (openaiKey) {
-    return { url: `${openaiBase}/chat/completions`, key: openaiKey, model: Deno.env.get("AI_MODEL") || "gpt-4o-mini" };
-  }
-  if (lovableKey) {
-    return { url: "https://ai.gateway.lovable.dev/v1/chat/completions", key: lovableKey, model: "google/gemini-2.0-flash" };
-  }
-  throw new Error("No AI API key configured.");
-}
-
-function normalizeArray(value: unknown): string[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => String(item).trim()).filter(Boolean);
-}
+import {
+  getAIConfig,
+  buildStudyModeContext,
+  STUDYMODE_SYSTEM_IDENTITY,
+  corsHeaders,
+  callAI,
+  safeJsonParse,
+  normalizeArray,
+  errorResponse,
+  jsonResponse,
+} from "../_shared/ai-config.ts";
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
 
   try {
     const ai = getAIConfig();
+    const body = await req.json();
+
     const {
       subject,
       topic,
@@ -41,98 +55,172 @@ serve(async (req) => {
       performanceContext,
       difficulty,
       pastPaperStyleNotes,
-    } = await req.json();
+      weakAreas,
+      curriculum,
+      examLevel,
+      notesOrDocuments,
+      count = 1,
+    } = body;
 
     if (!subject || !topic) {
-      return new Response(JSON.stringify({ error: "subject and topic are required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return jsonResponse({ error: "subject and topic are required" }, 400);
     }
 
-    const systemPrompt = `You are an elite exam question setter for ${subject}.\n
-Your job is to create ONE exam-style question that mirrors real past-paper style while reinforcing syllabus outcomes.
+    const questionCount = Math.min(Math.max(Number(count) || 1, 1), 5);
 
-Rules:
-1) Anchor to syllabus outline and topic scope only.
-2) Mimic past-paper patterns: command words, mark allocations, and structure.
-3) Prefer applied and reasoning-heavy questions over recall-only.
-4) If weak areas are provided, target those concepts.
-5) Do not copy any past-paper question verbatim.
-
-Return ONLY valid JSON with this exact shape:
-{
-  "question": "string",
-  "marks": 6,
-  "modelAnswer": "string",
-  "keyPoints": ["string"],
-  "difficulty": "easy|medium|hard",
-  "commandWords": ["string"],
-  "conceptsTested": ["string"],
-  "syllabusLinks": ["specific syllabus objective or subtopic"]
-}`;
-
-    let userPrompt = `Generate one past-paper-style question for:\nSubject: ${subject}\nTopic: ${topic}`;
-    if (topicContext) userPrompt += `\n\nTopic context:\n${String(topicContext).substring(0, 1500)}`;
-    if (curriculumContext) userPrompt += `\n\nSyllabus and past-paper context:\n${String(curriculumContext).substring(0, 3500)}`;
-    if (examWeight) userPrompt += `\n\nExam weighting: ${examWeight}% of total marks.`;
-    if (difficulty) userPrompt += `\nTarget difficulty: ${difficulty}.`;
-    if (preferredQuestionType) userPrompt += `\nPrefer this question style: ${preferredQuestionType}.`;
-    if (Array.isArray(avoidQuestionTypes) && avoidQuestionTypes.length > 0) {
-      userPrompt += `\nAvoid repeating these recent styles: ${avoidQuestionTypes.join(", ")}.`;
-    }
-    if (performanceContext) userPrompt += `\n\nStudent performance context:\n${String(performanceContext).substring(0, 1500)}`;
-    if (pastPaperStyleNotes) userPrompt += `\n\nPast-paper style summary:\n${String(pastPaperStyleNotes).substring(0, 1200)}`;
-
-    const response = await fetch(ai.url, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${ai.key}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: ai.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        response_format: { type: "json_object" },
-      }),
+    // ── Build unified context ───────────────────────────────────────────────
+    const context = buildStudyModeContext({
+      curriculum,
+      subject,
+      topic,
+      examLevel,
+      weakAreas,
+      notesOrDocuments,
+      performanceData: performanceContext,
+      syllabusContext: curriculumContext || topicContext,
+      pastPaperContext: pastPaperStyleNotes,
+      examWeight,
+      difficulty,
     });
 
-    if (!response.ok) {
-      if (response.status === 429) return new Response(JSON.stringify({ error: "Rate limit exceeded." }), { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      if (response.status === 402) return new Response(JSON.stringify({ error: "AI credits exhausted." }), { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      const t = await response.text();
-      console.error("generate-quiz error:", response.status, t);
-      throw new Error("Failed to generate question");
+    // ── System prompt ───────────────────────────────────────────────────────
+    const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
+
+YOUR TASK: Generate ${questionCount} high-quality, exam-style quiz question(s) for ${subject} — ${topic}.
+
+QUESTION TYPES TO MIX:
+• multiple_choice — 4 options (A–D), one correct, with explanation for each distractor
+• short_answer — 1–3 sentence response expected
+• structured — multi-part question with sub-questions (a), (b), (c), mark allocations per part
+
+RULES:
+1. Anchor every question to the syllabus outline and topic scope.
+2. Mimic past-paper patterns: command words, mark allocations, structure.
+3. Prefer applied, reasoning-heavy questions over pure recall.
+4. If weak areas are provided, target those concepts.
+5. NEVER copy any past-paper question verbatim.
+6. Difficulty should increase progressively when generating multiple questions.
+7. For each question provide: correct answer, step-by-step solution, marking scheme, and explanation.
+
+Return ONLY valid JSON matching this exact schema:
+{
+  "quiz": [
+    {
+      "id": "q1",
+      "question": "full question text",
+      "questionType": "multiple_choice|short_answer|structured",
+      "marks": 6,
+      "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+      "correctOption": "B",
+      "modelAnswer": "complete model answer",
+      "stepByStepSolution": "step 1: …\\nstep 2: …\\nstep 3: …",
+      "markingScheme": ["1 mark for identifying…", "2 marks for explaining…"],
+      "keyPoints": ["key point 1", "key point 2"],
+      "difficulty": "easy|medium|hard",
+      "commandWord": "explain",
+      "conceptsTested": ["concept1", "concept2"],
+      "syllabusLinks": ["specific syllabus objective"],
+      "explanation": "why this answer is correct and common mistakes"
+    }
+  ],
+  "weak_area_focus": ["weak area addressed 1", "weak area addressed 2"]
+}
+
+For non-multiple-choice questions, omit "options" and "correctOption".`;
+
+    // ── User prompt ─────────────────────────────────────────────────────────
+    let userPrompt = `Generate ${questionCount} exam-style question(s).\n\n${context}`;
+
+    if (preferredQuestionType) {
+      userPrompt += `\nPreferred question type: ${preferredQuestionType}`;
+    }
+    if (
+      Array.isArray(avoidQuestionTypes) &&
+      avoidQuestionTypes.length > 0
+    ) {
+      userPrompt += `\nAvoid these recent question types: ${avoidQuestionTypes.join(", ")}`;
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-    if (!content) throw new Error("AI did not return a question");
+    // ── Call AI ──────────────────────────────────────────────────────────────
+    const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      temperature: 0.5,
+      jsonMode: true,
+    });
 
-    let parsed;
-    try {
-      parsed = JSON.parse(content);
-    } catch {
-      const match = content.match(/\{[\s\S]*\}/);
-      if (match) parsed = JSON.parse(match[0]);
-      else throw new Error("Could not parse AI response");
+    const parsed = safeJsonParse<{
+      quiz?: unknown[];
+      weak_area_focus?: string[];
+      question?: string;
+    }>(rawContent);
+
+    // Handle both array and single-question responses
+    let quizItems: unknown[] = [];
+    if (parsed.quiz && Array.isArray(parsed.quiz)) {
+      quizItems = parsed.quiz;
+    } else if (parsed.question) {
+      // AI returned a flat question object
+      quizItems = [parsed];
     }
 
-    const questionData = {
-      question: String(parsed?.question || "").trim(),
-      marks: Number(parsed?.marks || 0),
-      modelAnswer: String(parsed?.modelAnswer || "").trim(),
-      keyPoints: normalizeArray(parsed?.keyPoints),
-      difficulty: ["easy", "medium", "hard"].includes(String(parsed?.difficulty)) ? parsed.difficulty : (difficulty || "medium"),
-      commandWords: normalizeArray(parsed?.commandWords),
-      conceptsTested: normalizeArray(parsed?.conceptsTested),
-      syllabusLinks: normalizeArray(parsed?.syllabusLinks),
+    if (quizItems.length === 0) {
+      throw new Error("AI returned empty quiz");
+    }
+
+    // ── Normalise each question ─────────────────────────────────────────────
+    const quiz = quizItems.map((item: any, i: number) => ({
+      id: item.id || `q${i + 1}`,
+      question: String(item.question || "").trim(),
+      questionType: ["multiple_choice", "short_answer", "structured"].includes(
+        item.questionType
+      )
+        ? item.questionType
+        : "structured",
+      marks: Number(item.marks || 0),
+      options: item.options || undefined,
+      correctOption: item.correctOption || undefined,
+      modelAnswer: String(item.modelAnswer || "").trim(),
+      stepByStepSolution: String(item.stepByStepSolution || "").trim(),
+      markingScheme: normalizeArray(item.markingScheme),
+      keyPoints: normalizeArray(item.keyPoints),
+      difficulty: ["easy", "medium", "hard"].includes(String(item.difficulty))
+        ? item.difficulty
+        : difficulty || "medium",
+      commandWord: String(item.commandWord || item.commandWords?.[0] || "").trim(),
+      conceptsTested: normalizeArray(item.conceptsTested),
+      syllabusLinks: normalizeArray(item.syllabusLinks),
+      explanation: String(item.explanation || "").trim(),
+    }));
+
+    // Validate
+    const valid = quiz.filter(
+      (q: any) => q.question && q.marks > 0
+    );
+    if (valid.length === 0) {
+      throw new Error("Generated quiz payload is incomplete");
+    }
+
+    // ── For backward compat: if count === 1, also flatten top-level fields ─
+    const response: Record<string, unknown> = {
+      quiz: valid,
+      weak_area_focus: normalizeArray(parsed.weak_area_focus),
     };
 
-    if (!questionData.question || questionData.marks <= 0) {
-      throw new Error("Generated question payload is incomplete");
+    // Backward-compat: flatten first question's fields at top level
+    if (valid.length === 1) {
+      const q = valid[0] as any;
+      response.question = q.question;
+      response.marks = q.marks;
+      response.modelAnswer = q.modelAnswer;
+      response.keyPoints = q.keyPoints;
+      response.difficulty = q.difficulty;
+      response.commandWords = q.commandWord ? [q.commandWord] : [];
+      response.conceptsTested = q.conceptsTested;
+      response.syllabusLinks = q.syllabusLinks;
     }
 
-    return new Response(JSON.stringify(questionData), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return jsonResponse(response);
   } catch (e) {
     console.error("generate-quiz error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return errorResponse(e);
   }
 });

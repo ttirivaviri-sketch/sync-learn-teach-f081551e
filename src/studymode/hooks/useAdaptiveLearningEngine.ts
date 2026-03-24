@@ -1,5 +1,5 @@
 /**
- * useAdaptiveLearningEngine.ts
+ * useAdaptiveLearningEngine.ts (v2)
  *
  * The central adaptive learning engine for StudySync.
  *
@@ -7,8 +7,11 @@
  *  1. Builds a rich context from profile + subjects + performance + documents
  *  2. Calls generate-study-plan edge function to create/regenerate AI study plans
  *  3. Calls generate-flashcards edge function for topic flashcards
- *  4. Monitors task completion and triggers plan adaptation at 70% threshold
- *  5. Provides a unified interface for all adaptive learning actions
+ *  4. Calls generate-exam-questions for past-paper-style questions
+ *  5. Calls mark-answer to score student answers
+ *  6. Monitors task completion and triggers plan adaptation at 70% threshold
+ *  7. Prioritises weak areas across all content generation
+ *  8. Provides a unified interface for all adaptive learning actions
  *
  * Triggers:
  *  - manual:      user clicks "Generate Plan"
@@ -43,6 +46,43 @@ export interface Flashcard {
   subject: string;
   difficulty: 'easy' | 'medium' | 'hard';
   tags: string[];
+  conceptType?: string;
+  syllabusLink?: string;
+}
+
+export interface ExamQuestion {
+  id: string;
+  questionNumber: string;
+  question: string;
+  parts?: { part: string; text: string; marks: number }[];
+  marks: number;
+  modelAnswer: string;
+  stepByStepSolution: string;
+  markingScheme: string[];
+  difficulty: string;
+  commandWord: string;
+  conceptsTested: string[];
+  syllabusLinks: string[];
+  explanation: string;
+  timeAllocation?: string;
+  examinerNotes?: string;
+}
+
+export interface MarkResult {
+  score: number;
+  totalMarks: number;
+  percentage: number;
+  feedback: string;
+  mistakes: string[];
+  correctParts: string[];
+  modelAnswer: string;
+  markBreakdown: {
+    criterion: string;
+    marksAwarded: number;
+    marksAvailable: number;
+    comment: string;
+  }[];
+  improvementTips: string[];
 }
 
 export interface PerformanceSummary {
@@ -56,6 +96,8 @@ export interface PerformanceSummary {
 export interface AdaptiveEngineState {
   isGeneratingPlan: boolean;
   isGeneratingFlashcards: boolean;
+  isGeneratingExamQuestions: boolean;
+  isMarkingAnswer: boolean;
   lastPlanGenerated: Date | null;
   performanceSummary: PerformanceSummary | null;
   error: string | null;
@@ -73,6 +115,8 @@ export function useAdaptiveLearningEngine() {
   const [state, setState] = useState<AdaptiveEngineState>({
     isGeneratingPlan: false,
     isGeneratingFlashcards: false,
+    isGeneratingExamQuestions: false,
+    isMarkingAnswer: false,
     lastPlanGenerated: null,
     performanceSummary: null,
     error: null,
@@ -120,13 +164,13 @@ export function useAdaptiveLearningEngine() {
       .gte('scheduled_date', thirtyDaysAgo)
       .lte('scheduled_date', today);
 
-    // 5. Parsed documents (syllabus + past papers)
+    // 5. Parsed documents (syllabus + past papers + notes)
     const { data: docsData } = await supabase
       .from('documents')
       .select('type, subject, parsed_content, is_processed')
       .eq('user_id', user.id)
       .eq('is_processed', true)
-      .in('type', ['syllabus', 'past_paper']);
+      .in('type', ['syllabus', 'past_paper', 'notes']);
 
     // 6. Exam settings
     const { data: examData } = await supabase
@@ -190,10 +234,11 @@ export function useAdaptiveLearningEngine() {
       subjectBreakdown,
     };
 
-    // ── Build syllabus / past-paper context strings ───────────────────────
+    // ── Build syllabus / past-paper / notes context strings ──────────────
     const docs = (docsData || []) as any[];
     let syllabusContext = '';
     let pastPaperContext = '';
+    let notesContext = '';
 
     docs.forEach((doc) => {
       const content = doc.parsed_content;
@@ -222,6 +267,14 @@ export function useAdaptiveLearningEngine() {
           .join('\n');
         pastPaperContext += `[${doc.subject}]\n${qList}\n\n`;
       }
+
+      if (doc.type === 'notes' && content.key_concepts) {
+        const conceptList = (content.key_concepts as any[])
+          .slice(0, 15)
+          .map((c: any) => `- ${c.concept}: ${c.definition?.substring(0, 80) || ''}`)
+          .join('\n');
+        notesContext += `[${doc.subject}]\n${conceptList}\n\n`;
+      }
     });
 
     // ── Build performance context string for AI ───────────────────────────
@@ -230,10 +283,10 @@ export function useAdaptiveLearningEngine() {
         ? `Overall accuracy: ${Math.round(overallAccuracy * 100)}%\n` +
           `Tasks completed: ${completedTasks}/${schedule.length} (${Math.round(completionRate * 100)}%)\n` +
           (weakTopics.length
-            ? `⚠ WEAK topics (need more practice): ${weakTopics.join(', ')}\n`
+            ? `WEAK topics (PRIORITISE): ${weakTopics.join(', ')}\n`
             : '') +
           (strongTopics.length
-            ? `✓ Strong topics (reduce time): ${strongTopics.join(', ')}\n`
+            ? `Strong topics (reduce time): ${strongTopics.join(', ')}\n`
             : '') +
           Object.entries(subjectBreakdown)
             .map(([name, s]) => `${name}: ${Math.round(s.accuracy * 100)}% accuracy (${s.attempted} attempts)`)
@@ -248,9 +301,11 @@ export function useAdaptiveLearningEngine() {
       examName: (examData as any)?.exam_name || null,
       syllabusContext,
       pastPaperContext,
+      notesContext,
       performanceContext: perfContext,
       performanceSummary,
       completionRate,
+      weakTopics,
     };
   }, []);
 
@@ -263,7 +318,7 @@ export function useAdaptiveLearningEngine() {
       try {
         const ctx = await buildContext();
 
-        const result = await aiRequestJSON<{ plan: StudyPlanItem[]; saved: number }>(
+        const result = await aiRequestJSON<{ plan: StudyPlanItem[]; saved: number; weak_area_focus: string[] }>(
           'generate-study-plan',
           {
             profile: ctx.profile,
@@ -272,12 +327,13 @@ export function useAdaptiveLearningEngine() {
             performanceContext: ctx.performanceContext,
             syllabusContext: ctx.syllabusContext,
             pastPaperContext: ctx.pastPaperContext,
+            notesOrDocuments: ctx.notesContext || undefined,
+            weakAreas: ctx.weakTopics,
             mode,
             userId: ctx.user.id,
           }
         );
 
-        // Store last generated timestamp
         const now = new Date();
         localStorage.setItem('lastPlanGenerated', now.toISOString());
 
@@ -288,9 +344,7 @@ export function useAdaptiveLearningEngine() {
           performanceSummary: ctx.performanceSummary,
         }));
 
-        // Invalidate schedule queries so UI re-renders
         queryClient.invalidateQueries({ queryKey: ['study-schedule'] });
-
         return result;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -312,7 +366,6 @@ export function useAdaptiveLearningEngine() {
       setState((prev) => ({ ...prev, isGeneratingFlashcards: true, error: null }));
 
       try {
-        // Fetch syllabus context for this specific topic
         const { data: docsData } = await supabase
           .from('documents')
           .select('parsed_content, type')
@@ -322,6 +375,7 @@ export function useAdaptiveLearningEngine() {
 
         let syllabusContext = '';
         let pastPaperContext = '';
+        let notesOrDocuments = '';
         (docsData || []).forEach((doc: any) => {
           if (doc.type === 'syllabus' && doc.parsed_content?.topics) {
             const t = (doc.parsed_content.topics as any[]).find((t: any) =>
@@ -346,25 +400,130 @@ export function useAdaptiveLearningEngine() {
                 .join('\n');
             }
           }
+          if (doc.type === 'notes' && doc.parsed_content?.key_concepts) {
+            const concepts = (doc.parsed_content.key_concepts as any[])
+              .filter((c: any) => c.topic?.toLowerCase().includes(topic.toLowerCase()))
+              .slice(0, 10)
+              .map((c: any) => `${c.concept}: ${c.definition?.substring(0, 100)}`)
+              .join('\n');
+            if (concepts) notesOrDocuments = concepts;
+          }
         });
 
-        const result = await aiRequestJSON<{ flashcards: Flashcard[]; count: number }>(
-          'generate-flashcards',
-          {
-            subject,
-            topic,
-            syllabusContext,
-            pastPaperContext,
-            count: options.count || 8,
-            difficulty: options.difficulty || 'mixed',
+        // Get weak areas for this topic
+        const { data: { user } } = await supabase.auth.getUser();
+        let weakAreas: string[] = [];
+        if (user) {
+          const { data: attempts } = await supabase
+            .from('quiz_attempts' as any)
+            .select('topic_name, was_correct')
+            .eq('user_id', user.id)
+            .ilike('topic_name', `%${topic}%`)
+            .eq('was_correct', false)
+            .limit(20);
+
+          if (attempts && attempts.length > 0) {
+            weakAreas = [`Low accuracy on ${topic} — focus on common exam mistakes`];
           }
-        );
+        }
+
+        const result = await aiRequestJSON<{
+          flashcards: Flashcard[];
+          count: number;
+          weak_area_focus: string[];
+        }>('generate-flashcards', {
+          subject,
+          topic,
+          syllabusContext,
+          pastPaperContext,
+          notesOrDocuments: notesOrDocuments || undefined,
+          weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+          count: options.count || 8,
+          difficulty: options.difficulty || 'mixed',
+        });
 
         setState((prev) => ({ ...prev, isGeneratingFlashcards: false }));
         return result.flashcards || [];
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         setState((prev) => ({ ...prev, isGeneratingFlashcards: false, error: msg }));
+        throw err;
+      }
+    },
+    []
+  );
+
+  // ── Generate Exam Questions ─────────────────────────────────────────────
+
+  const generateExamQuestions = useCallback(
+    async (
+      subject: string,
+      topic: string,
+      options: { count?: number; difficulty?: string; paperFormat?: string } = {}
+    ): Promise<ExamQuestion[]> => {
+      setState((prev) => ({ ...prev, isGeneratingExamQuestions: true, error: null }));
+
+      try {
+        const result = await aiRequestJSON<{
+          exam_questions: ExamQuestion[];
+          weak_area_focus: string[];
+        }>('generate-exam-questions', {
+          subject,
+          topic,
+          count: options.count || 3,
+          difficulty: options.difficulty || 'mixed',
+          paperFormat: options.paperFormat || 'mixed',
+        });
+
+        setState((prev) => ({ ...prev, isGeneratingExamQuestions: false }));
+        return result.exam_questions || [];
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setState((prev) => ({ ...prev, isGeneratingExamQuestions: false, error: msg }));
+        throw err;
+      }
+    },
+    []
+  );
+
+  // ── Mark Student Answer ─────────────────────────────────────────────────
+
+  const markAnswer = useCallback(
+    async (
+      question: string,
+      studentAnswer: string,
+      options: {
+        modelAnswer?: string;
+        markingScheme?: string[];
+        keyPoints?: string[];
+        totalMarks?: number;
+        topic?: string;
+        subject?: string;
+        conceptsTested?: string[];
+      } = {}
+    ): Promise<MarkResult> => {
+      setState((prev) => ({ ...prev, isMarkingAnswer: true, error: null }));
+
+      try {
+        const result = await aiRequestJSON<MarkResult>('mark-answer', {
+          question,
+          studentAnswer,
+          modelAnswer: options.modelAnswer,
+          markingScheme: options.markingScheme,
+          keyPoints: options.keyPoints,
+          totalMarks: options.totalMarks,
+          topic: options.topic,
+          subject: options.subject,
+          conceptsTested: options.conceptsTested,
+          mode: 'mark',
+          stream: false,
+        });
+
+        setState((prev) => ({ ...prev, isMarkingAnswer: false }));
+        return result;
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setState((prev) => ({ ...prev, isMarkingAnswer: false, error: msg }));
         throw err;
       }
     },
@@ -380,7 +539,7 @@ export function useAdaptiveLearningEngine() {
     if (lastGenStr) {
       const lastGen = new Date(lastGenStr);
       const hoursSince = (Date.now() - lastGen.getTime()) / 3_600_000;
-      if (hoursSince < PLAN_COOLDOWN_HOURS) return; // cooldown active
+      if (hoursSince < PLAN_COOLDOWN_HOURS) return;
     }
 
     try {
@@ -389,7 +548,7 @@ export function useAdaptiveLearningEngine() {
 
       if (ctx.completionRate >= ADAPTATION_THRESHOLD) {
         console.log(
-          `[AdaptiveEngine] Completion rate ${Math.round(ctx.completionRate * 100)}% ≥ ${ADAPTATION_THRESHOLD * 100}% — regenerating adaptive plan`
+          `[AdaptiveEngine] Completion rate ${Math.round(ctx.completionRate * 100)}% >= ${ADAPTATION_THRESHOLD * 100}% — regenerating adaptive plan`
         );
         await generateStudyPlan('adaptive');
       }
@@ -401,7 +560,6 @@ export function useAdaptiveLearningEngine() {
   // ── Auto-check adaptation on mount ───────────────────────────────────────
 
   useEffect(() => {
-    // Delay to avoid blocking initial render
     const timer = setTimeout(() => {
       checkAndAdapt().catch(console.warn);
     }, 5000);
@@ -410,18 +568,14 @@ export function useAdaptiveLearningEngine() {
 
   // ── Helpers ───────────────────────────────────────────────────────────────
 
-  /** Call this after signup + academic profile save */
   const onSignupComplete = useCallback(async () => {
     await generateStudyPlan('initial');
   }, [generateStudyPlan]);
 
-  /** Call this after a document is parsed */
   const onDocumentUploaded = useCallback(async () => {
-    // Regenerate plan with fresh syllabus/past-paper context
     await generateStudyPlan('initial');
   }, [generateStudyPlan]);
 
-  /** Refresh the performance summary without generating a new plan */
   const refreshPerformance = useCallback(async () => {
     const ctx = await buildContext();
     setState((prev) => ({ ...prev, performanceSummary: ctx.performanceSummary }));
@@ -432,6 +586,8 @@ export function useAdaptiveLearningEngine() {
     ...state,
     generateStudyPlan,
     generateFlashcards,
+    generateExamQuestions,
+    markAnswer,
     onSignupComplete,
     onDocumentUploaded,
     checkAndAdapt,

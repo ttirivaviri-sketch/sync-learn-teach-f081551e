@@ -1,59 +1,49 @@
 /**
- * generate-flashcards Edge Function
+ * generate-flashcards Edge Function (v2)
  *
- * Converts syllabus topics / past-paper patterns into structured flashcards
- * and optionally saves them to the flashcards table.
+ * Generates curriculum-aligned flashcards covering:
+ *   - Key definitions and terminology
+ *   - Formulas and core concepts
+ *   - Exam-style prompts with command words
  *
  * POST body:
  * {
- *   subject: string,
- *   topic: string,
- *   syllabusContext?: string,
- *   pastPaperContext?: string,
- *   count?: number (default 8, max 20),
- *   difficulty?: "easy"|"medium"|"hard"|"mixed"
+ *   subject, topic, syllabusContext?, pastPaperContext?,
+ *   count? (default 8, max 20), difficulty?, curriculum?,
+ *   examLevel?, weakAreas?, notesOrDocuments?, performanceData?
  * }
  *
  * Returns:
  * {
- *   flashcards: [{ front, back, hint, topic, difficulty, tags }]
+ *   flashcards: [{
+ *     id, front, back, hint, topic, subject, difficulty, tags,
+ *     conceptType, syllabusLink
+ *   }],
+ *   count: number,
+ *   weak_area_focus: string[]
  * }
  */
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
-
-function getAIConfig(): { url: string; key: string; model: string } {
-  const openaiKey = Deno.env.get("OPENAI_API_KEY");
-  const openaiBase = Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1";
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY");
-  if (openaiKey) {
-    return {
-      url: `${openaiBase}/chat/completions`,
-      key: openaiKey,
-      model: Deno.env.get("AI_MODEL") || "gpt-4o-mini",
-    };
-  }
-  if (lovableKey) {
-    return {
-      url: "https://ai.gateway.lovable.dev/v1/chat/completions",
-      key: lovableKey,
-      model: "google/gemini-2.0-flash",
-    };
-  }
-  throw new Error("No AI API key configured.");
-}
+import {
+  getAIConfig,
+  buildStudyModeContext,
+  STUDYMODE_SYSTEM_IDENTITY,
+  corsHeaders,
+  callAI,
+  safeJsonParse,
+  normalizeArray,
+  errorResponse,
+  jsonResponse,
+} from "../_shared/ai-config.ts";
 
 serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response(null, { headers: corsHeaders });
 
   try {
     const ai = getAIConfig();
+    const body = await req.json();
 
     const {
       subject,
@@ -62,114 +52,122 @@ serve(async (req: Request) => {
       pastPaperContext = "",
       count = 8,
       difficulty = "mixed",
-    } = await req.json();
+      curriculum,
+      examLevel,
+      weakAreas,
+      notesOrDocuments,
+      performanceData,
+    } = body;
 
     if (!subject || !topic) {
-      return new Response(JSON.stringify({ error: "subject and topic are required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return jsonResponse({ error: "subject and topic are required" }, 400);
     }
 
-    const cardCount = Math.min(Number(count) || 8, 20);
+    const cardCount = Math.min(Math.max(Number(count) || 8, 4), 20);
 
-    const systemPrompt = `You are an expert flashcard creator for exam preparation.
-Create ${cardCount} high-quality flashcards for the given topic.
+    // ── Build unified context ───────────────────────────────────────────────
+    const context = buildStudyModeContext({
+      curriculum,
+      subject,
+      topic,
+      examLevel,
+      weakAreas,
+      notesOrDocuments,
+      performanceData,
+      syllabusContext,
+      pastPaperContext,
+      difficulty,
+    });
 
-Rules:
-1. Return ONLY valid JSON — an array of flashcard objects.
-2. "front" = the question or concept prompt (exam-style where possible).
-3. "back" = the concise, accurate answer or definition.
-4. "hint" = a memory aid or key phrase (optional, keep short).
-5. "difficulty" = "easy", "medium", or "hard".
-6. "tags" = array of relevant concept keywords.
-7. Mix definition, application, and recall question types.
-8. Ground content in the syllabus and past-paper patterns provided.
-9. Use exam command-word phrasing where suitable.
+    // ── System prompt ───────────────────────────────────────────────────────
+    const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-Return ONLY this JSON structure:
+YOUR TASK: Create ${cardCount} high-quality flashcards for ${subject} — ${topic}.
+
+FLASHCARD CATEGORIES (mix all of these):
+• definition — Key definitions and terminology from the syllabus
+• formula — Important formulas, equations, or processes
+• concept — Core concepts, relationships, and principles
+• exam_prompt — Past-paper style prompts using exam command words (define, explain, compare, etc.)
+• application — Real-world applications or worked examples
+
+RULES:
+1. "front" = the question, prompt, or concept name (exam-style phrasing where possible).
+2. "back" = concise, accurate, exam-scoring answer or definition.
+3. "hint" = a memory aid, mnemonic, or key phrase (keep short, nullable).
+4. "conceptType" = one of: definition, formula, concept, exam_prompt, application.
+5. "syllabusLink" = the specific syllabus objective this card addresses.
+6. Ground every card in the syllabus and past-paper patterns provided.
+7. If weak areas are specified, create extra cards targeting those concepts.
+8. No vague or generic cards — every card must test specific examinable knowledge.
+
+Return ONLY valid JSON:
 {
   "flashcards": [
     {
       "front": "Define osmosis.",
-      "back": "The movement of water molecules from a region of higher water potential to a region of lower water potential through a partially permeable membrane.",
-      "hint": "Think: water moves TO where there's less water",
+      "back": "The net movement of water molecules from a region of higher water potential to a region of lower water potential through a partially permeable membrane.",
+      "hint": "Water moves TO where there's less water",
       "difficulty": "easy",
-      "tags": ["osmosis", "transport", "cell membrane"]
+      "tags": ["osmosis", "transport", "cell membrane"],
+      "conceptType": "definition",
+      "syllabusLink": "2.1 Cell membrane transport"
     }
-  ]
+  ],
+  "weak_area_focus": ["concept addressed from weak areas"]
 }`;
 
-    const userPrompt = `Create ${cardCount} flashcards for:
-Subject: ${subject}
-Topic: ${topic}
-Difficulty mix: ${difficulty}
+    // ── User prompt ─────────────────────────────────────────────────────────
+    const userPrompt = `Create ${cardCount} flashcards with difficulty mix: ${difficulty}.\n\n${context}
 
-${syllabusContext ? `Syllabus context:\n${syllabusContext.substring(0, 2000)}` : ""}
-${pastPaperContext ? `\nPast paper patterns:\n${pastPaperContext.substring(0, 1000)}` : ""}
+ENSURE COVERAGE:
+- At least ${Math.ceil(cardCount * 0.25)} definition cards (key terms)
+- At least ${Math.ceil(cardCount * 0.2)} formula/process cards (where applicable)
+- At least ${Math.ceil(cardCount * 0.25)} exam-prompt cards (command word style)
+- At least ${Math.ceil(cardCount * 0.15)} concept/application cards
+${weakAreas ? `- Extra focus on weak areas: ${Array.isArray(weakAreas) ? weakAreas.join(", ") : weakAreas}` : ""}`;
 
-Ensure the flashcards cover:
-- Key definitions and terminology
-- Important formulas or processes (where applicable)
-- Common exam question patterns for this topic
-- Concepts that frequently appear in past papers`;
-
-    const response = await fetch(ai.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ai.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: ai.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.5,
-        response_format: { type: "json_object" },
-      }),
+    // ── Call AI ──────────────────────────────────────────────────────────────
+    const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      temperature: 0.5,
+      jsonMode: true,
     });
 
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`AI API error: ${response.status} ${err}`);
-    }
+    const parsed = safeJsonParse<{
+      flashcards?: unknown[];
+      cards?: unknown[];
+      weak_area_focus?: string[];
+    }>(rawContent);
 
-    const aiData = await response.json();
-    const rawContent = aiData.choices?.[0]?.message?.content || "{}";
+    let flashcards: any[] =
+      parsed.flashcards || parsed.cards || (Array.isArray(parsed) ? parsed : []);
 
-    let flashcards: any[] = [];
-    try {
-      const parsed = JSON.parse(rawContent);
-      flashcards = parsed.flashcards || parsed.cards || (Array.isArray(parsed) ? parsed : []);
-    } catch {
-      const match = rawContent.match(/\[[\s\S]*\]/);
-      if (match) flashcards = JSON.parse(match[0]);
-    }
-
-    // Normalise each card
+    // ── Normalise each card ─────────────────────────────────────────────────
     flashcards = flashcards.map((card: any, i: number) => ({
-      id: `${topic.toLowerCase().replace(/\s+/g, "-")}-${i + 1}`,
-      front: card.front || card.question || card.term || "",
-      back: card.back || card.answer || card.definition || "",
+      id: card.id || `${topic.toLowerCase().replace(/\s+/g, "-")}-${i + 1}`,
+      front: String(card.front || card.question || card.term || "").trim(),
+      back: String(card.back || card.answer || card.definition || "").trim(),
       hint: card.hint || card.memory_aid || null,
       topic,
       subject,
-      difficulty: card.difficulty || "medium",
+      difficulty: ["easy", "medium", "hard"].includes(card.difficulty)
+        ? card.difficulty
+        : "medium",
       tags: Array.isArray(card.tags) ? card.tags : [],
+      conceptType: card.conceptType || "concept",
+      syllabusLink: card.syllabusLink || null,
     }));
 
-    return new Response(
-      JSON.stringify({ flashcards, count: flashcards.length }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    // Filter out empty cards
+    flashcards = flashcards.filter((c: any) => c.front && c.back);
+
+    return jsonResponse({
+      flashcards,
+      count: flashcards.length,
+      weak_area_focus: normalizeArray(parsed.weak_area_focus),
+    });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[generate-flashcards]", msg);
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    console.error("[generate-flashcards]", err);
+    return errorResponse(err);
   }
 });
