@@ -17,7 +17,9 @@ export type Database = {
       academic_profiles: {
         Row: {
           created_at: string | null
+          curriculum: string | null
           exam_board: string | null
+          exam_year: number | null
           goals: string | null
           grade: string | null
           id: string
@@ -31,7 +33,9 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          curriculum?: string | null
           exam_board?: string | null
+          exam_year?: number | null
           goals?: string | null
           grade?: string | null
           id?: string
@@ -45,7 +49,9 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          curriculum?: string | null
           exam_board?: string | null
+          exam_year?: number | null
           goals?: string | null
           grade?: string | null
           id?: string
@@ -335,6 +341,74 @@ export type Database = {
         }
         Relationships: []
       }
+      flashcards: {
+        Row: {
+          back: string
+          created_at: string | null
+          difficulty: string | null
+          ease_factor: number | null
+          front: string
+          hint: string | null
+          id: string
+          interval_days: number | null
+          last_reviewed_at: string | null
+          next_review_date: string | null
+          repetitions: number | null
+          subject: string
+          subject_id: string | null
+          tags: Json | null
+          topic: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          back: string
+          created_at?: string | null
+          difficulty?: string | null
+          ease_factor?: number | null
+          front: string
+          hint?: string | null
+          id?: string
+          interval_days?: number | null
+          last_reviewed_at?: string | null
+          next_review_date?: string | null
+          repetitions?: number | null
+          subject: string
+          subject_id?: string | null
+          tags?: Json | null
+          topic: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          back?: string
+          created_at?: string | null
+          difficulty?: string | null
+          ease_factor?: number | null
+          front?: string
+          hint?: string | null
+          id?: string
+          interval_days?: number | null
+          last_reviewed_at?: string | null
+          next_review_date?: string | null
+          repetitions?: number | null
+          subject?: string
+          subject_id?: string | null
+          tags?: Json | null
+          topic?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flashcards_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learner_subjects: {
         Row: {
           created_at: string
@@ -360,6 +434,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "learner_subjects_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      library_saved_items: {
+        Row: {
+          id: string
+          resource_id: string
+          resource_type: string
+          saved_at: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          resource_id: string
+          resource_type: string
+          saved_at?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          resource_id?: string
+          resource_type?: string
+          saved_at?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "library_saved_items_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -757,6 +866,7 @@ export type Database = {
         Row: {
           command_word: string | null
           concepts_tested: string[] | null
+          created_at: string | null
           difficulty_rating: number | null
           ease_factor: number | null
           id: string
@@ -765,13 +875,18 @@ export type Database = {
           marks_possible: number | null
           model_answer: string | null
           next_review_date: string | null
+          question: string | null
           review_count: number | null
+          subject_id: string | null
+          topic_name: string | null
           user_answer: string | null
           user_id: string | null
+          was_correct: boolean | null
         }
         Insert: {
           command_word?: string | null
           concepts_tested?: string[] | null
+          created_at?: string | null
           difficulty_rating?: number | null
           ease_factor?: number | null
           id?: string
@@ -780,13 +895,18 @@ export type Database = {
           marks_possible?: number | null
           model_answer?: string | null
           next_review_date?: string | null
+          question?: string | null
           review_count?: number | null
+          subject_id?: string | null
+          topic_name?: string | null
           user_answer?: string | null
           user_id?: string | null
+          was_correct?: boolean | null
         }
         Update: {
           command_word?: string | null
           concepts_tested?: string[] | null
+          created_at?: string | null
           difficulty_rating?: number | null
           ease_factor?: number | null
           id?: string
@@ -795,9 +915,13 @@ export type Database = {
           marks_possible?: number | null
           model_answer?: string | null
           next_review_date?: string | null
+          question?: string | null
           review_count?: number | null
+          subject_id?: string | null
+          topic_name?: string | null
           user_answer?: string | null
           user_id?: string | null
+          was_correct?: boolean | null
         }
         Relationships: []
       }
@@ -1170,6 +1294,53 @@ export type Database = {
           },
         ]
       }
+      topic_tutor_rankings: {
+        Row: {
+          completion_rate: number | null
+          id: string
+          rank_position: number | null
+          subject: string
+          success_rate: number | null
+          topic: string
+          topic_rating: number | null
+          total_reviews: number
+          tutor_id: string
+          updated_at: string
+        }
+        Insert: {
+          completion_rate?: number | null
+          id?: string
+          rank_position?: number | null
+          subject: string
+          success_rate?: number | null
+          topic: string
+          topic_rating?: number | null
+          total_reviews?: number
+          tutor_id: string
+          updated_at?: string
+        }
+        Update: {
+          completion_rate?: number | null
+          id?: string
+          rank_position?: number | null
+          subject?: string
+          success_rate?: number | null
+          topic?: string
+          topic_rating?: number | null
+          total_reviews?: number
+          tutor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_tutor_rankings_tutor_id_fkey"
+            columns: ["tutor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tutor_availability: {
         Row: {
           created_at: string
@@ -1346,6 +1517,51 @@ export type Database = {
         }
         Relationships: []
       }
+      tutorial_watch_events: {
+        Row: {
+          booked_tutor: boolean
+          completed: boolean
+          created_at: string
+          id: string
+          learner_id: string
+          tutorial_id: string
+          watch_seconds: number
+        }
+        Insert: {
+          booked_tutor?: boolean
+          completed?: boolean
+          created_at?: string
+          id?: string
+          learner_id: string
+          tutorial_id: string
+          watch_seconds?: number
+        }
+        Update: {
+          booked_tutor?: boolean
+          completed?: boolean
+          created_at?: string
+          id?: string
+          learner_id?: string
+          tutorial_id?: string
+          watch_seconds?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tutorial_watch_events_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tutorial_watch_events_tutorial_id_fkey"
+            columns: ["tutorial_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_tutorials"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_progress: {
         Row: {
           badges: Json | null
@@ -1354,9 +1570,11 @@ export type Database = {
           last_activity: string | null
           last_study_date: string | null
           progress: number | null
+          streak: number | null
           subject: string | null
           updated_at: string | null
           user_id: string | null
+          xp: number | null
         }
         Insert: {
           badges?: Json | null
@@ -1365,9 +1583,11 @@ export type Database = {
           last_activity?: string | null
           last_study_date?: string | null
           progress?: number | null
+          streak?: number | null
           subject?: string | null
           updated_at?: string | null
           user_id?: string | null
+          xp?: number | null
         }
         Update: {
           badges?: Json | null
@@ -1376,9 +1596,11 @@ export type Database = {
           last_activity?: string | null
           last_study_date?: string | null
           progress?: number | null
+          streak?: number | null
           subject?: string | null
           updated_at?: string | null
           user_id?: string | null
+          xp?: number | null
         }
         Relationships: []
       }
@@ -1483,6 +1705,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_published_tutorials: {
+        Args: { p_curriculum?: string; p_subject?: string }
+        Returns: {
+          completion_rate: number
+          created_at: string
+          curriculum: string
+          description: string
+          duration_label: string
+          grade: string
+          id: string
+          rating: number
+          review_count: number
+          subject: string
+          subtopic: string
+          thumbnail_url: string
+          title: string
+          topic: string
+          tutor_avatar_url: string
+          tutor_full_name: string
+          tutor_id: string
+          video_url: string
+          watch_count: number
+        }[]
+      }
+      get_subject_context: {
+        Args: { p_subject_id: string; p_topic_name: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1502,6 +1752,36 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      upsert_academic_profile: {
+        Args: {
+          p_curriculum: string
+          p_exam_year?: number
+          p_grade: string
+          p_subjects: string[]
+        }
+        Returns: {
+          created_at: string | null
+          curriculum: string | null
+          exam_board: string | null
+          exam_year: number | null
+          goals: string | null
+          grade: string | null
+          id: string
+          learning_style: string | null
+          school_name: string | null
+          study_level: string | null
+          subjects: string[] | null
+          target_grade: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academic_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin"
