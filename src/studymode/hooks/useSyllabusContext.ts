@@ -8,6 +8,9 @@
  *
  * Returns a rich `CurriculumContext` string that is injected directly into AI prompts,
  * making every generated question/task grounded in the student's actual uploaded materials.
+ *
+ * Falls back gracefully: if the RPC doesn't exist or fails, it fetches data directly
+ * from the subjects table as a simpler alternative.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -83,7 +86,7 @@ function buildCurriculumContext(
       parts.push(`Subtopics: ${topic.subtopics.join(' | ')}`);
     }
     if (topic.learningObjectives?.length) {
-      parts.push(`Learning Objectives:\n${topic.learningObjectives.map(o => `  • ${o}`).join('\n')}`);
+      parts.push(`Learning Objectives:\n${topic.learningObjectives.map(o => `  - ${o}`).join('\n')}`);
     }
     if (topic.concepts?.length) {
       parts.push(`Key Concepts: ${topic.concepts.join(', ')}`);
@@ -95,17 +98,17 @@ function buildCurriculumContext(
 
   // 2. Exam pattern data (aggregated across past papers)
   const topicPatterns = patterns.filter(p =>
-    p.topic_name.toLowerCase().includes(topicName.toLowerCase()) ||
-    topicName.toLowerCase().includes(p.topic_name.toLowerCase())
+    p.topic_name?.toLowerCase().includes(topicName.toLowerCase()) ||
+    topicName.toLowerCase().includes(p.topic_name?.toLowerCase() || '')
   );
 
   if (topicPatterns.length > 0) {
     parts.push(`\n=== PAST PAPER EXAM PATTERNS ===`);
-    const avgFreq = Math.round(topicPatterns.reduce((a, p) => a + p.frequency_score, 0) / topicPatterns.length);
-    const avgMarks = Math.round(topicPatterns.reduce((a, p) => a + p.avg_marks, 0) / topicPatterns.length);
-    const allQTypes = [...new Set(topicPatterns.flatMap(p => p.question_types))];
+    const avgFreq = Math.round(topicPatterns.reduce((a, p) => a + (p.frequency_score || 0), 0) / topicPatterns.length);
+    const avgMarks = Math.round(topicPatterns.reduce((a, p) => a + (p.avg_marks || 0), 0) / topicPatterns.length);
+    const allQTypes = [...new Set(topicPatterns.flatMap(p => p.question_types || []))];
     const years = topicPatterns.map(p => p.year).filter(Boolean);
-    
+
     parts.push(`Exam Frequency: ${avgFreq}% of paper marks allocated to this topic`);
     parts.push(`Average Marks per Paper: ${avgMarks} marks`);
     if (allQTypes.length) parts.push(`Question Types Seen: ${allQTypes.join(', ')}`);
@@ -139,16 +142,112 @@ function buildCurriculumContext(
     if (topCmd.length) {
       parts.push(`Most Frequent Command Words: ${topCmd.join(', ')}`);
     }
-
-    const difficulties = topicQs.map(q => q.difficulty);
-    const hardCount = difficulties.filter(d => d === 'hard').length;
-    const easyCount = difficulties.filter(d => d === 'easy').length;
-    if (hardCount > 0 || easyCount > 0) {
-      parts.push(`Difficulty Distribution: ${easyCount} easy, ${difficulties.length - hardCount - easyCount} medium, ${hardCount} hard`);
-    }
   }
 
   return parts.join('\n');
+}
+
+/**
+ * Direct fallback: fetch subject data from the subjects table
+ * when the RPC is unavailable.
+ */
+async function fetchSubjectDataDirect(
+  subjectId: string,
+  topicName: string,
+  userId: string
+): Promise<SyllabusContextData> {
+  const result: SyllabusContextData = {
+    topic: null,
+    allTopics: [],
+    examPatterns: [],
+    pastPaperQuestions: [],
+    examWeightFromPapers: 0,
+    masteredTopicCount: 0,
+    totalTopicCount: 0,
+    syllabusProgress: 0,
+    curriculumContext: '',
+    isLoaded: true,
+  };
+
+  try {
+    // Fetch subject with topics
+    const { data: subjectData } = await supabase
+      .from('subjects')
+      .select('name, topics')
+      .eq('id', subjectId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!subjectData) return result;
+
+    const allTopics = Array.isArray(subjectData.topics)
+      ? (subjectData.topics as unknown as DbTopic[])
+      : [];
+    result.allTopics = allTopics;
+    result.totalTopicCount = allTopics.length;
+
+    // Find matching topic
+    const matchedTopic = allTopics.find(
+      t => t.name?.toLowerCase() === topicName?.toLowerCase()
+    ) || allTopics.find(
+      t => t.name?.toLowerCase().includes(topicName?.toLowerCase()) ||
+           topicName?.toLowerCase().includes(t.name?.toLowerCase())
+    ) || null;
+    result.topic = matchedTopic;
+
+    if (matchedTopic) {
+      result.examWeightFromPapers = matchedTopic.examWeight || 0;
+    }
+
+    // Fetch exam patterns (best effort)
+    try {
+      const { data: patterns } = await supabase
+        .from('exam_patterns')
+        .select('topic_name, frequency_score, avg_marks, question_types, year')
+        .eq('subject_id', subjectId)
+        .eq('user_id', userId);
+
+      if (patterns) {
+        result.examPatterns = patterns as ExamPatternRow[];
+      }
+    } catch {
+      // exam_patterns table might not exist yet
+    }
+
+    // Fetch mastery count
+    try {
+      const { data: masteryData } = await supabase
+        .from('topic_mastery')
+        .select('mastery_percentage')
+        .eq('subject_id', subjectId)
+        .eq('user_id', userId);
+
+      if (masteryData) {
+        result.masteredTopicCount = masteryData.filter(
+          m => (m.mastery_percentage || 0) >= 70
+        ).length;
+        if (result.totalTopicCount > 0) {
+          result.syllabusProgress = Math.round(
+            (result.masteredTopicCount / result.totalTopicCount) * 100
+          );
+        }
+      }
+    } catch {
+      // topic_mastery table might not exist yet
+    }
+
+    // Build context string
+    result.curriculumContext = buildCurriculumContext(
+      topicName,
+      result.topic,
+      result.examPatterns,
+      result.pastPaperQuestions
+    );
+  } catch (err) {
+    console.warn('[useSyllabusContext] Direct fetch error:', err);
+  }
+
+  return result;
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
@@ -180,29 +279,42 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
         return;
       }
 
-      const { data: contextData, error } = await (supabase.rpc as any)('get_subject_context', {
-        p_subject_id: subjectId,
-        p_topic_name: topicName,
-      });
+      // Try the RPC first
+      let rpcSuccess = false;
+      try {
+        const { data: contextData, error } = await (supabase.rpc as any)('get_subject_context', {
+          p_subject_id: subjectId,
+          p_topic_name: topicName,
+        });
 
-      if (error) throw error;
+        if (!error && contextData && !contextData.error) {
+          const payload = contextData as Record<string, unknown>;
 
-      const payload = (contextData || {}) as Partial<SyllabusContextData>;
+          setData({
+            topic: (payload.topic as DbTopic | null) || null,
+            allTopics: Array.isArray(payload.allTopics) ? (payload.allTopics as DbTopic[]) : [],
+            examPatterns: Array.isArray(payload.examPatterns) ? (payload.examPatterns as ExamPatternRow[]) : [],
+            pastPaperQuestions: Array.isArray(payload.pastPaperQuestions)
+              ? (payload.pastPaperQuestions as PastPaperQuestion[])
+              : [],
+            examWeightFromPapers: Number(payload.examWeightFromPapers || 0),
+            masteredTopicCount: Number(payload.masteredTopicCount || 0),
+            totalTopicCount: Number(payload.totalTopicCount || 0),
+            syllabusProgress: Number(payload.syllabusProgress || 0),
+            curriculumContext: String(payload.curriculumContext || ''),
+            isLoaded: true,
+          });
+          rpcSuccess = true;
+        }
+      } catch (rpcErr) {
+        console.warn('[useSyllabusContext] RPC unavailable, using direct fallback:', rpcErr);
+      }
 
-      setData({
-        topic: (payload.topic as DbTopic | null) || null,
-        allTopics: Array.isArray(payload.allTopics) ? (payload.allTopics as DbTopic[]) : [],
-        examPatterns: Array.isArray(payload.examPatterns) ? (payload.examPatterns as ExamPatternRow[]) : [],
-        pastPaperQuestions: Array.isArray(payload.pastPaperQuestions)
-          ? (payload.pastPaperQuestions as PastPaperQuestion[])
-          : [],
-        examWeightFromPapers: Number(payload.examWeightFromPapers || 0),
-        masteredTopicCount: Number(payload.masteredTopicCount || 0),
-        totalTopicCount: Number(payload.totalTopicCount || 0),
-        syllabusProgress: Number(payload.syllabusProgress || 0),
-        curriculumContext: String(payload.curriculumContext || ''),
-        isLoaded: true,
-      });
+      // Fallback: fetch data directly from tables
+      if (!rpcSuccess) {
+        const directData = await fetchSubjectDataDirect(subjectId, topicName, user.id);
+        setData(directData);
+      }
     } catch (err) {
       console.error('[useSyllabusContext]', err);
       setData(prev => ({ ...prev, isLoaded: true }));

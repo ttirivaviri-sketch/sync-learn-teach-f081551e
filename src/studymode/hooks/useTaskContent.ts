@@ -6,7 +6,8 @@
  *   - Past paper patterns (exam weight, command words, question types)
  *   - Topic performance (mastery level, weak areas)
  *
- * Streams the response as SSE chunks for a live typing effect.
+ * Streams the response for a live typing effect.
+ * Handles multiple response formats: SSE, raw text, and JSON.
  */
 
 import { useState, useCallback } from 'react';
@@ -41,6 +42,33 @@ interface UseTaskContentReturn {
 
 const TASK_CONTENT_ENDPOINT = 'generate-task-content';
 
+/**
+ * Try to extract text content from an SSE data line.
+ * Handles: OpenAI SSE format, plain text, and various JSON shapes.
+ */
+function extractDeltaContent(jsonStr: string): string | null {
+  try {
+    const parsed = JSON.parse(jsonStr);
+    // OpenAI SSE format: { choices: [{ delta: { content: "..." } }] }
+    const delta = parsed.choices?.[0]?.delta?.content;
+    if (typeof delta === 'string') return delta;
+
+    // Alternative: { choices: [{ message: { content: "..." } }] }
+    const msg = parsed.choices?.[0]?.message?.content;
+    if (typeof msg === 'string') return msg;
+
+    // Alternative: { content: "..." }
+    if (typeof parsed.content === 'string') return parsed.content;
+
+    // Alternative: { text: "..." }
+    if (typeof parsed.text === 'string') return parsed.text;
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function useTaskContent(): UseTaskContentReturn {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -61,11 +89,32 @@ export function useTaskContent(): UseTaskContentReturn {
       const resp = await aiRequest(TASK_CONTENT_ENDPOINT, params);
 
       if (!resp.ok) {
-        const errData = await resp.json().catch(() => ({ error: 'Failed to generate content' }));
+        const errData = await resp.json().catch(() => ({ error: `Failed to generate content (HTTP ${resp.status})` }));
         throw new Error(errData.error || `Error ${resp.status}`);
       }
 
-      if (!resp.body) throw new Error('No response body');
+      if (!resp.body) {
+        // No streaming body — try to read as text/JSON
+        const text = await resp.text();
+        if (text) {
+          setContent(text);
+        } else {
+          throw new Error('No response body received');
+        }
+        return;
+      }
+
+      const contentType = resp.headers.get('content-type') || '';
+      const isSSE = contentType.includes('text/event-stream');
+      const isJSON = contentType.includes('application/json');
+
+      // If JSON response (non-streaming), extract content directly
+      if (isJSON) {
+        const data = await resp.json();
+        const text = data.content || data.text || data.message || JSON.stringify(data);
+        setContent(text);
+        return;
+      }
 
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -77,50 +126,91 @@ export function useTaskContent(): UseTaskContentReturn {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        let newlineIndex: number;
-        while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
-          let line = buffer.slice(0, newlineIndex);
-          buffer = buffer.slice(newlineIndex + 1);
+        if (isSSE) {
+          // Parse SSE format: lines starting with "data: "
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+            let line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
 
-          if (line.endsWith('\r')) line = line.slice(0, -1);
-          if (line.startsWith(':') || line.trim() === '') continue;
-          if (!line.startsWith('data: ')) continue;
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (line.startsWith(':') || line.trim() === '') continue;
+            if (!line.startsWith('data: ')) continue;
 
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') break;
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') continue;
 
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const delta = parsed.choices?.[0]?.delta?.content;
+            const delta = extractDeltaContent(jsonStr);
             if (delta) {
               accumulated += delta;
               setContent(accumulated);
             }
-          } catch {
-            buffer = line + '\n' + buffer;
-            break;
+          }
+        } else {
+          // Non-SSE streaming: could be raw text or chunked SSE without proper content-type
+          // Try to parse as SSE first, then fall back to raw text
+          let processed = false;
+          let newlineIndex: number;
+          while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+            let line = buffer.slice(0, newlineIndex);
+            buffer = buffer.slice(newlineIndex + 1);
+
+            if (line.endsWith('\r')) line = line.slice(0, -1);
+            if (line.trim() === '' || line.startsWith(':')) continue;
+
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.slice(6).trim();
+              if (jsonStr === '[DONE]') continue;
+              const delta = extractDeltaContent(jsonStr);
+              if (delta) {
+                accumulated += delta;
+                setContent(accumulated);
+                processed = true;
+              }
+            } else {
+              // Raw text chunk — might be plain markdown content
+              accumulated += line + '\n';
+              setContent(accumulated);
+              processed = true;
+            }
+          }
+
+          // If no newlines yet and buffer is getting long, it's probably raw text
+          if (!processed && buffer.length > 200) {
+            accumulated += buffer;
+            buffer = '';
+            setContent(accumulated);
           }
         }
       }
 
       // Flush remaining buffer
       if (buffer.trim()) {
-        for (let raw of buffer.split('\n')) {
-          if (!raw || !raw.startsWith('data: ')) continue;
-          const jsonStr = raw.slice(6).trim();
-          if (jsonStr === '[DONE]') continue;
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const delta = parsed.choices?.[0]?.delta?.content;
+        if (isSSE || buffer.includes('data: ')) {
+          for (const raw of buffer.split('\n')) {
+            if (!raw || !raw.startsWith('data: ')) continue;
+            const jsonStr = raw.slice(6).trim();
+            if (jsonStr === '[DONE]') continue;
+            const delta = extractDeltaContent(jsonStr);
             if (delta) {
               accumulated += delta;
               setContent(accumulated);
             }
-          } catch { /* ignore */ }
+          }
+        } else {
+          accumulated += buffer;
+          setContent(accumulated);
         }
       }
+
+      // If we accumulated nothing, something went wrong
+      if (!accumulated.trim()) {
+        throw new Error('AI returned empty content. Please try again.');
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unknown error');
+      const message = e instanceof Error ? e.message : 'Unknown error';
+      console.error('[useTaskContent] Error:', message);
+      setError(message);
     } finally {
       setIsLoading(false);
     }

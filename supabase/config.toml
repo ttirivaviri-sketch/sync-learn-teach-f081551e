@@ -15,6 +15,18 @@ verify_jwt = false
 [functions.generate-quiz]
 verify_jwt = false
 
+[functions.generate-flashcards]
+verify_jwt = false
+
+[functions.generate-exam-questions]
+verify_jwt = false
+
+[functions.generate-study-plan]
+verify_jwt = false
+
+[functions.explain-answer]
+verify_jwt = false
+
 [functions.ai-tutor]
 verify_jwt = false
 

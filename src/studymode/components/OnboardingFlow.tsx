@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { BookOpen, Calendar, Check, ChevronRight, GraduationCap, Layers3 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -31,7 +31,7 @@ const CURRICULUM_BOARDS: CurriculumBoard[] = [
     name: 'Primary',
     description: 'Primary / elementary school',
     levels: [
-      { id: 'primary', name: 'Primary', description: 'Grades 1–7 (or equivalent)' },
+      { id: 'primary', name: 'Primary', description: 'Grades 1-7 (or equivalent)' },
     ],
   },
   {
@@ -145,6 +145,29 @@ const SECONDARY_SUBJECTS = [
   { name: 'Computer Science', icon: '💻', color: 'from-slate-500 to-gray-600' },
 ];
 
+// Subject icon/gradient mapping (mirrors edge function)
+const SUBJECT_VISUALS: Record<string, { icon: string; gradient: string }> = {
+  mathematics: { icon: '📐', gradient: 'from-purple-500 to-violet-600' },
+  maths: { icon: '📐', gradient: 'from-purple-500 to-violet-600' },
+  physics: { icon: '⚛️', gradient: 'from-blue-500 to-indigo-600' },
+  chemistry: { icon: '🧪', gradient: 'from-green-500 to-emerald-600' },
+  biology: { icon: '🧬', gradient: 'from-pink-500 to-rose-600' },
+  english: { icon: '📖', gradient: 'from-orange-500 to-amber-600' },
+  geography: { icon: '🌍', gradient: 'from-lime-500 to-green-600' },
+  history: { icon: '🏛️', gradient: 'from-stone-500 to-amber-700' },
+  'computer science': { icon: '💻', gradient: 'from-cyan-500 to-sky-600' },
+  economics: { icon: '📊', gradient: 'from-teal-500 to-cyan-600' },
+  accounting: { icon: '🧮', gradient: 'from-blue-500 to-indigo-600' },
+  'business studies': { icon: '💼', gradient: 'from-teal-500 to-cyan-600' },
+  literacy: { icon: '📖', gradient: 'from-purple-500 to-violet-600' },
+  numeracy: { icon: '🔢', gradient: 'from-blue-500 to-indigo-600' },
+};
+
+function getSubjectVisuals(name: string) {
+  const key = name.trim().toLowerCase();
+  return SUBJECT_VISUALS[key] || { icon: '📚', gradient: 'from-gray-500 to-slate-600' };
+}
+
 interface OnboardingFlowProps {
   onComplete: () => void;
 }
@@ -161,9 +184,10 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
-
   const toggleSubject = (subject: string) => {
-    setSelectedSubjects(prev => (prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]));
+    setSelectedSubjects(prev =>
+      prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
+    );
   };
 
   const addCustomSubject = () => {
@@ -176,7 +200,6 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const handleBoardSelect = (board: CurriculumBoard) => {
     setSelectedBoard(board);
-    // If board has only one level, auto-select it and skip to subjects
     if (board.levels.length === 1) {
       setSelectedLevel(board.levels[0]);
       setStep('subjects');
@@ -188,66 +211,123 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const handleComplete = async () => {
     setIsSubmitting(true);
     try {
+      const curriculum = (selectedBoard?.id || 'other').toUpperCase();
+      const studyLevel = selectedLevel?.id || selectedBoard?.id || 'secondary';
+
       // Save to localStorage for offline/no-auth usage
       const setupData = {
         board: selectedBoard?.id,
         level: selectedLevel?.id,
+        curriculum,
+        studyLevel,
         subjects: selectedSubjects,
         examDates: Object.fromEntries(
           Object.entries(examDates).map(([k, v]) => [k, v.toISOString()])
         ),
+        completedAt: new Date().toISOString(),
       };
       localStorage.setItem('studymode_setup', JSON.stringify(setupData));
 
       // Try saving to DB if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // Save academic profile
-        const studyLevel = selectedLevel?.id || selectedBoard?.id || 'secondary';
-        await (supabase.from('academic_profiles' as any) as ReturnType<typeof supabase.from>).upsert({
-          user_id: user.id,
-          curriculum: (selectedBoard?.id || 'other').toUpperCase(),
-          study_level: studyLevel,
-          subjects: selectedSubjects,
-          updated_at: new Date().toISOString(),
-        } as never, { onConflict: 'user_id' });
-
-        for (const subjectName of selectedSubjects) {
-          // Check if subject already exists for this user
-          const { data: existingSubject } = await supabase
-            .from('subjects')
-            .select('id')
-            .eq('user_id', user.id)
-            .ilike('name', subjectName)
-            .maybeSingle();
-
-          if (!existingSubject) {
-            await supabase
-              .from('subjects')
-              .insert({
+        // 1. Save academic profile
+        try {
+          const { error: profileError } = await supabase
+            .from('academic_profiles')
+            .upsert(
+              {
                 user_id: user.id,
-                name: subjectName,
-                syllabus_code: selectedLevel?.id || 'custom',
-                topics: [],
-              });
+                curriculum,
+                study_level: studyLevel,
+                grade: studyLevel,
+                subjects: selectedSubjects,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: 'user_id' }
+            );
+
+          if (profileError) {
+            console.error('[OnboardingFlow] Profile save error:', profileError);
           }
+        } catch (profileErr) {
+          console.error('[OnboardingFlow] Profile save exception:', profileErr);
+        }
 
-          if (examDates[subjectName]) {
-            // Upsert exam settings (one per user)
-            await (supabase.from('exam_settings' as any) as ReturnType<typeof supabase.from>).upsert({
-              user_id: user.id,
-              exam_name: `${subjectName} Exam`,
-              exam_date: examDates[subjectName].toISOString().split('T')[0],
-              updated_at: new Date().toISOString(),
-            } as never, { onConflict: 'user_id' });
+        // 2. Create subjects
+        for (const subjectName of selectedSubjects) {
+          try {
+            // Check if subject already exists
+            const { data: existingSubject } = await supabase
+              .from('subjects')
+              .select('id')
+              .eq('user_id', user.id)
+              .ilike('name', subjectName)
+              .maybeSingle();
 
-            // Also save per-subject exam in subject_exams table
-            await (supabase.from('subject_exams' as any) as ReturnType<typeof supabase.from>).insert({
-              user_id: user.id,
-              subject_name: subjectName,
-              exam_name: `${subjectName} Exam`,
-              exam_date: examDates[subjectName].toISOString().split('T')[0],
-            } as never);
+            let subjectId = existingSubject?.id;
+
+            if (!subjectId) {
+              // Create the subject with visual defaults
+              const visuals = getSubjectVisuals(subjectName);
+              const { data: newSubject, error: subjectError } = await supabase
+                .from('subjects')
+                .insert({
+                  user_id: user.id,
+                  name: subjectName,
+                  syllabus_code: selectedLevel?.id || 'custom',
+                  topics: [],
+                  icon_emoji: visuals.icon,
+                  icon_gradient: visuals.gradient,
+                })
+                .select('id')
+                .single();
+
+              if (subjectError) {
+                console.error(`[OnboardingFlow] Subject "${subjectName}" insert error:`, subjectError);
+                continue;
+              }
+              subjectId = newSubject?.id;
+            }
+
+            // 3. Save exam date for this subject
+            if (examDates[subjectName] && subjectId) {
+              const examDateStr = examDates[subjectName].toISOString().split('T')[0];
+
+              // Upsert exam settings (global — one per user)
+              try {
+                await supabase
+                  .from('exam_settings')
+                  .upsert(
+                    {
+                      user_id: user.id,
+                      exam_name: `${curriculum} Examinations`,
+                      exam_date: examDateStr,
+                      updated_at: new Date().toISOString(),
+                    },
+                    { onConflict: 'user_id' }
+                  );
+              } catch (examSettingsErr) {
+                console.warn('[OnboardingFlow] exam_settings upsert error:', examSettingsErr);
+              }
+
+              // Insert per-subject exam record
+              try {
+                await supabase
+                  .from('subject_exams')
+                  .insert({
+                    user_id: user.id,
+                    subject_id: subjectId,
+                    subject_name: subjectName,
+                    exam_name: `${subjectName} Exam`,
+                    exam_date: examDateStr,
+                  });
+              } catch (subjectExamErr) {
+                console.warn(`[OnboardingFlow] subject_exams insert error for "${subjectName}":`, subjectExamErr);
+              }
+            }
+          } catch (subjectErr) {
+            console.error(`[OnboardingFlow] Subject "${subjectName}" processing error:`, subjectErr);
           }
         }
       }
@@ -255,8 +335,8 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       sessionStorage.setItem('onboarding_complete', 'true');
 
       toast({
-        title: '🎉 Welcome to STUDYMODE!',
-        description: 'Your learning journey begins now.',
+        title: 'Welcome to STUDYMODE!',
+        description: 'Your learning journey begins now. Your subjects have been saved.',
       });
 
       // Trigger initial AI study plan generation in the background
@@ -269,9 +349,12 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       console.error('Onboarding error:', error);
       toast({
         title: 'Setup Error',
-        description: 'Failed to complete setup. Please try again.',
+        description: 'Something went wrong. Your selections were saved locally and you can continue.',
         variant: 'destructive',
       });
+      // Even on error, let them proceed — data is in localStorage
+      sessionStorage.setItem('onboarding_complete', 'true');
+      onComplete();
     } finally {
       setIsSubmitting(false);
     }
@@ -290,37 +373,35 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-accent/5 to-success/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-2xl p-8 space-y-6 animate-fade-in">
         {/* Progress Steps */}
-        {(
-          <div className="flex items-center justify-between mb-8">
-            {progressSteps.map((s, index) => {
-              const thisStepIndex = stepOrder.indexOf(s.id);
-              const isDone = thisStepIndex < currentStepIndex;
-              const isActive = thisStepIndex === currentStepIndex;
+        <div className="flex items-center justify-between mb-8">
+          {progressSteps.map((s, index) => {
+            const thisStepIndex = stepOrder.indexOf(s.id);
+            const isDone = thisStepIndex < currentStepIndex;
+            const isActive = thisStepIndex === currentStepIndex;
 
-              return (
-                <div key={s.id} className="flex items-center">
-                  <div
-                    className={cn(
-                      'flex h-10 w-10 items-center justify-center rounded-full transition-all',
-                      isActive
-                        ? 'bg-primary text-primary-foreground scale-110'
-                        : isDone
-                        ? 'bg-success text-success-foreground'
-                        : 'bg-muted text-muted-foreground'
-                    )}
-                  >
-                    {isDone ? <Check className="h-5 w-5" /> : <s.icon className="h-5 w-5" />}
-                  </div>
-                  {index < progressSteps.length - 1 && (
-                    <div
-                      className={cn('h-1 w-10 sm:w-16 mx-2 transition-all', isDone ? 'bg-success' : 'bg-muted')}
-                    />
+            return (
+              <div key={s.id} className="flex items-center">
+                <div
+                  className={cn(
+                    'flex h-10 w-10 items-center justify-center rounded-full transition-all',
+                    isActive
+                      ? 'bg-primary text-primary-foreground scale-110'
+                      : isDone
+                      ? 'bg-success text-success-foreground'
+                      : 'bg-muted text-muted-foreground'
                   )}
+                >
+                  {isDone ? <Check className="h-5 w-5" /> : <s.icon className="h-5 w-5" />}
                 </div>
-              );
-            })}
-          </div>
-        )}
+                {index < progressSteps.length - 1 && (
+                  <div
+                    className={cn('h-1 w-10 sm:w-16 mx-2 transition-all', isDone ? 'bg-success' : 'bg-muted')}
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
 
         {/* Step: Board Selection */}
         {step === 'board' && (
@@ -426,6 +507,13 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </Button>
             </div>
 
+            {/* Show selected subjects count */}
+            {selectedSubjects.length > 0 && (
+              <p className="text-sm text-muted-foreground text-center">
+                {selectedSubjects.length} subject{selectedSubjects.length !== 1 ? 's' : ''} selected: {selectedSubjects.join(', ')}
+              </p>
+            )}
+
             <div className="flex gap-3">
               <Button
                 onClick={() => (selectedBoard && selectedBoard.levels.length > 1 ? setStep('level') : setStep('board'))}
@@ -436,10 +524,7 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               </Button>
               <Button
                 onClick={() => setStep('exams')}
-                disabled={
-                  selectedSubjects.length === 0 ||
-                  (selectedBoard?.levels.length ? selectedBoard.levels.length > 1 && !selectedLevel : false)
-                }
+                disabled={selectedSubjects.length === 0}
                 className="w-full gradient-primary"
               >
                 Continue
