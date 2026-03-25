@@ -1,10 +1,10 @@
 /**
- * generate-task-content Edge Function (v2)
+ * generate-task-content Edge Function (v3)
  *
  * Generates rich study task content (micro-revision, concept-learning, active-recall,
  * exam-question, flashcards, summary, revision-checklist) using the unified context.
  *
- * Returns a streaming response for real-time rendering.
+ * Returns a streaming SSE response for real-time rendering.
  *
  * POST body:
  * {
@@ -21,9 +21,7 @@ import {
   buildStudyModeContext,
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
-  callAIStream,
   errorResponse,
-  streamResponse,
 } from "../_shared/ai-config.ts";
 
 // ─── Task-specific prompt extensions ─────────────────────────────────────────
@@ -199,11 +197,48 @@ serve(async (req) => {
       masteryStatus,
     });
 
-    const userPrompt = `Generate ${taskType} content.\n\n${context}`;
+    const userPrompt = `Generate ${taskType} content for the topic "${topic}" in ${subject}.\n\n${context}`;
 
-    // ── Stream response ────────────────────────────────────────────────────
-    const aiResp = await callAIStream(ai, systemPrompt, userPrompt);
-    return streamResponse(aiResp.body);
+    // ── Make streaming request to AI API ──────────────────────────────────
+    const aiResponse = await fetch(ai.url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ai.key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: ai.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+        stream: true,
+      }),
+    });
+
+    if (!aiResponse.ok) {
+      if (aiResponse.status === 429) {
+        return errorResponse("RATE_LIMIT", 429);
+      }
+      if (aiResponse.status === 402) {
+        return errorResponse("CREDITS_EXHAUSTED", 402);
+      }
+      const errText = await aiResponse.text();
+      console.error("AI stream error:", aiResponse.status, errText);
+      return errorResponse(`AI API error: ${aiResponse.status}`);
+    }
+
+    // Pass through the AI streaming response directly
+    // The AI API returns SSE format: data: {"choices":[{"delta":{"content":"..."}}]}
+    return new Response(aiResponse.body, {
+      status: 200,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
   } catch (e) {
     console.error("generate-task-content error:", e);
     return errorResponse(e);

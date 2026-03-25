@@ -5,25 +5,25 @@
  *
  * Priority:
  *   1. Supabase Edge Function  (works in production)
- *   2. Local AI proxy /api/ai/ (works in development via Vite proxy → ai-server.js)
+ *   2. Local AI proxy /api/ai/ (works in development via Vite proxy -> ai-server.js)
  *
  * Edge function names mirror the local endpoint paths:
- *   /api/ai/generate-quiz          →  edge function "generate-quiz"
- *   /api/ai/generate-task-content  →  edge function "generate-task-content"
- *   /api/ai/explain-answer         →  edge function "explain-answer"
- *   /api/ai/tutor                  →  edge function "ai-tutor"
- *   /api/ai/greeting               →  edge function "ai-greeting"
- *   /api/ai/parse-document         →  edge function "parse-document"
- *   /api/ai/progress-insights      →  edge function "progress-insights"
- *   /api/ai/detect-weak-topics     →  edge function "detect-weak-topics"
- *   /api/ai/daily-summary          →  edge function "daily-summary"
- *   /api/ai/streak-celebration     →  edge function "streak-celebration"
- *   /api/ai/analyze-prerequisites  →  edge function "analyze-prerequisites"
- *   /api/ai/generate-prerequisite-theory  →  edge function "generate-prerequisite-theory"
- *   /api/ai/generate-prerequisite-quiz   →  edge function "generate-prerequisite-quiz"
+ *   /api/ai/generate-quiz          ->  edge function "generate-quiz"
+ *   /api/ai/generate-task-content  ->  edge function "generate-task-content"
+ *   /api/ai/explain-answer         ->  edge function "explain-answer"
+ *   /api/ai/tutor                  ->  edge function "ai-tutor"
+ *   /api/ai/parse-document         ->  edge function "parse-document"
+ *   /api/ai/generate-study-plan    ->  edge function "generate-study-plan"
+ *   /api/ai/generate-flashcards   ->  edge function "generate-flashcards"
+ *   /api/ai/generate-exam-questions ->  edge function "generate-exam-questions"
  */
 
 import { supabase } from '../../integrations/supabase/client';
+
+// ─── Known Supabase project constants ─────────────────────────────────────────
+// These are public values (not secrets) — the anon key is safe to embed.
+const SUPABASE_URL = 'https://uynoykcratwbcdzmsxfw.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5bm95a2NyYXR3YmNkem1zeGZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwNDYwMTksImV4cCI6MjA2OTYyMjAxOX0.bjshrxxGsSJNUndDl7WCvqMpN9ewEXiTVX6g5PlbXGc';
 
 /** Map from local /api/ai/<path> segment to edge function name */
 const EDGE_FUNCTION_MAP: Record<string, string> = {
@@ -43,9 +43,9 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   // Adaptive learning engine
   'generate-study-plan':         'generate-study-plan',
   'generate-flashcards':         'generate-flashcards',
-  // New: exam-style question generator
+  // Exam-style question generator
   'generate-exam-questions':     'generate-exam-questions',
-  // New: mark student answer
+  // Mark student answer (uses explain-answer with mode=mark)
   'mark-answer':                 'explain-answer',
 };
 
@@ -61,7 +61,7 @@ function isDevEnvironment(): boolean {
 
 /**
  * Invoke a Supabase Edge Function and return its Response.
- * Returns null if the edge function name is unknown.
+ * Returns null if the edge function name is unknown or invocation fails.
  */
 async function invokeEdgeFunction(
   endpointPath: string,
@@ -71,31 +71,19 @@ async function invokeEdgeFunction(
   if (!fnName) return null;
 
   try {
-    // supabase.functions.invoke returns { data, error }; we need the raw
-    // Response for streaming support, so we build the URL ourselves and
-    // use fetch with the Supabase anon key.
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
+    // Get current session for auth
+    const { data: { session } } = await supabase.auth.getSession();
 
-    const supabaseUrl = (supabase as any).supabaseUrl as string | undefined
-      ?? import.meta.env.VITE_SUPABASE_URL as string | undefined;
-    if (!supabaseUrl) return null;
-
-    const anonKey = (supabase as any).supabaseKey as string | undefined
-      ?? import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
-    if (!anonKey) return null;
-
-    const edgeUrl = `${supabaseUrl}/functions/v1/${fnName}`;
+    const edgeUrl = `${SUPABASE_URL}/functions/v1/${fnName}`;
 
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      'apikey': anonKey,
+      'apikey': SUPABASE_ANON_KEY,
     };
     if (session?.access_token) {
       headers['Authorization'] = `Bearer ${session.access_token}`;
     } else {
-      headers['Authorization'] = `Bearer ${anonKey}`;
+      headers['Authorization'] = `Bearer ${SUPABASE_ANON_KEY}`;
     }
 
     const resp = await fetch(edgeUrl, {
@@ -147,6 +135,7 @@ export async function aiRequest(
     typeof import.meta !== 'undefined' &&
     (import.meta as any).env?.VITE_FORCE_EDGE_FUNCTIONS === 'true';
 
+  // In production (not localhost), always try edge functions first
   if (!isDevEnvironment() || forceEdge) {
     const edgeResp = await invokeEdgeFunction(endpointPath, body);
     if (edgeResp !== null) {
