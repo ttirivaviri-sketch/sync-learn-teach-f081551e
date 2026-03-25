@@ -49,21 +49,12 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
       if (!userId) return false;
       setSaving(true);
       try {
-        const payload: Record<string, unknown> = {
-          user_id: userId,
-          updated_at: new Date().toISOString(),
-        };
-        if (data.curriculum !== undefined) payload.curriculum = data.curriculum;
-        if (data.grade !== undefined) payload.grade = data.grade;
-        if (data.study_level !== undefined) payload.study_level = data.study_level;
-        if (data.subjects !== undefined) payload.subjects = data.subjects;
-        if (data.exam_board !== undefined) payload.exam_board = data.exam_board;
-        if (data.school_name !== undefined) payload.school_name = data.school_name;
-        if (data.target_grade !== undefined) payload.target_grade = data.target_grade;
-
-        const { error } = await supabase
-          .from("academic_profiles")
-          .upsert(payload as any, { onConflict: "user_id" });
+        const { error } = await supabase.rpc("upsert_academic_profile", {
+          p_curriculum: data.curriculum ?? "ZIMSEC",
+          p_grade: data.grade ?? "",
+          p_subjects: data.subjects ?? [],
+          p_exam_year: data.exam_year ?? undefined,
+        });
         if (error) throw error;
 
         await fetchProfile();
