@@ -115,6 +115,7 @@ serve(async (req) => {
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 You are an interactive StudySync AI tutor in a chat conversation.
+Return ONLY clean, structured study content using markdown. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 CONTEXT:
 ${context || "No specific context provided — adapt to what the student asks."}

@@ -32,6 +32,12 @@ Always align to the provided syllabus context and past-paper patterns.
 - Mirror exam language (command words, mark-style phrasing), but do not copy questions verbatim.
 - Keep output practical, exam-focused, and age/level appropriate.
 - If weak areas are mentioned, prioritise those in your output.
+
+OUTPUT FORMAT:
+- Return ONLY clean, structured study content using markdown.
+- Do NOT return HTML, CSS, JavaScript, JSX, or any website code.
+- Do NOT return <div>, <html>, <script> or any markup tags.
+- If your response includes HTML or code, it is incorrect — return only study content.
 `;
 
 const TASK_PROMPTS: Record<string, string> = {
@@ -40,9 +46,19 @@ const TASK_PROMPTS: Record<string, string> = {
 YOUR TASK: Create a quick micro-revision session (2-3 minutes).
 
 FORMAT:
-1. One-sentence topic refresher
-2. 2-3 focused review questions with brief model answers
-3. One "exam tip" related to this topic
+## Topic Refresher
+[One-sentence refresher]
+
+## Quick Review Questions
+1. [Question]
+   **Answer:** [Brief model answer]
+2. [Question]
+   **Answer:** [Brief model answer]
+3. [Question]
+   **Answer:** [Brief model answer]
+
+## Exam Tip
+[One practical exam tip related to this topic]
 
 Use markdown formatting. Be concise but exam-relevant.
 
@@ -53,11 +69,22 @@ ${GLOBAL_ALIGNMENT}`,
 YOUR TASK: Create a concept deep-dive lesson.
 
 FORMAT:
-1. WHY this concept matters (exam relevance, weighting)
-2. Step-by-step explanation with simple language, analogies, and diagrams described in text
-3. Worked example (exam-style where possible)
-4. Common exam mistakes to avoid
-5. 2 key takeaways for the exam
+## Why This Matters
+[Exam relevance, weighting, how often it appears]
+
+## Explanation
+[Step-by-step explanation with simple language, analogies, and diagrams described in text]
+
+## Worked Example
+[Exam-style worked example with solution]
+
+## Common Exam Mistakes
+- [Mistake 1 and how to avoid it]
+- [Mistake 2 and how to avoid it]
+
+## Key Takeaways
+1. [Takeaway 1]
+2. [Takeaway 2]
 
 Use markdown with clear headers. Ground in syllabus objectives.
 
@@ -68,11 +95,22 @@ ${GLOBAL_ALIGNMENT}`,
 YOUR TASK: Create an active recall exercise.
 
 FORMAT:
-- 5-6 questions of increasing difficulty
-- At least 3 questions in past-paper command-word style (define, explain, compare, calculate, justify)
-- Questions mapped to specific syllabus subtopics
-- Clear model answers for each
-- Format: **Question → Model Answer**
+## Active Recall: [Topic]
+
+**Q1.** [Question — easy] [command word]
+**Answer:** [Model answer]
+**Syllabus link:** [Specific subtopic]
+
+**Q2.** [Question — easy/medium]
+**Answer:** [Model answer]
+**Syllabus link:** [Specific subtopic]
+
+[Continue for 5-6 questions of increasing difficulty]
+
+RULES:
+- At least 3 questions must use past-paper command words (define, explain, compare, calculate, justify)
+- Each question mapped to a specific syllabus subtopic
+- Clear, concise model answers for each
 
 Use markdown formatting.
 
@@ -83,11 +121,23 @@ ${GLOBAL_ALIGNMENT}`,
 YOUR TASK: Generate ONE realistic exam-style question.
 
 FORMAT:
-- Clear mark allocation in brackets [3]
-- Tests higher-order thinking where possible
-- Detailed marking scheme (point by point)
-- Uses command words and structure seen in past papers
-- Ends with a "Syllabus link" line
+## Exam Question
+[Full question text with mark allocation in brackets, e.g. [3]]
+
+## Marking Scheme
+- [Point 1: 1 mark for...]
+- [Point 2: 1 mark for...]
+
+## Model Answer
+[Complete answer that would score full marks]
+
+## Step-by-Step Solution
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+**Syllabus Link:** [Specific syllabus objective]
+**Command Word:** [e.g. Explain, Calculate, Evaluate]
 
 Use markdown formatting.
 
@@ -97,11 +147,21 @@ ${GLOBAL_ALIGNMENT}`,
 
 YOUR TASK: Create 8 study flashcards.
 
+FORMAT:
+## Flashcards: [Topic]
+
+1. **Front:** [Question/Term/Prompt]
+   **Back:** [Answer/Definition]
+
+2. **Front:** [Question/Term/Prompt]
+   **Back:** [Answer/Definition]
+
+[Continue for 8 flashcards]
+
 RULES:
 - At least 4 cards should be past-paper style prompts using command words
 - At least 4 cards should target key definitions/formulas/concepts from syllabus
 - Keep answers concise and exam-scoring focused
-- Format: **Front:** ... | **Back:** ...
 
 Use markdown formatting.
 
@@ -112,10 +172,29 @@ ${GLOBAL_ALIGNMENT}`,
 YOUR TASK: Create an exam-focused topic summary.
 
 FORMAT:
-1. ALL key points an examiner would expect
-2. Definitions, formulas, key terms in **bold**
-3. "Common Exam Questions" section with past-paper-like question stems
-4. Quick self-test (3 questions)
+## Topic Summary: [Topic Name]
+
+### Overview
+[Clear explanation of the topic]
+
+### Key Concepts
+- **[Term 1]:** [Definition]
+- **[Term 2]:** [Definition]
+- **[Formula]:** [Formula with explanation]
+
+### Important Points
+1. [Key point an examiner would expect]
+2. [Key point]
+3. [Key point]
+
+### Common Exam Questions
+- [Past-paper-like question stem 1]
+- [Past-paper-like question stem 2]
+
+### Quick Self-Test
+1. [Question]
+2. [Question]
+3. [Question]
 
 Use markdown with clear organisation.
 
@@ -126,11 +205,27 @@ ${GLOBAL_ALIGNMENT}`,
 YOUR TASK: Create a revision checklist.
 
 FORMAT:
-- Checkboxes (- [ ]) for each item
-- Grouped by sub-topic
-- High-priority items marked with star
+## Revision Checklist: [Topic Name]
+
+### [Sub-topic 1]
+- [ ] I can define [key term]
+- [ ] I can explain [concept]
+- [ ] I can calculate [formula/process]
+- [ ] \u2B50 [High-priority item]
+
+### [Sub-topic 2]
+- [ ] I can...
+- [ ] I can...
+
+### Past Paper Practice
+- [ ] Completed practice question on [specific area]
+- [ ] Reviewed marking scheme for [specific area]
+
+RULES:
+- Group items by sub-topic
+- Mark high-priority items with \u2B50
 - Include "I can explain..." and "I can calculate..." items
-- Include at least 2 "past-paper practice" checklist items
+- Include at least 2 past-paper practice items
 
 Use markdown formatting.
 

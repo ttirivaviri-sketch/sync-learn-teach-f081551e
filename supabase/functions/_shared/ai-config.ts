@@ -64,7 +64,18 @@ CORE PRINCIPLES:
 • No generic or vague questions — every item must be specific, academically accurate, and curriculum-relevant.
 • Use precise subject terminology and exam command words (define, explain, evaluate, compare, calculate, justify, etc.).
 • Adjust complexity only as needed — challenge without overwhelming, support without dumbing down.
-• Focus on deep student understanding, not rote memorisation.`;
+• Focus on deep student understanding, not rote memorisation.
+• Make content engaging, exam-focused, and supportive. Reinforce understanding and help the student improve confidence.
+
+OUTPUT FORMAT RULES — ABSOLUTE REQUIREMENTS:
+• You are a study content generator, NOT a web developer.
+• Do NOT return HTML, CSS, JavaScript, JSX, TSX, or any website/application code.
+• Do NOT return <html>, <div>, <head>, <body>, <script>, <style>, or any markup tags.
+• Do NOT return metadata, page headers, navigation bars, or UI components.
+• Return ONLY clean, structured educational study content.
+• When JSON is requested, return ONLY valid JSON with no surrounding text.
+• When plain text/markdown is requested, return ONLY the formatted study content.
+• If your response includes HTML or code, it is INCORRECT. You must regenerate and return only structured study content.`;
 
 // ─── Unified Context Builder ─────────────────────────────────────────────────
 
@@ -221,7 +232,36 @@ function truncate(s: string, maxLen: number): string {
 }
 
 /**
+ * Detects if AI output contains HTML/code instead of study content.
+ * Returns true if the response looks like HTML/JSX/code output.
+ */
+function containsHTMLOrCode(text: string): boolean {
+  const htmlPatterns = [
+    /<html[\s>]/i,
+    /<head[\s>]/i,
+    /<body[\s>]/i,
+    /<!DOCTYPE/i,
+    /<script[\s>]/i,
+    /<style[\s>]/i,
+    /<div\s+class(?:Name)?=/i,
+    /<\/(?:html|head|body|div|script|style)>/i,
+    /import\s+(?:React|{\s*useState)/,
+    /export\s+default\s+function/,
+    /const\s+\w+\s*=\s*\(\)\s*=>/,
+    /className="/,
+  ];
+  // Count matches — if 3+ patterns match, it's likely code
+  let matches = 0;
+  for (const pattern of htmlPatterns) {
+    if (pattern.test(text)) matches++;
+    if (matches >= 2) return true;
+  }
+  return false;
+}
+
+/**
  * Makes a non-streaming AI call and returns the parsed content string.
+ * Includes a safety check to reject HTML/code responses and retry once.
  */
 export async function callAI(
   ai: AIConfig,
@@ -234,49 +274,73 @@ export async function callAI(
     toolChoice?: unknown;
   } = {}
 ): Promise<string> {
-  const body: Record<string, unknown> = {
-    model: ai.model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
-    ],
+  const makeRequest = async (prompt: string): Promise<string> => {
+    const body: Record<string, unknown> = {
+      model: ai.model,
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: userPrompt },
+      ],
+    };
+
+    if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (options.jsonMode) body.response_format = { type: "json_object" };
+    if (options.tools) body.tools = options.tools;
+    if (options.toolChoice) body.tool_choice = options.toolChoice;
+
+    const response = await fetch(ai.url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ai.key}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) throw new Error("RATE_LIMIT");
+      if (response.status === 402) throw new Error("CREDITS_EXHAUSTED");
+      const errText = await response.text();
+      console.error("AI API error:", response.status, errText);
+      throw new Error(`AI API error: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    // Handle tool calls
+    if (options.tools) {
+      const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
+      if (toolCall) return toolCall.function.arguments;
+    }
+
+    return data.choices?.[0]?.message?.content || "";
   };
 
-  if (options.temperature !== undefined) body.temperature = options.temperature;
-  if (options.jsonMode) body.response_format = { type: "json_object" };
-  if (options.tools) body.tools = options.tools;
-  if (options.toolChoice) body.tool_choice = options.toolChoice;
+  // First attempt
+  let content = await makeRequest(systemPrompt);
 
-  const response = await fetch(ai.url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${ai.key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  // Safety check: if AI returned HTML/code, retry with a stronger enforcement prompt
+  if (containsHTMLOrCode(content)) {
+    console.warn("[callAI] Detected HTML/code in AI response — retrying with enforcement prompt");
+    const enforcedPrompt = systemPrompt + `\n\nCRITICAL CORRECTION: Your previous response contained HTML or code. This is WRONG. You must return ONLY structured study content (plain text, markdown, or JSON). Do NOT include any HTML tags, JSX, CSS, JavaScript, or code of any kind. Return ONLY the educational content.`;
+    content = await makeRequest(enforcedPrompt);
 
-  if (!response.ok) {
-    if (response.status === 429) throw new Error("RATE_LIMIT");
-    if (response.status === 402) throw new Error("CREDITS_EXHAUSTED");
-    const errText = await response.text();
-    console.error("AI API error:", response.status, errText);
-    throw new Error(`AI API error: ${response.status}`);
+    // If still HTML after retry, strip tags as a last resort
+    if (containsHTMLOrCode(content)) {
+      console.error("[callAI] AI still returned HTML/code after retry — stripping tags");
+      content = content
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
   }
 
-  const data = await response.json();
-
-  // Handle tool calls
-  if (options.tools) {
-    const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
-    if (toolCall) return toolCall.function.arguments;
-  }
-
-  return data.choices?.[0]?.message?.content || "";
+  return content;
 }
 
 /**
  * Makes a streaming AI call and returns the raw Response for passthrough.
+ * Includes output format enforcement in the system prompt.
  */
 export async function callAIStream(
   ai: AIConfig,
@@ -284,10 +348,15 @@ export async function callAIStream(
   userPrompt: string,
   options: { temperature?: number } = {}
 ): Promise<Response> {
+  // Enforce no-HTML rule for streaming responses (can't retry after stream starts)
+  const enforcedSystemPrompt = systemPrompt.includes("Do NOT return HTML")
+    ? systemPrompt
+    : systemPrompt + `\n\nREMINDER: Return ONLY structured study content (markdown or plain text). Do NOT return HTML, CSS, JavaScript, JSX, or any code.`;
+
   const body: Record<string, unknown> = {
     model: ai.model,
     messages: [
-      { role: "system", content: systemPrompt },
+      { role: "system", content: enforcedSystemPrompt },
       { role: "user", content: userPrompt },
     ],
     stream: true,

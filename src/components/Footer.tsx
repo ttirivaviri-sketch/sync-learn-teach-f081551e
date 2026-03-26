@@ -3,8 +3,8 @@ import { Separator } from "@/components/ui/separator";
 import { GraduationCap, Twitter, Github, Linkedin, Instagram, ArrowRight } from "lucide-react";
 
 const footerLinks = {
-  "For Students": ["Find Tutors", "Book Sessions", "Track Progress", "Student Support"],
-  "For Tutors":   ["Become a Tutor", "Verification Process", "Earnings & Payouts", "Tutor Support"],
+  "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
+  "For Tutors":   ["Become a Tutor", "Verification Process", "Earnings & Payouts", "Tutor Dashboard"],
   Company:        ["About Us", "Blog", "Careers", "Press Kit"],
   Legal:          ["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact Us"],
 };
@@ -39,17 +39,17 @@ const Footer = () => {
             </div>
 
             <p className="text-sm text-background/55 leading-relaxed max-w-xs">
-              Connecting learners with verified, qualified tutors for accessible, 
-              quality education across South Africa and beyond.
+              AI-powered study tools, expert tutors, and a curriculum-aligned resource library
+              -- everything students need to ace their exams.
             </p>
 
             {/* Newsletter */}
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-background/50 mb-3">
-                Get updates
+                Get study tips & updates
               </p>
               {subscribed ? (
-                <p className="text-sm text-emerald-400 font-medium">✓ You're subscribed!</p>
+                <p className="text-sm text-emerald-400 font-medium">You're subscribed!</p>
               ) : (
                 <form onSubmit={handleSubscribe} className="flex gap-2">
                   <input
@@ -112,13 +112,13 @@ const Footer = () => {
 
         {/* Bottom bar */}
         <div className="py-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-background/40">
-          <p>© 2026 StudySync. All rights reserved.</p>
+          <p>&copy; 2026 StudySync. All rights reserved.</p>
           <div className="flex gap-5">
             {["Privacy Policy", "Terms", "Cookie Policy"].map((l) => (
               <a key={l} href="#" className="hover:text-background/70 transition-colors">{l}</a>
             ))}
           </div>
-          <p>Made with ❤️ for accessible education</p>
+          <p>Made with care for accessible education</p>
         </div>
       </div>
     </footer>

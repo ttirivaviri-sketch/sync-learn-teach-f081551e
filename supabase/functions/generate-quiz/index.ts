@@ -87,6 +87,7 @@ serve(async (req) => {
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 YOUR TASK: Generate ${questionCount} high-quality, exam-style quiz question(s) for ${subject} — ${topic}.
+Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 QUESTION TYPES TO MIX:
 • multiple_choice — 4 options (A–D), one correct, with explanation for each distractor
