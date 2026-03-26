@@ -140,17 +140,17 @@ const AppShowcase = () => {
   const [activeTab, setActiveTab] = useState<"learner" | "tutor">("learner");
 
   const learnerFeatures: FeatureRowProps[] = [
-    { icon: Search, title: "Smart Tutor Search", desc: "Filter by subject, level, location, or specific modules.", color: "bg-primary" },
-    { icon: Star, title: "Verified Profiles", desc: "View qualifications, ratings, and genuine student reviews.", color: "bg-amber-500" },
-    { icon: Calendar, title: "Flexible Booking", desc: "Choose your preferred date & time in seconds.", color: "bg-indigo-500" },
-    { icon: CreditCard, title: "Secure Payments", desc: "Pay via mobile money, card, or cash — all protected.", color: "bg-emerald-600" },
+    { icon: Search, title: "Find Your Perfect Tutor", desc: "Search by subject, curriculum, grade level, or location -- find the right match in seconds.", color: "bg-primary" },
+    { icon: Star, title: "Verified & Rated", desc: "Every tutor is background-checked with verified qualifications and genuine student reviews.", color: "bg-amber-500" },
+    { icon: Calendar, title: "Book on Your Schedule", desc: "Choose your preferred date, time, and format -- online or in person.", color: "bg-indigo-500" },
+    { icon: CreditCard, title: "Secure, Flexible Payment", desc: "Pay via mobile money, card, or cash -- all protected with instant confirmation.", color: "bg-emerald-600" },
   ];
 
   const tutorFeatures: FeatureRowProps[] = [
-    { icon: Upload, title: "Easy Onboarding", desc: "Upload ID & qualifications — verified within 24 hours.", color: "bg-secondary" },
-    { icon: CheckCircle, title: "Background Checks", desc: "Criminal record verification for a safe platform.", color: "bg-teal-600" },
-    { icon: BookOpen, title: "Subject Management", desc: "Set your subjects, price per hour, and availability.", color: "bg-cyan-600" },
-    { icon: Briefcase, title: "Earnings Dashboard", desc: "Track income, completed sessions, and request payouts.", color: "bg-violet-600" },
+    { icon: Upload, title: "Quick Onboarding", desc: "Upload your ID and qualifications -- get verified within 24 hours and start earning.", color: "bg-secondary" },
+    { icon: CheckCircle, title: "Trusted & Verified", desc: "Background checks and identity verification build trust with every student.", color: "bg-teal-600" },
+    { icon: BookOpen, title: "Manage Your Subjects", desc: "Set your subjects, hourly rate, and availability -- students book directly.", color: "bg-cyan-600" },
+    { icon: Briefcase, title: "Track Your Earnings", desc: "Full earnings dashboard with session history, payouts, and growth analytics.", color: "bg-violet-600" },
   ];
 
   const isLearner = activeTab === "learner";
@@ -163,14 +163,14 @@ const AppShowcase = () => {
         <div className="text-center mb-16">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
             <span className="w-4 h-px bg-border block" />
-            Two apps, one mission
+            Built for learners & tutors
             <span className="w-4 h-px bg-border block" />
           </span>
           <h2 className="text-4xl md:text-5xl font-display font-extrabold text-foreground mb-5">
-            Built for every role
+            Two apps, one mission
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Separate, purpose-built experiences for learners and tutors.
+            Purpose-built experiences for students who want to learn and educators who want to teach.
           </p>
 
           {/* Tab switcher */}

@@ -1,12 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import {
-  Smartphone,
-  Globe,
+  Brain,
   Zap,
-  DollarSign,
   BookOpen,
   Users,
   ArrowRight,
+  GraduationCap,
+  FileText,
+  BarChart3,
+  Target,
+  Library,
+  Shield,
 } from "lucide-react";
 
 interface Feature {
@@ -15,74 +19,100 @@ interface Feature {
   description: string;
   gradient: string;
   bg: string;
+  category: "ai" | "tutors" | "library";
 }
 
 const features: Feature[] = [
   {
-    icon: Smartphone,
-    title: "Android Optimized",
-    description: "Built for Android devices — optimised for low-end phones and minimal data usage.",
+    icon: Brain,
+    title: "AI-Generated Quizzes",
+    description: "Adaptive quizzes that target your weak areas and match your exam board format -- Cambridge, IEB, or NSC.",
     gradient: "from-blue-500 to-indigo-600",
     bg: "bg-blue-50",
-  },
-  {
-    icon: Globe,
-    title: "Multilingual Support",
-    description: "Available in multiple languages to serve diverse communities and educational needs.",
-    gradient: "from-teal-500 to-emerald-600",
-    bg: "bg-teal-50",
+    category: "ai",
   },
   {
     icon: Zap,
-    title: "Low Data Usage",
-    description: "Efficient design ensures the app works well even with limited or slow connections.",
-    gradient: "from-amber-500 to-orange-500",
-    bg: "bg-amber-50",
-  },
-  {
-    icon: DollarSign,
-    title: "Affordable Learning",
-    description: "Competitive pricing with flexible payment — mobile money, card, or cash.",
-    gradient: "from-emerald-500 to-green-600",
-    bg: "bg-emerald-50",
-  },
-  {
-    icon: BookOpen,
-    title: "All Subjects",
-    description: "From Grade 8–12 school subjects to university modules across all disciplines.",
+    title: "Smart Flashcards",
+    description: "AI builds flashcards from your syllabus and past papers. Spaced repetition ensures you remember what matters.",
     gradient: "from-violet-500 to-purple-600",
     bg: "bg-violet-50",
+    category: "ai",
+  },
+  {
+    icon: Target,
+    title: "Exam-Style Practice",
+    description: "Real past-paper questions with AI marking, step-by-step solutions, and examiner-style feedback.",
+    gradient: "from-amber-500 to-orange-500",
+    bg: "bg-amber-50",
+    category: "ai",
   },
   {
     icon: Users,
-    title: "Community Driven",
-    description: "Built by students, for students — creating opportunities for growth and income.",
+    title: "Verified Expert Tutors",
+    description: "Book qualified, background-checked tutors for 1-on-1 sessions -- online or in person, on your schedule.",
+    gradient: "from-teal-500 to-emerald-600",
+    bg: "bg-teal-50",
+    category: "tutors",
+  },
+  {
+    icon: GraduationCap,
+    title: "Subject Specialists",
+    description: "From Grade 8-12 sciences to university-level engineering -- find a tutor who knows your exact syllabus.",
+    gradient: "from-emerald-500 to-green-600",
+    bg: "bg-emerald-50",
+    category: "tutors",
+  },
+  {
+    icon: Library,
+    title: "Curriculum Resource Library",
+    description: "Upload your syllabus, past papers, and notes. StudySync parses them into structured, actionable study material.",
     gradient: "from-pink-500 to-rose-600",
     bg: "bg-pink-50",
+    category: "library",
   },
 ];
+
+const categoryLabels: Record<string, { label: string; icon: React.ElementType }> = {
+  ai: { label: "AI Study Tools", icon: Brain },
+  tutors: { label: "Expert Tutors", icon: Users },
+  library: { label: "Resource Library", icon: Library },
+};
 
 const FeaturesSection = () => {
   const navigate = useNavigate();
 
   return (
-    <section className="py-28 bg-muted/30">
+    <section id="features" className="py-28 bg-muted/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Header */}
         <div className="text-center mb-16">
           <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted-foreground mb-3">
             <span className="w-4 h-px bg-border block" />
-            Why StudySync
+            Everything You Need to Succeed
             <span className="w-4 h-px bg-border block" />
           </span>
           <h2 className="text-4xl md:text-5xl font-display font-extrabold text-foreground mb-5">
-            Built for everyone
+            Three pillars of exam success
           </h2>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            StudySync works seamlessly on Android, supports multilingual users, 
-            and is designed with data efficiency in mind.
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+            AI-powered study tools, verified expert tutors, and a curriculum-aligned resource library
+            -- working together so you study smarter, not harder.
           </p>
+        </div>
+
+        {/* Category pills */}
+        <div className="flex flex-wrap justify-center gap-3 mb-12">
+          {Object.entries(categoryLabels).map(([key, { label, icon: Icon }]) => (
+            <div
+              key={key}
+              className="inline-flex items-center gap-2 bg-white border border-border/60 rounded-full px-5 py-2 shadow-sm"
+            >
+              <Icon className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-foreground">{label}</span>
+            </div>
+          ))}
         </div>
 
         {/* Grid */}
@@ -96,6 +126,21 @@ const FeaturesSection = () => {
               <div
                 className={`absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br ${f.gradient} opacity-0 group-hover:opacity-10 blur-xl transition-opacity duration-500`}
               />
+
+              {/* Category tag */}
+              <div className="mb-4">
+                <span
+                  className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                    f.category === "ai"
+                      ? "bg-blue-50 text-blue-600"
+                      : f.category === "tutors"
+                      ? "bg-teal-50 text-teal-600"
+                      : "bg-pink-50 text-pink-600"
+                  }`}
+                >
+                  {categoryLabels[f.category].label}
+                </span>
+              </div>
 
               {/* Icon */}
               <div
@@ -113,38 +158,6 @@ const FeaturesSection = () => {
             </div>
           ))}
         </div>
-
-        {/* Bottom CTA banner */}
-        <div className="mt-20 relative overflow-hidden rounded-3xl bg-gradient-to-br from-[hsl(230,90%,42%)] via-[hsl(245,85%,50%)] to-[hsl(260,88%,44%)] p-10 md:p-14 text-center shadow-elegant">
-          {/* Mesh blobs */}
-          <div className="absolute top-0 left-1/4 w-80 h-80 rounded-full bg-white/10 blur-[72px] pointer-events-none" />
-          <div className="absolute bottom-0 right-1/4 w-64 h-64 rounded-full bg-violet-300/15 blur-[60px] pointer-events-none" />
-
-          <div className="relative z-10">
-            <h3 className="text-3xl md:text-4xl font-display font-extrabold text-white mb-4">
-              Ready to transform your education?
-            </h3>
-            <p className="text-lg text-white/80 mb-8 max-w-2xl mx-auto">
-              Join thousands of students and tutors who are making quality education accessible for everyone.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={() => navigate("/learner/auth")}
-                className="inline-flex items-center justify-center gap-2 bg-white text-primary hover:bg-white/90 px-8 py-3.5 rounded-xl font-bold text-sm shadow-glow transition-all group"
-              >
-                Start Learning Today
-                <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-              </button>
-              <button
-                onClick={() => navigate("/tutor/auth")}
-                className="inline-flex items-center justify-center gap-2 border-2 border-white/40 text-white hover:bg-white/15 hover:border-white/60 px-8 py-3.5 rounded-xl font-semibold text-sm transition-all"
-              >
-                Apply as Tutor
-              </button>
-            </div>
-          </div>
-        </div>
-
       </div>
     </section>
   );
