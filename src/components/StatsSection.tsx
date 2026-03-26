@@ -43,7 +43,7 @@ const stats: Stat[] = [
     rawValue: 10000,
     suffix: "+",
     label: "Active Students",
-    description: "Learning every day",
+    description: "And growing daily",
     accentColor: "from-blue-500 to-indigo-600",
   },
   {
@@ -51,14 +51,14 @@ const stats: Stat[] = [
     rawValue: 500,
     suffix: "+",
     label: "Expert Tutors",
-    description: "Verified professionals",
+    description: "Background-checked",
     accentColor: "from-teal-500 to-emerald-600",
   },
   {
     icon: Award,
     rawValue: 95,
     suffix: "%",
-    label: "Success Rate",
+    label: "Pass Rate",
     description: "Grade improvement",
     accentColor: "from-amber-500 to-orange-500",
   },
@@ -66,8 +66,8 @@ const stats: Stat[] = [
     icon: Clock,
     rawValue: 50000,
     suffix: "+",
-    label: "Hours Taught",
-    description: "Knowledge shared",
+    label: "Study Hours",
+    description: "AI + tutor sessions",
     accentColor: "from-violet-500 to-purple-600",
   },
 ];
@@ -149,10 +149,10 @@ export const StatsSection = () => {
             <span className="w-4 h-px bg-white/40 block" />
           </span>
           <h2 className="text-3xl md:text-5xl font-display font-extrabold text-white mb-4">
-            Trusted by students worldwide
+            Real results, real impact
           </h2>
           <p className="text-lg text-white/70 max-w-2xl mx-auto">
-            Join our growing community of learners and educators making quality education accessible.
+            Students across South Africa and beyond are transforming their exam results with StudySync.
           </p>
         </div>
 

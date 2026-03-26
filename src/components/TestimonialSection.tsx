@@ -106,7 +106,7 @@ export const TestimonialSection = () => {
   ];
 
   return (
-    <section className="py-28 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
+    <section id="testimonials" className="py-28 px-4 sm:px-6 lg:px-8 bg-background overflow-hidden">
       <div className="max-w-7xl mx-auto">
 
         {/* Header */}

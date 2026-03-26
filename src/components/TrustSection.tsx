@@ -59,11 +59,11 @@ const TrustSection = () => {
             <span className="w-4 h-px bg-border block" />
           </span>
           <h2 className="text-4xl md:text-5xl font-display font-extrabold text-foreground mb-5">
-            Your safety, our priority
+            Your safety, our commitment
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Our rigorous verification process ensures learners connect with qualified, 
-            trustworthy tutors committed to educational excellence.
+            Every tutor on StudySync is verified, background-checked, and rated by real students --
+            so you can focus on learning with complete confidence.
           </p>
         </div>
 

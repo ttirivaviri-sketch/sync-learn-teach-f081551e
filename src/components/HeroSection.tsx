@@ -12,6 +12,8 @@ import {
   ChevronDown,
   Menu,
   X,
+  Brain,
+  Zap,
 } from "lucide-react";
 
 /* ── Floating stat card ─────────────────────────────── */
@@ -52,6 +54,12 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
+  const scrollToSection = (id: string) => {
+    setOpen(false);
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <nav
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -71,12 +79,18 @@ const Navbar = () => {
 
         {/* Desktop links */}
         <div className="hidden md:flex items-center gap-8">
-          {["Features", "How it Works", "Pricing", "About"].map((item) => (
+          {[
+            { label: "Features", id: "features" },
+            { label: "StudyMode", id: "studymode" },
+            { label: "How It Works", id: "how-it-works" },
+            { label: "Testimonials", id: "testimonials" },
+          ].map((item) => (
             <button
-              key={item}
+              key={item.id}
+              onClick={() => scrollToSection(item.id)}
               className="text-sm font-medium text-white/80 hover:text-white transition-colors"
             >
-              {item}
+              {item.label}
             </button>
           ))}
         </div>
@@ -102,9 +116,9 @@ const Navbar = () => {
             size="sm"
             variant="outline"
             className="border-white/30 text-white/80 hover:bg-white/15 hover:text-white"
-            onClick={() => navigate("/admin/auth")}
+            onClick={() => navigate("/tutor/auth")}
           >
-            Admin
+            Become a Tutor
           </Button>
         </div>
 
@@ -121,13 +135,18 @@ const Navbar = () => {
       {/* Mobile menu */}
       {open && (
         <div className="md:hidden glass border-t border-white/20 px-4 pb-4 space-y-3 animate-fade-up">
-          {["Features", "How it Works", "Pricing", "About"].map((item) => (
+          {[
+            { label: "Features", id: "features" },
+            { label: "StudyMode", id: "studymode" },
+            { label: "How It Works", id: "how-it-works" },
+            { label: "Testimonials", id: "testimonials" },
+          ].map((item) => (
             <button
-              key={item}
+              key={item.id}
               className="block w-full text-left text-sm font-medium text-white/80 py-2"
-              onClick={() => setOpen(false)}
+              onClick={() => scrollToSection(item.id)}
             >
-              {item}
+              {item.label}
             </button>
           ))}
           <div className="flex gap-3 pt-2">
@@ -135,14 +154,14 @@ const Navbar = () => {
               className="flex-1 bg-white text-primary hover:bg-white/90 font-semibold"
               onClick={() => navigate("/learner/auth")}
             >
-              Find a Tutor
+              Get Started
             </Button>
             <Button
               variant="outline"
               className="flex-1 border-white/30 text-white hover:bg-white/15"
               onClick={() => navigate("/tutor/auth")}
             >
-              Teach
+              Become a Tutor
             </Button>
           </div>
         </div>
@@ -151,9 +170,9 @@ const Navbar = () => {
   );
 };
 
-/* ══════════════════════════════════════════════════════════
+/* ======================================================
    HeroSection
-   ══════════════════════════════════════════════════════════ */
+   ====================================================== */
 const HeroSection = () => {
   const navigate = useNavigate();
 
@@ -186,21 +205,21 @@ const HeroSection = () => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-20">
           <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
 
-            {/* Left — copy */}
+            {/* Left -- copy */}
             <div className="flex-1 text-center lg:text-left">
               {/* Pill badge */}
               <div className="inline-flex items-center gap-2 glass-dark border border-white/20 rounded-full px-4 py-1.5 mb-8 animate-fade-up">
                 <Sparkles className="h-3.5 w-3.5 text-yellow-300" />
                 <span className="text-xs font-semibold text-white tracking-wide uppercase">
-                  Trusted by 10 000+ students
+                  AI-Powered Learning Platform
                 </span>
               </div>
 
               <h1 className="text-5xl sm:text-6xl md:text-7xl font-display font-extrabold text-white leading-[1.05] mb-6 animate-fade-up delay-100">
-                Learn smarter,<br />
-                <span className="text-white/80">grow </span>
+                Your Exam Success<br />
+                <span className="text-white/80">Starts </span>
                 <span className="relative inline-block">
-                  <span className="text-yellow-300">faster</span>
+                  <span className="text-yellow-300">Here</span>
                   {/* underline squiggle */}
                   <svg
                     className="absolute -bottom-2 left-0 w-full"
@@ -219,8 +238,10 @@ const HeroSection = () => {
               </h1>
 
               <p className="text-lg md:text-xl text-white/80 mb-10 max-w-xl mx-auto lg:mx-0 leading-relaxed animate-fade-up delay-200">
-                Connect with <strong className="text-white font-semibold">verified, qualified tutors</strong> for
-                school and university subjects — on your schedule, on your terms.
+                <strong className="text-white font-semibold">AI study tools</strong>,{" "}
+                <strong className="text-white font-semibold">expert tutors</strong>, and a{" "}
+                <strong className="text-white font-semibold">curriculum-aligned resource library</strong>{" "}
+                -- everything you need to ace your exams, in one place.
               </p>
 
               {/* CTA buttons */}
@@ -230,7 +251,7 @@ const HeroSection = () => {
                   className="bg-white text-primary hover:bg-white/90 shadow-glow font-bold text-base px-8 gap-2 group"
                   onClick={() => navigate("/learner/auth")}
                 >
-                  Find a Tutor
+                  Get Started Free
                   <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Button>
                 <Button
@@ -263,13 +284,13 @@ const HeroSection = () => {
                     ))}
                   </div>
                   <p className="text-xs text-white/70">
-                    <span className="font-semibold text-white">4.9/5</span> from 2 400+ reviews
+                    <span className="font-semibold text-white">4.9/5</span> from 2 400+ student reviews
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Right — visual */}
+            {/* Right -- visual */}
             <div className="flex-1 flex justify-center items-center relative w-full max-w-sm lg:max-w-md xl:max-w-lg animate-fade-up delay-200">
               {/* Central phone mockup */}
               <div className="relative z-10 animate-float">
@@ -289,17 +310,12 @@ const HeroSection = () => {
                     <div className="flex items-center gap-2 mb-2">
                       <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-5 w-auto object-contain" />
                     </div>
-                    <p className="text-[11px] text-white/70 font-medium">Find your tutor</p>
-                    {/* Search bar */}
-                    <div className="bg-white/20 rounded-xl px-3 py-2 flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full border border-white/60" />
-                      <span className="text-[10px] text-white/70">Mathematics, Physics…</span>
-                    </div>
-                    {/* Tutor cards */}
+                    <p className="text-[11px] text-white/70 font-medium">Today's Study Plan</p>
+                    {/* AI study cards */}
                     {[
-                      { name: "Dr. Alex M.", sub: "Mathematics", rate: "R180/hr", color: "from-blue-400/30" },
-                      { name: "Sarah K.", sub: "Chemistry", rate: "R150/hr", color: "from-teal-400/30" },
-                      { name: "James T.", sub: "Physics", rate: "R200/hr", color: "from-purple-400/30" },
+                      { name: "Algebra Revision", sub: "AI Quiz Ready", icon: "brain", color: "from-blue-400/30" },
+                      { name: "Chemistry Notes", sub: "Flashcards Generated", icon: "zap", color: "from-teal-400/30" },
+                      { name: "Physics Exam Prep", sub: "Past Papers Loaded", icon: "book", color: "from-purple-400/30" },
                     ].map((t, i) => (
                       <div
                         key={i}
@@ -311,7 +327,7 @@ const HeroSection = () => {
                               className="w-7 h-7 rounded-full border border-white/40 flex items-center justify-center text-[10px] font-bold text-white"
                               style={{ background: `hsl(${200 + i * 40} 70% 50%)` }}
                             >
-                              {t.name[0]}
+                              {t.icon === "brain" ? <Brain className="w-3.5 h-3.5" /> : t.icon === "zap" ? <Zap className="w-3.5 h-3.5" /> : <BookOpen className="w-3.5 h-3.5" />}
                             </div>
                             <div>
                               <p className="text-[11px] font-semibold text-white leading-tight">{t.name}</p>
@@ -319,19 +335,18 @@ const HeroSection = () => {
                             </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-[10px] font-bold text-white">{t.rate}</p>
                             <div className="flex gap-0.5 justify-end mt-0.5">
-                              {[...Array(5)].map((_, s) => (
-                                <div key={s} className="w-1.5 h-1.5 rounded-full bg-yellow-400" />
-                              ))}
+                              <div className="w-4 h-1.5 rounded-full bg-emerald-400" />
+                              <div className="w-4 h-1.5 rounded-full bg-emerald-400/50" />
+                              <div className="w-4 h-1.5 rounded-full bg-white/20" />
                             </div>
                           </div>
                         </div>
                       </div>
                     ))}
-                    {/* Book button */}
+                    {/* Start button */}
                     <div className="bg-white rounded-xl py-2 text-center mt-auto">
-                      <span className="text-[11px] font-bold text-primary">Book Session →</span>
+                      <span className="text-[11px] font-bold text-primary">Start Studying</span>
                     </div>
                   </div>
                 </div>
@@ -340,22 +355,22 @@ const HeroSection = () => {
               {/* Floating stat cards */}
               <FloatingCard
                 className="-left-4 top-10 animate-float-slow"
-                icon={<Users className="h-4 w-4 text-primary" />}
-                label="Active Students"
-                value="10 000+"
+                icon={<Brain className="h-4 w-4 text-primary" />}
+                label="AI Quizzes"
+                value="50 000+"
                 color="primary"
               />
               <FloatingCard
                 className="-right-4 top-1/3 animate-float"
                 icon={<Star className="h-4 w-4 text-yellow-400" />}
-                label="Avg. Rating"
-                value="4.9 / 5"
+                label="Pass Rate"
+                value="95%"
                 color="secondary"
               />
               <FloatingCard
                 className="left-0 bottom-16 animate-float-slow"
                 icon={<BookOpen className="h-4 w-4 text-secondary" />}
-                label="Sessions Booked"
+                label="Study Hours"
                 value="50 000+"
                 color="secondary"
               />
