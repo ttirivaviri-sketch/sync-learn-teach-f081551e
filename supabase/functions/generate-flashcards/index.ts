@@ -83,6 +83,7 @@ serve(async (req: Request) => {
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 YOUR TASK: Create ${cardCount} high-quality flashcards for ${subject} — ${topic}.
+Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 FLASHCARD CATEGORIES (mix all of these):
 • definition — Key definitions and terminology from the syllabus

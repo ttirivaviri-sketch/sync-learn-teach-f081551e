@@ -87,6 +87,7 @@ serve(async (req) => {
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 YOUR TASK: Generate ${questionCount} exam-style questions in REAL PAST-PAPER FORMAT for ${subject} — ${topic}.
+Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 These questions must look and feel like they came from an actual exam paper — correct structure, mark allocation, command words, and formatting.
 

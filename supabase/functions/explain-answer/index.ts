@@ -88,6 +88,7 @@ serve(async (req) => {
       const markSystemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 YOUR TASK: Mark and score the student's answer against the marking criteria.
+Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 You are an experienced examiner. Be fair but rigorous:
 1. Compare the student's answer point-by-point against the marking scheme.
@@ -161,6 +162,7 @@ Score this answer out of ${totalMarks || "the available marks"}.`;
     const explainSystemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 You are a supportive expert tutor helping a student understand where they went wrong on an exam question.
+Return ONLY clean, structured study content using markdown. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 Your explanation MUST:
 1. Acknowledge what the student got right (if anything).
