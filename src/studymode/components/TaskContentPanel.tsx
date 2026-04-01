@@ -173,7 +173,7 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
                 isLoading && 'animate-pulse',
               )}
             >
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <MathMarkdown>{content}</MathMarkdown>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-12">

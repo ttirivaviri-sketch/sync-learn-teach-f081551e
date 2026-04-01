@@ -677,7 +677,7 @@ export function ExamQuestionPanel({
 
               {aiExplanation && (
                 <div className="prose prose-sm max-w-none text-foreground">
-                  <ReactMarkdown>{aiExplanation}</ReactMarkdown>
+                  <MathMarkdown>{aiExplanation}</MathMarkdown>
                 </div>
               )}
 

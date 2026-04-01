@@ -177,7 +177,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
               "prose prose-sm dark:prose-invert max-w-none [&_p]:text-sm [&_p]:mb-1 [&_p]:last:mb-0",
               isGenerating && "animate-pulse"
             )}>
-              <ReactMarkdown>{aiMessage}</ReactMarkdown>
+              <MathMarkdown>{aiMessage}</MathMarkdown>
             </div>
           )}
         </div>

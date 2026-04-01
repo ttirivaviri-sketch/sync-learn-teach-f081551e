@@ -141,7 +141,7 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
           "[&_blockquote]:border-l-accent [&_blockquote]:bg-accent/5 [&_blockquote]:rounded-r-lg",
           isLoading && "animate-pulse"
         )}>
-          <ReactMarkdown>{content}</ReactMarkdown>
+          <MathMarkdown>{content}</MathMarkdown>
         </div>
       ) : (
         <div className="flex items-center gap-2 py-4">

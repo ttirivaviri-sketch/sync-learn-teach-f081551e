@@ -234,7 +234,7 @@ export function PrerequisiteRemediationFlow({
               {currentGap?.topic} - Quick Review
             </h2>
             <div className="text-foreground">
-              <ReactMarkdown>{theoryContent}</ReactMarkdown>
+              <MathMarkdown>{theoryContent}</MathMarkdown>
             </div>
           </div>
         )}
