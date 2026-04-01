@@ -342,7 +342,9 @@ export function ExamQuestionPanel({
             {activeQuestion.marks} marks
           </span>
         </div>
-        <p className="text-foreground font-medium leading-relaxed">{activeQuestion.text}</p>
+        <div className="text-foreground font-medium leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+          <MathMarkdown>{activeQuestion.text}</MathMarkdown>
+        </div>
         {quizGenerator?.question?.commandWord && (
           <p className="text-xs text-muted-foreground mt-2">
             Command word: <span className="font-medium text-accent">{quizGenerator.question.commandWord}</span>
