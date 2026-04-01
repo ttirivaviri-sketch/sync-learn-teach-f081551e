@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { MathMarkdown } from './MathMarkdown';
 import { DailyTask, Subject } from '../types/study';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
@@ -62,7 +63,9 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
           style={{ minHeight: 210 }}
         >
           <Layers className="h-5 w-5 text-accent mb-3 opacity-50" />
-          <p className="text-lg font-semibold text-foreground leading-relaxed">{card.front}</p>
+          <div className="text-lg font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+            <MathMarkdown>{card.front}</MathMarkdown>
+          </div>
           <span className="text-xs text-muted-foreground mt-4">Tap to reveal answer</span>
         </div>
 
@@ -76,7 +79,9 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
           style={{ minHeight: 210 }}
         >
           <CheckCircle2 className="h-5 w-5 text-success mb-3 opacity-50" />
-          <p className="text-base text-foreground leading-relaxed">{card.back}</p>
+          <div className="text-base text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+            <MathMarkdown>{card.back}</MathMarkdown>
+          </div>
           {card.hint && showHint && (
             <p className="text-xs text-muted-foreground mt-3 italic border-t border-border pt-2 w-full">
               💡 {card.hint}

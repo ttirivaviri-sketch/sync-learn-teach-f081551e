@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Trophy, Zap, Target, BookOpen, Flame, X, Sparkles, Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '../lib/utils';
@@ -177,7 +177,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
               "prose prose-sm dark:prose-invert max-w-none [&_p]:text-sm [&_p]:mb-1 [&_p]:last:mb-0",
               isGenerating && "animate-pulse"
             )}>
-              <ReactMarkdown>{aiMessage}</ReactMarkdown>
+              <MathMarkdown>{aiMessage}</MathMarkdown>
             </div>
           )}
         </div>

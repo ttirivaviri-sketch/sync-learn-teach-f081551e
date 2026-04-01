@@ -10,7 +10,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { cn } from '../lib/utils';
 import { Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { useUserProgress } from '../hooks/useUserProgress';
@@ -342,7 +342,9 @@ export function ExamQuestionPanel({
             {activeQuestion.marks} marks
           </span>
         </div>
-        <p className="text-foreground font-medium leading-relaxed">{activeQuestion.text}</p>
+        <div className="text-foreground font-medium leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+          <MathMarkdown>{activeQuestion.text}</MathMarkdown>
+        </div>
         {quizGenerator?.question?.commandWord && (
           <p className="text-xs text-muted-foreground mt-2">
             Command word: <span className="font-medium text-accent">{quizGenerator.question.commandWord}</span>
@@ -490,8 +492,8 @@ export function ExamQuestionPanel({
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-success/10 border border-success/30">
             <h4 className="font-semibold text-success mb-2">Model Answer</h4>
-            <div className="text-sm text-foreground whitespace-pre-wrap">
-              {generatedModelAnswer || 'Compare your answer with the expected solution.'}
+            <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+              <MathMarkdown>{generatedModelAnswer || 'Compare your answer with the expected solution.'}</MathMarkdown>
             </div>
           </div>
 
@@ -677,7 +679,7 @@ export function ExamQuestionPanel({
 
               {aiExplanation && (
                 <div className="prose prose-sm max-w-none text-foreground">
-                  <ReactMarkdown>{aiExplanation}</ReactMarkdown>
+                  <MathMarkdown>{aiExplanation}</MathMarkdown>
                 </div>
               )}
 

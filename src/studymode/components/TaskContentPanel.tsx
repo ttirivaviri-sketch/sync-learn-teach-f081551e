@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { DailyTask, Subject } from '../types/study';
 import { useTaskContent } from '../hooks/useTaskContent';
@@ -173,7 +173,7 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
                 isLoading && 'animate-pulse',
               )}
             >
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <MathMarkdown>{content}</MathMarkdown>
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-12">

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
 import { aiRequest } from '../lib/aiClient';
@@ -141,7 +141,7 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
           "[&_blockquote]:border-l-accent [&_blockquote]:bg-accent/5 [&_blockquote]:rounded-r-lg",
           isLoading && "animate-pulse"
         )}>
-          <ReactMarkdown>{content}</ReactMarkdown>
+          <MathMarkdown>{content}</MathMarkdown>
         </div>
       ) : (
         <div className="flex items-center gap-2 py-4">
