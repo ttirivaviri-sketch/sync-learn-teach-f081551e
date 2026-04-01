@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb } from 'lucide-react';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
+import { MathMarkdown } from './MathMarkdown';
 import { DailyTask, Subject } from '../types/study';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
