@@ -63,7 +63,9 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
           style={{ minHeight: 210 }}
         >
           <Layers className="h-5 w-5 text-accent mb-3 opacity-50" />
-          <p className="text-lg font-semibold text-foreground leading-relaxed">{card.front}</p>
+          <div className="text-lg font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+            <MathMarkdown>{card.front}</MathMarkdown>
+          </div>
           <span className="text-xs text-muted-foreground mt-4">Tap to reveal answer</span>
         </div>
 
