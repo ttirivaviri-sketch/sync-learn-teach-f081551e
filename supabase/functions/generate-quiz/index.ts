@@ -89,6 +89,15 @@ serve(async (req) => {
 YOUR TASK: Generate ${questionCount} high-quality, exam-style quiz question(s) for ${subject} — ${topic}.
 Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
+MATHEMATICAL NOTATION (CRITICAL):
+- For ALL mathematical expressions, use LaTeX notation wrapped in dollar signs.
+- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sin\\theta$
+- Display math: $$y = mx + c$$
+- NEVER write x^2, x_1, sqrt(x) in plain text — always use LaTeX.
+- Use proper symbols: $\\times$, $\\div$, $\\leq$, $\\geq$, $\\neq$
+- Fractions: $\\frac{numerator}{denominator}$
+- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$
+
 QUESTION TYPES TO MIX:
 • multiple_choice — 4 options (A–D), one correct, with explanation for each distractor
 • short_answer — 1–3 sentence response expected
@@ -108,12 +117,12 @@ Return ONLY valid JSON matching this exact schema:
   "quiz": [
     {
       "id": "q1",
-      "question": "full question text",
+      "question": "full question text with LaTeX math notation",
       "questionType": "multiple_choice|short_answer|structured",
       "marks": 6,
       "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
       "correctOption": "B",
-      "modelAnswer": "complete model answer",
+      "modelAnswer": "complete model answer with LaTeX math",
       "stepByStepSolution": "step 1: …\\nstep 2: …\\nstep 3: …",
       "markingScheme": ["1 mark for identifying…", "2 marks for explaining…"],
       "keyPoints": ["key point 1", "key point 2"],
