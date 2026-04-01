@@ -106,14 +106,15 @@ interface StudyModeWrapperProps {
   onDeactivate: () => void;
   onNeedHelp?: () => void;      // Navigate to tutor search (Home tab)
   onBrowseLibrary?: () => void; // Navigate to library resource browser
+  academicProfile?: import('@/types/academicProfile').AcademicProfile | null;
 }
 
-export function StudyModeWrapper({ onDeactivate, onNeedHelp, onBrowseLibrary }: StudyModeWrapperProps) {
+export function StudyModeWrapper({ onDeactivate, onNeedHelp, onBrowseLibrary, academicProfile }: StudyModeWrapperProps) {
   return (
     <div className="studymode-root">
       <StudyModeErrorBoundary onDeactivate={onDeactivate}>
         <Suspense fallback={<StudyModeLoadingFallback />}>
-          <StudyModeInner onNeedHelp={onNeedHelp} onBrowseLibrary={onBrowseLibrary} />
+          <StudyModeInner onNeedHelp={onNeedHelp} onBrowseLibrary={onBrowseLibrary} academicProfile={academicProfile} />
         </Suspense>
       </StudyModeErrorBoundary>
     </div>

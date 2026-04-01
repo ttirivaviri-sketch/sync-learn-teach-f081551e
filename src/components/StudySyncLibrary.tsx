@@ -453,6 +453,7 @@ const StudySyncLibrary = ({
           onDeactivate={() => setStudyModeActive(false)}
           onNeedHelp={onNeedHelp}
           onBrowseLibrary={() => { setStudyModeActive(false); setActiveCategory("all"); }}
+          academicProfile={academicProfile}
         />
       </Suspense>
     );
