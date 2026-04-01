@@ -46,7 +46,7 @@ export function getAIConfig(): AIConfig {
     return {
       url: "https://ai.gateway.lovable.dev/v1/chat/completions",
       key: lovableKey,
-      model: "google/gemini-2.0-flash",
+      model: "google/gemini-3-flash-preview",
     };
   }
   throw new Error(
