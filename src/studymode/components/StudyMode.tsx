@@ -9,13 +9,16 @@ import { ReadinessCheck as ReadinessCheckType } from '../types/study';
 import { MessageCircle, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { Button } from './ui/button';
+import type { AcademicProfile } from '@/types/academicProfile';
 
 export default function StudyMode({
   onNeedHelp,
   onBrowseLibrary,
+  academicProfile,
 }: {
   onNeedHelp?: () => void;
   onBrowseLibrary?: () => void;
+  academicProfile?: AcademicProfile | null;
 }) {
   const [readiness, setReadiness] = useState<ReadinessCheckType | null>(null);
   const [showUploadDialog, setShowUploadDialog] = useState(false);
@@ -59,6 +62,7 @@ export default function StudyMode({
             onOpenChat={handleOpenChat}
             onNeedHelp={onNeedHelp}
             onBrowseLibrary={onBrowseLibrary}
+            academicProfile={academicProfile}
           />
         </main>
       )}

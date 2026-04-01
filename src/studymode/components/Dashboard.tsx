@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
@@ -26,17 +26,21 @@ import { useBadgeEarning } from '../hooks/useBadgeEarning';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Skeleton } from './ui/skeleton';
+import { Badge } from './ui/badge';
+import { Card, CardContent } from './ui/card';
 import { supabase } from '../../integrations/supabase/client';
+import type { AcademicProfile } from '@/types/academicProfile';
 
 interface DashboardProps {
   readiness: ReadinessCheckType;
   onUploadClick?: () => void;
   onOpenChat?: (subject: string, topic: string) => void;
-  onNeedHelp?: () => void;  // navigates user to tutor search
-  onBrowseLibrary?: () => void;  // navigates to library tab
+  onNeedHelp?: () => void;
+  onBrowseLibrary?: () => void;
+  academicProfile?: AcademicProfile | null;
 }
 
-export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary }: DashboardProps) {
+export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
@@ -51,6 +55,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
       setUserId(data.session?.user?.id || null);
     });
   }, []);
+
+  // Check if user has uploaded documents (syllabi/past papers)
+  const [hasDocuments, setHasDocuments] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then(({ count }) => {
+        setHasDocuments((count ?? 0) > 0);
+      });
+  }, [userId]);
   
   const { 
     getStrugglingTopics, 
@@ -102,6 +119,66 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
     <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
       {/* Daily Summary Modal */}
       {showSummary && <DailySummary onClose={() => setShowSummary(false)} />}
+
+      {/* Academic Profile Card */}
+      {academicProfile ? (
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-sm text-foreground">Your Academic Profile</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Curriculum</span>
+                <p className="font-medium text-foreground">{academicProfile.curriculum || '—'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Grade</span>
+                <p className="font-medium text-foreground">{academicProfile.grade || '—'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Exam Year</span>
+                <p className="font-medium text-foreground">{academicProfile.exam_year || '—'}</p>
+              </div>
+            </div>
+            {academicProfile.subjects && academicProfile.subjects.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {academicProfile.subjects.map((s) => (
+                  <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="p-4 text-center">
+            <AlertCircle className="h-8 w-8 mx-auto text-warning mb-2" />
+            <h3 className="font-semibold text-sm mb-1">Academic Profile Not Set</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Go to your Profile tab to set your curriculum, grade, and subjects first.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Document upload gate */}
+      {hasDocuments === false && (
+        <Card className="border-accent/30 bg-accent/5">
+          <CardContent className="p-5 text-center">
+            <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
+            <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
+            </p>
+            <Button className="gradient-primary" onClick={onUploadClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Documents
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
