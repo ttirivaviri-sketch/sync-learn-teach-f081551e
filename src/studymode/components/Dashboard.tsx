@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
@@ -26,17 +26,21 @@ import { useBadgeEarning } from '../hooks/useBadgeEarning';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Skeleton } from './ui/skeleton';
+import { Badge } from './ui/badge';
+import { Card, CardContent } from './ui/card';
 import { supabase } from '../../integrations/supabase/client';
+import type { AcademicProfile } from '@/types/academicProfile';
 
 interface DashboardProps {
   readiness: ReadinessCheckType;
   onUploadClick?: () => void;
   onOpenChat?: (subject: string, topic: string) => void;
-  onNeedHelp?: () => void;  // navigates user to tutor search
-  onBrowseLibrary?: () => void;  // navigates to library tab
+  onNeedHelp?: () => void;
+  onBrowseLibrary?: () => void;
+  academicProfile?: AcademicProfile | null;
 }
 
-export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary }: DashboardProps) {
+export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
