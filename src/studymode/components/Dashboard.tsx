@@ -55,6 +55,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
       setUserId(data.session?.user?.id || null);
     });
   }, []);
+
+  // Check if user has uploaded documents (syllabi/past papers)
+  const [hasDocuments, setHasDocuments] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (!userId) return;
+    supabase
+      .from('documents')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .then(({ count }) => {
+        setHasDocuments((count ?? 0) > 0);
+      });
+  }, [userId]);
   
   const { 
     getStrugglingTopics, 
