@@ -905,21 +905,62 @@ const LearnerApp = () => {
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                       <span className="text-muted-foreground">Curriculum</span>
-                      <span className="font-medium">{academicProfile.curriculum}</span>
+                      <span className="font-medium">{academicProfile.curriculum || '—'}</span>
                       <span className="text-muted-foreground">Grade</span>
-                      <span className="font-medium">{academicProfile.grade}</span>
+                      <span className="font-medium">{academicProfile.grade || '—'}</span>
                       {academicProfile.exam_year && (
                         <>
                           <span className="text-muted-foreground">Exam Year</span>
                           <span className="font-medium">{academicProfile.exam_year}</span>
                         </>
                       )}
+                      {academicProfile.study_level && (
+                        <>
+                          <span className="text-muted-foreground">Study Level</span>
+                          <span className="font-medium">{academicProfile.study_level}</span>
+                        </>
+                      )}
+                      {academicProfile.exam_board && (
+                        <>
+                          <span className="text-muted-foreground">Exam Board</span>
+                          <span className="font-medium">{academicProfile.exam_board}</span>
+                        </>
+                      )}
+                      {academicProfile.school_name && (
+                        <>
+                          <span className="text-muted-foreground">School</span>
+                          <span className="font-medium">{academicProfile.school_name}</span>
+                        </>
+                      )}
+                      {academicProfile.target_grade && (
+                        <>
+                          <span className="text-muted-foreground">Target Grade</span>
+                          <span className="font-medium">{academicProfile.target_grade}</span>
+                        </>
+                      )}
+                      {academicProfile.learning_style && (
+                        <>
+                          <span className="text-muted-foreground">Learning Style</span>
+                          <span className="font-medium">{academicProfile.learning_style}</span>
+                        </>
+                      )}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {academicProfile.subjects.map((s) => (
-                        <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
-                      ))}
-                    </div>
+                    {academicProfile.subjects && academicProfile.subjects.length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">Subjects</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {academicProfile.subjects.map((s) => (
+                            <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {academicProfile.goals && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1">Goals</p>
+                        <p className="text-sm">{academicProfile.goals}</p>
+                      </div>
+                    )}
                     <Button variant="outline" size="sm" onClick={() => setShowAcademicSetup(true)}>
                       Edit Profile
                     </Button>
