@@ -120,6 +120,66 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
       {/* Daily Summary Modal */}
       {showSummary && <DailySummary onClose={() => setShowSummary(false)} />}
 
+      {/* Academic Profile Card */}
+      {academicProfile ? (
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+          <CardContent className="p-4 space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-sm text-foreground">Your Academic Profile</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <span className="text-muted-foreground">Curriculum</span>
+                <p className="font-medium text-foreground">{academicProfile.curriculum || '—'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Grade</span>
+                <p className="font-medium text-foreground">{academicProfile.grade || '—'}</p>
+              </div>
+              <div>
+                <span className="text-muted-foreground">Exam Year</span>
+                <p className="font-medium text-foreground">{academicProfile.exam_year || '—'}</p>
+              </div>
+            </div>
+            {academicProfile.subjects && academicProfile.subjects.length > 0 && (
+              <div className="flex flex-wrap gap-1 pt-1">
+                {academicProfile.subjects.map((s) => (
+                  <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="border-warning/30 bg-warning/5">
+          <CardContent className="p-4 text-center">
+            <AlertCircle className="h-8 w-8 mx-auto text-warning mb-2" />
+            <h3 className="font-semibold text-sm mb-1">Academic Profile Not Set</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Go to your Profile tab to set your curriculum, grade, and subjects first.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Document upload gate */}
+      {hasDocuments === false && (
+        <Card className="border-accent/30 bg-accent/5">
+          <CardContent className="p-5 text-center">
+            <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
+            <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
+            </p>
+            <Button className="gradient-primary" onClick={onUploadClick}>
+              <Upload className="mr-2 h-4 w-4" />
+              Upload Documents
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
         <p className="text-sm text-foreground">
