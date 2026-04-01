@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { DailyTask, Subject } from '../types/study';
 import { useTaskContent } from '../hooks/useTaskContent';

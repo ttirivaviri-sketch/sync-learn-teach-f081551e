@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { cn } from '../lib/utils';
 import { aiRequest } from '../lib/aiClient';

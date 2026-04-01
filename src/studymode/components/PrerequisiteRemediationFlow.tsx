@@ -8,7 +8,7 @@ import { Skeleton } from './ui/skeleton';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { cn } from '../lib/utils';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { aiRequestJSON } from '../lib/aiClient';
 
 interface PrerequisiteGap {

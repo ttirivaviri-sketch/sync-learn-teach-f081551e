@@ -10,7 +10,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { cn } from '../lib/utils';
 import { Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { useUserProgress } from '../hooks/useUserProgress';

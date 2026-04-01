@@ -6,7 +6,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { useAITutor } from '../hooks/useAITutor';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { cn } from '../lib/utils';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 
 interface ChatPanelProps {
   subject?: string;

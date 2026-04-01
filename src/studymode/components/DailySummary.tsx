@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Trophy, Zap, Target, BookOpen, Flame, X, Sparkles, Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
+import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '../lib/utils';
