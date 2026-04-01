@@ -79,7 +79,9 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
           style={{ minHeight: 210 }}
         >
           <CheckCircle2 className="h-5 w-5 text-success mb-3 opacity-50" />
-          <p className="text-base text-foreground leading-relaxed">{card.back}</p>
+          <div className="text-base text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+            <MathMarkdown>{card.back}</MathMarkdown>
+          </div>
           {card.hint && showHint && (
             <p className="text-xs text-muted-foreground mt-3 italic border-t border-border pt-2 w-full">
               💡 {card.hint}

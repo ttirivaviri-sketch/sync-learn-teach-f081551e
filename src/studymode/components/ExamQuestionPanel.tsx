@@ -492,8 +492,8 @@ export function ExamQuestionPanel({
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-success/10 border border-success/30">
             <h4 className="font-semibold text-success mb-2">Model Answer</h4>
-            <div className="text-sm text-foreground whitespace-pre-wrap">
-              {generatedModelAnswer || 'Compare your answer with the expected solution.'}
+            <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+              <MathMarkdown>{generatedModelAnswer || 'Compare your answer with the expected solution.'}</MathMarkdown>
             </div>
           </div>
 
