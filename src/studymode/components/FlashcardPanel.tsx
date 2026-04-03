@@ -1,6 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb } from 'lucide-react';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send } from 'lucide-react';
 import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
 import { MathMarkdown } from './MathMarkdown';
 import { DailyTask, Subject } from '../types/study';
