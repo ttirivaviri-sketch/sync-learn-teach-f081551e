@@ -68,6 +68,7 @@ export function ExamQuestionPanel({
 
   const { recordAttempt } = useSpacedRepetition(userId);
   const { addXp, updateStreak } = useUserProgress();
+  const { checkAndUpdateMastery } = useConceptMastery();
   const { markAnswer } = useAdaptiveLearningEngine();
 
   // ── AI quiz generator with full syllabus context ───────────────────────────
