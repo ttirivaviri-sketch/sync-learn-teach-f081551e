@@ -172,7 +172,15 @@ export function useSpacedRepetition(userId: string | null) {
     question: string,
     wasCorrect: boolean,
     subjectId?: string,
-    difficultyRating: number = 3
+    difficultyRating: number = 3,
+    options?: {
+      conceptsTested?: string[];
+      userAnswer?: string;
+      modelAnswer?: string;
+      commandWord?: string;
+      marksAwarded?: number;
+      marksPossible?: number;
+    }
   ) => {
     if (!userId) return null;
 
@@ -210,6 +218,12 @@ export function useSpacedRepetition(userId: string | null) {
             next_review_date: nextReviewDate.toISOString().split('T')[0],
             review_count: existingAttempt.review_count + 1,
             difficulty_rating: difficultyRating,
+            ...(options?.conceptsTested && { concepts_tested: options.conceptsTested }),
+            ...(options?.userAnswer && { user_answer: options.userAnswer }),
+            ...(options?.modelAnswer && { model_answer: options.modelAnswer }),
+            ...(options?.commandWord && { command_word: options.commandWord }),
+            ...(options?.marksAwarded != null && { marks_awarded: options.marksAwarded }),
+            ...(options?.marksPossible != null && { marks_possible: options.marksPossible }),
           })
           .eq('id', existingAttempt.id)
           .select()
@@ -245,6 +259,12 @@ export function useSpacedRepetition(userId: string | null) {
             interval_days: newInterval,
             next_review_date: nextReviewDate.toISOString().split('T')[0],
             review_count: 1,
+            ...(options?.conceptsTested && { concepts_tested: options.conceptsTested }),
+            ...(options?.userAnswer && { user_answer: options.userAnswer }),
+            ...(options?.modelAnswer && { model_answer: options.modelAnswer }),
+            ...(options?.commandWord && { command_word: options.commandWord }),
+            ...(options?.marksAwarded != null && { marks_awarded: options.marksAwarded }),
+            ...(options?.marksPossible != null && { marks_possible: options.marksPossible }),
           })
           .select()
           .single();
