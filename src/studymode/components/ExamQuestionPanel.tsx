@@ -13,6 +13,7 @@ import { Loader2 } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
+import { useConceptMastery } from '../hooks/useConceptMastery';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useAdaptiveLearningEngine, MarkResult } from '../hooks/useAdaptiveLearningEngine';
 import { Subject, Topic } from '../types/study';
