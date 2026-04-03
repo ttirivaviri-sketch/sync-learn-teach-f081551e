@@ -259,6 +259,12 @@ export function useSpacedRepetition(userId: string | null) {
             interval_days: newInterval,
             next_review_date: nextReviewDate.toISOString().split('T')[0],
             review_count: 1,
+            ...(options?.conceptsTested && { concepts_tested: options.conceptsTested }),
+            ...(options?.userAnswer && { user_answer: options.userAnswer }),
+            ...(options?.modelAnswer && { model_answer: options.modelAnswer }),
+            ...(options?.commandWord && { command_word: options.commandWord }),
+            ...(options?.marksAwarded != null && { marks_awarded: options.marksAwarded }),
+            ...(options?.marksPossible != null && { marks_possible: options.marksPossible }),
           })
           .select()
           .single();
