@@ -27,11 +27,26 @@ const difficultyColors: Record<string, string> = {
 function FlashcardView({ card, index, total }: { card: Flashcard; index: number; total: number }) {
   const [flipped, setFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [userAnswer, setUserAnswer] = useState('');
+  const [hasAttempted, setHasAttempted] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     setFlipped(false);
     setShowHint(false);
+    setUserAnswer('');
+    setHasAttempted(false);
   }, [index]);
+
+  const handleSubmitAnswer = () => {
+    setHasAttempted(true);
+    setFlipped(true);
+  };
+
+  const handleSkip = () => {
+    setHasAttempted(true);
+    setFlipped(true);
+  };
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -48,49 +63,77 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
         </Badge>
       </div>
 
-      {/* Card */}
+      {/* Question (always visible) */}
       <div
-        className="relative w-full cursor-pointer"
-        style={{ minHeight: 210 }}
-        onClick={() => setFlipped(f => !f)}
+        className="w-full rounded-2xl border border-border shadow-md p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-accent/10 to-accent/5"
+        style={{ minHeight: 180 }}
       >
-        {/* Front */}
-        <div
-          className={cn(
-            'w-full rounded-2xl border border-border shadow-md p-6 flex flex-col items-center justify-center text-center transition-all duration-300',
-            'bg-gradient-to-br from-accent/10 to-accent/5',
-            flipped && 'hidden'
-          )}
-          style={{ minHeight: 210 }}
-        >
-          <Layers className="h-5 w-5 text-accent mb-3 opacity-50" />
-          <div className="text-lg font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-            <MathMarkdown>{card.front}</MathMarkdown>
-          </div>
-          <span className="text-xs text-muted-foreground mt-4">Tap to reveal answer</span>
-        </div>
-
-        {/* Back */}
-        <div
-          className={cn(
-            'w-full rounded-2xl border border-border shadow-md p-6 flex flex-col items-center justify-center text-center transition-all duration-300',
-            'bg-gradient-to-br from-success/10 to-success/5',
-            !flipped && 'hidden'
-          )}
-          style={{ minHeight: 210 }}
-        >
-          <CheckCircle2 className="h-5 w-5 text-success mb-3 opacity-50" />
-          <div className="text-base text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
-            <MathMarkdown>{card.back}</MathMarkdown>
-          </div>
-          {card.hint && showHint && (
-            <p className="text-xs text-muted-foreground mt-3 italic border-t border-border pt-2 w-full">
-              💡 {card.hint}
-            </p>
-          )}
-          <span className="text-xs text-muted-foreground mt-4">Tap to see question</span>
+        <Layers className="h-5 w-5 text-accent mb-3 opacity-50" />
+        <div className="text-lg font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+          <MathMarkdown>{card.front}</MathMarkdown>
         </div>
       </div>
+
+      {/* Answer input (before attempting) */}
+      {!hasAttempted && (
+        <div className="w-full space-y-3">
+          <Textarea
+            ref={textareaRef}
+            placeholder="Type your answer before revealing..."
+            value={userAnswer}
+            onChange={(e) => setUserAnswer(e.target.value)}
+            className="min-h-[80px] text-sm"
+          />
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSubmitAnswer}
+              disabled={!userAnswer.trim()}
+              className="flex-1 gradient-primary"
+              size="sm"
+            >
+              <Send className="mr-2 h-3.5 w-3.5" />
+              Check Answer
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleSkip}
+              size="sm"
+              className="text-muted-foreground"
+            >
+              Skip & Reveal
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Revealed answer (after attempting) */}
+      {hasAttempted && flipped && (
+        <div className="w-full space-y-3">
+          {/* Student's answer */}
+          {userAnswer.trim() && (
+            <div className="w-full rounded-xl border border-border p-4 bg-muted/30">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">Your Answer</p>
+              <p className="text-sm text-foreground whitespace-pre-wrap">{userAnswer}</p>
+            </div>
+          )}
+
+          {/* Correct answer */}
+          <div
+            className="w-full rounded-2xl border border-success/30 shadow-md p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-success/10 to-success/5"
+            style={{ minHeight: 160 }}
+          >
+            <CheckCircle2 className="h-5 w-5 text-success mb-3 opacity-50" />
+            <div className="text-base text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
+              <MathMarkdown>{card.back}</MathMarkdown>
+            </div>
+            {card.hint && showHint && (
+              <p className="text-xs text-muted-foreground mt-3 italic border-t border-border pt-2 w-full">
+                💡 {card.hint}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Tags */}
       {card.tags.length > 0 && (
@@ -107,7 +150,7 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
       )}
 
       {/* Hint toggle */}
-      {card.hint && flipped && (
+      {card.hint && hasAttempted && flipped && (
         <Button
           variant="ghost"
           size="sm"
