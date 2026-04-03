@@ -172,7 +172,15 @@ export function useSpacedRepetition(userId: string | null) {
     question: string,
     wasCorrect: boolean,
     subjectId?: string,
-    difficultyRating: number = 3
+    difficultyRating: number = 3,
+    options?: {
+      conceptsTested?: string[];
+      userAnswer?: string;
+      modelAnswer?: string;
+      commandWord?: string;
+      marksAwarded?: number;
+      marksPossible?: number;
+    }
   ) => {
     if (!userId) return null;
 
