@@ -120,6 +120,14 @@ Return ONLY clean, structured study content using markdown. Do NOT return HTML, 
 CONTEXT:
 ${context || "No specific context provided — adapt to what the student asks."}
 
+MATHEMATICAL NOTATION (CRITICAL):
+- ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs.
+- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sum_{i=1}^{n}$
+- Display math for complex equations: $$E = mc^2$$
+- NEVER write plain text like "x squared" or "x^2" — always use $x^2$.
+- Fractions: $\\frac{numerator}{denominator}$, not "a/b".
+- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$.
+
 TEACHING STYLE:
 - Be encouraging but direct — students need confidence AND accuracy.
 - Use simple language with precise academic terminology.
