@@ -243,6 +243,7 @@ export function ExamQuestionPanel({
   const handleSelfAssess = async (assessment: 'correct' | 'incorrect') => {
     setSelfAssessment(assessment);
 
+    const concepts = quizGenerator?.question?.conceptsTested || [];
     if (activeQuestion && userId) {
       await recordAttempt(
         activeQuestion.topic,
@@ -250,9 +251,21 @@ export function ExamQuestionPanel({
         assessment === 'correct',
         subject?.id,
         activeQuestion.marks,
+        {
+          conceptsTested: concepts,
+          userAnswer: answer,
+          modelAnswer: generatedModelAnswer || undefined,
+          commandWord: quizGenerator?.question?.commandWord,
+        }
       );
+
+      // Check concept mastery progression
+      if (subject?.id && concepts.length > 0) {
+        checkAndUpdateMastery(userId, subject.id, activeQuestion.topic, concepts);
+      }
     }
 
+    // XP: both correct and incorrect earn XP
     const xpEarned = assessment === 'correct' ? 25 : 10;
     addXp.mutate(xpEarned);
     updateStreak.mutate();
