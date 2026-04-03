@@ -192,7 +192,8 @@ export function ExamQuestionPanel({
       const passed = result.percentage >= 50;
       setSelfAssessment(passed ? 'correct' : 'incorrect');
 
-      // Record the attempt
+      // Record the attempt with full data
+      const concepts = quizGenerator?.question?.conceptsTested || [];
       if (userId) {
         await recordAttempt(
           activeQuestion.topic,
@@ -200,11 +201,26 @@ export function ExamQuestionPanel({
           passed,
           subject?.id,
           activeQuestion.marks,
+          {
+            conceptsTested: concepts,
+            userAnswer: answer,
+            modelAnswer: generatedModelAnswer || undefined,
+            commandWord: quizGenerator?.question?.commandWord,
+            marksAwarded: result.score,
+            marksPossible: result.totalMarks,
+          }
         );
+
+        // Check concept mastery progression
+        if (subject?.id && concepts.length > 0) {
+          checkAndUpdateMastery(userId, subject.id, activeQuestion.topic, concepts);
+        }
       }
 
-      // XP based on score percentage
-      const xpEarned = Math.max(5, Math.round(result.percentage * 0.3));
+      // XP: both correct and incorrect get XP, correct gets more
+      const xpEarned = passed
+        ? Math.max(15, Math.round(result.percentage * 0.4))
+        : Math.max(5, Math.round(result.percentage * 0.15));
       addXp.mutate(xpEarned);
       updateStreak.mutate();
 
