@@ -7,6 +7,7 @@ import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
 import { FlashcardPanel } from './FlashcardPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
+import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '../lib/utils';
