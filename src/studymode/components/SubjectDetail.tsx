@@ -23,6 +23,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
   const [selectedTask, setSelectedTask] = useState<DailyTask | null>(null);
   const [currentTasks, setCurrentTasks] = useState(tasks);
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
+  const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
 
