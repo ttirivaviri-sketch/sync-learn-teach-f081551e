@@ -1,11 +1,13 @@
-import { useEffect } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap, Send, Eye, MinusCircle } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
+import { Textarea } from './ui/textarea';
 import { DailyTask, Subject } from '../types/study';
 import { useTaskContent } from '../hooks/useTaskContent';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
+import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '../lib/utils';
 
 interface TaskContentPanelProps {
@@ -35,10 +37,20 @@ const taskIcons: Record<string, string> = {
   'revision-checklist': '✅',
 };
 
+// Active recall tasks need an attempt-first answering panel
+const ATTEMPT_FIRST_TYPES = ['active-recall'];
+
 export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
   const { content, isLoading, error, generateContent, reset } = useTaskContent();
+  const { addXp, updateStreak } = useUserProgress();
 
-  // ── Fetch full curriculum context ──────────────────────────────────────────
+  // Answer-first state for active-recall
+  const [userAnswer, setUserAnswer] = useState('');
+  const [hasAttempted, setHasAttempted] = useState(false);
+  const [revealedEarly, setRevealedEarly] = useState(false);
+  const [xpChange, setXpChange] = useState(0);
+  const isAttemptFirst = ATTEMPT_FIRST_TYPES.includes(task.type);
+
   const {
     curriculumContext,
     examWeightFromPapers,
@@ -47,16 +59,17 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
     isLoaded: contextLoaded,
   } = useSyllabusContext(subject.id, subject.currentTopic.name);
 
-  // ── Fetch topic performance for adaptive content ───────────────────────────
   const { performance } = useTopicPerformance(subject.id, subject.currentTopic.name);
 
-  // ── Generate content once context is loaded ───────────────────────────────
   useEffect(() => {
-    if (!contextLoaded) return; // Wait for curriculum context to load
+    if (!contextLoaded) return;
 
     reset();
+    setUserAnswer('');
+    setHasAttempted(false);
+    setRevealedEarly(false);
+    setXpChange(0);
 
-    // Build performance context for adaptive content depth
     let performanceContext = '';
     if (performance && performance.totalAttempts > 0) {
       performanceContext = `Student accuracy on this topic: ${Math.round(performance.accuracy * 100)}%. `;
@@ -85,6 +98,26 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
   const hasPastPapers = pastPaperQuestions.length > 0;
   const hasExamPatterns = examPatterns.length > 0;
 
+  const handleSubmitAnswer = () => {
+    setHasAttempted(true);
+    setRevealedEarly(false);
+    // Award XP for attempting
+    addXp.mutate(15);
+    updateStreak.mutate();
+    setXpChange(15);
+  };
+
+  const handleRevealEarly = () => {
+    setHasAttempted(true);
+    setRevealedEarly(true);
+    // Negative XP for revealing without attempting
+    addXp.mutate(-5);
+    setXpChange(-5);
+  };
+
+  // For attempt-first types, content is hidden until attempted
+  const shouldShowContent = !isAttemptFirst || hasAttempted;
+
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Header */}
@@ -100,6 +133,14 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
             {taskLabels[task.type]} · {subject.currentTopic.name}
           </p>
         </div>
+        {xpChange !== 0 && (
+          <span className={cn(
+            "text-xs font-bold px-2 py-1 rounded-full",
+            xpChange > 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+          )}>
+            {xpChange > 0 ? '+' : ''}{xpChange} XP
+          </span>
+        )}
       </div>
 
       {/* Curriculum context badges */}
@@ -138,8 +179,58 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
         </div>
       )}
 
-      {/* Content */}
-      {contextLoaded && (
+      {/* Active Recall: Answer panel BEFORE revealing content */}
+      {contextLoaded && isAttemptFirst && !hasAttempted && (
+        <div className="space-y-4">
+          <div className="p-4 rounded-xl bg-warning/10 border border-warning/30">
+            <h4 className="font-semibold text-foreground mb-1 flex items-center gap-2">
+              🧠 Active Recall Challenge
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              Write down everything you remember about <span className="font-medium text-foreground">{subject.currentTopic.name}</span> before seeing the notes. This strengthens memory retention.
+            </p>
+          </div>
+
+          <Textarea
+            placeholder={`What do you remember about ${subject.currentTopic.name}? Write key concepts, formulas, definitions...`}
+            value={userAnswer}
+            onChange={(e) => setUserAnswer(e.target.value)}
+            className="min-h-[150px] text-sm"
+          />
+
+          <div className="flex gap-2">
+            <Button
+              onClick={handleSubmitAnswer}
+              disabled={!userAnswer.trim()}
+              className="flex-1 gradient-primary"
+            >
+              <Send className="mr-2 h-4 w-4" />
+              Submit & Reveal Notes (+15 XP)
+            </Button>
+            <Button
+              variant="outline"
+              onClick={handleRevealEarly}
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            >
+              <MinusCircle className="mr-1 h-4 w-4" />
+              Reveal (−5 XP)
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Show student's recall attempt */}
+      {contextLoaded && isAttemptFirst && hasAttempted && userAnswer.trim() && (
+        <div className="p-4 rounded-xl border border-border bg-muted/30">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1.5">
+            {revealedEarly ? '⚠️ Skipped — Your recall was not submitted' : '✅ Your Recall Attempt'}
+          </p>
+          <p className="text-sm text-foreground whitespace-pre-wrap">{userAnswer}</p>
+        </div>
+      )}
+
+      {/* Content (hidden for active-recall until attempted) */}
+      {contextLoaded && shouldShowContent && (
         <div className="p-5 rounded-2xl bg-card border border-border min-h-[200px]">
           {error ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
