@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { DailyTask, Subject } from '../types/study';
+import type { AIContextPayload } from './useAIStudyIntelligence';
 
 interface DbDailyTask {
   id: string;
@@ -18,7 +19,7 @@ interface DbDailyTask {
   updated_at: string;
 }
 
-export function useDailyTasks(subjects: Subject[]) {
+export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload | null) {
   const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const today = new Date().toISOString().split('T')[0];
@@ -56,14 +57,33 @@ export function useDailyTasks(subjects: Subject[]) {
   });
 
   // Generate tasks for a subject (used when no DB tasks exist)
+  // Enhanced with AI intelligence context for personalised task descriptions
   const generateTasksForSubject = (subject: Subject): DailyTask[] => {
     const topicName = subject.currentTopic?.name || 'General Review';
+    const examWeight = subject.currentTopic?.examWeight || 5;
+
+    // Extract AI-driven context for richer task descriptions
+    const diffLevel = aiContext?.difficultyLevel || 'medium';
+    const weakAreas = aiContext?.weakAreas || [];
+    const isWeakTopic = weakAreas.some(w =>
+      w.toLowerCase().includes(topicName.toLowerCase()) ||
+      topicName.toLowerCase().includes(w.toLowerCase())
+    );
+
+    // Adjust descriptions based on AI intelligence
+    const difficultyLabel = diffLevel === 'easy' ? 'foundational'
+      : diffLevel === 'exam-level' ? 'exam-style'
+      : diffLevel;
+    const urgencyNote = isWeakTopic ? ' (priority: weak area)' : '';
+
     return [
       {
         id: `${subject.id}-t1`,
         type: 'micro-revision',
-        title: 'Quick Review',
-        description: `2-3 questions from ${topicName}`,
+        title: isWeakTopic ? 'Targeted Review' : 'Quick Review',
+        description: isWeakTopic
+          ? `Focus review: ${topicName} — address gaps identified by AI${urgencyNote}`
+          : `2-3 ${difficultyLabel} questions from ${topicName}`,
         isCompleted: false,
         isLocked: false,
         subjectId: subject.id,
@@ -71,8 +91,10 @@ export function useDailyTasks(subjects: Subject[]) {
       {
         id: `${subject.id}-t2`,
         type: 'concept-learning',
-        title: 'Concept Learning',
-        description: `Deep dive into ${topicName}`,
+        title: isWeakTopic ? 'Concept Reinforcement' : 'Concept Learning',
+        description: isWeakTopic
+          ? `Strengthen understanding of ${topicName} with step-by-step explanations`
+          : `Deep dive into ${topicName} at ${difficultyLabel} level`,
         isCompleted: false,
         isLocked: false,
         subjectId: subject.id,
@@ -81,7 +103,7 @@ export function useDailyTasks(subjects: Subject[]) {
         id: `${subject.id}-t3`,
         type: 'flashcards',
         title: 'Flashcard Review',
-        description: `Key terms & concepts for ${topicName}`,
+        description: `Key terms & concepts for ${topicName} — AI-curated from your syllabus`,
         isCompleted: false,
         isLocked: true,
         subjectId: subject.id,
@@ -90,7 +112,7 @@ export function useDailyTasks(subjects: Subject[]) {
         id: `${subject.id}-t4`,
         type: 'active-recall',
         title: 'Active Recall',
-        description: `Test yourself on ${topicName}`,
+        description: `Test yourself on ${topicName} — ${difficultyLabel} difficulty${urgencyNote}`,
         isCompleted: false,
         isLocked: true,
         subjectId: subject.id,
@@ -99,7 +121,7 @@ export function useDailyTasks(subjects: Subject[]) {
         id: `${subject.id}-t5`,
         type: 'exam-question',
         title: 'AI Exam Question',
-        description: `Exam-style question (${subject.currentTopic?.examWeight || 5}% exam weight)`,
+        description: `Exam-style question for ${topicName} (${examWeight}% exam weight) — matching your exam board format`,
         isCompleted: false,
         isLocked: true,
         subjectId: subject.id,
@@ -115,60 +137,19 @@ export function useDailyTasks(subjects: Subject[]) {
       // Check if tasks already exist for today
       if (dbTasks && dbTasks.length > 0) return;
 
+      // Generate enriched tasks using AI intelligence
       const tasksToInsert = subjects.flatMap(subject => {
-        const topicName = subject.currentTopic?.name || 'General Review';
-        return [
-          {
-            user_id: userId,
-            subject_id: subject.id,
-            task_type: 'micro-revision',
-            title: 'Quick Review',
-            description: `2-3 questions from ${topicName}`,
-            is_completed: false,
-            is_locked: false,
-            task_date: today,
-          },
-          {
-            user_id: userId,
-            subject_id: subject.id,
-            task_type: 'concept-learning',
-            title: 'Concept Learning',
-            description: `Deep dive into ${topicName}`,
-            is_completed: false,
-            is_locked: false,
-            task_date: today,
-          },
-          {
-            user_id: userId,
-            subject_id: subject.id,
-            task_type: 'flashcards',
-            title: 'Flashcard Review',
-            description: `Key terms & concepts for ${topicName}`,
-            is_completed: false,
-            is_locked: true,
-            task_date: today,
-          },
-          {
-            user_id: userId,
-            subject_id: subject.id,
-            task_type: 'active-recall',
-            title: 'Active Recall',
-            description: `Test yourself on ${topicName}`,
-            is_completed: false,
-            is_locked: true,
-            task_date: today,
-          },
-          {
-            user_id: userId,
-            subject_id: subject.id,
-            task_type: 'exam-question',
-            title: 'AI Exam Question',
-            description: `Exam-style question (${subject.currentTopic?.examWeight || 5}% exam weight)`,
-            is_completed: false,
-            is_locked: true,
-            task_date: today,
-          },
-        ];
+        const generated = generateTasksForSubject(subject);
+        return generated.map(task => ({
+          user_id: userId,
+          subject_id: subject.id,
+          task_type: task.type,
+          title: task.title,
+          description: task.description,
+          is_completed: false,
+          is_locked: task.isLocked,
+          task_date: today,
+        }));
       });
 
       try {

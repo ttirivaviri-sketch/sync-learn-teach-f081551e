@@ -327,3 +327,40 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
 
   return { ...data, refresh };
 }
+
+/**
+ * Enhanced version that merges with AI Study Intelligence context.
+ * Use this when AIContextPayload is available for richer curriculum context.
+ */
+export function buildEnhancedCurriculumContext(
+  baseContext: string,
+  aiContext?: {
+    curriculumContext?: string;
+    examBoardContext?: string;
+    studyRecommendations?: string;
+    difficultyLevel?: string;
+    timeContext?: string;
+  } | null
+): string {
+  if (!aiContext) return baseContext;
+
+  const parts = [baseContext];
+
+  if (aiContext.curriculumContext) {
+    parts.push('\n' + aiContext.curriculumContext);
+  }
+  if (aiContext.examBoardContext) {
+    parts.push('\n=== EXAM BOARD CONTEXT (INTERNET ACCESS) ===\n' + aiContext.examBoardContext);
+  }
+  if (aiContext.studyRecommendations) {
+    parts.push('\n' + aiContext.studyRecommendations);
+  }
+  if (aiContext.timeContext) {
+    parts.push('\n=== TIME CONTEXT ===\n' + aiContext.timeContext);
+  }
+  if (aiContext.difficultyLevel) {
+    parts.push(`\nTarget Difficulty: ${aiContext.difficultyLevel}`);
+  }
+
+  return parts.filter(Boolean).join('\n');
+}

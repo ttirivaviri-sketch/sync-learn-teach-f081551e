@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, Filter, BookOpen, GraduationCap } from "lucide-react";
+import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, Filter, BookOpen, GraduationCap, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,9 +36,18 @@ export const TutorBookingManager = ({
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('all');
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [learnerSubjectsMap, setLearnerSubjectsMap] = useState<Record<string, string[]>>({});
+  const [learnerAcademicProfiles, setLearnerAcademicProfiles] = useState<Record<string, {
+    curriculum?: string | null;
+    grade?: string | null;
+    subjects?: string[] | null;
+    exam_year?: number | null;
+    school_name?: string | null;
+    target_grade?: string | null;
+  }>>({});
+  const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
   const { toast } = useToast();
 
-  // Fetch learner subjects for all bookings
+  // Fetch learner subjects and academic profiles for all bookings
   useEffect(() => {
     const learnerIds = [...new Set(bookings.map(b => b.learner_id))];
     if (learnerIds.length === 0) return;
@@ -58,8 +67,39 @@ export const TutorBookingManager = ({
         setLearnerSubjectsMap(map);
       }
     };
+
+    const fetchAcademicProfiles = async () => {
+      const { data } = await supabase
+        .from('academic_profiles')
+        .select('user_id, curriculum, grade, subjects, exam_year, school_name, target_grade')
+        .in('user_id', learnerIds);
+
+      if (data) {
+        const profileMap: Record<string, typeof data[0]> = {};
+        for (const row of data) {
+          if (row.user_id) {
+            profileMap[row.user_id] = row;
+          }
+        }
+        setLearnerAcademicProfiles(profileMap);
+      }
+    };
+
     fetchLearnerSubjects();
+    fetchAcademicProfiles();
   }, [bookings]);
+
+  const toggleProfileExpand = (bookingId: string) => {
+    setExpandedProfiles(prev => {
+      const next = new Set(prev);
+      if (next.has(bookingId)) {
+        next.delete(bookingId);
+      } else {
+        next.add(bookingId);
+      }
+      return next;
+    });
+  };
 
   const handleReschedule = async (bookingId: string, newScheduledAt: string, reason?: string) => {
     try {
@@ -178,27 +218,118 @@ export const TutorBookingManager = ({
                      booking.learner_profile.study_level === 'tertiary' ? 'Tertiary' : booking.learner_profile.study_level}
                   </p>
                 )}
-                {learnerSubjectsMap[booking.learner_id]?.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {learnerSubjectsMap[booking.learner_id].slice(0, 3).map((subj) => (
-                      <Badge key={subj} variant="outline" className="text-xs py-0 h-5">
-                        <BookOpen className="h-2.5 w-2.5 mr-0.5" />
-                        {subj}
-                      </Badge>
-                    ))}
-                    {learnerSubjectsMap[booking.learner_id].length > 3 && (
-                      <Badge variant="outline" className="text-xs py-0 h-5">
-                        +{learnerSubjectsMap[booking.learner_id].length - 3}
-                      </Badge>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
             <Badge className={getStatusColor(booking.status)}>
               {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
             </Badge>
           </div>
+
+          {/* Academic Profile Section */}
+          {(() => {
+            const acadProfile = learnerAcademicProfiles[booking.learner_id];
+            const learnerSubjects = learnerSubjectsMap[booking.learner_id];
+            const isExpanded = expandedProfiles.has(booking.id);
+            const hasProfile = acadProfile && (acadProfile.curriculum || acadProfile.grade || (acadProfile.subjects && acadProfile.subjects.length > 0));
+            const hasSubjects = learnerSubjects && learnerSubjects.length > 0;
+
+            if (!hasProfile && !hasSubjects) return null;
+
+            return (
+              <div className="mb-3 rounded-lg border border-primary/15 bg-primary/5 overflow-hidden">
+                <button
+                  className="w-full flex items-center justify-between p-2.5 text-left hover:bg-primary/10 transition-colors"
+                  onClick={() => toggleProfileExpand(booking.id)}
+                >
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-primary" />
+                    <span className="text-xs font-semibold text-primary">Academic Profile</span>
+                    {acadProfile?.curriculum && (
+                      <Badge variant="secondary" className="text-[10px] py-0 h-4">{acadProfile.curriculum}</Badge>
+                    )}
+                    {acadProfile?.grade && (
+                      <Badge variant="outline" className="text-[10px] py-0 h-4">{acadProfile.grade}</Badge>
+                    )}
+                  </div>
+                  {isExpanded ? (
+                    <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </button>
+
+                {isExpanded && (
+                  <div className="px-3 pb-3 space-y-2 border-t border-primary/10">
+                    {/* Profile details grid */}
+                    {hasProfile && (
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs pt-2">
+                        {acadProfile.curriculum && (
+                          <>
+                            <span className="text-muted-foreground">Curriculum</span>
+                            <span className="font-medium">{acadProfile.curriculum}</span>
+                          </>
+                        )}
+                        {acadProfile.grade && (
+                          <>
+                            <span className="text-muted-foreground">Grade</span>
+                            <span className="font-medium">{acadProfile.grade}</span>
+                          </>
+                        )}
+                        {acadProfile.exam_year && (
+                          <>
+                            <span className="text-muted-foreground">Exam Year</span>
+                            <span className="font-medium">{acadProfile.exam_year}</span>
+                          </>
+                        )}
+                        {acadProfile.school_name && (
+                          <>
+                            <span className="text-muted-foreground">School</span>
+                            <span className="font-medium">{acadProfile.school_name}</span>
+                          </>
+                        )}
+                        {acadProfile.target_grade && (
+                          <>
+                            <span className="text-muted-foreground">Target Grade</span>
+                            <span className="font-medium">{acadProfile.target_grade}</span>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Academic profile subjects */}
+                    {acadProfile?.subjects && acadProfile.subjects.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Registered Subjects</p>
+                        <div className="flex flex-wrap gap-1">
+                          {acadProfile.subjects.map((subj) => (
+                            <Badge key={subj} variant="secondary" className="text-[10px] py-0 h-4">
+                              <BookOpen className="h-2.5 w-2.5 mr-0.5" />
+                              {subj}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Learner additional subjects (from learner_subjects table) */}
+                    {hasSubjects && (
+                      <div>
+                        <p className="text-[10px] text-muted-foreground mb-1">Tutoring Subjects</p>
+                        <div className="flex flex-wrap gap-1">
+                          {learnerSubjects.map((subj) => (
+                            <Badge key={subj} variant="outline" className="text-[10px] py-0 h-4">
+                              <BookOpen className="h-2.5 w-2.5 mr-0.5" />
+                              {subj}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           {/* Session Details */}
           <div className="space-y-2 mb-4">
