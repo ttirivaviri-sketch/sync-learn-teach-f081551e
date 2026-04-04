@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from './ui/button';
 import { TaskList } from './TaskList';
@@ -7,6 +7,7 @@ import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
 import { FlashcardPanel } from './FlashcardPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
+import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '../lib/utils';
@@ -22,6 +23,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
   const [selectedTask, setSelectedTask] = useState<DailyTask | null>(null);
   const [currentTasks, setCurrentTasks] = useState(tasks);
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
+  const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
 
@@ -179,6 +181,20 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
             }
           </p>
         </div>
+
+        {/* Concept Mastery Breakdown Toggle */}
+        <button
+          onClick={() => setShowConceptBreakdown(v => !v)}
+          className="w-full mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground hover:bg-muted/80 transition-colors"
+        >
+          <span className="font-medium">Concept Breakdown</span>
+          {showConceptBreakdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        {showConceptBreakdown && (
+          <div className="mt-2">
+            <ConceptMasteryBreakdown subjectId={subject.id} topicName={subject.currentTopic.name} />
+          </div>
+        )}
 
         {/* Advance Topic Button */}
         {canAdvance(subject) && (
