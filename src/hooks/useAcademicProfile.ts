@@ -57,6 +57,37 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         });
         if (error) throw error;
 
+        // Sync subjects to learner_subjects and subjects tables for Study Mode integration
+        if (data.subjects && data.subjects.length > 0) {
+          for (const subjectName of data.subjects) {
+            // Sync to learner_subjects (for tutor booking visibility)
+            await supabase
+              .from("learner_subjects")
+              .upsert(
+                { user_id: userId, subject: subjectName },
+                { onConflict: "user_id,subject" }
+              )
+              .then(() => {});
+
+            // Sync to subjects table (for Study Mode) - only create if doesn't exist
+            const { data: existing } = await supabase
+              .from("subjects")
+              .select("id")
+              .eq("user_id", userId)
+              .ilike("name", subjectName)
+              .maybeSingle();
+
+            if (!existing?.id) {
+              await (supabase.from("subjects") as any).insert({
+                user_id: userId,
+                name: subjectName,
+                syllabus_code: null,
+                topics: [],
+              });
+            }
+          }
+        }
+
         await fetchProfile();
         return true;
       } catch (err) {
