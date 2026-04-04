@@ -34,7 +34,7 @@ serve(async (req) => {
     // Parse form data from PayFast
     const formData = await req.formData();
     const pfData: Record<string, string> = {};
-    
+
     for (const [key, value] of formData.entries()) {
       pfData[key] = value.toString();
     }
@@ -43,15 +43,21 @@ serve(async (req) => {
 
     // Step 1: Verify signature
     const receivedSignature = pfData.signature;
-    delete pfData.signature;
+    const pfDataForSignature = { ...pfData };
+    delete pfDataForSignature.signature;
 
-    const signatureString = Object.entries(pfData)
+    const signatureString = Object.entries(pfDataForSignature)
       .filter(([_, value]) => value !== "")
-      .map(([key, value]) => `${key}=${encodeURIComponent(value.trim()).replace(/%20/g, "+")}`)
+      .map(
+        ([key, value]) =>
+          `${key}=${encodeURIComponent(value.trim()).replace(/%20/g, "+")}`
+      )
       .join("&");
 
     const signatureWithPassphrase = PAYFAST_PASSPHRASE
-      ? `${signatureString}&passphrase=${encodeURIComponent(PAYFAST_PASSPHRASE.trim()).replace(/%20/g, "+")}`
+      ? `${signatureString}&passphrase=${encodeURIComponent(
+          PAYFAST_PASSPHRASE.trim()
+        ).replace(/%20/g, "+")}`
       : signatureString;
 
     // Create MD5 hash
@@ -59,26 +65,33 @@ serve(async (req) => {
     const data = encoder.encode(signatureWithPassphrase);
     const hashBuffer = await crypto.subtle.digest("MD5", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const calculatedSignature = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    const calculatedSignature = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
 
     if (calculatedSignature !== receivedSignature) {
-      console.error("Signature mismatch:", { calculated: calculatedSignature, received: receivedSignature });
+      console.error("Signature mismatch:", {
+        calculated: calculatedSignature,
+        received: receivedSignature,
+      });
       throw new Error("Invalid signature");
     }
 
-    // Step 2: Verify the source IP (in production)
-    // Note: In edge functions, we trust PayFast's signature verification
-
-    // Step 3: Validate with PayFast server
+    // Step 2: Validate payment data
     const paymentId = pfData.m_payment_id;
     const paymentStatus = pfData.payment_status;
-    const amount = parseFloat(pfData.amount_gross);
+    const amountGross = parseFloat(pfData.amount_gross);
+    const pfPaymentId = pfData.pf_payment_id;
 
     if (!paymentId) {
       throw new Error("Missing payment ID");
     }
 
-    // Get payment record
+    console.log(
+      `Processing ITN: payment=${paymentId}, status=${paymentStatus}, amount=${amountGross}, pf_id=${pfPaymentId}`
+    );
+
+    // Get payment record with booking
     const { data: payment, error: paymentError } = await supabase
       .from("payments")
       .select("*, booking:bookings(*)")
@@ -86,13 +99,27 @@ serve(async (req) => {
       .single();
 
     if (paymentError || !payment) {
-      console.error("Payment not found:", paymentId);
+      console.error("Payment not found:", paymentId, paymentError);
       throw new Error("Payment not found");
     }
 
-    // Verify amount matches
-    if (Math.abs(payment.amount - amount) > 0.01) {
-      console.error("Amount mismatch:", { expected: payment.amount, received: amount });
+    // Don't process if payment is already in a final state
+    if (payment.status === "succeeded" || payment.status === "refunded") {
+      console.log(
+        `Payment ${paymentId} already in final state: ${payment.status}. Skipping.`
+      );
+      return new Response("OK", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
+    }
+
+    // Verify amount matches (allow small rounding differences)
+    if (Math.abs(payment.amount - amountGross) > 0.01) {
+      console.error("Amount mismatch:", {
+        expected: payment.amount,
+        received: amountGross,
+      });
       throw new Error("Amount mismatch");
     }
 
@@ -112,15 +139,16 @@ serve(async (req) => {
         newStatus = "failed";
         break;
       default:
+        console.warn(`Unknown PayFast status: ${paymentStatus}`);
         newStatus = "pending";
     }
 
-    // Update payment status
+    // Update payment record
     const { error: updateError } = await supabase
       .from("payments")
       .update({
         status: newStatus,
-        provider_ref: pfData.pf_payment_id,
+        provider_ref: pfPaymentId || null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", paymentId);
@@ -130,15 +158,91 @@ serve(async (req) => {
       throw new Error("Failed to update payment");
     }
 
-    // If payment succeeded, update booking status
-    if (newStatus === "succeeded" && payment.booking) {
-      await supabase
+    console.log(`Payment ${paymentId} updated to ${newStatus}`);
+
+    // If payment succeeded, ensure booking is in confirmed state
+    // (it should already be confirmed by tutor, but this is a safety net)
+    if (newStatus === "succeeded" && payment.booking_id) {
+      const { data: currentBooking, error: bookingFetchError } = await supabase
         .from("bookings")
-        .update({ status: "confirmed" })
-        .eq("id", payment.booking_id);
+        .select("id, status")
+        .eq("id", payment.booking_id)
+        .single();
+
+      if (!bookingFetchError && currentBooking) {
+        // If booking is in requested state, move to confirmed (payment confirms it)
+        if (currentBooking.status === "requested") {
+          const { error: bookingUpdateError } = await supabase
+            .from("bookings")
+            .update({
+              status: "confirmed",
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", payment.booking_id);
+
+          if (bookingUpdateError) {
+            console.error("Failed to update booking status:", bookingUpdateError);
+          } else {
+            console.log(
+              `Booking ${payment.booking_id} auto-confirmed via payment`
+            );
+          }
+        }
+        // If already confirmed, that's fine - the session is paid and ready
+        console.log(
+          `Booking ${payment.booking_id} status: ${currentBooking.status}. Payment succeeded.`
+        );
+      }
+
+      // Create a notification for the learner
+      try {
+        const { data: paymentRecord } = await supabase
+          .from("payments")
+          .select("payer_id")
+          .eq("id", paymentId)
+          .single();
+
+        if (paymentRecord?.payer_id) {
+          await supabase.from("notifications").insert({
+            user_id: paymentRecord.payer_id,
+            title: "Payment Confirmed",
+            body: `Your payment of R${amountGross.toFixed(
+              2
+            )} has been confirmed. Your session is secured!`,
+            type: "payment",
+            related_booking_id: payment.booking_id,
+          });
+        }
+      } catch (notifError) {
+        // Non-critical, just log
+        console.warn("Failed to create payment notification:", notifError);
+      }
     }
 
-    console.log(`Payment ${paymentId} updated to ${newStatus}`);
+    // If payment failed, create notification
+    if (newStatus === "failed" && payment.booking_id) {
+      try {
+        const { data: paymentRecord } = await supabase
+          .from("payments")
+          .select("payer_id")
+          .eq("id", paymentId)
+          .single();
+
+        if (paymentRecord?.payer_id) {
+          await supabase.from("notifications").insert({
+            user_id: paymentRecord.payer_id,
+            title: "Payment Failed",
+            body: `Your payment of R${amountGross.toFixed(
+              2
+            )} was not successful. Please try again.`,
+            type: "payment",
+            related_booking_id: payment.booking_id,
+          });
+        }
+      } catch (notifError) {
+        console.warn("Failed to create payment failure notification:", notifError);
+      }
+    }
 
     return new Response("OK", {
       status: 200,

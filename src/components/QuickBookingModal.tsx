@@ -74,7 +74,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
 
       toast({
         title: "Booking Request Sent!",
-        description: `Your session request has been sent to ${tutor.name}`,
+        description: `Your session request has been sent to ${tutor.name}. You'll be prompted to pay once confirmed.`,
       });
       
       onClose();

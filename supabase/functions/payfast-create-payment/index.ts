@@ -13,6 +13,7 @@ interface PaymentRequest {
   itemName: string;
   returnUrl: string;
   cancelUrl: string;
+  paymentMethod?: string; // card, eft, instant_eft, mobicred
 }
 
 serve(async (req) => {
@@ -65,11 +66,64 @@ serve(async (req) => {
       throw new Error("Could not fetch user profile");
     }
 
-    const { bookingId, amount, itemName, returnUrl, cancelUrl }: PaymentRequest =
-      await req.json();
+    const {
+      bookingId,
+      amount,
+      itemName,
+      returnUrl,
+      cancelUrl,
+      paymentMethod,
+    }: PaymentRequest = await req.json();
 
     if (!bookingId || !amount || !itemName) {
       throw new Error("Missing required payment fields");
+    }
+
+    // Validate the booking exists and belongs to this user
+    const { data: bookingData, error: bookingError } = await supabase
+      .from("bookings")
+      .select("id, learner_id, status, price")
+      .eq("id", bookingId)
+      .single();
+
+    if (bookingError || !bookingData) {
+      throw new Error("Booking not found");
+    }
+
+    if (bookingData.learner_id !== user.id) {
+      throw new Error("Unauthorized: booking does not belong to you");
+    }
+
+    if (bookingData.status === "canceled") {
+      throw new Error("Cannot pay for a cancelled booking");
+    }
+
+    // Check if there's already a succeeded payment for this booking
+    const { data: existingPayments } = await supabase
+      .from("payments")
+      .select("id, status")
+      .eq("booking_id", bookingId)
+      .eq("status", "succeeded");
+
+    if (existingPayments && existingPayments.length > 0) {
+      throw new Error("This booking has already been paid for");
+    }
+
+    // Check for existing pending payment and cancel it before creating a new one
+    const { data: pendingPayments } = await supabase
+      .from("payments")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .eq("status", "pending");
+
+    if (pendingPayments && pendingPayments.length > 0) {
+      // Mark old pending payments as failed (user retrying)
+      for (const pp of pendingPayments) {
+        await supabase
+          .from("payments")
+          .update({ status: "failed", updated_at: new Date().toISOString() })
+          .eq("id", pp.id);
+      }
     }
 
     // Create payment record
@@ -94,29 +148,52 @@ serve(async (req) => {
     // Build PayFast notify URL - points to our ITN handler
     const notifyUrl = `${SUPABASE_URL}/functions/v1/payfast-itn`;
 
-    // PayFast payment data
+    // PayFast payment data - order matters for signature
     const paymentData: Record<string, string> = {
       merchant_id: PAYFAST_MERCHANT_ID,
       merchant_key: PAYFAST_MERCHANT_KEY,
       return_url: returnUrl,
       cancel_url: cancelUrl,
       notify_url: notifyUrl,
-      name_first: profile.full_name?.split(" ")[0] || "User",
-      name_last: profile.full_name?.split(" ").slice(1).join(" ") || "",
-      email_address: profile.email,
+      name_first: (profile.full_name?.split(" ")[0] || "User").substring(0, 100),
+      name_last: (profile.full_name?.split(" ").slice(1).join(" ") || "").substring(0, 100),
+      email_address: (profile.email || user.email || "").substring(0, 100),
       m_payment_id: payment.id,
       amount: amount.toFixed(2),
       item_name: itemName.substring(0, 100),
+      item_description: `StudySync tutoring session booking ${bookingId.slice(0, 8)}`.substring(0, 255),
+      email_confirmation: "1",
+      confirmation_address: (profile.email || user.email || "").substring(0, 100),
     };
 
-    // Generate signature
+    // Add payment method if specified (PayFast payment_method parameter)
+    // cc = credit card, eft = EFT, dc = debit card, mp = Mobicred, mc = Mastercard
+    if (paymentMethod) {
+      const methodMap: Record<string, string> = {
+        card: "cc",
+        eft: "eft",
+        instant_eft: "eft",
+        mobicred: "mp",
+      };
+      const pfMethod = methodMap[paymentMethod];
+      if (pfMethod) {
+        paymentData.payment_method = pfMethod;
+      }
+    }
+
+    // Generate signature - must follow PayFast's specific ordering
     const signatureString = Object.entries(paymentData)
       .filter(([_, value]) => value !== "")
-      .map(([key, value]) => `${key}=${encodeURIComponent(value.trim()).replace(/%20/g, "+")}`)
+      .map(
+        ([key, value]) =>
+          `${key}=${encodeURIComponent(value.trim()).replace(/%20/g, "+")}`
+      )
       .join("&");
 
     const signatureWithPassphrase = PAYFAST_PASSPHRASE
-      ? `${signatureString}&passphrase=${encodeURIComponent(PAYFAST_PASSPHRASE.trim()).replace(/%20/g, "+")}`
+      ? `${signatureString}&passphrase=${encodeURIComponent(
+          PAYFAST_PASSPHRASE.trim()
+        ).replace(/%20/g, "+")}`
       : signatureString;
 
     // Create MD5 hash
@@ -124,7 +201,9 @@ serve(async (req) => {
     const data = encoder.encode(signatureWithPassphrase);
     const hashBuffer = await crypto.subtle.digest("MD5", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const signature = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    const signature = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
 
     paymentData.signature = signature;
 
@@ -133,6 +212,12 @@ serve(async (req) => {
     const payfastUrl = isSandbox
       ? "https://sandbox.payfast.co.za/eng/process"
       : "https://www.payfast.co.za/eng/process";
+
+    console.log(
+      `Payment created: ${payment.id} for booking ${bookingId}, amount R${amount.toFixed(
+        2
+      )}, sandbox: ${isSandbox}`
+    );
 
     return new Response(
       JSON.stringify({

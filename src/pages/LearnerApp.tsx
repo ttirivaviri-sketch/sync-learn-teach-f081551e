@@ -34,6 +34,7 @@ import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useBookingPayments } from '@/hooks/useBookingPayments';
 import { PendingPaymentCard } from '@/components/PendingPaymentCard';
+import { PaymentCheckout } from '@/components/PaymentCheckout';
 import LearnerSyllabusManager from '@/components/LearnerSyllabusManager';
 import { useLearnerSubjects } from '@/hooks/useLearnerSubjects';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
@@ -114,6 +115,7 @@ const LearnerApp = () => {
     avatar?: string;
   } | null>(null);
   const [showPaymentForBooking, setShowPaymentForBooking] = useState<any>(null);
+  const [checkoutBooking, setCheckoutBooking] = useState<any>(null);
   const [showReschedule, setShowReschedule] = useState(false);
   const [rescheduleBooking, setRescheduleBooking] = useState<any>(null);
   const [showPaymentMethods, setShowPaymentMethods] = useState(false);
@@ -405,8 +407,15 @@ const LearnerApp = () => {
       toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." });
       return;
     }
-    setShowPaymentForBooking(booking);
-    setActiveTab("activity");
+    setCheckoutBooking(booking);
+  };
+
+  const handleStartCheckout = (booking: any) => {
+    if (bypassPayments) {
+      toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." });
+      return;
+    }
+    setCheckoutBooking(booking);
   };
 
   const handleStartChat = (tutor: { id: string | number; full_name?: string; name?: string }) => {
@@ -419,6 +428,20 @@ const LearnerApp = () => {
   if (loading) return <LoadingScreen message="Loading your account..." />;
   if (!isDevMode && !session?.user) return null;
   if (showLaunchScreen && !isDevMode) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
+
+  // Full-screen payment checkout
+  if (checkoutBooking) {
+    return (
+      <PaymentCheckout
+        booking={checkoutBooking}
+        onBack={() => setCheckoutBooking(null)}
+        onPaymentInitiated={() => {
+          // Payment form submitted - user will be redirected to PayFast
+          // On return, PaymentSuccess/PaymentCancelled pages handle the rest
+        }}
+      />
+    );
+  }
 
   if (showVideoMeeting && videoMeetingData) {
     return (
@@ -687,18 +710,8 @@ const LearnerApp = () => {
 
           {/* ── Activity Tab ── */}
           <TabsContent value="activity" className="space-y-4 p-4 mt-0">
-            {/* Pending Payment (active payment flow) */}
-            {showPaymentForBooking && (
-              <div className="mb-4">
-                <PendingPaymentCard
-                  booking={showPaymentForBooking}
-                  onPaymentComplete={() => setShowPaymentForBooking(null)}
-                />
-              </div>
-            )}
-
-            {/* Other bookings needing payment */}
-            {!showPaymentForBooking && bookingsNeedingPayment.length > 0 && (
+            {/* Bookings needing payment */}
+            {bookingsNeedingPayment.length > 0 && (
               <div className="mb-4">
                 <h3 className="font-semibold mb-3 flex items-center gap-2">
                   <span className="relative flex h-3 w-3">
@@ -713,6 +726,7 @@ const LearnerApp = () => {
                       key={booking.id}
                       booking={booking}
                       onPaymentComplete={() => {}}
+                      onStartCheckout={handleStartCheckout}
                     />
                   ))}
                 </div>
@@ -1094,8 +1108,32 @@ const LearnerApp = () => {
               <div className="flex items-center gap-3 p-3 border rounded-lg">
                 <CreditCard className="h-5 w-5 text-primary" />
                 <div className="flex-1">
-                  <p className="font-medium text-sm">PayFast</p>
-                  <p className="text-xs text-muted-foreground">South Africa's trusted payment gateway</p>
+                  <p className="font-medium text-sm">Credit / Debit Card</p>
+                  <p className="text-xs text-muted-foreground">Visa, Mastercard, Amex via PayFast</p>
+                </div>
+                <Badge variant="default" className="bg-green-500">Active</Badge>
+              </div>
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">EFT / Bank Transfer</p>
+                  <p className="text-xs text-muted-foreground">Pay via your bank's online portal</p>
+                </div>
+                <Badge variant="default" className="bg-green-500">Active</Badge>
+              </div>
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Instant EFT</p>
+                  <p className="text-xs text-muted-foreground">Secure instant bank payment via Ozow</p>
+                </div>
+                <Badge variant="default" className="bg-green-500">Active</Badge>
+              </div>
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <CreditCard className="h-5 w-5 text-primary" />
+                <div className="flex-1">
+                  <p className="font-medium text-sm">Mobicred</p>
+                  <p className="text-xs text-muted-foreground">Buy now, pay later in instalments</p>
                 </div>
                 <Badge variant="default" className="bg-green-500">Active</Badge>
               </div>
@@ -1110,7 +1148,7 @@ const LearnerApp = () => {
                 </div>
               )}
               <p className="text-xs text-muted-foreground text-center pt-2">
-                Additional payment methods (Ozow, bank EFT) coming soon.
+                All payments are processed securely by PayFast, South Africa's trusted payment gateway.
               </p>
             </div>
           </div>
