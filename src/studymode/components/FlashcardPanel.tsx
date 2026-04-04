@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send, MinusCircle } from 'lucide-react';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Badge } from './ui/badge';
@@ -8,6 +8,9 @@ import { DailyTask, Subject } from '../types/study';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useAdaptiveLearningEngine, Flashcard } from '../hooks/useAdaptiveLearningEngine';
+import { useConceptMastery } from '../hooks/useConceptMastery';
+import { useUserProgress } from '../hooks/useUserProgress';
+import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '../lib/utils';
 
@@ -24,11 +27,19 @@ const difficultyColors: Record<string, string> = {
   hard:   'bg-destructive/15 text-destructive border-destructive/30',
 };
 
-function FlashcardView({ card, index, total }: { card: Flashcard; index: number; total: number }) {
+interface FlashcardViewProps {
+  card: Flashcard;
+  index: number;
+  total: number;
+  onResult: (answered: boolean, skipped: boolean) => void;
+}
+
+function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
   const [flipped, setFlipped] = useState(false);
   const [showHint, setShowHint] = useState(false);
   const [userAnswer, setUserAnswer] = useState('');
   const [hasAttempted, setHasAttempted] = useState(false);
+  const [skipped, setSkipped] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -36,16 +47,21 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
     setShowHint(false);
     setUserAnswer('');
     setHasAttempted(false);
+    setSkipped(false);
   }, [index]);
 
   const handleSubmitAnswer = () => {
     setHasAttempted(true);
+    setSkipped(false);
     setFlipped(true);
+    onResult(true, false);
   };
 
   const handleSkip = () => {
     setHasAttempted(true);
+    setSkipped(true);
     setFlipped(true);
+    onResult(false, true);
   };
 
   return (
@@ -98,9 +114,10 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
               variant="outline"
               onClick={handleSkip}
               size="sm"
-              className="text-muted-foreground"
+              className="text-destructive border-destructive/30 hover:bg-destructive/10"
             >
-              Skip & Reveal
+              <MinusCircle className="mr-1 h-3.5 w-3.5" />
+              Skip (−5 XP)
             </Button>
           </div>
         </div>
@@ -109,6 +126,13 @@ function FlashcardView({ card, index, total }: { card: Flashcard; index: number;
       {/* Revealed answer (after attempting) */}
       {hasAttempted && flipped && (
         <div className="w-full space-y-3">
+          {/* XP indicator */}
+          {skipped && (
+            <div className="text-center text-xs text-destructive font-medium">
+              −5 XP (revealed without attempting)
+            </div>
+          )}
+
           {/* Student's answer */}
           {userAnswer.trim() && (
             <div className="w-full rounded-xl border border-border p-4 bg-muted/30">
@@ -170,6 +194,8 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [totalXpEarned, setTotalXpEarned] = useState(0);
 
   const {
     curriculumContext,
@@ -179,30 +205,22 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
 
   const { performance } = useTopicPerformance(subject.id, subject.currentTopic.name);
   const { generateFlashcards } = useAdaptiveLearningEngine();
+  const { addXp, updateStreak } = useUserProgress();
+  const { checkAndUpdateMastery } = useConceptMastery();
+  const { recordAttempt } = useSpacedRepetition(userId);
 
-  // ── Build syllabus context string for this topic ──────────────────────────
-  const syllabusContext =
-    curriculumContext
-      ? curriculumContext.substring(0, 1500)
-      : '';
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUserId(data.session?.user?.id || null);
+    });
+  }, []);
 
-  const pastPaperContext =
-    pastPaperQuestions.length > 0
-      ? pastPaperQuestions
-          .slice(0, 5)
-          .map((q: any) =>
-            `[${q.marks}m] ${q.command_words?.join(', ') || ''}: ${q.subtopic || q.topic || subject.currentTopic.name}`
-          )
-          .join('\n')
-      : '';
+  const syllabusContext = curriculumContext ? curriculumContext.substring(0, 1500) : '';
 
-  // ── Determine recommended difficulty based on performance ─────────────────
   const difficulty =
-    performance?.recommendedDifficulty === 'hard'
-      ? 'hard'
-      : performance?.recommendedDifficulty === 'easy'
-      ? 'easy'
-      : 'mixed';
+    performance?.recommendedDifficulty === 'hard' ? 'hard'
+    : performance?.recommendedDifficulty === 'easy' ? 'easy'
+    : 'mixed';
 
   // ── Persist flashcards to Supabase ────────────────────────────────────────
   const persistCards = useCallback(async (newCards: Flashcard[]) => {
@@ -210,7 +228,6 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Upsert cards (keyed on user_id + subject + topic + front)
       const rows = newCards.map(c => ({
         user_id: user.id,
         subject: subject.name,
@@ -228,12 +245,50 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         .upsert(rows, { onConflict: 'user_id,subject,topic,front', ignoreDuplicates: true });
 
       if (upsertErr) {
-        console.warn('[FlashcardPanel] Persist error (table may not exist yet):', upsertErr.message);
+        console.warn('[FlashcardPanel] Persist error:', upsertErr.message);
       }
     } catch (err) {
       console.warn('[FlashcardPanel] Persist failed:', err);
     }
   }, [subject]);
+
+  // ── Handle card result (answered or skipped) ──────────────────────────────
+  const handleCardResult = useCallback(async (answered: boolean, skipped: boolean) => {
+    const card = cards[currentIndex];
+    if (!card || !userId) return;
+
+    const concepts = card.tags || [];
+
+    if (skipped) {
+      // Negative XP for skipping
+      addXp.mutate(-5);
+      setTotalXpEarned(prev => prev - 5);
+    } else {
+      // Positive XP for attempting (we treat flashcard attempt as correct since they self-reviewed)
+      addXp.mutate(15);
+      setTotalXpEarned(prev => prev + 15);
+      updateStreak.mutate();
+
+      // Record as a quiz attempt for concept mastery tracking
+      await recordAttempt(
+        subject.currentTopic.name,
+        card.front,
+        true, // treated as correct since they attempted
+        subject.id,
+        1,
+        {
+          conceptsTested: concepts,
+          userAnswer: 'flashcard-attempt',
+          modelAnswer: card.back,
+        }
+      );
+
+      // Check concept mastery progression
+      if (subject.id && concepts.length > 0) {
+        checkAndUpdateMastery(userId, subject.id, subject.currentTopic.name, concepts);
+      }
+    }
+  }, [cards, currentIndex, userId, subject, addXp, updateStreak, recordAttempt, checkAndUpdateMastery]);
 
   // ── Fetch flashcards ──────────────────────────────────────────────────────
   const fetchCards = useCallback(async () => {
@@ -241,6 +296,7 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
     setError(null);
     setCurrentIndex(0);
     setCards([]);
+    setTotalXpEarned(0);
 
     try {
       const newCards = await generateFlashcards(subject.name, subject.currentTopic.name, {
@@ -252,7 +308,6 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         setError('No flashcards generated. Try again.');
       } else {
         setCards(newCards);
-        // Persist in background — don't block the UI
         persistCards(newCards).catch(() => {});
       }
     } catch (err: unknown) {
@@ -262,11 +317,9 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
     }
   }, [generateFlashcards, subject.name, subject.currentTopic.name, difficulty, persistCards]);
 
-  // Trigger on mount (after syllabus context loads)
   useEffect(() => {
     if (!contextLoaded) return;
     fetchCards();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contextLoaded, subject.id, subject.currentTopic.name]);
 
   const goNext = useCallback(() => {
@@ -284,12 +337,20 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div>
+        <div className="flex-1">
           <h3 className="text-lg font-bold text-foreground">{task.title}</h3>
           <p className="text-sm text-muted-foreground">
             Flashcards · {subject.currentTopic.name}
           </p>
         </div>
+        {totalXpEarned !== 0 && (
+          <span className={cn(
+            "text-xs font-bold px-2 py-1 rounded-full",
+            totalXpEarned > 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"
+          )}>
+            {totalXpEarned > 0 ? '+' : ''}{totalXpEarned} XP
+          </span>
+        )}
       </div>
 
       {/* Context badges */}
@@ -302,16 +363,6 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         {pastPaperQuestions.length > 0 && (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
             📝 {pastPaperQuestions.length} past-paper patterns
-          </span>
-        )}
-        {performance?.masteryStatus === 'mastered' && (
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/30">
-            ✓ Topic mastered
-          </span>
-        )}
-        {performance?.masteryStatus === 'needs-practice' && (
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-destructive/15 text-destructive border border-destructive/30">
-            ⚠ Needs work
           </span>
         )}
       </div>
@@ -330,44 +381,27 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
           <div className="flex flex-col items-center gap-3 py-12">
             <Loader2 className="h-8 w-8 animate-spin text-accent" />
             <p className="text-sm text-muted-foreground">
-              {!contextLoaded
-                ? 'Loading syllabus context…'
-                : 'Generating exam-style flashcards…'}
+              {!contextLoaded ? 'Loading syllabus context…' : 'Generating exam-style flashcards…'}
             </p>
           </div>
         ) : cards.length > 0 ? (
           <>
-            <FlashcardView card={cards[currentIndex]} index={currentIndex} total={cards.length} />
+            <FlashcardView
+              card={cards[currentIndex]}
+              index={currentIndex}
+              total={cards.length}
+              onResult={handleCardResult}
+            />
 
             {/* Navigation */}
             <div className="flex items-center justify-between mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goPrev}
-                disabled={currentIndex === 0}
-                className="gap-1"
-              >
+              <Button variant="outline" size="sm" onClick={goPrev} disabled={currentIndex === 0} className="gap-1">
                 <ChevronLeft className="h-4 w-4" /> Prev
               </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={fetchCards}
-                disabled={isLoading}
-                className="gap-1"
-              >
+              <Button variant="outline" size="sm" onClick={fetchCards} disabled={isLoading} className="gap-1">
                 <RotateCw className="h-4 w-4" /> New Set
               </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goNext}
-                disabled={currentIndex === cards.length - 1}
-                className="gap-1"
-              >
+              <Button variant="outline" size="sm" onClick={goNext} disabled={currentIndex === cards.length - 1} className="gap-1">
                 Next <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
