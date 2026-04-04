@@ -104,7 +104,7 @@ export const AdvancedBooking = () => {
 
       toast({
         title: "Session booked!",
-        description: `Your session with ${selectedTutor.full_name} on ${format(selectedDate, 'EEE, MMM d')} at ${formatTime(selectedTime)} has been requested.`,
+        description: `Your session with ${selectedTutor.full_name} on ${format(selectedDate, 'EEE, MMM d')} at ${formatTime(selectedTime)} has been requested. You'll be prompted to pay once the tutor confirms.`,
       });
 
       // Reset form
