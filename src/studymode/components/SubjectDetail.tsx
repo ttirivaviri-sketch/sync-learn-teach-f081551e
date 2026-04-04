@@ -182,6 +182,20 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
           </p>
         </div>
 
+        {/* Concept Mastery Breakdown Toggle */}
+        <button
+          onClick={() => setShowConceptBreakdown(v => !v)}
+          className="w-full mt-3 flex items-center justify-between px-3 py-2 rounded-lg bg-muted/50 border border-border text-sm text-muted-foreground hover:bg-muted/80 transition-colors"
+        >
+          <span className="font-medium">Concept Breakdown</span>
+          {showConceptBreakdown ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+        </button>
+        {showConceptBreakdown && (
+          <div className="mt-2">
+            <ConceptMasteryBreakdown subjectId={subject.id} topicName={subject.currentTopic.name} />
+          </div>
+        )}
+
         {/* Advance Topic Button */}
         {canAdvance(subject) && (
           <Button
