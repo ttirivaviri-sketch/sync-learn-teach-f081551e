@@ -1020,6 +1020,151 @@ export type Database = {
           },
         ]
       }
+      sail_agent_logs: {
+        Row: {
+          action: string
+          agent: Database["public"]["Enums"]["sail_agent_type"]
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          input: Json | null
+          output: Json | null
+          success: boolean
+          task_id: string
+        }
+        Insert: {
+          action: string
+          agent: Database["public"]["Enums"]["sail_agent_type"]
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input?: Json | null
+          output?: Json | null
+          success?: boolean
+          task_id: string
+        }
+        Update: {
+          action?: string
+          agent?: Database["public"]["Enums"]["sail_agent_type"]
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          input?: Json | null
+          output?: Json | null
+          success?: boolean
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sail_agent_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sail_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sail_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          processed: boolean
+          severity: Database["public"]["Enums"]["sail_risk_level"]
+          source: string
+          task_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          severity?: Database["public"]["Enums"]["sail_risk_level"]
+          source: string
+          task_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          processed?: boolean
+          severity?: Database["public"]["Enums"]["sail_risk_level"]
+          source?: string
+          task_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sail_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sail_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sail_tasks: {
+        Row: {
+          agent: Database["public"]["Enums"]["sail_agent_type"]
+          approval_required: boolean
+          approved_at: string | null
+          approved_by: string | null
+          code_patch: string | null
+          context: Json
+          created_at: string
+          description: string
+          id: string
+          priority: Database["public"]["Enums"]["priority_level"]
+          rejection_reason: string | null
+          risk_level: Database["public"]["Enums"]["sail_risk_level"]
+          status: Database["public"]["Enums"]["sail_task_status"]
+          title: string
+          type: Database["public"]["Enums"]["sail_task_type"]
+          updated_at: string
+        }
+        Insert: {
+          agent: Database["public"]["Enums"]["sail_agent_type"]
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          code_patch?: string | null
+          context?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["priority_level"]
+          rejection_reason?: string | null
+          risk_level?: Database["public"]["Enums"]["sail_risk_level"]
+          status?: Database["public"]["Enums"]["sail_task_status"]
+          title: string
+          type: Database["public"]["Enums"]["sail_task_type"]
+          updated_at?: string
+        }
+        Update: {
+          agent?: Database["public"]["Enums"]["sail_agent_type"]
+          approval_required?: boolean
+          approved_at?: string | null
+          approved_by?: string | null
+          code_patch?: string | null
+          context?: Json
+          created_at?: string
+          description?: string
+          id?: string
+          priority?: Database["public"]["Enums"]["priority_level"]
+          rejection_reason?: string | null
+          risk_level?: Database["public"]["Enums"]["sail_risk_level"]
+          status?: Database["public"]["Enums"]["sail_task_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["sail_task_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       security_audit_logs: {
         Row: {
           action: string
@@ -1182,6 +1327,51 @@ export type Database = {
           name?: string
           syllabus_code?: string | null
           topics?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          amount: number | null
+          created_at: string
+          currency: string | null
+          id: string
+          payment_provider: string | null
+          payment_ref: string | null
+          plan: string
+          status: string
+          trial_end: string | null
+          trial_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          payment_provider?: string | null
+          payment_ref?: string | null
+          plan?: string
+          status?: string
+          trial_end?: string | null
+          trial_start?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number | null
+          created_at?: string
+          currency?: string | null
+          id?: string
+          payment_provider?: string | null
+          payment_ref?: string | null
+          plan?: string
+          status?: string
+          trial_end?: string | null
+          trial_start?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -1798,6 +1988,22 @@ export type Database = {
         | "failed"
       payment_status: "pending" | "succeeded" | "failed" | "refunded"
       priority_level: "low" | "medium" | "high" | "urgent"
+      sail_agent_type:
+        | "debug"
+        | "frontend"
+        | "backend"
+        | "learning"
+        | "monetization"
+        | "reviewer"
+      sail_risk_level: "low" | "medium" | "high"
+      sail_task_status:
+        | "pending"
+        | "in_progress"
+        | "review"
+        | "approved"
+        | "rejected"
+        | "deployed"
+      sail_task_type: "bug" | "ux" | "backend" | "learning" | "monetization"
       study_level:
         | "junior_primary"
         | "senior_primary"
@@ -1948,6 +2154,24 @@ export const Constants = {
       ],
       payment_status: ["pending", "succeeded", "failed", "refunded"],
       priority_level: ["low", "medium", "high", "urgent"],
+      sail_agent_type: [
+        "debug",
+        "frontend",
+        "backend",
+        "learning",
+        "monetization",
+        "reviewer",
+      ],
+      sail_risk_level: ["low", "medium", "high"],
+      sail_task_status: [
+        "pending",
+        "in_progress",
+        "review",
+        "approved",
+        "rejected",
+        "deployed",
+      ],
+      sail_task_type: ["bug", "ux", "backend", "learning", "monetization"],
       study_level: [
         "junior_primary",
         "senior_primary",
