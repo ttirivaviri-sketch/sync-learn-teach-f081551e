@@ -25,6 +25,20 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
+
+    // SAIL Detection: Report error to the autonomous intelligence layer
+    try {
+      import('../sail/detection/detectionSystem').then(({ detectionSystem }) => {
+        detectionSystem.detectError({
+          message: error.message,
+          stack: error.stack,
+          component: errorInfo.componentStack?.split('\n')[1]?.trim() || 'unknown',
+          url: window.location.href,
+        }).catch(() => { /* SAIL not available — non-critical */ });
+      }).catch(() => { /* Module not available */ });
+    } catch {
+      // SAIL detection is non-critical
+    }
   }
 
   handleRefresh = () => {

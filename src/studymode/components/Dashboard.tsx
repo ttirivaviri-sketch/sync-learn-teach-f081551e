@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Rocket } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
@@ -30,6 +30,10 @@ import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { supabase } from '../../integrations/supabase/client';
 import type { AcademicProfile } from '@/types/academicProfile';
+import { SyllabusSetupGate } from '@/components/SyllabusSetupGate';
+import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
+import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
+import { useSAIL, SAILDashboard } from '../../sail';
 
 interface DashboardProps {
   readiness: ReadinessCheckType;
@@ -42,7 +46,7 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress' | 'sail'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
@@ -50,6 +54,27 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
   const { exams: subjectExams, addExam, deleteExam, getNextExam } = useSubjectExams();
   
+  const [syllabusSetupDone, setSyllabusSetupDone] = useState(false);
+
+  // AI Study Intelligence Engine — the brain of the system
+  const aiIntelligence = useAIStudyIntelligence(academicProfile);
+
+  // SAIL — StudySync Autonomous Intelligence Layer
+  const sail = useSAIL();
+
+  // Wire AI context into the adaptive learning engine
+  const [aiContextPayload, setAIContextPayload] = useState<any>(null);
+  useEffect(() => {
+    if (academicProfile && !aiIntelligence.isLoading) {
+      aiIntelligence.buildAIContext().then(ctx => {
+        setAIContextPayload(ctx);
+      }).catch(console.warn);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [academicProfile, aiIntelligence.isLoading]);
+
+  const adaptiveEngine = useAdaptiveLearningEngine(aiContextPayload);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
       setUserId(data.session?.user?.id || null);
@@ -79,8 +104,8 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const subjects = dbSubjects ?? [];
   const hasSubjects = subjects.length > 0;
   
-  // Task persistence
-  const { getTasksForSubject } = useDailyTasks(subjects);
+  // Task persistence — enhanced with AI context
+  const { getTasksForSubject } = useDailyTasks(subjects, aiContextPayload);
   
   // Badge earning — auto-checks on progress changes
   useBadgeEarning();
@@ -120,13 +145,29 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
       {/* Daily Summary Modal */}
       {showSummary && <DailySummary onClose={() => setShowSummary(false)} />}
 
-      {/* Academic Profile Card */}
+      {/* Academic Profile Card with AI Intelligence Status */}
       {academicProfile ? (
         <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
           <CardContent className="p-4 space-y-2">
-            <div className="flex items-center gap-2 mb-1">
-              <GraduationCap className="h-5 w-5 text-primary" />
-              <h3 className="font-semibold text-sm text-foreground">Your Academic Profile</h3>
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <GraduationCap className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold text-sm text-foreground">Your Academic Profile</h3>
+              </div>
+              {/* AI Intelligence Status Indicator */}
+              <div className="flex items-center gap-1.5">
+                {aiIntelligence.isEnriching ? (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 animate-pulse border-primary/50">
+                    <Brain className="h-3 w-3 mr-0.5 text-primary" />
+                    AI Syncing...
+                  </Badge>
+                ) : aiIntelligence.syllabusIntelligence ? (
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/50 text-green-600">
+                    <Brain className="h-3 w-3 mr-0.5" />
+                    AI Active
+                  </Badge>
+                ) : null}
+              </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-xs">
               <div>
@@ -149,6 +190,43 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 ))}
               </div>
             )}
+            {/* AI Learning Profile Summary */}
+            {aiIntelligence.learningProfile && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <div className="grid grid-cols-4 gap-2 text-xs text-center">
+                  <div>
+                    <p className="font-bold text-primary">{aiIntelligence.learningProfile.overallUnderstanding}%</p>
+                    <p className="text-[10px] text-muted-foreground">Understanding</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-accent capitalize">{aiIntelligence.learningProfile.learningPace}</p>
+                    <p className="text-[10px] text-muted-foreground">Pace</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-warning capitalize">{aiIntelligence.learningProfile.recommendedDifficulty}</p>
+                    <p className="text-[10px] text-muted-foreground">Level</p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-destructive">
+                      {aiIntelligence.learningProfile.daysUntilExam !== null
+                        ? `${aiIntelligence.learningProfile.daysUntilExam}d`
+                        : '—'}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">To Exam</p>
+                  </div>
+                </div>
+                {aiIntelligence.learningProfile.persistentWeakAreas.length > 0 && (
+                  <div className="mt-1.5">
+                    <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Areas:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {aiIntelligence.learningProfile.persistentWeakAreas.slice(0, 4).map((t) => (
+                        <Badge key={t} variant="destructive" className="text-[9px] px-1 py-0">{t}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
       ) : (
@@ -163,8 +241,18 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </Card>
       )}
 
-      {/* Document upload gate */}
-      {hasDocuments === false && (
+      {/* Syllabus & Paper Codes Setup Gate */}
+      {userId && (
+        <SyllabusSetupGate
+          userId={userId}
+          academicProfile={academicProfile}
+          onSetupComplete={() => setSyllabusSetupDone(true)}
+          onUploadDocuments={onUploadClick}
+        />
+      )}
+
+      {/* Document upload gate — show when syllabus is set but no documents uploaded */}
+      {syllabusSetupDone && hasDocuments === false && (
         <Card className="border-accent/30 bg-accent/5">
           <CardContent className="p-5 text-center">
             <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
@@ -211,12 +299,12 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
          </div>
        ) : null}
  
-      {!hasSubjects && !subjectsLoading && (
+      {!hasSubjects && !subjectsLoading && !syllabusSetupDone && (
         <div className="p-6 rounded-2xl bg-warning/10 border border-warning/30 text-center">
           <Upload className="h-12 w-12 mx-auto text-warning mb-3" />
-          <h3 className="text-lg font-bold text-foreground mb-2">Upload Your Syllabi</h3>
+          <h3 className="text-lg font-bold text-foreground mb-2">Set Up Your Syllabi</h3>
           <p className="text-sm text-muted-foreground mb-4">
-            Upload your official syllabi to get started with personalized subjects and a study schedule tailored to you.
+            Add your subjects with syllabus codes and paper codes above, or upload your official syllabi to get started.
           </p>
           <Button className="gradient-primary" onClick={onUploadClick}>
             <Upload className="mr-2 h-4 w-4" />
@@ -251,7 +339,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="subjects">
             <BookOpen className="mr-1.5 h-4 w-4" />
             <span className="hidden sm:inline">Subjects</span>
@@ -270,6 +358,15 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             {(topicsDueToday.length > 0 || strugglingTopics.length > 0) && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-bold">
                 {topicsDueToday.length + strugglingTopics.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="sail" className="relative">
+            <Rocket className="mr-1.5 h-4 w-4" />
+            <span className="hidden sm:inline">SAIL</span>
+            {sail.systemState.pendingApprovals > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] text-accent-foreground font-bold">
+                {sail.systemState.pendingApprovals}
               </span>
             )}
           </TabsTrigger>
@@ -462,6 +559,27 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               </div>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="sail" className="mt-4">
+          <SAILDashboard
+            systemState={sail.systemState}
+            tasks={sail.tasks}
+            pendingApprovals={sail.pendingApprovals}
+            recentSignals={sail.recentSignals}
+            pipelines={sail.pipelines}
+            subscription={sail.subscription}
+            agentConfigs={sail.agentConfigs}
+            canAccessStudyMode={sail.canAccessStudyMode}
+            accessMessage={sail.accessMessage}
+            onApproveTask={sail.approveTask}
+            onRejectTask={sail.rejectTask}
+            onRetryTask={sail.retryTask}
+            onRefresh={sail.refreshTasks}
+            onApprovePipeline={sail.approvePipeline}
+            onRejectPipeline={sail.rejectPipeline}
+            onStartTrial={sail.startTrial}
+          />
         </TabsContent>
       </Tabs>
 

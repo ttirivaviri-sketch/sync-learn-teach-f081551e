@@ -47,6 +47,10 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   'generate-exam-questions':     'generate-exam-questions',
   // Mark student answer (uses explain-answer with mode=mark)
   'mark-answer':                 'explain-answer',
+  // AI tracking & intelligence
+  'ai-track-progress':           'ai-track-progress',
+  'syllabus-enrichment':         'generate-task-content',
+  'ai-study-intelligence':       'ai-study-intelligence',
 };
 
 /**

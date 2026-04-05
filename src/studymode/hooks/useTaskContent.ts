@@ -10,8 +10,9 @@
  * Handles multiple response formats: SSE, raw text, and JSON.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { aiRequest } from '../lib/aiClient';
+import type { AIContextPayload } from './useAIStudyIntelligence';
 
 export interface TaskContentParams {
   taskType: string;
@@ -30,6 +31,8 @@ export interface TaskContentParams {
   masteryStatus?: 'mastered' | 'needs-practice' | 'not-started';
   /** Difficulty level for exam questions within tasks */
   difficulty?: 'easy' | 'medium' | 'hard';
+  /** AI intelligence context for enrichment */
+  aiContext?: AIContextPayload | null;
 }
 
 interface UseTaskContentReturn {
@@ -38,6 +41,8 @@ interface UseTaskContentReturn {
   error: string | null;
   generateContent: (params: TaskContentParams) => Promise<void>;
   reset: () => void;
+  /** Inject AI intelligence context for all subsequent generations */
+  setAIContext: (ctx: AIContextPayload | null) => void;
 }
 
 const TASK_CONTENT_ENDPOINT = 'generate-task-content';
@@ -73,6 +78,11 @@ export function useTaskContent(): UseTaskContentReturn {
   const [content, setContent] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const aiContextRef = useRef<AIContextPayload | null>(null);
+
+  const setAIContext = useCallback((ctx: AIContextPayload | null) => {
+    aiContextRef.current = ctx;
+  }, []);
 
   const reset = useCallback(() => {
     setContent('');
@@ -86,7 +96,37 @@ export function useTaskContent(): UseTaskContentReturn {
     setError(null);
 
     try {
-      const resp = await aiRequest(TASK_CONTENT_ENDPOINT, params);
+      // Merge AI intelligence context into the request
+      const aiCtx = params.aiContext || aiContextRef.current;
+      const enrichedParams = {
+        ...params,
+        // Layer on curriculum and performance context from AI Intelligence Engine
+        curriculumContext: aiCtx?.curriculumContext
+          ? `${aiCtx.curriculumContext}\n\n${params.curriculumContext || ''}`
+          : params.curriculumContext,
+        performanceContext: aiCtx?.performanceContext
+          ? `${aiCtx.performanceContext}\n\n${params.performanceContext || ''}`
+          : params.performanceContext,
+        // Add enriched data
+        syllabusData: aiCtx?.syllabusData || '',
+        pastPaperData: aiCtx?.pastPaperData || '',
+        examBoardContext: aiCtx?.examBoardContext || '',
+        weakAreas: aiCtx?.weakAreas || [],
+        studyRecommendations: aiCtx?.studyRecommendations || '',
+        difficultyLevel: aiCtx?.difficultyLevel || params.difficulty || 'medium',
+        timeContext: aiCtx?.timeContext || '',
+        notesContext: aiCtx?.notesContext || '',
+        // Enable internet access for AI enrichment
+        internetAccess: true,
+        internetInstruction:
+          `Use internet access to enrich this ${params.taskType} task for ${params.subject} > ${params.topic}. ` +
+          'Look up the latest syllabus specifications, exam patterns, and learning resources. ' +
+          'Incorporate real-world examples and up-to-date content relevant to the student\'s curriculum.',
+      };
+      // Remove the nested aiContext to avoid circular reference
+      delete (enrichedParams as any).aiContext;
+
+      const resp = await aiRequest(TASK_CONTENT_ENDPOINT, enrichedParams);
 
       if (!resp.ok) {
         const errData = await resp.json().catch(() => ({ error: `Failed to generate content (HTTP ${resp.status})` }));
@@ -216,5 +256,5 @@ export function useTaskContent(): UseTaskContentReturn {
     }
   }, []);
 
-  return { content, isLoading, error, generateContent, reset };
+  return { content, isLoading, error, generateContent, reset, setAIContext };
 }

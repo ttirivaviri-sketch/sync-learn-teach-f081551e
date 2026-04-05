@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap, Send, Eye, MinusCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap, Send, Eye, MinusCircle, Brain } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
 import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
@@ -168,6 +168,10 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
               ✅ Topic mastered — advanced content
             </span>
           )}
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
+            <Brain className="h-3 w-3" />
+            AI-enriched with internet
+          </span>
         </div>
       )}
 

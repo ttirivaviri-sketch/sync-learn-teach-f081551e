@@ -35,8 +35,7 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import { useBookingPayments } from '@/hooks/useBookingPayments';
 import { PendingPaymentCard } from '@/components/PendingPaymentCard';
 import { PaymentCheckout } from '@/components/PaymentCheckout';
-import LearnerSyllabusManager from '@/components/LearnerSyllabusManager';
-import { useLearnerSubjects } from '@/hooks/useLearnerSubjects';
+import { SyllabusSetupGate } from '@/components/SyllabusSetupGate';
 import { ProfilePhotoUpload } from '@/components/ProfilePhotoUpload';
 import { RescheduleDialog } from '@/components/RescheduleDialog';
 import { AcademicProfileSetup } from '@/components/AcademicProfileSetup';
@@ -993,12 +992,12 @@ const LearnerApp = () => {
               </CardContent>
             </Card>
 
-            {/* Syllabus Manager */}
+            {/* Syllabus & Paper Codes Manager */}
             {session?.user?.id && (
-              <LearnerSyllabusManager
+              <SyllabusSetupGate
                 userId={session.user.id}
-                currentStudyLevel={profile?.study_level}
-                onProfileUpdated={loadUserProfile}
+                academicProfile={academicProfile}
+                advisory
               />
             )}
 

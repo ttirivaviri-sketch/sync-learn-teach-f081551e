@@ -24,6 +24,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequestJSON } from '../lib/aiClient';
+import type { AIContextPayload } from './useAIStudyIntelligence';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,8 +111,10 @@ const PLAN_COOLDOWN_HOURS = 12;   // Don't regenerate more often than this
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useAdaptiveLearningEngine() {
+export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
   const queryClient = useQueryClient();
+  const aiContextRef = useRef<AIContextPayload | null>(null);
+  if (aiContext) aiContextRef.current = aiContext;
   const [state, setState] = useState<AdaptiveEngineState>({
     isGeneratingPlan: false,
     isGeneratingFlashcards: false,
@@ -318,19 +321,33 @@ export function useAdaptiveLearningEngine() {
       try {
         const ctx = await buildContext();
 
+        // Merge with AI Study Intelligence context if available
+        const aiCtx = aiContextRef.current;
+
         const result = await aiRequestJSON<{ plan: StudyPlanItem[]; saved: number; weak_area_focus: string[] }>(
           'generate-study-plan',
           {
             profile: ctx.profile,
             subjects: ctx.subjects,
             examDate: ctx.examDate,
-            performanceContext: ctx.performanceContext,
-            syllabusContext: ctx.syllabusContext,
-            pastPaperContext: ctx.pastPaperContext,
-            notesOrDocuments: ctx.notesContext || undefined,
-            weakAreas: ctx.weakTopics,
+            performanceContext: aiCtx?.performanceContext || ctx.performanceContext,
+            syllabusContext: aiCtx?.syllabusData || ctx.syllabusContext,
+            pastPaperContext: aiCtx?.pastPaperData || ctx.pastPaperContext,
+            notesOrDocuments: aiCtx?.notesContext || ctx.notesContext || undefined,
+            weakAreas: aiCtx?.weakAreas?.length ? aiCtx.weakAreas : ctx.weakTopics,
+            curriculumContext: aiCtx?.curriculumContext || '',
+            examBoardContext: aiCtx?.examBoardContext || '',
+            studyRecommendations: aiCtx?.studyRecommendations || '',
+            difficultyLevel: aiCtx?.difficultyLevel || 'medium',
+            timeContext: aiCtx?.timeContext || '',
             mode,
             userId: ctx.user.id,
+            // Internet access instruction
+            internetAccess: true,
+            internetInstruction: aiCtx?.examBoardContext || 
+              'Use internet access to look up the latest syllabus specifications, ' +
+              'past paper patterns, and examiner reports for the student\'s registered subjects. ' +
+              'Incorporate any recent updates to topic weighting or exam format.',
           }
         );
 
@@ -427,6 +444,9 @@ export function useAdaptiveLearningEngine() {
           }
         }
 
+        // Merge with AI Study Intelligence context
+        const aiCtx = aiContextRef.current;
+
         const result = await aiRequestJSON<{
           flashcards: Flashcard[];
           count: number;
@@ -434,12 +454,20 @@ export function useAdaptiveLearningEngine() {
         }>('generate-flashcards', {
           subject,
           topic,
-          syllabusContext,
-          pastPaperContext,
-          notesOrDocuments: notesOrDocuments || undefined,
-          weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+          syllabusContext: aiCtx?.syllabusData || syllabusContext,
+          pastPaperContext: aiCtx?.pastPaperData || pastPaperContext,
+          notesOrDocuments: aiCtx?.notesContext || notesOrDocuments || undefined,
+          weakAreas: weakAreas.length > 0 ? weakAreas : (aiCtx?.weakAreas || undefined),
+          curriculumContext: aiCtx?.curriculumContext || '',
+          examBoardContext: aiCtx?.examBoardContext || '',
+          studyRecommendations: aiCtx?.studyRecommendations || '',
+          difficultyLevel: aiCtx?.difficultyLevel || options.difficulty || 'mixed',
           count: options.count || 8,
           difficulty: options.difficulty || 'mixed',
+          internetAccess: true,
+          internetInstruction:
+            `Use internet access to verify the latest ${subject} syllabus content for ${topic}. ` +
+            'Include exam board-specific terminology and recently updated learning objectives.',
         });
 
         setState((prev) => ({ ...prev, isGeneratingFlashcards: false }));
@@ -464,6 +492,9 @@ export function useAdaptiveLearningEngine() {
       setState((prev) => ({ ...prev, isGeneratingExamQuestions: true, error: null }));
 
       try {
+        // Merge with AI Study Intelligence context
+        const aiCtx = aiContextRef.current;
+
         const result = await aiRequestJSON<{
           exam_questions: ExamQuestion[];
           weak_area_focus: string[];
@@ -471,8 +502,20 @@ export function useAdaptiveLearningEngine() {
           subject,
           topic,
           count: options.count || 3,
-          difficulty: options.difficulty || 'mixed',
+          difficulty: aiCtx?.difficultyLevel || options.difficulty || 'mixed',
           paperFormat: options.paperFormat || 'mixed',
+          curriculumContext: aiCtx?.curriculumContext || '',
+          syllabusContext: aiCtx?.syllabusData || '',
+          pastPaperContext: aiCtx?.pastPaperData || '',
+          examBoardContext: aiCtx?.examBoardContext || '',
+          performanceContext: aiCtx?.performanceContext || '',
+          studyRecommendations: aiCtx?.studyRecommendations || '',
+          weakAreas: aiCtx?.weakAreas || [],
+          internetAccess: true,
+          internetInstruction:
+            `Use internet access to model these exam questions after the latest ${subject} ` +
+            `past paper format for ${topic}. Match the exact command words, mark allocations, ` +
+            'and question structures used by the student\'s exam board.',
         });
 
         setState((prev) => ({ ...prev, isGeneratingExamQuestions: false }));
@@ -505,6 +548,8 @@ export function useAdaptiveLearningEngine() {
       setState((prev) => ({ ...prev, isMarkingAnswer: true, error: null }));
 
       try {
+        const aiCtx = aiContextRef.current;
+
         const result = await aiRequestJSON<MarkResult>('mark-answer', {
           question,
           studentAnswer,
@@ -515,8 +560,16 @@ export function useAdaptiveLearningEngine() {
           topic: options.topic,
           subject: options.subject,
           conceptsTested: options.conceptsTested,
+          curriculumContext: aiCtx?.curriculumContext || '',
+          performanceContext: aiCtx?.performanceContext || '',
+          difficultyLevel: aiCtx?.difficultyLevel || 'medium',
           mode: 'mark',
           stream: false,
+          internetAccess: true,
+          internetInstruction:
+            'Use internet access to verify the model answer against the latest syllabus. ' +
+            'Apply the exam board\'s official marking criteria and give feedback tailored to ' +
+            'the student\'s current understanding level.',
         });
 
         setState((prev) => ({ ...prev, isMarkingAnswer: false }));
