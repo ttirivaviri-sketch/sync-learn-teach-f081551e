@@ -35,6 +35,7 @@
 
 // Types
 export * from './types';
+export * from './types/edgeFunctions';
 
 // Engine
 export { SAILTaskEngine, taskEngine } from './engine/taskEngine';
@@ -50,6 +51,13 @@ export { SubscriptionEngine, subscriptionEngine } from './monetization/subscript
 
 // Pipeline
 export { SAILDeploymentPipeline, deploymentPipeline } from './pipeline/deploymentPipeline';
+
+// System Prompts
+export {
+  PAYOUT_SYSTEM_PROMPT,
+  VIDEO_SYSTEM_PROMPT,
+  STUDENT_INSIGHTS_SYSTEM_PROMPT,
+} from './prompts/systemPrompts';
 
 // Hooks
 export { useSAIL } from './hooks/useSAIL';

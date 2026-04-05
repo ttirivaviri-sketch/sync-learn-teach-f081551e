@@ -51,6 +51,10 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   'ai-track-progress':           'ai-track-progress',
   'syllabus-enrichment':         'generate-task-content',
   'ai-study-intelligence':       'ai-study-intelligence',
+  // SAIL edge functions (system-level AI prompts)
+  'process-tutor-payout':        'process-tutor-payout',
+  'process-video-upload':        'process-video-upload',
+  'generate-student-insights':   'generate-student-insights',
 };
 
 /**

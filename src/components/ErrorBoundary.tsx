@@ -26,18 +26,23 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     console.error('Error caught by boundary:', error, errorInfo);
 
-    // SAIL Detection: Report error to the autonomous intelligence layer
+    // SAIL Detection: Report error to the autonomous intelligence layer (non-critical)
+    // Uses dynamic import so that missing SAIL tables or modules never cascade.
     try {
-      import('../sail/detection/detectionSystem').then(({ detectionSystem }) => {
-        detectionSystem.detectError({
-          message: error.message,
-          stack: error.stack,
-          component: errorInfo.componentStack?.split('\n')[1]?.trim() || 'unknown',
-          url: window.location.href,
-        }).catch(() => { /* SAIL not available — non-critical */ });
-      }).catch(() => { /* Module not available */ });
+      import('../sail/detection/detectionSystem')
+        .then(({ detectionSystem }) => {
+          if (detectionSystem && typeof detectionSystem.detectError === 'function') {
+            detectionSystem.detectError({
+              message: error.message,
+              stack: error.stack,
+              component: errorInfo.componentStack?.split('\n')[1]?.trim() || 'unknown',
+              url: window.location.href,
+            }).catch(() => { /* SAIL detection is non-critical */ });
+          }
+        })
+        .catch(() => { /* SAIL module not available — non-critical */ });
     } catch {
-      // SAIL detection is non-critical
+      // SAIL detection is entirely non-critical — never block error display
     }
   }
 
