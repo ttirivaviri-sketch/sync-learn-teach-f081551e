@@ -20,10 +20,12 @@ import {
   ShieldCheck,
   Shield,
   RotateCcw,
+  Bot,
 } from "lucide-react";
 
 const items = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+  { title: "SAIL", url: "/admin/sail", icon: Bot },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "Bookings", url: "/admin/bookings", icon: CalendarCheck2 },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },

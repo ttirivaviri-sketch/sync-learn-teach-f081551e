@@ -33,7 +33,6 @@ import type { AcademicProfile } from '@/types/academicProfile';
 import { SyllabusSetupGate } from '@/components/SyllabusSetupGate';
 import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
-import { useSAIL, SAILDashboard } from '../../sail';
 
 interface DashboardProps {
   readiness: ReadinessCheckType;
@@ -58,9 +57,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
   // AI Study Intelligence Engine — the brain of the system
   const aiIntelligence = useAIStudyIntelligence(academicProfile);
-
-  // SAIL — StudySync Autonomous Intelligence Layer
-  const sail = useSAIL();
 
   // Wire AI context into the adaptive learning engine
   const [aiContextPayload, setAIContextPayload] = useState<any>(null);
