@@ -958,6 +958,7 @@ const LearnerApp = () => {
                         </>
                       )}
                     </div>
+                    {/* Subjects */}
                     {academicProfile.subjects && academicProfile.subjects.length > 0 && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-1.5">Subjects</p>
@@ -965,6 +966,53 @@ const LearnerApp = () => {
                           {academicProfile.subjects.map((s) => (
                             <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
                           ))}
+                        </div>
+                      </div>
+                    )}
+                    {/* Per-Subject Exam Dates */}
+                    {academicProfile.exam_dates && academicProfile.exam_dates.length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-1.5">Exam Dates</p>
+                        <div className="space-y-1">
+                          {academicProfile.exam_dates
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                            .map((ed) => {
+                              const daysLeft = Math.ceil(
+                                (new Date(ed.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                              );
+                              return (
+                                <div key={ed.subject} className="flex items-center justify-between text-xs">
+                                  <span className="font-medium">{ed.subject}</span>
+                                  <span className={`${daysLeft <= 14 ? 'text-destructive font-bold' : daysLeft <= 30 ? 'text-warning' : 'text-muted-foreground'}`}>
+                                    {new Date(ed.date).toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                    {daysLeft > 0 ? ` (${daysLeft}d)` : daysLeft === 0 ? ' (Today!)' : ' (Passed)'}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+                    )}
+                    {/* Emails (private - only visible to student) */}
+                    {(academicProfile.student_email || academicProfile.guardian_email) && (
+                      <div className="pt-2 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-1.5 flex items-center gap-1">
+                          <span>Contact Info</span>
+                          <Badge variant="outline" className="text-[9px] px-1 py-0">Private</Badge>
+                        </p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                          {academicProfile.student_email && (
+                            <>
+                              <span className="text-muted-foreground">Your Email</span>
+                              <span className="font-medium truncate">{academicProfile.student_email}</span>
+                            </>
+                          )}
+                          {academicProfile.guardian_email && (
+                            <>
+                              <span className="text-muted-foreground">Guardian Email</span>
+                              <span className="font-medium truncate">{academicProfile.guardian_email}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                     )}

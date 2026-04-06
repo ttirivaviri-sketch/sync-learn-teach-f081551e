@@ -18,6 +18,15 @@ export type GradeLevel =
   | "A-Level" | "O-Level"
   | "Year 1" | "Year 2" | "Year 3" | "Year 4";
 
+/**
+ * Per-subject exam date entry stored in academic_profiles.exam_dates JSONB.
+ * Example: { subject: "Mathematics", date: "2026-10-15" }
+ */
+export interface SubjectExamDate {
+  subject: string;
+  date: string; // ISO date string YYYY-MM-DD
+}
+
 export interface AcademicProfile {
   id?: string;
   user_id: string;
@@ -31,8 +40,31 @@ export interface AcademicProfile {
   target_grade?: string | null;
   learning_style?: string | null;
   goals?: string | null;
+  /** Private: only the student can view/edit; tutors must not see this */
+  student_email?: string | null;
+  /** Private: guardian receives weekly reports; no login access */
+  guardian_email?: string | null;
+  /** Per-subject exam dates: [{subject, date}] */
+  exam_dates?: SubjectExamDate[] | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+/**
+ * Risk level indicator for a subject based on exam proximity and performance.
+ * Used in guardian reports and tutor dashboards.
+ */
+export type RiskLevel = 'on_track' | 'needs_attention' | 'at_risk';
+
+export interface SubjectRisk {
+  subject: string;
+  riskLevel: RiskLevel;
+  /** Emoji indicator */
+  indicator: string; // circle green/yellow/red
+  daysUntilExam: number | null;
+  averageScore: number | null;
+  tasksCompleted: number;
+  tasksMissed: number;
 }
 
 // ─── Library Resource Types ───────────────────────────────────────────────────

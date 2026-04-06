@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
@@ -29,10 +29,12 @@ import { Skeleton } from './ui/skeleton';
 import { Badge } from './ui/badge';
 import { Card, CardContent } from './ui/card';
 import { supabase } from '../../integrations/supabase/client';
-import type { AcademicProfile } from '@/types/academicProfile';
+import type { AcademicProfile, SubjectExamDate } from '@/types/academicProfile';
 import { SyllabusSetupGate } from '@/components/SyllabusSetupGate';
+import { RiskLevelSummary, buildSubjectRisks } from '@/components/RiskLevelIndicator';
 import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
+import { useStudyActivity } from '@/hooks/useStudyActivity';
 
 interface DashboardProps {
   readiness: ReadinessCheckType;
@@ -57,6 +59,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
   // AI Study Intelligence Engine — the brain of the system
   const aiIntelligence = useAIStudyIntelligence(academicProfile);
+
+  // Study activity tracking
+  const { getWeeklySummary, logActivity } = useStudyActivity(userId ?? undefined);
 
   // Wire AI context into the adaptive learning engine
   const [aiContextPayload, setAIContextPayload] = useState<any>(null);
@@ -114,6 +119,74 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   
   const examDate = getExamDate();
   const examName = examSettings?.exam_name || 'Examinations';
+
+  // === Profile-driven exam dates & risk levels ===
+  const profileExamDates: SubjectExamDate[] = useMemo(() => {
+    return academicProfile?.exam_dates || [];
+  }, [academicProfile?.exam_dates]);
+
+  // Auto-sync profile exam dates into subject_exams if they don't exist
+  useEffect(() => {
+    if (!userId || profileExamDates.length === 0 || !subjects.length) return;
+    const syncExamDates = async () => {
+      for (const ed of profileExamDates) {
+        const matchingSubject = subjects.find(
+          (s) => s.name.toLowerCase() === ed.subject.toLowerCase()
+        );
+        if (matchingSubject) {
+          // Check if this exam date already exists in subject_exams
+          const existing = subjectExams.find(
+            (se) => se.subject_id === matchingSubject.id
+          );
+          if (!existing) {
+            try {
+              addExam.mutate({
+                subject_id: matchingSubject.id,
+                exam_name: `${ed.subject} Exam`,
+                exam_date: ed.date,
+              });
+              console.log(`[Dashboard] Synced exam date for ${ed.subject}: ${ed.date}`);
+            } catch (err) {
+              console.warn(`[Dashboard] Failed to sync exam date for ${ed.subject}:`, err);
+            }
+          }
+        }
+      }
+    };
+    syncExamDates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, profileExamDates.length, subjects.length]);
+
+  // Build risk level indicators from profile exam dates + activity data
+  const subjectRisks = useMemo(() => {
+    if (!academicProfile?.subjects || academicProfile.subjects.length === 0) return [];
+    const weeklySummary = getWeeklySummary();
+    const activityMap: Record<string, { tasksCompleted: number; tasksMissed: number; avgScore: number }> = {};
+    for (const ws of weeklySummary) {
+      activityMap[ws.subject] = {
+        tasksCompleted: ws.tasksCompleted,
+        tasksMissed: ws.tasksMissed,
+        avgScore: ws.avgScore,
+      };
+    }
+    return buildSubjectRisks({
+      subjects: academicProfile.subjects,
+      examDates: profileExamDates,
+      activitySummary: activityMap,
+    });
+  }, [academicProfile?.subjects, profileExamDates, getWeeklySummary]);
+
+  // Subjects sorted by exam proximity (nearest exam first)
+  const sortedSubjects = useMemo(() => {
+    if (profileExamDates.length === 0) return subjects;
+    return [...subjects].sort((a, b) => {
+      const aExam = profileExamDates.find((e) => e.subject.toLowerCase() === a.name.toLowerCase());
+      const bExam = profileExamDates.find((e) => e.subject.toLowerCase() === b.name.toLowerCase());
+      const aDate = aExam ? new Date(aExam.date).getTime() : Infinity;
+      const bDate = bExam ? new Date(bExam.date).getTime() : Infinity;
+      return aDate - bDate;
+    });
+  }, [subjects, profileExamDates]);
  
   const getReadinessMessage = () => {
     const avg = (readiness.sleep + readiness.energy + readiness.mood) / 3;
@@ -184,6 +257,40 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 {academicProfile.subjects.map((s) => (
                   <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s}</Badge>
                 ))}
+              </div>
+            )}
+            {/* Risk Level Indicators */}
+            {subjectRisks.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <RiskLevelSummary risks={subjectRisks} />
+              </div>
+            )}
+            {/* Exam Dates from Profile */}
+            {profileExamDates.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-border/50">
+                <p className="text-[10px] text-muted-foreground font-medium mb-1">Upcoming Exams</p>
+                <div className="flex flex-wrap gap-1">
+                  {profileExamDates
+                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                    .slice(0, 4)
+                    .map((ed) => {
+                      const days = Math.ceil((new Date(ed.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                      return (
+                        <Badge
+                          key={ed.subject}
+                          variant="outline"
+                          className={`text-[9px] px-1.5 py-0 ${
+                            days <= 14 ? 'border-destructive/50 text-destructive' :
+                            days <= 30 ? 'border-warning/50 text-warning' :
+                            'border-border'
+                          }`}
+                        >
+                          <Clock className="h-2.5 w-2.5 mr-0.5" />
+                          {ed.subject}: {days}d
+                        </Badge>
+                      );
+                    })}
+                </div>
               </div>
             )}
             {/* AI Learning Profile Summary */}
@@ -370,21 +477,41 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             <>
               {hasSubjects ? (
                 <>
-                  <h2 className="text-xl font-bold text-foreground mb-4">Your Subjects</h2>
+                  <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
+                  {profileExamDates.length > 0 && (
+                    <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
-                    {subjects.map((subject, index) => (
-                      <div 
-                        key={subject.id}
-                        style={{ animationDelay: `${index * 100}ms` }}
-                        className="animate-fade-in"
-                      >
-                        <SubjectCard
-                          subject={subject}
-                          tasksCount={4}
-                          onClick={() => setSelectedSubject(subject)}
-                        />
-                      </div>
-                    ))}
+                    {sortedSubjects.map((subject, index) => {
+                      const examEntry = profileExamDates.find(
+                        (e) => e.subject.toLowerCase() === subject.name.toLowerCase()
+                      );
+                      const daysUntil = examEntry
+                        ? Math.ceil((new Date(examEntry.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                        : null;
+
+                      return (
+                        <div 
+                          key={subject.id}
+                          style={{ animationDelay: `${index * 100}ms` }}
+                          className="animate-fade-in relative"
+                        >
+                          {daysUntil !== null && daysUntil > 0 && daysUntil <= 30 && (
+                            <Badge
+                              variant="destructive"
+                              className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
+                            >
+                              {daysUntil}d to exam
+                            </Badge>
+                          )}
+                          <SubjectCard
+                            subject={subject}
+                            tasksCount={4}
+                            onClick={() => setSelectedSubject(subject)}
+                          />
+                        </div>
+                      );
+                    })}
                   </div>
                 </>
               ) : (
