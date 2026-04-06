@@ -698,10 +698,46 @@ const LearnerApp = () => {
             </div>
             <StudySyncLibrary
               academicProfile={academicProfile}
-              onBookTutor={(tutorId, tutorName) => {
-                setSearchQuery(tutorName);
-                setActiveTab("home");
-                toast({ title: "Find Tutor", description: `Searching for ${tutorName}...` });
+              onBookTutor={async (tutorId, tutorName) => {
+                // Try to find matching tutor from loaded data to open booking directly
+                const matchedTutor = tutors.find(t => t.id === tutorId);
+                if (matchedTutor && matchedTutor.subjects?.length > 0) {
+                  const firstSubject = matchedTutor.subjects[0];
+                  setSelectedTutor({
+                    id: matchedTutor.id,
+                    name: matchedTutor.full_name || tutorName,
+                    subject: firstSubject.subject,
+                    level: firstSubject.level,
+                    price: firstSubject.hourly_rate,
+                    subjectId: firstSubject.id,
+                    avatar: matchedTutor.avatar_url,
+                  });
+                  setShowBookingModal(true);
+                } else {
+                  // Fallback: fetch tutor subjects from DB
+                  const { data: tutorSubjects } = await supabase
+                    .from('tutor_subjects')
+                    .select('id, subject, level, hourly_rate')
+                    .eq('user_id', tutorId)
+                    .limit(1);
+
+                  if (tutorSubjects && tutorSubjects.length > 0) {
+                    const s = tutorSubjects[0];
+                    setSelectedTutor({
+                      id: tutorId,
+                      name: tutorName,
+                      subject: s.subject,
+                      level: s.level,
+                      price: s.hourly_rate || 0,
+                      subjectId: s.id,
+                    });
+                    setShowBookingModal(true);
+                  } else {
+                    setSearchQuery(tutorName);
+                    setActiveTab("home");
+                    toast({ title: "Find Tutor", description: `Searching for ${tutorName}...` });
+                  }
+                }
               }}
               onNeedHelp={() => setActiveTab("home")}
             />
