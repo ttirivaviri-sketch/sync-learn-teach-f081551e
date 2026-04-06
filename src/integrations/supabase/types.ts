@@ -1067,6 +1067,48 @@ export type Database = {
           },
         ]
       }
+      sail_detection_signals: {
+        Row: {
+          auto_create_task: boolean | null
+          created_at: string | null
+          data: Json | null
+          description: string | null
+          id: string
+          severity: string
+          source: string
+          suggested_agent: string | null
+          suggested_priority: string | null
+          suggested_task_type: string | null
+          title: string
+        }
+        Insert: {
+          auto_create_task?: boolean | null
+          created_at?: string | null
+          data?: Json | null
+          description?: string | null
+          id?: string
+          severity?: string
+          source: string
+          suggested_agent?: string | null
+          suggested_priority?: string | null
+          suggested_task_type?: string | null
+          title: string
+        }
+        Update: {
+          auto_create_task?: boolean | null
+          created_at?: string | null
+          data?: Json | null
+          description?: string | null
+          id?: string
+          severity?: string
+          source?: string
+          suggested_agent?: string | null
+          suggested_priority?: string | null
+          suggested_task_type?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       sail_events: {
         Row: {
           created_at: string
@@ -1101,6 +1143,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "sail_events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "sail_tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sail_pipelines: {
+        Row: {
+          agent: string
+          approved_at: string | null
+          approved_by: string | null
+          branch_name: string
+          created_at: string | null
+          diff_summary: string | null
+          id: string
+          preview_url: string | null
+          rejection_reason: string | null
+          risk_level: string
+          stage: string
+          task_id: string | null
+          test_results: Json | null
+          updated_at: string | null
+        }
+        Insert: {
+          agent: string
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_name: string
+          created_at?: string | null
+          diff_summary?: string | null
+          id?: string
+          preview_url?: string | null
+          rejection_reason?: string | null
+          risk_level?: string
+          stage?: string
+          task_id?: string | null
+          test_results?: Json | null
+          updated_at?: string | null
+        }
+        Update: {
+          agent?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          branch_name?: string
+          created_at?: string | null
+          diff_summary?: string | null
+          id?: string
+          preview_url?: string | null
+          rejection_reason?: string | null
+          risk_level?: string
+          stage?: string
+          task_id?: string | null
+          test_results?: Json | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sail_pipelines_task_id_fkey"
             columns: ["task_id"]
             isOneToOne: false
             referencedRelation: "sail_tasks"
