@@ -459,7 +459,7 @@ const LearnerApp = () => {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-mesh">
       {/* ── Header ── */}
       <header
         className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
