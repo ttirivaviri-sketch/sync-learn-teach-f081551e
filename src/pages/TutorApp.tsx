@@ -29,6 +29,8 @@ import { usePresenceTracking } from '@/hooks/usePresenceTracking';
 import { useTutorStats } from '@/hooks/useTutorStats';
 import TutorAvailabilitySchedule from '@/components/TutorAvailabilitySchedule';
 import { TutorCreatorDashboard } from '@/components/TutorCreatorDashboard';
+import { TutorWalletPanel } from '@/components/TutorWalletPanel';
+import { StudentInsightsPanel } from '@/components/StudentInsightsPanel';
 
 // ── Type definitions ──────────────────────────────────────────────────────────
 interface VideoMeetingData {
@@ -570,21 +572,19 @@ const TutorApp = () => {
               </CardContent>
             </Card>
 
-            {/* Payout / Tax Report */}
-            <div className="grid md:grid-cols-2 gap-4">
-              <Button className="w-full" size="lg" onClick={handleRequestPayout}>
-                Request Payout
-              </Button>
-              <Button
-                variant="outline"
-                className="w-full"
-                size="lg"
-                onClick={() => toast({ title: "Tax Report", description: "Feature coming soon!" })}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download Tax Report
-              </Button>
-            </div>
+            {/* Wallet & Payouts */}
+            <TutorWalletPanel tutorId={session?.user?.id || ''} />
+
+            {/* Tax Report */}
+            <Button
+              variant="outline"
+              className="w-full"
+              size="lg"
+              onClick={() => toast({ title: "Tax Report", description: "Feature coming soon!" })}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Download Tax Report
+            </Button>
 
             {/* Creator shortcut */}
             <Card className="bg-gradient-to-r from-emerald-500/10 to-primary/10 border-emerald-200">

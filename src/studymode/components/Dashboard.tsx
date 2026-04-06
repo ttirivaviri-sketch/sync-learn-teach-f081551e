@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Rocket } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
@@ -45,7 +45,7 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress' | 'sail'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
@@ -335,7 +335,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="subjects">
             <BookOpen className="mr-1.5 h-4 w-4" />
             <span className="hidden sm:inline">Subjects</span>
@@ -354,15 +354,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             {(topicsDueToday.length > 0 || strugglingTopics.length > 0) && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-bold">
                 {topicsDueToday.length + strugglingTopics.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="sail" className="relative">
-            <Rocket className="mr-1.5 h-4 w-4" />
-            <span className="hidden sm:inline">SAIL</span>
-            {sail.systemState.pendingApprovals > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-accent text-[10px] text-accent-foreground font-bold">
-                {sail.systemState.pendingApprovals}
               </span>
             )}
           </TabsTrigger>
@@ -557,26 +548,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           </div>
         </TabsContent>
 
-        <TabsContent value="sail" className="mt-4">
-          <SAILDashboard
-            systemState={sail.systemState}
-            tasks={sail.tasks}
-            pendingApprovals={sail.pendingApprovals}
-            recentSignals={sail.recentSignals}
-            pipelines={sail.pipelines}
-            subscription={sail.subscription}
-            agentConfigs={sail.agentConfigs}
-            canAccessStudyMode={sail.canAccessStudyMode}
-            accessMessage={sail.accessMessage}
-            onApproveTask={sail.approveTask}
-            onRejectTask={sail.rejectTask}
-            onRetryTask={sail.retryTask}
-            onRefresh={sail.refreshTasks}
-            onApprovePipeline={sail.approvePipeline}
-            onRejectPipeline={sail.rejectPipeline}
-            onStartTrial={sail.startTrial}
-          />
-        </TabsContent>
       </Tabs>
 
       {/* Daily Progress Summary */}
