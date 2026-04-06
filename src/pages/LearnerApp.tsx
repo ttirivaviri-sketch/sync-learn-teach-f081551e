@@ -584,7 +584,8 @@ const LearnerApp = () => {
                   title={selectedSubject ? `No ${selectedSubject} tutors found` : 'No tutors available'}
                   description={selectedSubject
                     ? 'Try a different subject or clear your filter'
-                    : 'Check back soon for available tutors'}
+                    : 'No tutors with subjects are currently registered. Check back soon!'}
+                  action={{ label: "Refresh List", onClick: refreshTutors }}
                 />
               ) : (
                 tutors.map((tutor) => {
