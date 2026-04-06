@@ -1192,7 +1192,9 @@ const LearnerApp = () => {
                 const ok = await saveAcademicProfile(data);
                 if (ok) {
                   setShowAcademicSetup(false);
-                  toast({ title: "Profile saved!", description: "Your library has been personalised." });
+                  toast({ title: "Profile saved!", description: "Your library and Study Mode have been personalised." });
+                  // Auto-navigate to library with Study Mode context
+                  setActiveTab("library");
                 }
                 return ok;
               }}
