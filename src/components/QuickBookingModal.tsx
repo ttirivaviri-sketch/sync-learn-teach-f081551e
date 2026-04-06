@@ -1,13 +1,14 @@
-import { useState } from "react";
-import { Calendar, Clock, DollarSign, Video } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Calendar, Clock, DollarSign, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface QuickBookingModalProps {
   isOpen: boolean;
@@ -30,17 +31,106 @@ interface QuickBookingModalProps {
   }) => Promise<any>;
 }
 
+interface AvailabilitySlot {
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+}
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBookingModalProps) => {
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
   const [duration, setDuration] = useState('60');
   const [notes, setNotes] = useState('');
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [loadingAvailability, setLoadingAvailability] = useState(true);
   const { toast } = useToast();
+
+  // Fetch tutor availability when modal opens
+  useEffect(() => {
+    if (!isOpen || !tutor.id) return;
+    setLoadingAvailability(true);
+    supabase
+      .from('tutor_availability')
+      .select('day_of_week, start_time, end_time, is_available')
+      .eq('tutor_id', tutor.id)
+      .eq('is_available', true)
+      .then(({ data }) => {
+        setAvailability((data as AvailabilitySlot[]) || []);
+        setLoadingAvailability(false);
+      });
+  }, [isOpen, tutor.id]);
+
+  // Generate next 14 days
+  const availableDates = useMemo(() => {
+    const dates: { value: string; label: string; dayOfWeek: number }[] = [];
+    for (let i = 0; i < 14; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      dates.push({
+        value: date.toISOString().split('T')[0],
+        label: date.toLocaleDateString('en-US', {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+        }),
+        dayOfWeek: date.getDay(),
+      });
+    }
+    return dates;
+  }, []);
+
+  // Filter dates to only those where the tutor has availability
+  const datesWithAvailability = useMemo(() => {
+    if (availability.length === 0) return availableDates; // Show all if no availability data
+    const availableDays = new Set(availability.map(a => a.day_of_week));
+    return availableDates.filter(d => availableDays.has(d.dayOfWeek));
+  }, [availableDates, availability]);
+
+  // Generate time slots based on tutor's availability for the selected date
+  const timeSlots = useMemo(() => {
+    const selectedDateObj = availableDates.find(d => d.value === selectedDate);
+    if (!selectedDateObj) return [];
+
+    const daySlots = availability.filter(
+      a => a.day_of_week === selectedDateObj.dayOfWeek && a.is_available
+    );
+
+    if (daySlots.length === 0) {
+      // No availability data — show generic slots
+      const slots: string[] = [];
+      for (let hour = 8; hour <= 20; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+          slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
+        }
+      }
+      return slots;
+    }
+
+    // Generate 30-min slots within each availability window
+    const slots: string[] = [];
+    for (const slot of daySlots) {
+      const [startH, startM] = slot.start_time.split(':').map(Number);
+      const [endH, endM] = slot.end_time.split(':').map(Number);
+      const startMinutes = startH * 60 + startM;
+      const endMinutes = endH * 60 + endM;
+
+      for (let m = startMinutes; m < endMinutes; m += 30) {
+        const h = Math.floor(m / 60);
+        const min = m % 60;
+        slots.push(`${h.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}`);
+      }
+    }
+    return slots;
+  }, [selectedDate, availability, availableDates]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedDate || !selectedTime) {
       toast({
         title: "Missing Information",
@@ -60,10 +150,10 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
     }
 
     setLoading(true);
-    
+
     try {
       const scheduledAt = new Date(`${selectedDate}T${selectedTime}`);
-      
+
       await onSubmit({
         tutor_id: tutor.id,
         tutor_subject_id: tutor.subjectId,
@@ -76,10 +166,9 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
         title: "Booking Request Sent!",
         description: `Your session request has been sent to ${tutor.name}. You'll be prompted to pay once confirmed.`,
       });
-      
+
       onClose();
-      
-      // Reset form
+
       setSelectedDate('');
       setSelectedTime('');
       setDuration('60');
@@ -95,30 +184,6 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       setLoading(false);
     }
   };
-
-  // Generate available time slots
-  const timeSlots = [];
-  for (let hour = 8; hour <= 20; hour++) {
-    for (let minute = 0; minute < 60; minute += 30) {
-      const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-      timeSlots.push(time);
-    }
-  }
-
-  // Generate next 7 days
-  const availableDates = [];
-  for (let i = 0; i < 7; i++) {
-    const date = new Date();
-    date.setDate(date.getDate() + i);
-    availableDates.push({
-      value: date.toISOString().split('T')[0],
-      label: date.toLocaleDateString('en-US', { 
-        weekday: 'short', 
-        month: 'short', 
-        day: 'numeric' 
-      })
-    });
-  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -142,74 +207,95 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
                 <DollarSign className="h-4 w-4" />
                 R{tutor.price}/hour
               </div>
+              {availability.length > 0 && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Showing tutor's available time slots</span>
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          <div className="space-y-3">
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Select value={selectedDate} onValueChange={setSelectedDate}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select date" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableDates.map(date => (
-                    <SelectItem key={date.value} value={date.value}>
-                      {date.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {loadingAvailability ? (
+            <div className="flex items-center justify-center py-4 text-sm text-muted-foreground">
+              Loading availability...
             </div>
+          ) : (
+            <div className="space-y-3">
+              {datesWithAvailability.length === 0 && (
+                <div className="flex items-start gap-2 p-3 bg-muted/50 rounded-lg">
+                  <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <p className="text-xs text-muted-foreground">
+                    This tutor hasn't set availability yet. You can still request a session — they'll confirm if available.
+                  </p>
+                </div>
+              )}
 
-            <div>
-              <Label htmlFor="time">Time</Label>
-              <Select value={selectedTime} onValueChange={setSelectedTime}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select time" />
-                </SelectTrigger>
-                <SelectContent>
-                  {timeSlots.map(time => (
-                    <SelectItem key={time} value={time}>
-                      {time}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="date">Date</Label>
+                <Select value={selectedDate} onValueChange={(v) => { setSelectedDate(v); setSelectedTime(''); }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select date" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(datesWithAvailability.length > 0 ? datesWithAvailability : availableDates).map(date => (
+                      <SelectItem key={date.value} value={date.value}>
+                        {date.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="duration">Duration</Label>
-              <Select value={duration} onValueChange={setDuration}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="30">30 minutes</SelectItem>
-                  <SelectItem value="60">1 hour</SelectItem>
-                  <SelectItem value="90">1.5 hours</SelectItem>
-                  <SelectItem value="120">2 hours</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+              <div>
+                <Label htmlFor="time">Time</Label>
+                <Select value={selectedTime} onValueChange={setSelectedTime}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={selectedDate ? "Select time" : "Select a date first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {timeSlots.map(time => (
+                      <SelectItem key={time} value={time}>
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div>
-              <Label htmlFor="notes">Notes (Optional)</Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any specific topics or requirements..."
-                rows={2}
-              />
+              <div>
+                <Label htmlFor="duration">Duration</Label>
+                <Select value={duration} onValueChange={setDuration}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="30">30 minutes</SelectItem>
+                    <SelectItem value="60">1 hour</SelectItem>
+                    <SelectItem value="90">1.5 hours</SelectItem>
+                    <SelectItem value="120">2 hours</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Any specific topics or requirements..."
+                  rows={2}
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex gap-2 pt-4">
             <Button type="button" variant="outline" onClick={onClose} className="flex-1">
               Cancel
             </Button>
-            <Button type="submit" disabled={loading} className="flex-1">
+            <Button type="submit" disabled={loading || loadingAvailability} className="flex-1">
               {loading ? "Sending..." : "Send Request"}
             </Button>
           </div>
