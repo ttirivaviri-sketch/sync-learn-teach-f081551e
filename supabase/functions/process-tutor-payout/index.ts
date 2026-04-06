@@ -302,7 +302,7 @@ serve(async (req) => {
         .from("tutor_wallets")
         .update({
           balance: walletBalance,
-          total_earned: supabase.rpc ? undefined : walletBalance, // Use RPC for atomic increment if available
+          total_earned: walletBalance,
           last_payout_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         })
