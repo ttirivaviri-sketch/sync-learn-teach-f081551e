@@ -44,12 +44,14 @@ export function useStudentInsights(tutorId?: string): UseStudentInsightsReturn {
 
         if (fetchError || !data) return null; // Table may not exist yet — silently return null
 
+        const row = data as any;
+
         // Check if cache is still valid
-        if (new Date(data.expires_at) < new Date()) {
+        if (new Date(row.expires_at) < new Date()) {
           return null; // Expired
         }
 
-        const cachedInsights = data.insights as unknown as StudentInsightsResponse;
+        const cachedInsights = row.insights as unknown as StudentInsightsResponse;
         setInsights(cachedInsights);
         return cachedInsights;
       } catch (err) {
