@@ -587,6 +587,27 @@ const TutorApp = () => {
             <TutorProfile user={session?.user} />
           </TabsContent>
         </Tabs>
+
+        {/* ── Bottom Navigation ── */}
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border/50 shadow-xl z-40">
+          <div className="grid grid-cols-4 gap-1 p-2 max-w-lg mx-auto">
+            {[
+              { id: "home", label: "Home", Icon: Home },
+              { id: "tutorials", label: "Tutorials", Icon: BookOpen },
+              { id: "activity", label: "Activity", Icon: Activity },
+              { id: "profile", label: "Profile", Icon: User },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                className={`nav-pill ${activeTab === id ? 'nav-pill-active' : ''}`}
+                onClick={() => setActiveTab(id)}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[11px]">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Chat Interface ── */}
