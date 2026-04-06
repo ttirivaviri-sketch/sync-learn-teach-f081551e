@@ -459,7 +459,7 @@ const LearnerApp = () => {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-mesh">
       {/* ── Header ── */}
       <header
         className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
@@ -584,7 +584,8 @@ const LearnerApp = () => {
                   title={selectedSubject ? `No ${selectedSubject} tutors found` : 'No tutors available'}
                   description={selectedSubject
                     ? 'Try a different subject or clear your filter'
-                    : 'Check back soon for available tutors'}
+                    : 'No tutors with subjects are currently registered. Check back soon!'}
+                  action={{ label: "Refresh List", onClick: refreshTutors }}
                 />
               ) : (
                 tutors.map((tutor) => {
@@ -1072,23 +1073,22 @@ const LearnerApp = () => {
         </Tabs>
 
         {/* ── Bottom Navigation ── */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border shadow-lg">
-          <div className="grid grid-cols-4 gap-1 p-2">
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border/50 shadow-xl z-40">
+          <div className="grid grid-cols-4 gap-1 p-2 max-w-lg mx-auto">
             {[
               { id: "home", label: "Home", Icon: Home },
               { id: "library", label: "Library", Icon: BookOpen },
               { id: "activity", label: "Activity", Icon: Activity },
               { id: "profile", label: "Profile", Icon: User },
             ].map(({ id, label, Icon }) => (
-              <Button
+              <button
                 key={id}
-                variant={activeTab === id ? "default" : "ghost"}
-                className="flex flex-col h-auto py-2 px-1"
+                className={`nav-pill ${activeTab === id ? 'nav-pill-active' : ''}`}
                 onClick={() => setActiveTab(id)}
               >
-                <Icon className="h-5 w-5 mb-1" />
-                <span className="text-xs">{label}</span>
-              </Button>
+                <Icon className="h-5 w-5" />
+                <span className="text-[11px]">{label}</span>
+              </button>
             ))}
           </div>
         </div>

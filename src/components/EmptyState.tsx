@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
+import { User } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
@@ -22,23 +22,28 @@ export const EmptyState = ({
   className 
 }: EmptyStateProps) => {
   return (
-    <Card className={cn("bg-muted/30", className)}>
-      <CardContent className="p-8 text-center">
-        {icon && (
-          <div className="mb-4 flex justify-center">
-            {icon}
+    <div className={cn("card-themed p-1", className)}>
+      <div className="bg-card rounded-[calc(var(--radius)-2px)] p-8 text-center">
+        <div className="mb-4 flex justify-center">
+          <div className="gradient-ring">
+            <div className="p-6">
+              {icon || <User className="h-12 w-12 text-muted-foreground" />}
+            </div>
           </div>
-        )}
-        <h3 className="font-semibold mb-2">{title}</h3>
+        </div>
+        <h3 className="font-display font-bold text-lg mb-2">{title}</h3>
         <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
           {description}
         </p>
         {action && (
-          <Button variant="outline" onClick={action.onClick}>
+          <Button
+            onClick={action.onClick}
+            className="bg-gradient-to-r from-primary to-primary-glow text-primary-foreground shadow-elegant"
+          >
             {action.label}
           </Button>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 };

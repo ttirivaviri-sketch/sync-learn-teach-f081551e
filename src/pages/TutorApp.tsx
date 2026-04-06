@@ -260,7 +260,7 @@ const TutorApp = () => {
 
   // ── Main render ───────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background bg-mesh">
       {/* ── Header ── */}
       <header
         className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
@@ -337,24 +337,6 @@ const TutorApp = () => {
       {/* ── Main Content ── */}
       <div className="p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="home" className="flex flex-col gap-1">
-              <Home className="h-4 w-4" />
-              <span className="text-xs">Home</span>
-            </TabsTrigger>
-            <TabsTrigger value="tutorials" className="flex flex-col gap-1">
-              <BookOpen className="h-4 w-4" />
-              <span className="text-xs">Tutorials</span>
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex flex-col gap-1">
-              <Activity className="h-4 w-4" />
-              <span className="text-xs">Activity</span>
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex flex-col gap-1">
-              <User className="h-4 w-4" />
-              <span className="text-xs">Profile</span>
-            </TabsTrigger>
-          </TabsList>
 
           {/* ── Home Tab ── */}
           <TabsContent value="home" className="space-y-4">
@@ -605,6 +587,27 @@ const TutorApp = () => {
             <TutorProfile user={session?.user} />
           </TabsContent>
         </Tabs>
+
+        {/* ── Bottom Navigation ── */}
+        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border/50 shadow-xl z-40">
+          <div className="grid grid-cols-4 gap-1 p-2 max-w-lg mx-auto">
+            {[
+              { id: "home", label: "Home", Icon: Home },
+              { id: "tutorials", label: "Tutorials", Icon: BookOpen },
+              { id: "activity", label: "Activity", Icon: Activity },
+              { id: "profile", label: "Profile", Icon: User },
+            ].map(({ id, label, Icon }) => (
+              <button
+                key={id}
+                className={`nav-pill ${activeTab === id ? 'nav-pill-active' : ''}`}
+                onClick={() => setActiveTab(id)}
+              >
+                <Icon className="h-5 w-5" />
+                <span className="text-[11px]">{label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* ── Chat Interface ── */}
