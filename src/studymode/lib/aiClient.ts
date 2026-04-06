@@ -55,6 +55,9 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   'process-tutor-payout':        'process-tutor-payout',
   'process-video-upload':        'process-video-upload',
   'generate-student-insights':   'generate-student-insights',
+  // Guardian & tutor insight functions
+  'send-guardian-report':        'send-guardian-report',
+  'generate-tutor-booking-insights': 'generate-tutor-booking-insights',
 };
 
 /**

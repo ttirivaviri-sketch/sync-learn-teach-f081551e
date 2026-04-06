@@ -231,8 +231,14 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       // Try saving to DB if user is authenticated
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        // 1. Save academic profile
+        // 1. Save academic profile (including exam_dates)
         try {
+          // Build exam_dates array for the profile
+          const examDatesArray = Object.entries(examDates).map(([subject, date]) => ({
+            subject,
+            date: date.toISOString().split('T')[0],
+          }));
+
           const { error: profileError } = await supabase
             .from('academic_profiles')
             .upsert(
@@ -242,13 +248,16 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 study_level: studyLevel,
                 grade: studyLevel,
                 subjects: selectedSubjects,
+                exam_dates: examDatesArray,
                 updated_at: new Date().toISOString(),
-              },
+              } as any,
               { onConflict: 'user_id' }
             );
 
           if (profileError) {
             console.error('[OnboardingFlow] Profile save error:', profileError);
+          } else {
+            console.log('[OnboardingFlow] Profile saved with exam_dates:', examDatesArray.length);
           }
         } catch (profileErr) {
           console.error('[OnboardingFlow] Profile save exception:', profileErr);
