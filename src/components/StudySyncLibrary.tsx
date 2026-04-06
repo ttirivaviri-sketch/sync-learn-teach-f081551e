@@ -773,6 +773,34 @@ const StudySyncLibrary = ({
               url={activeVideoResource.videoUrl || ""}
               title={activeVideoResource.title}
             />
+
+            {/* Book Tutor from video — checks availability, not online status */}
+            {activeVideoResource.tutor && (
+              <div className="mt-4 flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={activeVideoResource.tutor.avatar_url || "/placeholder.svg"} />
+                    <AvatarFallback className="text-xs">
+                      {activeVideoResource.tutor.name.split(" ").map((n) => n[0]).join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{activeVideoResource.tutor.name}</p>
+                    <p className="text-xs text-muted-foreground">Book based on available time slots</p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => {
+                    handleBookTutor(activeVideoResource.tutor!.id, activeVideoResource.tutor!.name);
+                    setActiveVideoResource(null);
+                  }}
+                >
+                  <GraduationCap className="h-3 w-3 mr-1" />
+                  Book Tutor
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       )}
