@@ -337,24 +337,6 @@ const TutorApp = () => {
       {/* ── Main Content ── */}
       <div className="p-4 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="home" className="flex flex-col gap-1">
-              <Home className="h-4 w-4" />
-              <span className="text-xs">Home</span>
-            </TabsTrigger>
-            <TabsTrigger value="tutorials" className="flex flex-col gap-1">
-              <BookOpen className="h-4 w-4" />
-              <span className="text-xs">Tutorials</span>
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="flex flex-col gap-1">
-              <Activity className="h-4 w-4" />
-              <span className="text-xs">Activity</span>
-            </TabsTrigger>
-            <TabsTrigger value="profile" className="flex flex-col gap-1">
-              <User className="h-4 w-4" />
-              <span className="text-xs">Profile</span>
-            </TabsTrigger>
-          </TabsList>
 
           {/* ── Home Tab ── */}
           <TabsContent value="home" className="space-y-4">
