@@ -175,41 +175,87 @@ export function buildStudyModeContext(input: StudyModeContextInput): string {
  * Handles: raw JSON, markdown-fenced JSON, and partial extraction.
  */
 export function safeJsonParse<T = unknown>(raw: string): T {
-  // 1. Try direct parse
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    // continue
+  /** Attempt JSON.parse with common fixes applied */
+  function tryParse(str: string): T | undefined {
+    // Remove control characters (except \n \r \t) that break JSON
+    let cleaned = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "");
+    try {
+      return JSON.parse(cleaned) as T;
+    } catch { /* continue */ }
+    // Fix trailing commas before } or ]
+    cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
+    try {
+      return JSON.parse(cleaned) as T;
+    } catch { /* continue */ }
+    return undefined;
   }
+
+  /** Attempt to repair truncated JSON by closing open brackets/braces */
+  function repairTruncated(str: string): T | undefined {
+    let s = str.trim();
+    // Remove trailing comma if present
+    s = s.replace(/,\s*$/, "");
+    // Remove a trailing incomplete key like  "front": 
+    s = s.replace(/,?\s*"[^"]*"\s*:\s*$/, "");
+    // Remove a trailing incomplete string value like  "front": "some text
+    s = s.replace(/,?\s*"[^"]*"\s*:\s*"[^"]*$/, "");
+
+    // Close open braces/brackets
+    const opens = { "{": "}", "[": "]" };
+    const stack: string[] = [];
+    let inString = false;
+    let escape = false;
+    for (const ch of s) {
+      if (escape) { escape = false; continue; }
+      if (ch === "\\") { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === "{" || ch === "[") stack.push(opens[ch as "{" | "["]);
+      if (ch === "}" || ch === "]") stack.pop();
+    }
+    s += stack.reverse().join("");
+    return tryParse(s);
+  }
+
+  // 1. Try direct parse
+  const direct = tryParse(raw);
+  if (direct !== undefined) return direct;
 
   // 2. Try extracting from markdown fences
   const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
   if (fenceMatch?.[1]) {
-    try {
-      return JSON.parse(fenceMatch[1].trim()) as T;
-    } catch {
-      // continue
-    }
+    const r = tryParse(fenceMatch[1].trim());
+    if (r !== undefined) return r;
   }
 
-  // 3. Try extracting first JSON object
+  // 3. Find JSON boundaries and extract
+  const stripped = raw.replace(/```(?:json)?\s*/gi, "").replace(/```\s*/g, "").trim();
+  const jsonStart = stripped.search(/[{[]/);
+  if (jsonStart !== -1) {
+    const startChar = stripped[jsonStart];
+    const endChar = startChar === "[" ? "]" : "}";
+    const jsonEnd = stripped.lastIndexOf(endChar);
+    if (jsonEnd > jsonStart) {
+      const candidate = stripped.substring(jsonStart, jsonEnd + 1);
+      const r = tryParse(candidate);
+      if (r !== undefined) return r;
+    }
+    // Possibly truncated — try repair from jsonStart onward
+    const r = repairTruncated(stripped.substring(jsonStart));
+    if (r !== undefined) return r;
+  }
+
+  // 4. Legacy greedy match fallback
   const objMatch = raw.match(/\{[\s\S]*\}/);
   if (objMatch) {
-    try {
-      return JSON.parse(objMatch[0]) as T;
-    } catch {
-      // continue
-    }
+    const r = tryParse(objMatch[0]) ?? repairTruncated(objMatch[0]);
+    if (r !== undefined) return r;
   }
 
-  // 4. Try extracting JSON array
   const arrMatch = raw.match(/\[[\s\S]*\]/);
   if (arrMatch) {
-    try {
-      return JSON.parse(arrMatch[0]) as T;
-    } catch {
-      // continue
-    }
+    const r = tryParse(arrMatch[0]) ?? repairTruncated(arrMatch[0]);
+    if (r !== undefined) return r;
   }
 
   throw new Error("Could not parse AI response as JSON");
