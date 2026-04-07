@@ -85,7 +85,7 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
-    if (resource.type === "video" && resource.videoUrl) {
+    if (resource.type === "video") {
       setActiveVideoResource(resource);
       return;
     }
@@ -769,10 +769,17 @@ const StudySyncLibrary = ({
               </Button>
             </div>
 
-            <VideoEmbedPlayer
-              url={activeVideoResource.videoUrl || ""}
-              title={activeVideoResource.title}
-            />
+            {activeVideoResource.videoUrl ? (
+              <VideoEmbedPlayer
+                url={activeVideoResource.videoUrl}
+                title={activeVideoResource.title}
+              />
+            ) : (
+              <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center text-center p-6">
+                <Video className="h-10 w-10 text-muted-foreground mb-2" />
+                <p className="text-sm text-muted-foreground">No video URL available for this resource.</p>
+              </div>
+            )}
 
             {/* Book Tutor from video — checks availability, not online status */}
             {activeVideoResource.tutor && (

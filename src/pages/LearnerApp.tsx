@@ -771,11 +771,13 @@ const LearnerApp = () => {
               </div>
             )}
 
-            {/* Upcoming Sessions */}
+            {/* Upcoming Sessions - always visible */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Upcoming Sessions</h3>
-                <Badge variant="outline">{bookings.length} active</Badge>
+                <Badge variant="outline">
+                  {bookings.filter(b => b.status === 'requested' || b.status === 'confirmed').length} active
+                </Badge>
               </div>
 
               {bookingsLoading ? (
@@ -783,7 +785,7 @@ const LearnerApp = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
                   <p className="text-muted-foreground">Loading bookings...</p>
                 </div>
-              ) : bookings.length === 0 ? (
+              ) : bookings.filter(b => b.status === 'requested' || b.status === 'confirmed').length === 0 ? (
                 <Card className="p-6">
                   <div className="text-center text-muted-foreground">
                     <p className="text-sm">No upcoming sessions</p>
@@ -791,81 +793,96 @@ const LearnerApp = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {bookings.map((booking) => (
-                    <LiveBookingCard
-                      key={booking.id}
-                      booking={booking}
-                      userType="learner"
-                      onJoinSession={handleJoinVideoSession}
-                      onPayNow={handlePayNow}
-                      hasPendingPayment={needsPayment(booking.id)}
-                      onStartChat={(b) => {
-                        setChatWithUserId(b.tutor_id);
-                        setChatWithUserName("Tutor");
-                        setShowChat(true);
-                      }}
-                    />
-                  ))}
+                  {bookings
+                    .filter(b => b.status === 'requested' || b.status === 'confirmed')
+                    .map((booking) => (
+                      <LiveBookingCard
+                        key={booking.id}
+                        booking={booking}
+                        userType="learner"
+                        onJoinSession={handleJoinVideoSession}
+                        onPayNow={handlePayNow}
+                        hasPendingPayment={needsPayment(booking.id)}
+                        onStartChat={(b) => {
+                          setChatWithUserId(b.tutor_id);
+                          setChatWithUserName("Tutor");
+                          setShowChat(true);
+                        }}
+                      />
+                    ))}
                 </div>
               )}
             </div>
 
-            {/* Past Sessions */}
-            <div className="mt-6">
-              <h3 className="font-semibold mb-3">Past Sessions</h3>
-              {bookings.filter(b => b.status === 'completed' || b.status === 'canceled').length === 0 ? (
-                <Card className="p-6">
-                  <div className="text-center text-muted-foreground">
-                    <p className="text-sm">No past sessions yet</p>
-                  </div>
-                </Card>
-              ) : (
-                bookings
-                  .filter(b => b.status === 'completed' || b.status === 'canceled')
-                  .map((pastBooking) => (
-                    <Card key={pastBooking.id} className="mb-3">
-                      <CardContent className="p-4">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium">{pastBooking.tutor_profile?.full_name || 'Tutor'}</h4>
-                            <p className="text-sm text-muted-foreground">{pastBooking.tutor_subjects?.subject}</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(pastBooking.scheduled_at).toLocaleDateString()} • {pastBooking.duration_minutes} min
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-semibold">R{pastBooking.price}</p>
-                            <Badge
-                              variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'}
-                              className="mt-1"
-                            >
-                              {pastBooking.status === 'completed' ? 'Completed' : 'Cancelled'}
-                            </Badge>
-                            {pastBooking.status === 'completed' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="mt-2"
-                                onClick={() => {
-                                  setReviewData({
-                                    bookingId: pastBooking.id,
-                                    reviewedId: pastBooking.tutor_id,
-                                    reviewedName: pastBooking.tutor_profile?.full_name || 'Tutor',
-                                    userType: 'learner',
-                                  });
-                                  setShowReviewModal(true);
-                                }}
-                              >
-                                Rate & Review
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-              )}
-            </div>
+            {/* Past Sessions - hidden behind button */}
+            {(() => {
+              const pastSessions = bookings.filter(b => b.status === 'completed' || b.status === 'canceled');
+              return pastSessions.length > 0 ? (
+                <div className="mt-2">
+                  {!showAllPayments ? (
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setShowAllPayments(true)}
+                    >
+                      <Clock className="h-4 w-4 mr-2" />
+                      View Past Sessions ({pastSessions.length})
+                    </Button>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold">Past Sessions</h3>
+                        <Button variant="ghost" size="sm" onClick={() => setShowAllPayments(false)}>
+                          Hide
+                        </Button>
+                      </div>
+                      {pastSessions.map((pastBooking) => (
+                        <Card key={pastBooking.id}>
+                          <CardContent className="p-4">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <h4 className="font-medium">{pastBooking.tutor_profile?.full_name || 'Tutor'}</h4>
+                                <p className="text-sm text-muted-foreground">{pastBooking.tutor_subjects?.subject}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(pastBooking.scheduled_at).toLocaleDateString()} • {pastBooking.duration_minutes} min
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold">R{pastBooking.price}</p>
+                                <Badge
+                                  variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'}
+                                  className="mt-1"
+                                >
+                                  {pastBooking.status === 'completed' ? 'Completed' : 'Cancelled'}
+                                </Badge>
+                                {pastBooking.status === 'completed' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="mt-2"
+                                    onClick={() => {
+                                      setReviewData({
+                                        bookingId: pastBooking.id,
+                                        reviewedId: pastBooking.tutor_id,
+                                        reviewedName: pastBooking.tutor_profile?.full_name || 'Tutor',
+                                        userType: 'learner',
+                                      });
+                                      setShowReviewModal(true);
+                                    }}
+                                  >
+                                    Rate & Review
+                                  </Button>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : null;
+            })()}
           </TabsContent>
 
           {/* ── Profile Tab ── */}
