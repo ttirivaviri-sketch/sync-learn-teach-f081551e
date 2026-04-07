@@ -202,11 +202,14 @@ export function useLibraryResources(
   academicProfile?: AcademicProfile | null
 ): UseLibraryResourcesReturn {
   const [dbResources, setDbResources] = useState<LibraryResource[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [dbFetched, setDbFetched] = useState(false);
 
-  // Merge seed + DB resources
-  const allResources: LibraryResource[] = [...SEED_TUTORIALS, ...dbResources];
+  // Show only DB resources once fetched; show seed data only as initial loading placeholder
+  const allResources: LibraryResource[] = dbFetched
+    ? dbResources
+    : SEED_TUTORIALS;
 
   // Fetch tutor-uploaded tutorials from Supabase
   useEffect(() => {
@@ -258,6 +261,7 @@ export function useLibraryResources(
           }));
 
           setDbResources(mapped);
+          setDbFetched(true);
           return;
         }
 
@@ -322,8 +326,10 @@ export function useLibraryResources(
         );
 
         setDbResources(mapped);
+        setDbFetched(true);
       } catch (err) {
         console.warn("Tutorial fetch error (non-critical):", err);
+        setDbFetched(true); // Mark as fetched so we show empty state, not seed data
       } finally {
         setLoading(false);
       }

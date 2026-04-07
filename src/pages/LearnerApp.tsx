@@ -227,12 +227,14 @@ const LearnerApp = () => {
   }, [session?.user?.id]);
 
   // Show academic profile setup prompt if profile is missing
+  // Once the user has dismissed/saved, don't re-show during this session
+  const [profileSetupDismissed, setProfileSetupDismissed] = useState(false);
   useEffect(() => {
-    if (!academicProfileLoading && !academicProfile && (session?.user || isDevMode)) {
+    if (!academicProfileLoading && !academicProfile && !profileSetupDismissed && (session?.user || isDevMode)) {
       const timer = setTimeout(() => setShowAcademicSetup(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [academicProfileLoading, academicProfile, session?.user, isDevMode]);
+  }, [academicProfileLoading, academicProfile, profileSetupDismissed, session?.user, isDevMode]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
@@ -471,7 +473,7 @@ const LearnerApp = () => {
             <img
               src="/lovable-uploads/studysync-logo.png"
               alt="StudySync"
-              className="h-[52px] w-[150px] shrink-0 object-contain"
+              className="h-[42px] sm:h-[48px] w-auto shrink-0 object-contain"
               style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
             />
             <p
@@ -1276,14 +1278,17 @@ const LearnerApp = () => {
                 const ok = await saveAcademicProfile(data);
                 if (ok) {
                   setShowAcademicSetup(false);
+                  setProfileSetupDismissed(true);
                   toast({ title: "Profile saved!", description: "Your library and Study Mode have been personalised." });
                   // Auto-navigate to library with Study Mode context
                   setActiveTab("library");
+                } else {
+                  toast({ title: "Save failed", description: "Please try again or check your connection.", variant: "destructive" });
                 }
                 return ok;
               }}
               saving={academicProfileSaving}
-              onSkip={() => setShowAcademicSetup(false)}
+              onSkip={() => { setShowAcademicSetup(false); setProfileSetupDismissed(true); }}
               compact
             />
           </div>

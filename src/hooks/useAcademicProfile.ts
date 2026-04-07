@@ -87,40 +87,42 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
           has_guardian_email: !!data.guardian_email,
         });
 
-        // Call the updated RPC with new fields
-        const { error: rpcError } = await supabase.rpc("upsert_academic_profile" as any, {
-          p_curriculum: data.curriculum ?? "ZIMSEC",
-          p_grade: data.grade ?? "",
-          p_subjects: data.subjects ?? [],
-          p_exam_year: data.exam_year ?? null,
-          p_student_email: data.student_email ?? null,
-          p_guardian_email: data.guardian_email ?? null,
-          p_exam_dates: JSON.stringify(examDatesJson),
-        });
+        // Try direct upsert first (most reliable across schema states)
+        const upsertPayload: Record<string, unknown> = {
+          user_id: userId,
+          curriculum: data.curriculum ?? "ZIMSEC",
+          grade: data.grade ?? "",
+          subjects: data.subjects ?? [],
+          exam_year: data.exam_year ?? null,
+          updated_at: new Date().toISOString(),
+        };
 
-        if (rpcError) {
-          console.error("[useAcademicProfile] RPC error:", rpcError);
-          // Fallback: try direct upsert if RPC signature mismatch (migration not yet applied)
-          const { error: directError } = await supabase
-            .from("academic_profiles")
-            .upsert(
-              {
-                user_id: userId,
-                curriculum: data.curriculum ?? "ZIMSEC",
-                grade: data.grade ?? "",
-                subjects: data.subjects ?? [],
-                exam_year: data.exam_year ?? null,
-                student_email: data.student_email ?? null,
-                guardian_email: data.guardian_email ?? null,
-                exam_dates: examDatesJson as any,
-                updated_at: new Date().toISOString(),
-              } as any,
-              { onConflict: "user_id" }
-            );
+        // Only include extended fields if they have values
+        if (data.student_email !== undefined) upsertPayload.student_email = data.student_email ?? null;
+        if (data.guardian_email !== undefined) upsertPayload.guardian_email = data.guardian_email ?? null;
+        if (examDatesJson.length > 0) upsertPayload.exam_dates = examDatesJson;
 
-          if (directError) {
-            console.error("[useAcademicProfile] Direct upsert error:", directError);
-            throw directError;
+        const { error: directError } = await supabase
+          .from("academic_profiles")
+          .upsert(upsertPayload as any, { onConflict: "user_id" });
+
+        if (directError) {
+          console.error("[useAcademicProfile] Direct upsert error:", directError);
+
+          // Fallback: try RPC if direct upsert fails
+          const { error: rpcError } = await supabase.rpc("upsert_academic_profile" as any, {
+            p_curriculum: data.curriculum ?? "ZIMSEC",
+            p_grade: data.grade ?? "",
+            p_subjects: data.subjects ?? [],
+            p_exam_year: data.exam_year ?? null,
+            p_student_email: data.student_email ?? null,
+            p_guardian_email: data.guardian_email ?? null,
+            p_exam_dates: JSON.stringify(examDatesJson),
+          });
+
+          if (rpcError) {
+            console.error("[useAcademicProfile] RPC fallback also failed:", rpcError);
+            throw rpcError;
           }
         }
 
