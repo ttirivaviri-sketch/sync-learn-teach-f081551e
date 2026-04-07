@@ -85,7 +85,7 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
-    if (resource.type === "video" && resource.videoUrl) {
+    if (resource.type === "video") {
       setActiveVideoResource(resource);
       return;
     }

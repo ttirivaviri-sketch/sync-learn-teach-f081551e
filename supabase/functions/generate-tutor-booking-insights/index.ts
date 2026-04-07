@@ -154,7 +154,19 @@ serve(async (req) => {
         : 0,
     };
 
-    const insights = {
+    const insights: {
+      subject: string;
+      curriculum: string;
+      grade: string;
+      strengths: string[];
+      weaknesses: string[];
+      topics_needing_help: string[];
+      study_patterns: typeof studyPatterns;
+      exam_date: string | null;
+      days_until_exam: number | null;
+      risk_level: string;
+      recommendations: string[];
+    } = {
       subject,
       curriculum: profile?.curriculum || "Unknown",
       grade: profile?.grade || "Unknown",
