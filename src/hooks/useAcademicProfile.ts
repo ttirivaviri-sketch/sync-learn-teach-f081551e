@@ -74,7 +74,6 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
       }
       setSaving(true);
       try {
-        // Build exam_dates JSONB from the data
         const examDatesJson: SubjectExamDate[] = data.exam_dates || [];
 
         console.log("[useAcademicProfile] Saving profile:", {
@@ -87,30 +86,16 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
           has_guardian_email: !!data.guardian_email,
         });
 
-        // Try direct upsert first (most reliable across schema states)
-        const upsertPayload: Record<string, unknown> = {
-          user_id: userId,
-          curriculum: data.curriculum ?? "ZIMSEC",
-          grade: data.grade ?? "",
-          subjects: data.subjects ?? [],
-          exam_year: data.exam_year ?? null,
-          updated_at: new Date().toISOString(),
-        };
+        // ─── Strategy: try from safest to least safe ──────────────────────
+        // 1. RPC v2 (7-param, supports emails + exam_dates) — works if migration applied
+        // 2. RPC v1 (4-param, core fields only) — always existed
+        // 3. Direct upsert of core-only columns — absolute fallback
 
-        // Only include extended fields if they have values
-        if (data.student_email !== undefined) upsertPayload.student_email = data.student_email ?? null;
-        if (data.guardian_email !== undefined) upsertPayload.guardian_email = data.guardian_email ?? null;
-        if (examDatesJson.length > 0) upsertPayload.exam_dates = examDatesJson;
+        let saved = false;
 
-        const { error: directError } = await supabase
-          .from("academic_profiles")
-          .upsert(upsertPayload as any, { onConflict: "user_id" });
-
-        if (directError) {
-          console.error("[useAcademicProfile] Direct upsert error:", directError);
-
-          // Fallback: try RPC if direct upsert fails
-          const { error: rpcError } = await supabase.rpc("upsert_academic_profile" as any, {
+        // --- Attempt 1: v2 RPC (full save, includes extended columns) ---
+        try {
+          const { error: rpcV2Error } = await supabase.rpc("upsert_academic_profile" as any, {
             p_curriculum: data.curriculum ?? "ZIMSEC",
             p_grade: data.grade ?? "",
             p_subjects: data.subjects ?? [],
@@ -120,16 +105,91 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
             p_exam_dates: JSON.stringify(examDatesJson),
           });
 
-          if (rpcError) {
-            console.error("[useAcademicProfile] RPC fallback also failed:", rpcError);
-            throw rpcError;
+          if (!rpcV2Error) {
+            console.log("[useAcademicProfile] Saved via RPC v2 (full)");
+            saved = true;
+          } else {
+            console.warn("[useAcademicProfile] RPC v2 failed:", rpcV2Error.message);
+          }
+        } catch (rpcV2Err) {
+          console.warn("[useAcademicProfile] RPC v2 exception:", rpcV2Err);
+        }
+
+        // --- Attempt 2: v1 RPC (core fields only, 4 params) ---
+        if (!saved) {
+          try {
+            const { error: rpcV1Error } = await supabase.rpc("upsert_academic_profile" as any, {
+              p_curriculum: data.curriculum ?? "ZIMSEC",
+              p_grade: data.grade ?? "",
+              p_subjects: data.subjects ?? [],
+              p_exam_year: data.exam_year ?? null,
+            });
+
+            if (!rpcV1Error) {
+              console.log("[useAcademicProfile] Saved via RPC v1 (core only — run the migration to enable emails & exam dates)");
+              saved = true;
+            } else {
+              console.warn("[useAcademicProfile] RPC v1 failed:", rpcV1Error.message);
+            }
+          } catch (rpcV1Err) {
+            console.warn("[useAcademicProfile] RPC v1 exception:", rpcV1Err);
           }
         }
 
-        // Sync subjects to learner_subjects and subjects tables for Study Mode integration
+        // --- Attempt 3: direct upsert of core-only columns ---
+        if (!saved) {
+          const corePayload: Record<string, unknown> = {
+            user_id: userId,
+            curriculum: data.curriculum ?? "ZIMSEC",
+            grade: data.grade ?? "",
+            subjects: data.subjects ?? [],
+            exam_year: data.exam_year ?? null,
+            updated_at: new Date().toISOString(),
+          };
+
+          const { error: coreError } = await supabase
+            .from("academic_profiles")
+            .upsert(corePayload as any, { onConflict: "user_id" });
+
+          if (coreError) {
+            console.error("[useAcademicProfile] Direct upsert also failed:", coreError);
+            throw coreError;
+          }
+
+          console.log("[useAcademicProfile] Saved via direct upsert (core only)");
+          saved = true;
+        }
+
+        // If we used a fallback path (not v2 RPC), try adding extended data separately
+        // so they persist when the migration IS applied later
+        if (saved) {
+          const hasExtended = data.student_email || data.guardian_email || examDatesJson.length > 0;
+          if (hasExtended) {
+            try {
+              const extPayload: Record<string, unknown> = {
+                user_id: userId,
+                curriculum: data.curriculum ?? "ZIMSEC",
+                grade: data.grade ?? "",
+                subjects: data.subjects ?? [],
+                exam_year: data.exam_year ?? null,
+                updated_at: new Date().toISOString(),
+              };
+              if (data.student_email !== undefined) extPayload.student_email = data.student_email ?? null;
+              if (data.guardian_email !== undefined) extPayload.guardian_email = data.guardian_email ?? null;
+              if (examDatesJson.length > 0) extPayload.exam_dates = examDatesJson;
+
+              await supabase
+                .from("academic_profiles")
+                .upsert(extPayload as any, { onConflict: "user_id" });
+            } catch {
+              // Extended columns missing — OK, core was already saved
+            }
+          }
+        }
+
+        // ── Sync subjects to learner_subjects & subjects tables ──────────
         if (data.subjects && data.subjects.length > 0) {
           for (const subjectName of data.subjects) {
-            // Sync to learner_subjects (for tutor booking visibility)
             await supabase
               .from("learner_subjects")
               .upsert(
@@ -138,7 +198,6 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
               )
               .then(() => {});
 
-            // Sync to subjects table (for Study Mode) - only create if doesn't exist
             const { data: existing } = await supabase
               .from("subjects")
               .select("id")
@@ -156,10 +215,9 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
             }
           }
 
-          // Also sync exam dates to subject_exams table for Study Mode calendar
+          // Sync exam dates to subject_exams for Study Mode calendar
           if (examDatesJson.length > 0) {
             for (const examEntry of examDatesJson) {
-              // Find the subject_id
               const { data: subjectRow } = await supabase
                 .from("subjects")
                 .select("id")
@@ -168,7 +226,6 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
                 .maybeSingle();
 
               if (subjectRow?.id) {
-                // Check if exam already exists for this subject
                 const { data: existingExam } = await (supabase
                   .from("subject_exams") as any)
                   .select("id")
@@ -177,18 +234,11 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
                   .maybeSingle();
 
                 if (existingExam?.id) {
-                  // Update existing exam date
-                  await (supabase
-                    .from("subject_exams") as any)
-                    .update({
-                      exam_date: examEntry.date,
-                      updated_at: new Date().toISOString(),
-                    })
+                  await (supabase.from("subject_exams") as any)
+                    .update({ exam_date: examEntry.date, updated_at: new Date().toISOString() })
                     .eq("id", existingExam.id);
                 } else {
-                  // Insert new exam record
-                  await (supabase
-                    .from("subject_exams") as any)
+                  await (supabase.from("subject_exams") as any)
                     .insert({
                       user_id: userId,
                       subject_id: subjectRow.id,
@@ -197,7 +247,6 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
                       exam_date: examEntry.date,
                     });
                 }
-
                 console.log(`[useAcademicProfile] Synced exam date for ${examEntry.subject}: ${examEntry.date}`);
               }
             }

@@ -19,91 +19,58 @@ export type Database = {
           created_at: string | null
           curriculum: string | null
           exam_board: string | null
-          exam_dates: Json | null
           exam_year: number | null
           goals: string | null
           grade: string | null
-          guardian_email: string | null
           id: string
           learning_style: string | null
           school_name: string | null
-          student_email: string | null
           study_level: string | null
           subjects: string[] | null
           target_grade: string | null
           updated_at: string | null
           user_id: string | null
+          student_email: string | null
+          guardian_email: string | null
+          exam_dates: Record<string, unknown>[] | null
         }
         Insert: {
           created_at?: string | null
           curriculum?: string | null
           exam_board?: string | null
-          exam_dates?: Json | null
           exam_year?: number | null
           goals?: string | null
           grade?: string | null
-          guardian_email?: string | null
           id?: string
           learning_style?: string | null
           school_name?: string | null
-          student_email?: string | null
           study_level?: string | null
           subjects?: string[] | null
           target_grade?: string | null
           updated_at?: string | null
           user_id?: string | null
+          student_email?: string | null
+          guardian_email?: string | null
+          exam_dates?: Record<string, unknown>[] | null
         }
         Update: {
           created_at?: string | null
           curriculum?: string | null
           exam_board?: string | null
-          exam_dates?: Json | null
           exam_year?: number | null
           goals?: string | null
           grade?: string | null
-          guardian_email?: string | null
           id?: string
           learning_style?: string | null
           school_name?: string | null
-          student_email?: string | null
           study_level?: string | null
           subjects?: string[] | null
           target_grade?: string | null
           updated_at?: string | null
           user_id?: string | null
-        }
-        Relationships: []
-      }
-      analytics_reports: {
-        Row: {
-          created_at: string
-          email_sent: boolean
-          email_sent_at: string | null
-          id: string
-          report_type: string
-          summary_json: Json
-          user_id: string
-          week_start: string
-        }
-        Insert: {
-          created_at?: string
-          email_sent?: boolean
-          email_sent_at?: string | null
-          id?: string
-          report_type?: string
-          summary_json?: Json
-          user_id: string
-          week_start: string
-        }
-        Update: {
-          created_at?: string
-          email_sent?: boolean
-          email_sent_at?: string | null
-          id?: string
-          report_type?: string
-          summary_json?: Json
-          user_id?: string
-          week_start?: string
+          student_email?: string | null
+          guardian_email?: string | null
+          exam_dates?: Record<string, unknown>[] | null
         }
         Relationships: []
       }
@@ -1338,48 +1305,6 @@ export type Database = {
         }
         Relationships: []
       }
-      study_activity: {
-        Row: {
-          activity_type: string
-          created_at: string
-          date: string
-          duration_minutes: number | null
-          id: string
-          metadata: Json | null
-          score: number | null
-          subject: string
-          task_completed: boolean
-          topic: string | null
-          user_id: string
-        }
-        Insert: {
-          activity_type?: string
-          created_at?: string
-          date?: string
-          duration_minutes?: number | null
-          id?: string
-          metadata?: Json | null
-          score?: number | null
-          subject: string
-          task_completed?: boolean
-          topic?: string | null
-          user_id: string
-        }
-        Update: {
-          activity_type?: string
-          created_at?: string
-          date?: string
-          duration_minutes?: number | null
-          id?: string
-          metadata?: Json | null
-          score?: number | null
-          subject?: string
-          task_completed?: boolean
-          topic?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
       study_schedule: {
         Row: {
           completed: boolean | null
@@ -1757,39 +1682,6 @@ export type Database = {
           },
         ]
       }
-      tutor_booking_insights: {
-        Row: {
-          booking_id: string
-          expires_at: string
-          generated_at: string
-          id: string
-          insights_json: Json
-          student_id: string
-          subject: string
-          tutor_id: string
-        }
-        Insert: {
-          booking_id: string
-          expires_at?: string
-          generated_at?: string
-          id?: string
-          insights_json?: Json
-          student_id: string
-          subject: string
-          tutor_id: string
-        }
-        Update: {
-          booking_id?: string
-          expires_at?: string
-          generated_at?: string
-          id?: string
-          insights_json?: Json
-          student_id?: string
-          subject?: string
-          tutor_id?: string
-        }
-        Relationships: []
-      }
       tutor_subjects: {
         Row: {
           created_at: string
@@ -2160,76 +2052,36 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
-      upsert_academic_profile:
-        | {
-            Args: {
-              p_curriculum: string
-              p_exam_year?: number
-              p_grade: string
-              p_subjects: string[]
-            }
-            Returns: {
-              created_at: string | null
-              curriculum: string | null
-              exam_board: string | null
-              exam_dates: Json | null
-              exam_year: number | null
-              goals: string | null
-              grade: string | null
-              guardian_email: string | null
-              id: string
-              learning_style: string | null
-              school_name: string | null
-              student_email: string | null
-              study_level: string | null
-              subjects: string[] | null
-              target_grade: string | null
-              updated_at: string | null
-              user_id: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "academic_profiles"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_curriculum: string
-              p_exam_dates?: Json
-              p_exam_year?: number
-              p_grade: string
-              p_guardian_email?: string
-              p_student_email?: string
-              p_subjects: string[]
-            }
-            Returns: {
-              created_at: string | null
-              curriculum: string | null
-              exam_board: string | null
-              exam_dates: Json | null
-              exam_year: number | null
-              goals: string | null
-              grade: string | null
-              guardian_email: string | null
-              id: string
-              learning_style: string | null
-              school_name: string | null
-              student_email: string | null
-              study_level: string | null
-              subjects: string[] | null
-              target_grade: string | null
-              updated_at: string | null
-              user_id: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "academic_profiles"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      upsert_academic_profile: {
+        Args: {
+          p_curriculum: string
+          p_exam_year?: number
+          p_grade: string
+          p_subjects: string[]
+        }
+        Returns: {
+          created_at: string | null
+          curriculum: string | null
+          exam_board: string | null
+          exam_year: number | null
+          goals: string | null
+          grade: string | null
+          id: string
+          learning_style: string | null
+          school_name: string | null
+          study_level: string | null
+          subjects: string[] | null
+          target_grade: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "academic_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
     }
     Enums: {
       app_role: "admin"

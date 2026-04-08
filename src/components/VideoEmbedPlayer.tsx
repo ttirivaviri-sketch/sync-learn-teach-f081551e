@@ -37,16 +37,30 @@ const getEmbedUrl = (url: string): string | null => {
     const parsed = new URL(url);
     const host = parsed.hostname.replace(/^www\./, "");
 
-    // YouTube watch URLs
+    // YouTube watch URLs (youtube.com, m.youtube.com, www.youtube.com)
     if (host.includes("youtube.com")) {
       if (parsed.pathname === "/watch") {
         const id = parsed.searchParams.get("v");
         return id ? `https://www.youtube.com/embed/${id}` : null;
       }
 
-      // YouTube shorts
+      // YouTube shorts — extract the video ID from path segment
       if (parsed.pathname.startsWith("/shorts/")) {
-        const id = parsed.pathname.split("/")[2];
+        // pathname is "/shorts/4nDIQZ1E8r0" (query params are not in pathname)
+        const segments = parsed.pathname.split("/").filter(Boolean);
+        const id = segments[1]; // "shorts" is [0], video ID is [1]
+        return id ? `https://www.youtube.com/embed/${id}` : null;
+      }
+
+      // YouTube embed URLs (already embeddable)
+      if (parsed.pathname.startsWith("/embed/")) {
+        return url;
+      }
+
+      // YouTube live
+      if (parsed.pathname.startsWith("/live/")) {
+        const segments = parsed.pathname.split("/").filter(Boolean);
+        const id = segments[1];
         return id ? `https://www.youtube.com/embed/${id}` : null;
       }
     }

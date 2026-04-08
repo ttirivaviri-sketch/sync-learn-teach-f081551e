@@ -141,20 +141,13 @@ ${weakAreas ? `- Extra focus on weak areas: ${Array.isArray(weakAreas) ? weakAre
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
-      maxTokens: 4000,
     });
 
-    let parsed: { flashcards?: unknown[]; cards?: unknown[]; weak_area_focus?: string[] };
-    try {
-      parsed = safeJsonParse<{
-        flashcards?: unknown[];
-        cards?: unknown[];
-        weak_area_focus?: string[];
-      }>(rawContent);
-    } catch (parseErr) {
-      console.error("[generate-flashcards] Raw AI response (first 500 chars):", rawContent?.substring(0, 500));
-      throw parseErr;
-    }
+    const parsed = safeJsonParse<{
+      flashcards?: unknown[];
+      cards?: unknown[];
+      weak_area_focus?: string[];
+    }>(rawContent);
 
     let flashcards: any[] =
       parsed.flashcards || parsed.cards || (Array.isArray(parsed) ? parsed : []);
