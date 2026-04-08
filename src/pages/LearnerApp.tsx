@@ -771,13 +771,11 @@ const LearnerApp = () => {
               </div>
             )}
 
-            {/* Upcoming Sessions - always visible */}
+            {/* Upcoming Sessions */}
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold">Upcoming Sessions</h3>
-                <Badge variant="outline">
-                  {bookings.filter(b => b.status === 'requested' || b.status === 'confirmed').length} active
-                </Badge>
+                <Badge variant="outline">{bookings.length} active</Badge>
               </div>
 
               {bookingsLoading ? (
@@ -785,7 +783,7 @@ const LearnerApp = () => {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
                   <p className="text-muted-foreground">Loading bookings...</p>
                 </div>
-              ) : bookings.filter(b => b.status === 'requested' || b.status === 'confirmed').length === 0 ? (
+              ) : bookings.length === 0 ? (
                 <Card className="p-6">
                   <div className="text-center text-muted-foreground">
                     <p className="text-sm">No upcoming sessions</p>
@@ -793,96 +791,81 @@ const LearnerApp = () => {
                 </Card>
               ) : (
                 <div className="space-y-3">
-                  {bookings
-                    .filter(b => b.status === 'requested' || b.status === 'confirmed')
-                    .map((booking) => (
-                      <LiveBookingCard
-                        key={booking.id}
-                        booking={booking}
-                        userType="learner"
-                        onJoinSession={handleJoinVideoSession}
-                        onPayNow={handlePayNow}
-                        hasPendingPayment={needsPayment(booking.id)}
-                        onStartChat={(b) => {
-                          setChatWithUserId(b.tutor_id);
-                          setChatWithUserName("Tutor");
-                          setShowChat(true);
-                        }}
-                      />
-                    ))}
+                  {bookings.map((booking) => (
+                    <LiveBookingCard
+                      key={booking.id}
+                      booking={booking}
+                      userType="learner"
+                      onJoinSession={handleJoinVideoSession}
+                      onPayNow={handlePayNow}
+                      hasPendingPayment={needsPayment(booking.id)}
+                      onStartChat={(b) => {
+                        setChatWithUserId(b.tutor_id);
+                        setChatWithUserName("Tutor");
+                        setShowChat(true);
+                      }}
+                    />
+                  ))}
                 </div>
               )}
             </div>
 
-            {/* Past Sessions - hidden behind button */}
-            {(() => {
-              const pastSessions = bookings.filter(b => b.status === 'completed' || b.status === 'canceled');
-              return pastSessions.length > 0 ? (
-                <div className="mt-2">
-                  {!showAllPayments ? (
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setShowAllPayments(true)}
-                    >
-                      <Clock className="h-4 w-4 mr-2" />
-                      View Past Sessions ({pastSessions.length})
-                    </Button>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-semibold">Past Sessions</h3>
-                        <Button variant="ghost" size="sm" onClick={() => setShowAllPayments(false)}>
-                          Hide
-                        </Button>
-                      </div>
-                      {pastSessions.map((pastBooking) => (
-                        <Card key={pastBooking.id}>
-                          <CardContent className="p-4">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium">{pastBooking.tutor_profile?.full_name || 'Tutor'}</h4>
-                                <p className="text-sm text-muted-foreground">{pastBooking.tutor_subjects?.subject}</p>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  {new Date(pastBooking.scheduled_at).toLocaleDateString()} • {pastBooking.duration_minutes} min
-                                </p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-semibold">R{pastBooking.price}</p>
-                                <Badge
-                                  variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'}
-                                  className="mt-1"
-                                >
-                                  {pastBooking.status === 'completed' ? 'Completed' : 'Cancelled'}
-                                </Badge>
-                                {pastBooking.status === 'completed' && (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="mt-2"
-                                    onClick={() => {
-                                      setReviewData({
-                                        bookingId: pastBooking.id,
-                                        reviewedId: pastBooking.tutor_id,
-                                        reviewedName: pastBooking.tutor_profile?.full_name || 'Tutor',
-                                        userType: 'learner',
-                                      });
-                                      setShowReviewModal(true);
-                                    }}
-                                  >
-                                    Rate & Review
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null;
-            })()}
+            {/* Past Sessions */}
+            <div className="mt-6">
+              <h3 className="font-semibold mb-3">Past Sessions</h3>
+              {bookings.filter(b => b.status === 'completed' || b.status === 'canceled').length === 0 ? (
+                <Card className="p-6">
+                  <div className="text-center text-muted-foreground">
+                    <p className="text-sm">No past sessions yet</p>
+                  </div>
+                </Card>
+              ) : (
+                bookings
+                  .filter(b => b.status === 'completed' || b.status === 'canceled')
+                  .map((pastBooking) => (
+                    <Card key={pastBooking.id} className="mb-3">
+                      <CardContent className="p-4">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium">{pastBooking.tutor_profile?.full_name || 'Tutor'}</h4>
+                            <p className="text-sm text-muted-foreground">{pastBooking.tutor_subjects?.subject}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {new Date(pastBooking.scheduled_at).toLocaleDateString()} • {pastBooking.duration_minutes} min
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">R{pastBooking.price}</p>
+                            <Badge
+                              variant={pastBooking.status === 'completed' ? 'outline' : 'destructive'}
+                              className="mt-1"
+                            >
+                              {pastBooking.status === 'completed' ? 'Completed' : 'Cancelled'}
+                            </Badge>
+                            {pastBooking.status === 'completed' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="mt-2"
+                                onClick={() => {
+                                  setReviewData({
+                                    bookingId: pastBooking.id,
+                                    reviewedId: pastBooking.tutor_id,
+                                    reviewedName: pastBooking.tutor_profile?.full_name || 'Tutor',
+                                    userType: 'learner',
+                                  });
+                                  setShowReviewModal(true);
+                                }}
+                              >
+                                Rate & Review
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
+              )}
+            </div>
           </TabsContent>
 
           {/* ── Profile Tab ── */}
@@ -967,11 +950,46 @@ const LearnerApp = () => {
                 <CardTitle className="text-sm flex items-center gap-2">
                   <GraduationCap className="h-4 w-4 text-primary" />
                   Academic Profile
+                  {academicProfile && (() => {
+                    // Compute profile completeness
+                    const fields = [
+                      academicProfile.curriculum,
+                      academicProfile.grade,
+                      academicProfile.subjects && academicProfile.subjects.length > 0 ? 'yes' : null,
+                      academicProfile.exam_year,
+                      academicProfile.study_level,
+                      academicProfile.school_name,
+                      academicProfile.target_grade,
+                      academicProfile.learning_style,
+                      academicProfile.exam_dates && academicProfile.exam_dates.length > 0 ? 'yes' : null,
+                    ];
+                    const filled = fields.filter(Boolean).length;
+                    const pct = Math.round((filled / fields.length) * 100);
+                    return (
+                      <Badge
+                        variant="outline"
+                        className={`ml-auto text-[10px] ${
+                          pct >= 80 ? 'border-green-500/50 text-green-600' :
+                          pct >= 50 ? 'border-yellow-500/50 text-yellow-600' :
+                          'border-red-500/50 text-red-600'
+                        }`}
+                      >
+                        {pct}% complete
+                      </Badge>
+                    );
+                  })()}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 {academicProfile ? (
                   <div className="space-y-3">
+                    {/* Full name from user profile */}
+                    {profile?.full_name && (
+                      <div className="flex items-center gap-2 pb-2 border-b border-border">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold text-sm">{profile.full_name}</span>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
                       <span className="text-muted-foreground">Curriculum</span>
                       <span className="font-medium">{academicProfile.curriculum || '—'}</span>
@@ -1013,11 +1031,18 @@ const LearnerApp = () => {
                           <span className="font-medium">{academicProfile.learning_style}</span>
                         </>
                       )}
+                      {/* Account email (from auth session) */}
+                      {session?.user?.email && (
+                        <>
+                          <span className="text-muted-foreground">Account Email</span>
+                          <span className="font-medium truncate">{session.user.email}</span>
+                        </>
+                      )}
                     </div>
                     {/* Subjects */}
                     {academicProfile.subjects && academicProfile.subjects.length > 0 && (
                       <div>
-                        <p className="text-xs text-muted-foreground mb-1.5">Subjects</p>
+                        <p className="text-xs text-muted-foreground mb-1.5">Subjects ({academicProfile.subjects.length})</p>
                         <div className="flex flex-wrap gap-1.5">
                           {academicProfile.subjects.map((s) => (
                             <Badge key={s} variant="outline" className="text-xs">{s}</Badge>

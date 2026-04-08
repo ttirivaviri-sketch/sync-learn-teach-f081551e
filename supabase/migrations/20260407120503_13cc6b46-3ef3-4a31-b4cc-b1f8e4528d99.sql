@@ -1,1 +1,0 @@
-ALTER TABLE public.academic_profiles ADD CONSTRAINT academic_profiles_user_id_key UNIQUE (user_id);

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
@@ -354,14 +354,15 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         />
       )}
 
-      {/* Document upload gate — show when syllabus is set but no documents uploaded */}
-      {syllabusSetupDone && hasDocuments === false && (
+      {/* Document upload gate — show when no documents uploaded (regardless of syllabus state) */}
+      {hasDocuments === false && (
         <Card className="border-accent/30 bg-accent/5">
           <CardContent className="p-5 text-center">
             <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
             <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
             <p className="text-sm text-muted-foreground mb-4">
               Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
+              Task generation is disabled until you upload at least one document.
             </p>
             <Button className="gradient-primary" onClick={onUploadClick}>
               <Upload className="mr-2 h-4 w-4" />
@@ -422,19 +423,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           <Upload className="mr-2 h-4 w-4" />
           Upload Documents
         </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('calendar')}>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('calendar')} disabled={hasDocuments === false}>
           <BookOpen className="mr-2 h-4 w-4" />
           Past Papers
         </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setShowSummary(true)}>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setShowSummary(true)} disabled={hasDocuments === false}>
           <Trophy className="mr-2 h-4 w-4" />
           Daily Summary
         </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('progress')}>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('progress')} disabled={hasDocuments === false}>
           <BarChart3 className="mr-2 h-4 w-4" />
           Progress
         </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('review')}>
+        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('review')} disabled={hasDocuments === false}>
           <Settings className="mr-2 h-4 w-4" />
           Review
         </Button>
@@ -504,10 +505,33 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                               {daysUntil}d to exam
                             </Badge>
                           )}
+                          {hasDocuments === false && (
+                            <Badge
+                              variant="secondary"
+                              className="absolute -top-2 -left-2 z-10 text-[10px] px-1.5 py-0"
+                            >
+                              <Lock className="h-2.5 w-2.5 mr-0.5" />
+                              Upload docs
+                            </Badge>
+                          )}
                           <SubjectCard
                             subject={subject}
                             tasksCount={4}
-                            onClick={() => setSelectedSubject(subject)}
+                            onClick={() => {
+                              if (hasDocuments === false) {
+                                // Gate: don't allow task generation without documents
+                                window.dispatchEvent(
+                                  new CustomEvent('show-toast', {
+                                    detail: {
+                                      title: 'Upload Documents First',
+                                      description: 'Upload your syllabus or past papers before generating study tasks.',
+                                    },
+                                  })
+                                );
+                                return;
+                              }
+                              setSelectedSubject(subject);
+                            }}
                           />
                         </div>
                       );

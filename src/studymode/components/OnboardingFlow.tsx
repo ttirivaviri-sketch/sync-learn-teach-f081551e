@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '../hooks/use-toast';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
+import type { AcademicProfile } from '@/types/academicProfile';
 
 interface CurriculumLevel {
   id: string;
@@ -170,17 +171,55 @@ function getSubjectVisuals(name: string) {
 
 interface OnboardingFlowProps {
   onComplete: () => void;
+  /** If an academic profile already exists, skip board/level/subjects steps */
+  academicProfile?: AcademicProfile | null;
 }
 
-export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
+export function OnboardingFlow({ onComplete, academicProfile }: OnboardingFlowProps) {
   const { onSignupComplete } = useAdaptiveLearningEngine();
-  const [step, setStep] = useState<'board' | 'level' | 'subjects' | 'exams'>('board');
 
-  const [selectedBoard, setSelectedBoard] = useState<CurriculumBoard | null>(null);
-  const [selectedLevel, setSelectedLevel] = useState<CurriculumLevel | null>(null);
-  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  // Determine if we can skip early steps because the academic profile is already set
+  const profileHasSubjects = !!(academicProfile?.subjects && academicProfile.subjects.length > 0);
+  const profileHasCurriculum = !!academicProfile?.curriculum;
+
+  const [step, setStep] = useState<'board' | 'level' | 'subjects' | 'exams'>(
+    // Skip to exams step if profile already has curriculum + subjects
+    profileHasCurriculum && profileHasSubjects ? 'exams' : 'board'
+  );
+
+  // Pre-populate from academic profile if it exists
+  const matchingBoard = profileHasCurriculum
+    ? CURRICULUM_BOARDS.find(
+        (b) => b.id.toLowerCase() === academicProfile!.curriculum!.toLowerCase() ||
+               b.name.toLowerCase() === academicProfile!.curriculum!.toLowerCase()
+      ) || null
+    : null;
+
+  const [selectedBoard, setSelectedBoard] = useState<CurriculumBoard | null>(matchingBoard);
+  const [selectedLevel, setSelectedLevel] = useState<CurriculumLevel | null>(
+    matchingBoard && academicProfile?.study_level
+      ? matchingBoard.levels.find(
+          (l) => l.id === academicProfile!.study_level || l.name === academicProfile!.study_level
+        ) || matchingBoard.levels[0] || null
+      : null
+  );
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>(
+    profileHasSubjects ? [...academicProfile!.subjects!] : []
+  );
   const [customSubject, setCustomSubject] = useState('');
-  const [examDates, setExamDates] = useState<Record<string, Date>>({});
+  const [examDates, setExamDates] = useState<Record<string, Date>>(() => {
+    // Pre-populate exam dates from academic profile
+    const dates: Record<string, Date> = {};
+    if (academicProfile?.exam_dates) {
+      for (const ed of academicProfile.exam_dates) {
+        const d = new Date(ed.date);
+        if (!isNaN(d.getTime())) {
+          dates[ed.subject] = d;
+        }
+      }
+    }
+    return dates;
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
 
@@ -546,6 +585,31 @@ export function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         {/* Step: Exam Dates */}
         {step === 'exams' && (
           <div className="space-y-6 animate-fade-in">
+            {/* Show profile summary when skipped from academic profile */}
+            {profileHasCurriculum && profileHasSubjects && (
+              <div className="rounded-xl bg-primary/10 border border-primary/20 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <GraduationCap className="h-5 w-5 text-primary" />
+                  <span className="font-semibold text-sm text-foreground">Profile Loaded</span>
+                </div>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Your curriculum ({academicProfile?.curriculum}) and {selectedSubjects.length} subjects were imported from your Academic Profile.
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {selectedSubjects.map((s) => (
+                    <span key={s} className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary font-medium">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+                <button
+                  className="text-xs text-primary underline mt-2"
+                  onClick={() => setStep('board')}
+                >
+                  Change curriculum/subjects
+                </button>
+              </div>
+            )}
             <div className="text-center">
               <h2 className="text-3xl font-bold text-foreground mb-2">Set Exam Dates</h2>
               <p className="text-muted-foreground">When are your exams? (You can set these later)</p>

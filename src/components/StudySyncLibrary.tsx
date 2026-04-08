@@ -85,12 +85,45 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
-    if (resource.type === "video") {
-      setActiveVideoResource(resource);
+    // Determine the video URL: explicit field, or extract from summary/description/title
+    let videoUrl = resource.videoUrl;
+
+    if (!videoUrl && resource.type === "video") {
+      // Regex for extracting video platform URLs from any text
+      const videoUrlRegex =
+        /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?[^\s)"']*|shorts\/[^\s)"']*|embed\/[^\s)"']*|live\/[^\s)"']*)|youtu\.be\/[^\s)"']*|(?:www\.)?vimeo\.com\/[^\s)"']*|(?:www\.)?loom\.com\/share\/[^\s)"']*|[^\s)"']*supabase\.co[^\s)"']*\/storage\/[^\s)"']*|[^\s)"']*\.(?:mp4|webm|mov|m4v|ogg)(?:\?[^\s)"']*)?)/i;
+
+      // Try summary first, then check all string fields on the resource
+      const textsToSearch = [
+        resource.summary,
+        resource.title,
+        (resource as any).description,
+        (resource as any).url,
+      ].filter(Boolean);
+
+      for (const text of textsToSearch) {
+        const match = text.match(videoUrlRegex);
+        if (match) {
+          videoUrl = match[0];
+          break;
+        }
+      }
+    }
+
+    if (resource.type === "video" && videoUrl) {
+      setActiveVideoResource({ ...resource, videoUrl });
       return;
     }
 
-    dispatchToast("Opening Resource", `Opening ${resource.title}`);
+    // For non-video resources or if no URL found
+    if (resource.type === "video") {
+      dispatchToast(
+        "No Video URL",
+        "This tutorial doesn't have a playable link yet. The tutor may need to add a video URL."
+      );
+    } else {
+      dispatchToast("Opening Resource", `Opening ${resource.title}`);
+    }
   };
 
   const handleBookTutor = (tutorId: string, tutorName: string) => {
@@ -769,17 +802,10 @@ const StudySyncLibrary = ({
               </Button>
             </div>
 
-            {activeVideoResource.videoUrl ? (
-              <VideoEmbedPlayer
-                url={activeVideoResource.videoUrl}
-                title={activeVideoResource.title}
-              />
-            ) : (
-              <div className="aspect-video bg-muted rounded-lg flex flex-col items-center justify-center text-center p-6">
-                <Video className="h-10 w-10 text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">No video URL available for this resource.</p>
-              </div>
-            )}
+            <VideoEmbedPlayer
+              url={activeVideoResource.videoUrl || ""}
+              title={activeVideoResource.title}
+            />
 
             {/* Book Tutor from video — checks availability, not online status */}
             {activeVideoResource.tutor && (

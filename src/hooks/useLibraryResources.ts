@@ -2,6 +2,17 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LibraryResource, AcademicProfile } from "@/types/academicProfile";
 
+/** Try to extract a video URL from a text string (description, summary, etc.) */
+const extractVideoUrl = (text: string | null | undefined): string | undefined => {
+  if (!text) return undefined;
+  // Match common video platforms and direct video file URLs.
+  // Handles youtube.com/shorts/ID?si=xxx, youtu.be/ID, vimeo.com/ID, etc.
+  const match = text.match(
+    /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?[^\s)"']*|shorts\/[^\s)"']*|embed\/[^\s)"']*|live\/[^\s)"']*)|youtu\.be\/[^\s)"']*|(?:www\.)?vimeo\.com\/[^\s)"']*|(?:www\.)?loom\.com\/share\/[^\s)"']*|[^\s)"']*supabase\.co[^\s)"']*\/storage\/[^\s)"']*|[^\s)"']*\.(?:mp4|webm|mov|m4v|ogg)(?:\?[^\s)"']*)?)/i
+  );
+  return match ? match[0] : undefined;
+};
+
 // ─── Seed data (used when Supabase table doesn't have items yet) ──────────────
 // This mirrors the database structure and allows the UI to work offline/dev mode
 
@@ -243,7 +254,7 @@ export function useLibraryResources(
             isTutorial: true,
             watchCount: row.watch_count || 0,
             completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || undefined,
+            videoUrl: row.video_url || extractVideoUrl(row.description) || extractVideoUrl(row.title) || undefined,
             tags: {
               subject: row.subject,
               topic: row.topic,
@@ -260,6 +271,7 @@ export function useLibraryResources(
             },
           }));
 
+          console.log("[useLibraryResources] RPC tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
           setDbResources(mapped);
           setDbFetched(true);
           return;
@@ -287,6 +299,7 @@ export function useLibraryResources(
 
         if (directError) {
           console.warn("tutor_tutorials direct query failed:", directError.message);
+          setDbFetched(true);
           return;
         }
 
@@ -296,7 +309,7 @@ export function useLibraryResources(
             title: row.title,
             author: (row.tutor_profile as any)?.full_name || "Tutor",
             type: "video" as const,
-            category: row.subject,
+            category: row.subject || row.category || "General",
             gradeLevel: row.grade || "All Grades",
             summary: row.description || "",
             rating: row.rating || 0,
@@ -307,7 +320,7 @@ export function useLibraryResources(
             isTutorial: true,
             watchCount: row.watch_count || 0,
             completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || undefined,
+            videoUrl: row.video_url || extractVideoUrl(row.description) || extractVideoUrl(row.title) || undefined,
             tags: {
               subject: row.subject,
               topic: row.topic,
@@ -325,6 +338,7 @@ export function useLibraryResources(
           })
         );
 
+        console.log("[useLibraryResources] Direct query tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
         setDbResources(mapped);
         setDbFetched(true);
       } catch (err) {
