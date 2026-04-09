@@ -46,7 +46,7 @@ export function useUserProgress() {
 
       try {
         const { data, error } = await supabase
-          .from('user_progress' as any)
+          .from('user_progress')
           .select('*')
           .eq('user_id', userId)
           .maybeSingle();
@@ -61,7 +61,7 @@ export function useUserProgress() {
         if (!data) {
           try {
             const { data: newProgress, error: insertError } = await supabase
-              .from('user_progress' as any)
+              .from('user_progress')
               .insert({ user_id: userId, xp: 0, streak: 0, badges: [] })
               .select()
               .single();
@@ -103,7 +103,7 @@ export function useUserProgress() {
       try {
         // Get today's completed tasks from study_schedule
         const { data: scheduledTasks } = await supabase
-          .from('study_schedule' as any)
+          .from('study_schedule')
           .select('is_completed')
           .eq('user_id', userId)
           .eq('scheduled_date', today);
@@ -113,7 +113,7 @@ export function useUserProgress() {
 
         // Get today's quiz attempts
         const { data: quizAttempts } = await supabase
-          .from('quiz_attempts' as any)
+          .from('quiz_attempts')
           .select('was_correct')
           .eq('user_id', userId)
           .gte('created_at', `${today}T00:00:00Z`);
@@ -149,12 +149,12 @@ export function useUserProgress() {
 
         if (progress?.id) {
           await supabase
-            .from('user_progress' as any)
+            .from('user_progress')
             .update({ xp: newXp })
             .eq('user_id', userId);
         } else {
           await supabase
-            .from('user_progress' as any)
+            .from('user_progress')
             .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] });
         }
         return newXp;
@@ -195,7 +195,7 @@ export function useUserProgress() {
         }
 
         await supabase
-          .from('user_progress' as any)
+          .from('user_progress')
           .upsert({ user_id: userId, streak: newStreak, last_study_date: today, xp: progress?.xp ?? 0, badges: [] });
 
         return newStreak;
@@ -228,7 +228,7 @@ export function useUserProgress() {
         }));
 
         await supabase
-          .from('user_progress' as any)
+          .from('user_progress')
           .upsert({ user_id: userId, badges: badgesJson, xp: progress?.xp ?? 0, streak: progress?.streak ?? 0 });
 
         return newBadges;

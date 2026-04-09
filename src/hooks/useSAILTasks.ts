@@ -51,7 +51,7 @@ export const useSAILTasks = () => {
     queryKey: ['sail-tasks'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sail_tasks' as any)
+        .from('sail_tasks')
         .select('*')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -63,7 +63,7 @@ export const useSAILTasks = () => {
     queryKey: ['sail-events'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sail_events' as any)
+        .from('sail_events')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
@@ -76,7 +76,7 @@ export const useSAILTasks = () => {
     queryKey: ['sail-agent-logs'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('sail_agent_logs' as any)
+        .from('sail_agent_logs')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(100);
@@ -89,12 +89,12 @@ export const useSAILTasks = () => {
     mutationFn: async (taskId: string) => {
       const { data: { user } } = await supabase.auth.getUser();
       const { error } = await supabase
-        .from('sail_tasks' as any)
+        .from('sail_tasks')
         .update({
           status: 'approved',
           approved_by: user?.id,
           approved_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', taskId);
       if (error) throw error;
     },
@@ -104,8 +104,8 @@ export const useSAILTasks = () => {
   const rejectTask = useMutation({
     mutationFn: async ({ taskId, reason }: { taskId: string; reason: string }) => {
       const { error } = await supabase
-        .from('sail_tasks' as any)
-        .update({ status: 'rejected', rejection_reason: reason } as any)
+        .from('sail_tasks')
+        .update({ status: 'rejected', rejection_reason: reason })
         .eq('id', taskId);
       if (error) throw error;
     },

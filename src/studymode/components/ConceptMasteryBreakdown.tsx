@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle2, Circle, AlertTriangle, Loader2 } from 'lucide-react';
 import { supabase } from '../../integrations/supabase/client';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface ConceptMasteryBreakdownProps {
   subjectId: string;
@@ -30,7 +30,7 @@ export function ConceptMasteryBreakdown({ subjectId, topicName }: ConceptMastery
       if (!user || cancelled) { setIsLoading(false); return; }
 
       const { data: attempts } = await supabase
-        .from('quiz_attempts' as any)
+        .from('quiz_attempts')
         .select('concepts_tested, was_correct, created_at')
         .eq('user_id', user.id)
         .eq('subject_id', subjectId)

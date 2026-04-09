@@ -1,12 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Upload, FileText, X, Check, Loader2, AlertCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { supabase } from '../../integrations/supabase/client';
-import { useToast } from '../hooks/use-toast';
-import { cn } from '../lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 
@@ -208,7 +208,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
                   .update({ topics: topicsJson as any, syllabus_code: parsedPayload.syllabus_code || null })
                   .eq('id', existingSubject.id);
               } else {
-                await (supabase.from('subjects') as any).insert({
+                await supabase.from('subjects').insert({
                   user_id: user.id,
                   name: subjectName,
                   syllabus_code: parsedPayload.syllabus_code || null,

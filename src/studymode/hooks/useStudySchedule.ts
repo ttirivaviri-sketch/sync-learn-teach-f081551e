@@ -55,7 +55,7 @@ export function useStudySchedule(month?: Date) {
       const endDate   = format(endOfMonth(currentMonth),   'yyyy-MM-dd');
 
       const { data, error } = await supabase
-        .from('study_schedule' as any)
+        .from('study_schedule')
         .select(`
           *,
           subject:subjects(name)
@@ -79,7 +79,7 @@ export function useStudySchedule(month?: Date) {
     const xpAmount = TASK_XP[taskType] ?? 12;
     try {
       // Fetch current XP
-      const { data: prog } = await (supabase as any)
+      const { data: prog } = await supabase
         .from('user_progress')
         .select('xp, streak, last_study_date')
         .eq('user_id', userId)
@@ -100,7 +100,7 @@ export function useStudySchedule(month?: Date) {
       }
       // else: already studied today — keep streak as-is
 
-      await (supabase as any)
+      await supabase
         .from('user_progress')
         .upsert(
           {
@@ -124,7 +124,7 @@ export function useStudySchedule(month?: Date) {
       const today       = new Date().toISOString().split('T')[0];
       const monthStart  = today.substring(0, 7) + '-01';
 
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('study_schedule')
         .select('is_completed')
         .eq('user_id', userId)
@@ -158,7 +158,7 @@ export function useStudySchedule(month?: Date) {
       if (!user) throw new Error('Not authenticated');
 
       const { error } = await supabase
-        .from('study_schedule' as any)
+        .from('study_schedule')
         .insert({
           user_id:          user.id,
           subject_id:       item.subject_id,
@@ -189,7 +189,7 @@ export function useStudySchedule(month?: Date) {
       if (!user) throw new Error('Not authenticated');
 
       const { error } = await supabase
-        .from('study_schedule' as any)
+        .from('study_schedule')
         .update({ is_completed: isCompleted })
         .eq('id', id);
 
@@ -211,7 +211,7 @@ export function useStudySchedule(month?: Date) {
   const deleteScheduleItem = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('study_schedule' as any)
+        .from('study_schedule')
         .delete()
         .eq('id', id);
 

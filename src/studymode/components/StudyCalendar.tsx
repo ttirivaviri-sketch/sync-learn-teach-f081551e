@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Check, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths } from 'date-fns';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useStudySchedule, StudyScheduleItem } from '../hooks/useStudySchedule';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Input } from './ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Subject } from '../types/study';
 import { SubjectExamWithReadiness } from '../hooks/useSubjectExams';
 

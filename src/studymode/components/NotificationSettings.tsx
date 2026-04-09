@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Bell, Clock, Save, Loader2, CheckCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Switch } from './ui/switch';
-import { Label } from './ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '../../integrations/supabase/client';
 
 interface NotificationPrefs {
@@ -47,20 +47,19 @@ export function NotificationSettings() {
         if (!user) return;
 
         const { data, error } = await supabase
-          .from('notification_preferences' as any)
+          .from('notification_preferences')
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
 
         if (!error && data) {
-          const d = data as any;
           setPrefs({
-            reviewReminders: d.review_reminders ?? true,
-            sessionReminders: d.session_reminders ?? true,
-            streakReminders: d.streak_reminders ?? true,
-            quietHoursStart: d.quiet_hours_start ?? '22:00',
-            quietHoursEnd: d.quiet_hours_end ?? '07:00',
-            reminderFrequency: d.reminder_frequency_minutes ?? 15,
+            reviewReminders: data.review_reminders ?? true,
+            sessionReminders: data.session_reminders ?? true,
+            streakReminders: data.streak_reminders ?? true,
+            quietHoursStart: data.quiet_hours_start ?? '22:00',
+            quietHoursEnd: data.quiet_hours_end ?? '07:00',
+            reminderFrequency: data.reminder_frequency_minutes ?? 15,
           });
         }
       } catch {
@@ -81,7 +80,7 @@ export function NotificationSettings() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
         await supabase
-          .from('notification_preferences' as any)
+          .from('notification_preferences')
           .upsert({
             user_id: user.id,
             review_reminders: prefs.reviewReminders,
@@ -90,7 +89,7 @@ export function NotificationSettings() {
             quiet_hours_start: prefs.quietHoursStart,
             quiet_hours_end: prefs.quietHoursEnd,
             reminder_frequency_minutes: prefs.reminderFrequency,
-          } as any, { onConflict: 'user_id' });
+          }, { onConflict: 'user_id' });
       }
     } catch {
       // DB table might not exist yet — localStorage is the fallback

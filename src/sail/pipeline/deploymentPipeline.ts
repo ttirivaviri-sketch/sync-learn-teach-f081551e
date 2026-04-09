@@ -98,8 +98,8 @@ export class SAILDeploymentPipeline {
 
     try {
       const { data, error } = await supabase
-        .from('sail_pipelines' as any)
-        .insert(pipelineData as any)
+        .from('sail_pipelines')
+        .insert(pipelineData)
         .select()
         .single();
 
@@ -148,8 +148,8 @@ export class SAILDeploymentPipeline {
 
     try {
       const { error } = await supabase
-        .from('sail_pipelines' as any)
-        .update(updates as any)
+        .from('sail_pipelines')
+        .update(updates)
         .eq('id', pipelineId);
 
       if (error) {
@@ -172,21 +172,21 @@ export class SAILDeploymentPipeline {
 
     return this.advanceStage(pipelineId, stage, {
       test_results: results,
-    } as any);
+    });
   }
 
   // ── Approve a pipeline ────────────────────────────────────────────────────
   async approve(pipelineId: string, approvedBy: string): Promise<boolean> {
     return this.advanceStage(pipelineId, 'approved', {
       approved_by: approvedBy,
-    } as any);
+    });
   }
 
   // ── Reject a pipeline ─────────────────────────────────────────────────────
   async reject(pipelineId: string, reason: string): Promise<boolean> {
     return this.advanceStage(pipelineId, 'rejected', {
       rejection_reason: reason,
-    } as any);
+    });
   }
 
   // ── Check if pipeline can auto-deploy ─────────────────────────────────────
@@ -207,7 +207,7 @@ export class SAILDeploymentPipeline {
   }): Promise<DeploymentPipeline[]> {
     try {
       let query = supabase
-        .from('sail_pipelines' as any)
+        .from('sail_pipelines')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(filters?.limit || 50);

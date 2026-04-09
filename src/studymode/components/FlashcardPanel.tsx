@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send, MinusCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Badge } from './ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
 import { MathMarkdown } from './MathMarkdown';
 import { DailyTask, Subject } from '../types/study';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
@@ -12,7 +12,7 @@ import { useConceptMastery } from '../hooks/useConceptMastery';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { supabase } from '../../integrations/supabase/client';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface FlashcardPanelProps {
   task: DailyTask;
@@ -240,7 +240,7 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         tags: c.tags,
       }));
 
-      const { error: upsertErr } = await (supabase as any)
+      const { error: upsertErr } = await supabase
         .from('flashcards')
         .upsert(rows, { onConflict: 'user_id,subject,topic,front', ignoreDuplicates: true });
 

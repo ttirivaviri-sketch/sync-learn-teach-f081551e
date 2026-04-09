@@ -11,11 +11,11 @@
 
 import { useState, useEffect } from 'react';
 import { Brain, RefreshCw, Loader2, TrendingUp, CheckCircle2, AlertTriangle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Progress } from './ui/progress';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { supabase } from '../../integrations/supabase/client';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow, parseISO } from 'date-fns';
 
 export function AdaptivePlanBanner() {
@@ -41,7 +41,7 @@ export function AdaptivePlanBanner() {
       const today = new Date().toISOString().split('T')[0];
       const monthStart = today.substring(0, 7) + '-01';
 
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from('study_schedule')
         .select('is_completed')
         .eq('user_id', user.id)
@@ -86,7 +86,7 @@ export function AdaptivePlanBanner() {
       if (user) {
         const today = new Date().toISOString().split('T')[0];
         const monthStart = today.substring(0, 7) + '-01';
-        const { data } = await (supabase as any)
+        const { data } = await supabase
           .from('study_schedule')
           .select('is_completed')
           .eq('user_id', user.id)

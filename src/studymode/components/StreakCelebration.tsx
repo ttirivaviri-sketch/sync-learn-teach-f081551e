@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Flame, X, Sparkles, Loader2, PartyPopper } from 'lucide-react';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { aiRequestJSON } from '../lib/aiClient';
 

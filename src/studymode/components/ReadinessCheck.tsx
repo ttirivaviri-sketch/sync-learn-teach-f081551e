@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Moon, Battery, Smile, ChevronRight } from 'lucide-react';
-import { Button } from './ui/button';
-import { Slider } from './ui/slider';
+import { Button } from '@/components/ui/button';
+import { Slider } from '@/components/ui/slider';
 import { ReadinessCheck as ReadinessCheckType } from '../types/study';
 
 interface ReadinessCheckProps {

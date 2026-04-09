@@ -1,9 +1,9 @@
 import { Bell, BellRing, Check, CheckCheck, Trash2 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { ScrollArea } from './ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNotifications, AppNotification } from '../hooks/useNotifications';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
 function NotificationItem({ notification, onRead }: { notification: AppNotification; onRead: (id: string) => void }) {

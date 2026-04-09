@@ -18,7 +18,7 @@ export const useSubscription = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       const { data, error } = await supabase
-        .from('subscriptions' as any)
+        .from('subscriptions')
         .select('*')
         .eq('user_id', user.id)
         .maybeSingle();

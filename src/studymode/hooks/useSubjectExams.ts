@@ -40,8 +40,8 @@ export function useSubjectExams() {
       if (!userId) return [];
 
       // Fetch exams
-      const { data: exams, error: examsError } = await (supabase
-        .from('subject_exams') as any)
+      const { data: exams, error: examsError } = await supabase
+        .from('subject_exams')
         .select('*, subject:subjects(name)')
         .eq('user_id', userId)
         .order('exam_date', { ascending: true });
@@ -59,7 +59,7 @@ export function useSubjectExams() {
 
       // Fetch quiz attempts for all subjects
       const { data: quizData } = await supabase
-        .from('quiz_attempts' as any)
+        .from('quiz_attempts')
         .select('*')
         .eq('user_id', userId)
         .in('subject_id', subjectIds);
@@ -126,14 +126,14 @@ export function useSubjectExams() {
       if (!user) throw new Error('Not authenticated');
 
       const { error } = await supabase
-        .from('subject_exams' as any)
+        .from('subject_exams')
         .insert({
           user_id: user.id,
           subject_id: exam.subject_id,
           exam_name: exam.exam_name,
           exam_date: exam.exam_date,
           paper_number: exam.paper_number || null,
-        } as any);
+        });
 
       if (error) throw error;
     },
@@ -143,8 +143,8 @@ export function useSubjectExams() {
   const updateExam = useMutation({
     mutationFn: async ({ id, ...updates }: { id: string; exam_name?: string; exam_date?: string; paper_number?: string }) => {
       const { error } = await supabase
-        .from('subject_exams' as any)
-        .update(updates as any)
+        .from('subject_exams')
+        .update(updates)
         .eq('id', id);
 
       if (error) throw error;
@@ -155,7 +155,7 @@ export function useSubjectExams() {
   const deleteExam = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('subject_exams' as any)
+        .from('subject_exams')
         .delete()
         .eq('id', id);
 

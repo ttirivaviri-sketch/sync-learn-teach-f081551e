@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { Calendar as CalendarIcon, GraduationCap, Save, Loader2, CheckCircle, Plus, X } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Calendar } from './ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface ExamSetupCardProps {

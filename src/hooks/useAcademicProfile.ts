@@ -95,7 +95,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
 
         // --- Attempt 1: v2 RPC (full save, includes extended columns) ---
         try {
-          const { error: rpcV2Error } = await supabase.rpc("upsert_academic_profile" as any, {
+          const { error: rpcV2Error } = await supabase.rpc("upsert_academic_profile", {
             p_curriculum: data.curriculum ?? "ZIMSEC",
             p_grade: data.grade ?? "",
             p_subjects: data.subjects ?? [],
@@ -118,7 +118,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         // --- Attempt 2: v1 RPC (core fields only, 4 params) ---
         if (!saved) {
           try {
-            const { error: rpcV1Error } = await supabase.rpc("upsert_academic_profile" as any, {
+            const { error: rpcV1Error } = await supabase.rpc("upsert_academic_profile", {
               p_curriculum: data.curriculum ?? "ZIMSEC",
               p_grade: data.grade ?? "",
               p_subjects: data.subjects ?? [],
@@ -149,7 +149,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
 
           const { error: coreError } = await supabase
             .from("academic_profiles")
-            .upsert(corePayload as any, { onConflict: "user_id" });
+            .upsert(corePayload, { onConflict: "user_id" });
 
           if (coreError) {
             console.error("[useAcademicProfile] Direct upsert also failed:", coreError);
@@ -180,7 +180,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
 
               await supabase
                 .from("academic_profiles")
-                .upsert(extPayload as any, { onConflict: "user_id" });
+                .upsert(extPayload, { onConflict: "user_id" });
             } catch {
               // Extended columns missing — OK, core was already saved
             }
@@ -206,7 +206,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
               .maybeSingle();
 
             if (!existing?.id) {
-              await (supabase.from("subjects") as any).insert({
+              await supabase.from("subjects").insert({
                 user_id: userId,
                 name: subjectName,
                 syllabus_code: null,
@@ -226,19 +226,19 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
                 .maybeSingle();
 
               if (subjectRow?.id) {
-                const { data: existingExam } = await (supabase
-                  .from("subject_exams") as any)
+                const { data: existingExam } = await supabase
+                  .from("subject_exams")
                   .select("id")
                   .eq("user_id", userId)
                   .eq("subject_id", subjectRow.id)
                   .maybeSingle();
 
                 if (existingExam?.id) {
-                  await (supabase.from("subject_exams") as any)
+                  await supabase.from("subject_exams")
                     .update({ exam_date: examEntry.date, updated_at: new Date().toISOString() })
                     .eq("id", existingExam.id);
                 } else {
-                  await (supabase.from("subject_exams") as any)
+                  await supabase.from("subject_exams")
                     .insert({
                       user_id: userId,
                       subject_id: subjectRow.id,

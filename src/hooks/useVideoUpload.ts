@@ -46,7 +46,7 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
 
     try {
       const { data, error: fetchError } = await supabase
-        .from('video_content' as any)
+        .from('video_content')
         .select('*')
         .eq('tutor_id', tutorId)
         .order('created_at', { ascending: false });
@@ -118,13 +118,13 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
     async (videoId: string): Promise<boolean> => {
       try {
         const { error: updateError } = await supabase
-          .from('video_content' as any)
+          .from('video_content')
           .update({
             ownership_confirmed: true,
             status: 'approved',
             visibility: 'public',
             updated_at: new Date().toISOString(),
-          } as any)
+          })
           .eq('id', videoId)
           .eq('tutor_id', tutorId!);
 
@@ -148,7 +148,7 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
     async (videoId: string): Promise<boolean> => {
       try {
         const { error: deleteError } = await supabase
-          .from('video_content' as any)
+          .from('video_content')
           .delete()
           .eq('id', videoId)
           .eq('tutor_id', tutorId!);

@@ -1,7 +1,7 @@
 import { Calendar, Flame, Brain, Zap, Settings } from 'lucide-react';
 import { ReadinessCheck } from '../types/study';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface ExamCountdownWidgetProps {
   examDate: Date;

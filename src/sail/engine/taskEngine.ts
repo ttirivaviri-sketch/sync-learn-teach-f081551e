@@ -141,8 +141,8 @@ export class SAILTaskEngine {
 
     try {
       const { data, error } = await supabase
-        .from('sail_tasks' as any)
-        .insert(taskData as any)
+        .from('sail_tasks')
+        .insert(taskData)
         .select()
         .single();
 
@@ -173,7 +173,7 @@ export class SAILTaskEngine {
   async getPendingTasks(limit = 20): Promise<SAILTask[]> {
     try {
       const { data, error } = await supabase
-        .from('sail_tasks' as any)
+        .from('sail_tasks')
         .select('*')
         .in('status', ['pending', 'assigned'])
         .order('priority', { ascending: true })
@@ -203,7 +203,7 @@ export class SAILTaskEngine {
   }): Promise<SAILTask[]> {
     try {
       let query = supabase
-        .from('sail_tasks' as any)
+        .from('sail_tasks')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(filters?.limit || 50);
@@ -252,8 +252,8 @@ export class SAILTaskEngine {
 
     try {
       const { error } = await supabase
-        .from('sail_tasks' as any)
-        .update(updates as any)
+        .from('sail_tasks')
+        .update(updates)
         .eq('id', taskId);
 
       if (error) {
@@ -287,7 +287,7 @@ export class SAILTaskEngine {
   async retryTask(taskId: string): Promise<boolean> {
     try {
       const { data } = await supabase
-        .from('sail_tasks' as any)
+        .from('sail_tasks')
         .select('retry_count, max_retries')
         .eq('id', taskId)
         .single();
@@ -329,7 +329,7 @@ export class SAILTaskEngine {
 
     try {
       const { data } = await supabase
-        .from('sail_tasks' as any)
+        .from('sail_tasks')
         .select('status');
 
       if (data) {

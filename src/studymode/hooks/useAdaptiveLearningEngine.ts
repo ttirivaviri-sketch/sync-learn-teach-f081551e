@@ -138,7 +138,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
 
     // 1. Academic profile
     const { data: profileData } = await supabase
-      .from('academic_profiles' as any)
+      .from('academic_profiles')
       .select('*')
       .eq('user_id', user.id)
       .maybeSingle();
@@ -151,7 +151,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
 
     // 3. Performance data (quiz_attempts)
     const { data: attemptsData } = await supabase
-      .from('quiz_attempts' as any)
+      .from('quiz_attempts')
       .select('topic_name, subject_id, was_correct, difficulty_rating, created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
@@ -161,7 +161,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
     const today = new Date().toISOString().split('T')[0];
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString().split('T')[0];
     const { data: scheduleData } = await supabase
-      .from('study_schedule' as any)
+      .from('study_schedule')
       .select('is_completed, topic_name, subject_id, scheduled_date')
       .eq('user_id', user.id)
       .gte('scheduled_date', thirtyDaysAgo)
@@ -177,7 +177,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
 
     // 6. Exam settings
     const { data: examData } = await supabase
-      .from('exam_settings' as any)
+      .from('exam_settings')
       .select('exam_date, exam_name')
       .eq('user_id', user.id)
       .maybeSingle();
@@ -432,7 +432,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
         let weakAreas: string[] = [];
         if (user) {
           const { data: attempts } = await supabase
-            .from('quiz_attempts' as any)
+            .from('quiz_attempts')
             .select('topic_name, was_correct')
             .eq('user_id', user.id)
             .ilike('topic_name', `%${topic}%`)

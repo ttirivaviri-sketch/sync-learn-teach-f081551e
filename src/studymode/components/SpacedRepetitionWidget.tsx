@@ -1,6 +1,6 @@
 import { Brain, AlertCircle, TrendingUp, Calendar, ChevronRight } from 'lucide-react';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { TopicReviewStatus } from '../hooks/useSpacedRepetition';
 
 interface SpacedRepetitionWidgetProps {

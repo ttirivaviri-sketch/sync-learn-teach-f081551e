@@ -257,7 +257,7 @@ export class SAILDetectionSystem {
     // Persist to Supabase (best effort)
     try {
       await supabase
-        .from('sail_detection_signals' as any)
+        .from('sail_detection_signals')
         .insert({
           source: signal.source,
           severity: signal.severity,
@@ -268,7 +268,7 @@ export class SAILDetectionSystem {
           suggested_priority: signal.suggested_priority,
           suggested_agent: signal.suggested_agent,
           auto_create_task: signal.auto_create_task,
-        } as any);
+        });
     } catch {
       // Table may not exist yet
     }

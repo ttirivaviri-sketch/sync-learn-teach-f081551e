@@ -7,8 +7,8 @@ import { ChatPanel } from './ChatPanel';
 import { StreakCelebration } from './StreakCelebration';
 import { ReadinessCheck as ReadinessCheckType } from '../types/study';
 import { MessageCircle, X } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
-import { Button } from './ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import type { AcademicProfile } from '@/types/academicProfile';
 
 export default function StudyMode({

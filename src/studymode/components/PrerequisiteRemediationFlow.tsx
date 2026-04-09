@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { ArrowLeft, Brain, BookOpen, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Progress } from './ui/progress';
-import { Alert, AlertDescription } from './ui/alert';
-import { Skeleton } from './ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { supabase } from '../../integrations/supabase/client';
-import { useToast } from '../hooks/use-toast';
-import { cn } from '../lib/utils';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { MathMarkdown } from './MathMarkdown';
 import { aiRequestJSON } from '../lib/aiClient';
 

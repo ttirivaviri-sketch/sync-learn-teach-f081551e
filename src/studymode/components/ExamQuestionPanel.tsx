@@ -4,11 +4,11 @@ import {
   ThumbsUp, ThumbsDown, MessageCircle, Loader2 as LoaderIcon,
   BookOpen, Zap, Trophy, Target,
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
