@@ -334,7 +334,7 @@ export function useAIStudyIntelligence(academicProfile?: AcademicProfile | null)
     // 1. Fetch quiz attempts (last 90 days)
     const ninetyDaysAgo = new Date(Date.now() - 90 * 86_400_000).toISOString();
     const { data: attempts } = await supabase
-      .from('quiz_attempts' as any)
+      .from('quiz_attempts')
       .select('topic_name, subject_id, was_correct, difficulty_rating, created_at')
       .eq('user_id', user.id)
       .gte('created_at', ninetyDaysAgo)
@@ -428,7 +428,7 @@ export function useAIStudyIntelligence(academicProfile?: AcademicProfile | null)
     // 11. Days until exam
     let daysUntilExam: number | null = null;
     const { data: examData } = await supabase
-      .from('exam_settings' as any)
+      .from('exam_settings')
       .select('exam_date')
       .eq('user_id', user.id)
       .maybeSingle();
@@ -441,7 +441,7 @@ export function useAIStudyIntelligence(academicProfile?: AcademicProfile | null)
     // If no exam_settings date, check subject_exams
     if (daysUntilExam === null) {
       const { data: subjectExams } = await supabase
-        .from('subject_exams' as any)
+        .from('subject_exams')
         .select('exam_date')
         .eq('user_id', user.id)
         .gte('exam_date', new Date().toISOString().split('T')[0])

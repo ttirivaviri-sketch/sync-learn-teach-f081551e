@@ -55,7 +55,7 @@ export function useConceptMastery() {
     try {
       // 1. Fetch all attempts for this topic that include concepts
       const { data: allAttempts } = await supabase
-        .from('quiz_attempts' as any)
+        .from('quiz_attempts')
         .select('concepts_tested, was_correct, created_at, topic_name, subject_id')
         .eq('user_id', userId)
         .eq('subject_id', subjectId)
@@ -93,7 +93,7 @@ export function useConceptMastery() {
 
       // 5. Upsert topic_mastery — only increase, never decrease
       const { data: existing } = await supabase
-        .from('topic_mastery' as any)
+        .from('topic_mastery')
         .select('mastery_percentage, id')
         .eq('user_id', userId)
         .eq('subject_id', subjectId)
@@ -105,7 +105,7 @@ export function useConceptMastery() {
       if (masteryPercentage > currentMastery) {
         if (existing) {
           await supabase
-            .from('topic_mastery' as any)
+            .from('topic_mastery')
             .update({
               mastery_percentage: masteryPercentage,
               last_reviewed_at: new Date().toISOString(),
@@ -118,7 +118,7 @@ export function useConceptMastery() {
           const correctAttempts = attempts.filter(a => a.was_correct).length;
 
           await supabase
-            .from('topic_mastery' as any)
+            .from('topic_mastery')
             .insert({
               user_id: userId,
               subject_id: subjectId,

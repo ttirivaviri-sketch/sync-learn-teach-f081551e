@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Trophy, Zap, Target, BookOpen, Flame, X, Sparkles, Loader2 } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { useUserProgress } from '../hooks/useUserProgress';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 
 interface DailySummaryProps {

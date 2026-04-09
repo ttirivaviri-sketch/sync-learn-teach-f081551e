@@ -1,6 +1,6 @@
 import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight, Layers, FileText, ClipboardList } from 'lucide-react';
 import { DailyTask } from '../types/study';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface TaskListProps {
   tasks: DailyTask[];

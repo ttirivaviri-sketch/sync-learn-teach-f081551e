@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { AlertTriangle, Eye, ShieldAlert, Sparkles, Loader2, RefreshCw, ChevronRight } from 'lucide-react';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { TopicReviewStatus } from '../hooks/useSpacedRepetition';
 import { TutorBriefing } from './TutorBriefing';
 import { aiRequestJSON } from '../lib/aiClient';

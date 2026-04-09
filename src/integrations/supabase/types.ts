@@ -2000,6 +2000,324 @@ export type Database = {
           },
         ]
       }
+      notification_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          review_reminders: boolean
+          session_reminders: boolean
+          streak_reminders: boolean
+          quiet_hours_start: string | null
+          quiet_hours_end: string | null
+          reminder_frequency_minutes: number
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          review_reminders?: boolean
+          session_reminders?: boolean
+          streak_reminders?: boolean
+          quiet_hours_start?: string | null
+          quiet_hours_end?: string | null
+          reminder_frequency_minutes?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          review_reminders?: boolean
+          session_reminders?: boolean
+          streak_reminders?: boolean
+          quiet_hours_start?: string | null
+          quiet_hours_end?: string | null
+          reminder_frequency_minutes?: number
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      student_insights_cache: {
+        Row: {
+          id: string
+          student_id: string
+          tutor_id: string
+          insights: Json
+          expires_at: string
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          student_id: string
+          tutor_id: string
+          insights: Json
+          expires_at: string
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          student_id?: string
+          tutor_id?: string
+          insights?: Json
+          expires_at?: string
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      study_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          started_at: string
+          ended_at: string | null
+          duration_minutes: number | null
+          subject: string | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          started_at: string
+          ended_at?: string | null
+          duration_minutes?: number | null
+          subject?: string | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          started_at?: string
+          ended_at?: string | null
+          duration_minutes?: number | null
+          subject?: string | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      tutor_assignments: {
+        Row: {
+          id: string
+          learner_id: string
+          tutor_id: string | null
+          subject: string
+          topic: string | null
+          focus_area: string | null
+          difficulty_override: string | null
+          notes: string | null
+          due_date: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          learner_id: string
+          tutor_id?: string | null
+          subject: string
+          topic?: string | null
+          focus_area?: string | null
+          difficulty_override?: string | null
+          notes?: string | null
+          due_date?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          learner_id?: string
+          tutor_id?: string | null
+          subject?: string
+          topic?: string | null
+          focus_area?: string | null
+          difficulty_override?: string | null
+          notes?: string | null
+          due_date?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      tutor_payouts: {
+        Row: {
+          id: string
+          tutor_id: string
+          amount: number
+          currency: string
+          status: string
+          payment_method: string | null
+          processed_at: string | null
+          session_id: string | null
+          commission_rate: number | null
+          commission_amount: number | null
+          net_amount: number | null
+          created_at: string | null
+        }
+        Insert: {
+          id?: string
+          tutor_id: string
+          amount: number
+          currency?: string
+          status?: string
+          payment_method?: string | null
+          processed_at?: string | null
+          session_id?: string | null
+          commission_rate?: number | null
+          commission_amount?: number | null
+          net_amount?: number | null
+          created_at?: string | null
+        }
+        Update: {
+          id?: string
+          tutor_id?: string
+          amount?: number
+          currency?: string
+          status?: string
+          payment_method?: string | null
+          processed_at?: string | null
+          session_id?: string | null
+          commission_rate?: number | null
+          commission_amount?: number | null
+          net_amount?: number | null
+          created_at?: string | null
+        }
+        Relationships: []
+      }
+      tutor_wallets: {
+        Row: {
+          id: string
+          tutor_id: string
+          balance: number
+          total_earned: number
+          currency: string
+          last_payout_at: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          tutor_id: string
+          balance?: number
+          total_earned?: number
+          currency?: string
+          last_payout_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          tutor_id?: string
+          balance?: number
+          total_earned?: number
+          currency?: string
+          last_payout_at?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      video_content: {
+        Row: {
+          id: string
+          tutor_id: string
+          title: string
+          description: string | null
+          video_url: string
+          thumbnail_url: string | null
+          subject: string | null
+          topic: string | null
+          status: string
+          visibility: string
+          ownership_confirmed: boolean
+          watch_count: number
+          rating: number | null
+          review_count: number
+          rejection_reason: string | null
+          created_at: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          tutor_id: string
+          title: string
+          description?: string | null
+          video_url: string
+          thumbnail_url?: string | null
+          subject?: string | null
+          topic?: string | null
+          status?: string
+          visibility?: string
+          ownership_confirmed?: boolean
+          watch_count?: number
+          rating?: number | null
+          review_count?: number
+          rejection_reason?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          tutor_id?: string
+          title?: string
+          description?: string | null
+          video_url?: string
+          thumbnail_url?: string | null
+          subject?: string | null
+          topic?: string | null
+          status?: string
+          visibility?: string
+          ownership_confirmed?: boolean
+          watch_count?: number
+          rating?: number | null
+          review_count?: number
+          rejection_reason?: string | null
+          created_at?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      study_activity: {
+        Row: {
+          id: string
+          user_id: string
+          subject: string
+          activity_type: string
+          task_completed: boolean
+          score: number | null
+          topic: string | null
+          duration_minutes: number | null
+          metadata: Json
+          date: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          subject: string
+          activity_type?: string
+          task_completed?: boolean
+          score?: number | null
+          topic?: string | null
+          duration_minutes?: number | null
+          metadata?: Json
+          date?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          subject?: string
+          activity_type?: string
+          task_completed?: boolean
+          score?: number | null
+          topic?: string | null
+          duration_minutes?: number | null
+          metadata?: Json
+          date?: string
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

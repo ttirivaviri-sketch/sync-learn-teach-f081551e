@@ -61,7 +61,7 @@ export class SubscriptionEngine {
 
     try {
       const { data, error } = await supabase
-        .from('subscriptions' as any)
+        .from('subscriptions')
         .select('*')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -112,8 +112,8 @@ export class SubscriptionEngine {
 
     try {
       const { data, error } = await supabase
-        .from('subscriptions' as any)
-        .insert(subData as any)
+        .from('subscriptions')
+        .insert(subData)
         .select()
         .single();
 
@@ -149,7 +149,7 @@ export class SubscriptionEngine {
 
       if (existing) {
         const { error } = await supabase
-          .from('subscriptions' as any)
+          .from('subscriptions')
           .update({
             plan,
             status: 'active',
@@ -162,7 +162,7 @@ export class SubscriptionEngine {
               k => (PLAN_FEATURES[plan] as any)[k] === true
             ),
             updated_at: now.toISOString(),
-          } as any)
+          })
           .eq('id', existing.id);
 
         if (error) {
@@ -172,7 +172,7 @@ export class SubscriptionEngine {
       } else {
         // Create new subscription
         const { error } = await supabase
-          .from('subscriptions' as any)
+          .from('subscriptions')
           .insert({
             user_id: userId,
             plan,
@@ -185,7 +185,7 @@ export class SubscriptionEngine {
             features: Object.keys(PLAN_FEATURES[plan]).filter(
               k => (PLAN_FEATURES[plan] as any)[k] === true
             ),
-          } as any);
+          });
 
         if (error) {
           console.warn('[SAIL Monetization] Error creating subscription:', error.message);
@@ -208,12 +208,12 @@ export class SubscriptionEngine {
       if (!existing) return false;
 
       const { error } = await supabase
-        .from('subscriptions' as any)
+        .from('subscriptions')
         .update({
           status: 'cancelled',
           cancelled_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
-        } as any)
+        })
         .eq('id', existing.id);
 
       if (error) {
@@ -393,7 +393,7 @@ export class SubscriptionEngine {
   }> {
     try {
       const { data: allSubs } = await supabase
-        .from('subscriptions' as any)
+        .from('subscriptions')
         .select('plan, status, price_monthly, trial_end, cancelled_at');
 
       const subs = (allSubs || []) as unknown as Subscription[];

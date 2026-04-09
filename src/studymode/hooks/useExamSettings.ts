@@ -29,7 +29,7 @@ export function useExamSettings() {
       }
 
       const { data, error: fetchError } = await supabase
-        .from('exam_settings' as any)
+        .from('exam_settings')
         .select('*')
         .eq('user_id', session.user.id)
         .maybeSingle();
@@ -64,7 +64,7 @@ export function useExamSettings() {
       if (settings) {
         // Update existing
         const { data, error: updateError } = await supabase
-          .from('exam_settings' as any)
+          .from('exam_settings')
           .update({
             exam_name: examName.trim(),
             exam_date: examDateStr,
@@ -78,7 +78,7 @@ export function useExamSettings() {
       } else {
         // Insert new
         const { data, error: insertError } = await supabase
-          .from('exam_settings' as any)
+          .from('exam_settings')
           .insert({
             user_id: session.user.id,
             exam_name: examName.trim(),

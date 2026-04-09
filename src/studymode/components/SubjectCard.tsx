@@ -1,7 +1,7 @@
 import { Lock, ChevronRight, Target } from 'lucide-react';
 import { Subject } from '../types/study';
-import { Progress } from './ui/progress';
-import { cn } from '../lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 interface SubjectCardProps {
   subject: Subject;

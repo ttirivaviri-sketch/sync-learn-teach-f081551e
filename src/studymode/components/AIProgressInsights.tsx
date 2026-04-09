@@ -1,8 +1,8 @@
 import { useState, useCallback } from 'react';
 import { Sparkles, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 
 interface AIProgressInsightsProps {

@@ -112,9 +112,9 @@ export function useAIProgressTracker() {
       // Persist signals to Supabase (best effort)
       try {
         for (const signal of signals) {
-          await supabase.from('daily_tasks' as any).update({
+          await supabase.from('daily_tasks').update({
             updated_at: new Date().toISOString(),
-          } as any).eq('user_id', user.id).limit(1);
+          }).eq('user_id', user.id).limit(1);
         }
       } catch {
         // daily_tasks table might not have all columns yet
@@ -289,7 +289,7 @@ export function useAIProgressTracker() {
       // Build context from recent performance
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
       const { data: attempts } = await supabase
-        .from('quiz_attempts' as any)
+        .from('quiz_attempts')
         .select('topic_name, was_correct, difficulty_rating, created_at')
         .eq('user_id', user.id)
         .gte('created_at', thirtyDaysAgo)

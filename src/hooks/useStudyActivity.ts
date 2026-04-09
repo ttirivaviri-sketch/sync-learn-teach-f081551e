@@ -36,8 +36,8 @@ export function useStudyActivity(userId?: string) {
       const weekAgo = new Date();
       weekAgo.setDate(weekAgo.getDate() - 7);
 
-      const { data, error } = await (supabase
-        .from("study_activity") as any)
+      const { data, error } = await supabase
+        .from("study_activity")
         .select("*")
         .eq("user_id", userId)
         .gte("date", weekAgo.toISOString().split("T")[0])
@@ -74,8 +74,8 @@ export function useStudyActivity(userId?: string) {
     }) => {
       if (!userId) return;
       try {
-        const { error } = await (supabase
-          .from("study_activity") as any)
+        const { error } = await supabase
+          .from("study_activity")
           .insert({
             user_id: userId,
             subject: entry.subject,

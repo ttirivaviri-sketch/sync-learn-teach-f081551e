@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
-import { useToast } from './use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 export interface AppNotification {
   id: string;
@@ -86,7 +86,7 @@ export function useNotifications() {
     // Check due spaced repetition reviews
     try {
       const { data: dueReviews } = await supabase
-        .from('quiz_attempts' as any)
+        .from('quiz_attempts')
         .select('command_word')
         .eq('user_id', user.id)
         .lte('next_review_date', today);

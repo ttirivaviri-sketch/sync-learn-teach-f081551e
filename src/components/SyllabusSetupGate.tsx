@@ -212,7 +212,7 @@ export function SyllabusSetupGate({
           prerequisites: [],
         }));
 
-        await (supabase.from("subjects") as any).insert({
+        await supabase.from("subjects").insert({
           user_id: userId,
           name: subject,
           syllabus_code: syllabusCode || null,
@@ -339,7 +339,7 @@ export function SyllabusSetupGate({
       for (const subjectName of academicProfile.subjects) {
         if (existingNames.has(subjectName.toLowerCase())) continue;
 
-        await (supabase.from("subjects") as any).insert({
+        await supabase.from("subjects").insert({
           user_id: userId,
           name: subjectName,
           syllabus_code: null,

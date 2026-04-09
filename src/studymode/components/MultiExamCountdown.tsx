@@ -5,14 +5,14 @@ import {
   Calendar as CalendarIcon, GraduationCap, Plus, Trash2, ChevronDown, ChevronUp,
   Target, Brain, Flame, Shield, AlertTriangle, CheckCircle2, Clock
 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Calendar } from './ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Progress } from './ui/progress';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 import { SubjectExamWithReadiness } from '../hooks/useSubjectExams';
 import { Subject } from '../types/study';
 

@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { BookOpen, Calendar, Check, ChevronRight, GraduationCap, Layers3 } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { Input } from './ui/input';
-import { Label } from './ui/label';
-import { Calendar as CalendarComponent } from './ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { supabase } from '../../integrations/supabase/client';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import type { AcademicProfile } from '@/types/academicProfile';
 

@@ -38,7 +38,7 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
 
       try {
         const { data, error } = await supabase
-          .from('daily_tasks' as any)
+          .from('daily_tasks')
           .select('*')
           .eq('user_id', userId)
           .eq('task_date', today);
@@ -154,8 +154,8 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
 
       try {
         const { error } = await supabase
-          .from('daily_tasks' as any)
-          .insert(tasksToInsert as any);
+          .from('daily_tasks')
+          .insert(tasksToInsert);
 
         if (error) {
           console.warn('Could not persist tasks:', error.message);
@@ -177,11 +177,11 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
       try {
         // Try to update in DB
         const { error } = await supabase
-          .from('daily_tasks' as any)
+          .from('daily_tasks')
           .update({
             is_completed: true,
             completed_at: new Date().toISOString(),
-          } as any)
+          })
           .eq('id', taskId)
           .eq('user_id', userId);
 
@@ -196,8 +196,8 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
           const nextTask = allTasks[taskIndex + 1];
           if (nextTask.subject_id === allTasks[taskIndex].subject_id) {
             await supabase
-              .from('daily_tasks' as any)
-              .update({ is_locked: false } as any)
+              .from('daily_tasks')
+              .update({ is_locked: false })
               .eq('id', nextTask.id)
               .eq('user_id', userId);
           }

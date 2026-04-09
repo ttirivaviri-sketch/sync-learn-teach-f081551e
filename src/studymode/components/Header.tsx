@@ -4,8 +4,8 @@ import { useExamSettings } from '../hooks/useExamSettings';
 import { useSubjectExams } from '../hooks/useSubjectExams';
 import { useAIGreeting } from '../hooks/useAIGreeting';
 import { NotificationBell } from './NotificationBell';
-import { Skeleton } from './ui/skeleton';
-import { Button } from './ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import { useTheme } from 'next-themes';
 
 export function Header() {

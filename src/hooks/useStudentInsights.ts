@@ -36,7 +36,7 @@ export function useStudentInsights(tutorId?: string): UseStudentInsightsReturn {
 
       try {
         const { data, error: fetchError } = await supabase
-          .from('student_insights_cache' as any)
+          .from('student_insights_cache')
           .select('insights, expires_at')
           .eq('student_id', studentId)
           .eq('tutor_id', tutorId)
@@ -44,14 +44,12 @@ export function useStudentInsights(tutorId?: string): UseStudentInsightsReturn {
 
         if (fetchError || !data) return null; // Table may not exist yet — silently return null
 
-        const row = data as any;
-
         // Check if cache is still valid
-        if (new Date(row.expires_at) < new Date()) {
+        if (new Date(data.expires_at) < new Date()) {
           return null; // Expired
         }
 
-        const cachedInsights = row.insights as unknown as StudentInsightsResponse;
+        const cachedInsights = data.insights as unknown as StudentInsightsResponse;
         setInsights(cachedInsights);
         return cachedInsights;
       } catch (err) {

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap, Send, Eye, MinusCircle, Brain } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { DailyTask, Subject } from '../types/study';
 import { useTaskContent } from '../hooks/useTaskContent';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useUserProgress } from '../hooks/useUserProgress';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface TaskContentPanelProps {
   task: DailyTask;

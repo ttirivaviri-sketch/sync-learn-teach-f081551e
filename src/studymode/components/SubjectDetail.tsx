@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
-import { Button } from './ui/button';
+import { Button } from '@/components/ui/button';
 import { TaskList } from './TaskList';
 import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
@@ -10,7 +10,7 @@ import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface SubjectDetailProps {
   subject: Subject;

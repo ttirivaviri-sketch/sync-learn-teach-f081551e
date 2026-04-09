@@ -1,6 +1,6 @@
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { useMasteryHistory } from '../hooks/useMasteryHistory';
-import { Skeleton } from './ui/skeleton';
+import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart3, TrendingUp } from 'lucide-react';
 
 export function ProgressCharts() {

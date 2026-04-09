@@ -228,7 +228,7 @@ export function useLibraryResources(
       setLoading(true);
       try {
         // ── Primary path: RPC that returns flat fields ──────────────────────
-        const { data: rpcData, error: rpcError } = await (supabase.rpc as any)(
+        const { data: rpcData, error: rpcError } = await supabase.rpc(
           "get_published_tutorials",
           {
             p_curriculum: academicProfile?.curriculum ?? null,
@@ -286,7 +286,7 @@ export function useLibraryResources(
         }
 
         const { data: directData, error: directError } = await supabase
-          .from("tutor_tutorials" as any)
+          .from("tutor_tutorials")
           .select(
             `id, title, subject, topic, subtopic, grade, curriculum,
              description, rating, review_count, thumbnail_url,

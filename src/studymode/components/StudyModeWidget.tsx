@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, X, MessageSquare, BookOpen, Target, ChevronUp, Sparkles, GraduationCap } from 'lucide-react';
-import { Button } from './ui/button';
-import { cn } from '../lib/utils';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { supabase } from '../../integrations/supabase/client';
 
 interface TutorAssignment {
@@ -35,7 +35,7 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
 
         // Query tutor assignments table directly (no edge function needed)
         const { data, error } = await supabase
-          .from('tutor_assignments' as any)
+          .from('tutor_assignments')
           .select('id, subject, topic, focus_area, difficulty_override, notes, due_date')
           .eq('learner_id', session.user.id)
           .order('created_at', { ascending: false })
@@ -69,13 +69,13 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
 
       // Track session start directly in Supabase (no edge function needed)
       const { data } = await supabase
-        .from('study_sessions' as any)
+        .from('study_sessions')
         .insert({ user_id: session.user.id, started_at: new Date().toISOString() })
         .select('id')
         .single();
 
-      if ((data as any)?.id) {
-        setSessionId((data as any).id);
+      if (data?.id) {
+        setSessionId(data.id);
         setSessionActive(true);
       }
     } catch {

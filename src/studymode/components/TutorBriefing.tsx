@@ -1,5 +1,5 @@
 import { GraduationCap, AlertTriangle, Lightbulb, Target, BookOpen } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 
 interface StudentStruggle {
   topic: string;

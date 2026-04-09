@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Loader2, Bot, User, Sparkles, Trash2, BookOpen } from 'lucide-react';
-import { Button } from './ui/button';
-import { Textarea } from './ui/textarea';
-import { ScrollArea } from './ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAITutor } from '../hooks/useAITutor';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
-import { cn } from '../lib/utils';
+import { cn } from '@/lib/utils';
 import { MathMarkdown } from './MathMarkdown';
 
 interface ChatPanelProps {
