@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/utils/logger";
 
 interface QuickBookingModalProps {
   isOpen: boolean;
@@ -174,7 +175,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       setDuration('60');
       setNotes('');
     } catch (error) {
-      console.error('Booking error:', error);
+      logger.error('Booking error:', error);
       toast({
         title: "Booking Failed",
         description: "There was an error sending your booking request. Please try again.",

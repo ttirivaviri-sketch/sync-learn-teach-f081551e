@@ -36,6 +36,7 @@ import type {
   SubscriptionFeatures,
 } from '../types';
 import { PLAN_FEATURES, PLAN_PRICING, TRIAL_DURATION_DAYS } from '../types';
+import { logger } from "@/utils/logger";
 
 // ─── Subscription Engine ────────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ export class SubscriptionEngine {
         .maybeSingle();
 
       if (error) {
-        console.warn('[SAIL Monetization] Error fetching subscription:', error.message);
+        logger.warn('[SAIL Monetization] Error fetching subscription:', error.message);
         return null;
       }
 
@@ -118,7 +119,7 @@ export class SubscriptionEngine {
         .single();
 
       if (error) {
-        console.warn('[SAIL Monetization] Error creating trial:', error.message);
+        logger.warn('[SAIL Monetization] Error creating trial:', error.message);
         // Return in-memory subscription
         return {
           id: `sub-trial-${userId}`,
@@ -166,7 +167,7 @@ export class SubscriptionEngine {
           .eq('id', existing.id);
 
         if (error) {
-          console.warn('[SAIL Monetization] Error upgrading plan:', error.message);
+          logger.warn('[SAIL Monetization] Error upgrading plan:', error.message);
           return false;
         }
       } else {
@@ -188,7 +189,7 @@ export class SubscriptionEngine {
           });
 
         if (error) {
-          console.warn('[SAIL Monetization] Error creating subscription:', error.message);
+          logger.warn('[SAIL Monetization] Error creating subscription:', error.message);
           return false;
         }
       }
@@ -217,7 +218,7 @@ export class SubscriptionEngine {
         .eq('id', existing.id);
 
       if (error) {
-        console.warn('[SAIL Monetization] Error cancelling:', error.message);
+        logger.warn('[SAIL Monetization] Error cancelling:', error.message);
         return false;
       }
 

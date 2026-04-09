@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { aiRequestJSON } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 const MILESTONES = [7, 14, 30];
 const STORAGE_KEY = 'celebrated-streaks';
@@ -68,7 +69,7 @@ export function StreakCelebration() {
           });
       setAiMessage(data.message || '');
     } catch (err) {
-      console.error('Streak celebration error:', err);
+      logger.error('Streak celebration error:', err);
     } finally {
       setIsLoading(false);
     }

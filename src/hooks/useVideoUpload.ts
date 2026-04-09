@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from "@/utils/logger";
 import type {
   VideoUploadRequest,
   VideoUploadResponse,
@@ -54,13 +55,13 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
       if (fetchError) {
         // Silently ignore "relation does not exist" for unmigrated DBs
         if (!fetchError.message?.includes('does not exist')) {
-          console.warn('Video fetch error:', fetchError.message);
+          logger.warn('Video fetch error:', fetchError.message);
         }
       } else if (data) {
         setVideos(data as unknown as VideoContent[]);
       }
     } catch (err) {
-      console.warn('Error fetching videos (table may not exist yet):', err);
+      logger.warn('Error fetching videos (table may not exist yet):', err);
     } finally {
       setIsLoading(false);
     }
@@ -104,7 +105,7 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         setError(message);
-        console.error('Video submission error:', err);
+        logger.error('Video submission error:', err);
         return null;
       } finally {
         setIsSubmitting(false);
@@ -129,14 +130,14 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
           .eq('tutor_id', tutorId!);
 
         if (updateError) {
-          console.error('Ownership confirmation error:', updateError);
+          logger.error('Ownership confirmation error:', updateError);
           return false;
         }
 
         await refreshVideos();
         return true;
       } catch (err) {
-        console.error('Error confirming ownership:', err);
+        logger.error('Error confirming ownership:', err);
         return false;
       }
     },
@@ -154,14 +155,14 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
           .eq('tutor_id', tutorId!);
 
         if (deleteError) {
-          console.error('Video delete error:', deleteError);
+          logger.error('Video delete error:', deleteError);
           return false;
         }
 
         setVideos((prev) => prev.filter((v) => v.id !== videoId));
         return true;
       } catch (err) {
-        console.error('Error deleting video:', err);
+        logger.error('Error deleting video:', err);
         return false;
       }
     },

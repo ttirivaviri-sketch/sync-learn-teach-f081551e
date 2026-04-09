@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 interface LocationPickerProps {
   currentLat?: number;
@@ -50,7 +51,7 @@ export const LocationPicker = ({ currentLat, currentLng, onLocationUpdate }: Loc
             description: "Your location has been saved successfully.",
           });
         } catch (error) {
-          console.error('Error updating location:', error);
+          logger.error('Error updating location:', error);
           toast({
             title: "Error",
             description: "Failed to save location. Please try again.",
@@ -123,7 +124,7 @@ export const LocationPicker = ({ currentLat, currentLng, onLocationUpdate }: Loc
         });
         setManualAddress('');
       } catch (error) {
-        console.error('Error updating location:', error);
+        logger.error('Error updating location:', error);
         toast({
           title: "Error",
           description: "Failed to save location. Please try again.",

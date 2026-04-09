@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Shield, UserPlus, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 const Roles = () => {
   const [userRoles, setUserRoles] = useState<any[]>([]);
@@ -39,7 +40,7 @@ const Roles = () => {
       if (error) throw error;
       setUserRoles(data || []);
     } catch (error) {
-      console.error('Error loading roles:', error);
+      logger.error('Error loading roles:', error);
       toast({
         title: "Error",
         description: "Failed to load user roles",
@@ -60,7 +61,7 @@ const Roles = () => {
       if (error) throw error;
       setAllUsers(data || []);
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
     }
   };
 
@@ -94,7 +95,7 @@ const Roles = () => {
       setSelectedRole("");
       loadRoles();
     } catch (error: any) {
-      console.error('Error adding role:', error);
+      logger.error('Error adding role:', error);
       toast({
         title: "Error",
         description: error.message || "Failed to assign role",
@@ -119,7 +120,7 @@ const Roles = () => {
 
       loadRoles();
     } catch (error) {
-      console.error('Error removing role:', error);
+      logger.error('Error removing role:', error);
       toast({
         title: "Error",
         description: "Failed to remove role",

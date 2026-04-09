@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useLearnerSubjects } from "@/hooks/useLearnerSubjects";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 const STUDY_LEVELS = [
   { key: "junior_primary", label: "Junior Primary (Grades 1–4)" },
@@ -60,7 +61,7 @@ const LearnerSyllabusManager = ({ userId, currentStudyLevel, onProfileUpdated }:
       toast({ title: "Grade updated", description: "Your study level has been saved." });
       onProfileUpdated?.();
     } catch (error) {
-      console.error("Error updating study level:", error);
+      logger.error("Error updating study level:", error);
       toast({ title: "Error", description: "Failed to update grade.", variant: "destructive" });
     } finally {
       setSavingLevel(false);

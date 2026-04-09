@@ -9,6 +9,7 @@
  */
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from "@/utils/logger";
 import type {
   StudentInsightsRequest,
   StudentInsightsResponse,
@@ -53,7 +54,7 @@ export function useStudentInsights(tutorId?: string): UseStudentInsightsReturn {
         setInsights(cachedInsights);
         return cachedInsights;
       } catch (err) {
-        console.warn('Cache lookup failed:', err);
+        logger.warn('Cache lookup failed:', err);
         return null;
       }
     },
@@ -108,7 +109,7 @@ export function useStudentInsights(tutorId?: string): UseStudentInsightsReturn {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         setError(message);
-        console.error('Student insights generation error:', err);
+        logger.error('Student insights generation error:', err);
         return null;
       } finally {
         setIsGenerating(false);

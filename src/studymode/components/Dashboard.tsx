@@ -35,6 +35,7 @@ import { RiskLevelSummary, buildSubjectRisks } from '@/components/RiskLevelIndic
 import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { useStudyActivity } from '@/hooks/useStudyActivity';
+import { logger } from "@/utils/logger";
 
 interface DashboardProps {
   readiness: ReadinessCheckType;
@@ -69,7 +70,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
     if (academicProfile && !aiIntelligence.isLoading) {
       aiIntelligence.buildAIContext().then(ctx => {
         setAIContextPayload(ctx);
-      }).catch(console.warn);
+      }).catch((e) => logger.warn(e));
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [academicProfile, aiIntelligence.isLoading]);
@@ -145,9 +146,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 exam_name: `${ed.subject} Exam`,
                 exam_date: ed.date,
               });
-              console.log(`[Dashboard] Synced exam date for ${ed.subject}: ${ed.date}`);
+              logger.info(`[Dashboard] Synced exam date for ${ed.subject}: ${ed.date}`);
             } catch (err) {
-              console.warn(`[Dashboard] Failed to sync exam date for ${ed.subject}:`, err);
+              logger.warn(`[Dashboard] Failed to sync exam date for ${ed.subject}:`, err);
             }
           }
         }

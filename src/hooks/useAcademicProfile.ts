@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AcademicProfile, SubjectExamDate } from "@/types/academicProfile";
+import { logger } from "@/utils/logger";
 
 interface UseAcademicProfileReturn {
   profile: AcademicProfile | null;
@@ -30,7 +31,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         .maybeSingle();
 
       if (error && error.code !== "PGRST116") {
-        console.error("[useAcademicProfile] Error loading profile:", error);
+        logger.error("[useAcademicProfile] Error loading profile:", error);
       }
 
       if (data) {
@@ -44,7 +45,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
           }
         }
         setProfile(rawProfile);
-        console.log("[useAcademicProfile] Profile loaded successfully:", {
+        logger.info("[useAcademicProfile] Profile loaded successfully:", {
           curriculum: rawProfile.curriculum,
           grade: rawProfile.grade,
           subjects: rawProfile.subjects?.length,
@@ -56,7 +57,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         setProfile(null);
       }
     } catch (err) {
-      console.error("[useAcademicProfile] Fetch error:", err);
+      logger.error("[useAcademicProfile] Fetch error:", err);
     } finally {
       setLoading(false);
     }
@@ -69,14 +70,14 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
   const saveProfile = useCallback(
     async (data: Partial<AcademicProfile>): Promise<boolean> => {
       if (!userId) {
-        console.error("[useAcademicProfile] Cannot save: no userId");
+        logger.error("[useAcademicProfile] Cannot save: no userId");
         return false;
       }
       setSaving(true);
       try {
         const examDatesJson: SubjectExamDate[] = data.exam_dates || [];
 
-        console.log("[useAcademicProfile] Saving profile:", {
+        logger.info("[useAcademicProfile] Saving profile:", {
           curriculum: data.curriculum,
           grade: data.grade,
           subjects: data.subjects?.length,
@@ -106,13 +107,13 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
           });
 
           if (!rpcV2Error) {
-            console.log("[useAcademicProfile] Saved via RPC v2 (full)");
+            logger.info("[useAcademicProfile] Saved via RPC v2 (full)");
             saved = true;
           } else {
-            console.warn("[useAcademicProfile] RPC v2 failed:", rpcV2Error.message);
+            logger.warn("[useAcademicProfile] RPC v2 failed:", rpcV2Error.message);
           }
         } catch (rpcV2Err) {
-          console.warn("[useAcademicProfile] RPC v2 exception:", rpcV2Err);
+          logger.warn("[useAcademicProfile] RPC v2 exception:", rpcV2Err);
         }
 
         // --- Attempt 2: v1 RPC (core fields only, 4 params) ---
@@ -126,13 +127,13 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
             });
 
             if (!rpcV1Error) {
-              console.log("[useAcademicProfile] Saved via RPC v1 (core only — run the migration to enable emails & exam dates)");
+              logger.info("[useAcademicProfile] Saved via RPC v1 (core only — run the migration to enable emails & exam dates)");
               saved = true;
             } else {
-              console.warn("[useAcademicProfile] RPC v1 failed:", rpcV1Error.message);
+              logger.warn("[useAcademicProfile] RPC v1 failed:", rpcV1Error.message);
             }
           } catch (rpcV1Err) {
-            console.warn("[useAcademicProfile] RPC v1 exception:", rpcV1Err);
+            logger.warn("[useAcademicProfile] RPC v1 exception:", rpcV1Err);
           }
         }
 
@@ -152,11 +153,11 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
             .upsert(corePayload, { onConflict: "user_id" });
 
           if (coreError) {
-            console.error("[useAcademicProfile] Direct upsert also failed:", coreError);
+            logger.error("[useAcademicProfile] Direct upsert also failed:", coreError);
             throw coreError;
           }
 
-          console.log("[useAcademicProfile] Saved via direct upsert (core only)");
+          logger.info("[useAcademicProfile] Saved via direct upsert (core only)");
           saved = true;
         }
 
@@ -247,17 +248,17 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
                       exam_date: examEntry.date,
                     });
                 }
-                console.log(`[useAcademicProfile] Synced exam date for ${examEntry.subject}: ${examEntry.date}`);
+                logger.info(`[useAcademicProfile] Synced exam date for ${examEntry.subject}: ${examEntry.date}`);
               }
             }
           }
         }
 
         await fetchProfile();
-        console.log("[useAcademicProfile] Profile saved successfully");
+        logger.info("[useAcademicProfile] Profile saved successfully");
         return true;
       } catch (err) {
-        console.error("[useAcademicProfile] Save error:", err);
+        logger.error("[useAcademicProfile] Save error:", err);
         return false;
       } finally {
         setSaving(false);

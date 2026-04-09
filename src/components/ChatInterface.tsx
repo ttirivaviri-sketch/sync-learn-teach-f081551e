@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Session } from "@supabase/supabase-js";
+import { logger } from "@/utils/logger";
 
 interface Message {
   id: string;
@@ -170,7 +171,7 @@ const ChatInterface = ({
 
       setConversations(conversationsWithUserInfo);
     } catch (error) {
-      console.error('Error loading conversations:', error);
+      logger.error('Error loading conversations:', error);
       toast({
         title: "Error",
         description: "Failed to load conversations",
@@ -219,7 +220,7 @@ const ChatInterface = ({
         );
       }
     } catch (error) {
-      console.error('Error loading messages:', error);
+      logger.error('Error loading messages:', error);
       toast({
         title: "Error",
         description: "Failed to load messages",
@@ -265,7 +266,7 @@ const ChatInterface = ({
       setActiveConversation(data.id);
       loadConversations();
     } catch (error) {
-      console.error('Error creating conversation:', error);
+      logger.error('Error creating conversation:', error);
       toast({
         title: "Error",
         description: "Failed to create conversation",
@@ -290,7 +291,7 @@ const ChatInterface = ({
 
       setNewMessage("");
     } catch (error) {
-      console.error('Error sending message:', error);
+      logger.error('Error sending message:', error);
       toast({
         title: "Error",
         description: "Failed to send message",
@@ -306,7 +307,7 @@ const ChatInterface = ({
         .update({ read_at: new Date().toISOString() })
         .eq('id', messageId);
     } catch (error) {
-      console.error('Error marking message as read:', error);
+      logger.error('Error marking message as read:', error);
     }
   };
 

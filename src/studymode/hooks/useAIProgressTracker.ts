@@ -22,6 +22,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequestJSON } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -163,7 +164,7 @@ export function useAIProgressTracker() {
       // Detect anomalies
       detectAnomalies(signals);
     } catch (err) {
-      console.warn('[AIProgressTracker] Error processing signals:', err);
+      logger.warn('[AIProgressTracker] Error processing signals:', err);
     } finally {
       processingRef.current = false;
     }
@@ -318,7 +319,7 @@ export function useAIProgressTracker() {
       setState(prev => ({ ...prev, lastInsightGenerated: new Date() }));
       return result.insights || null;
     } catch (err) {
-      console.warn('[AIProgressTracker] Insight generation failed:', err);
+      logger.warn('[AIProgressTracker] Insight generation failed:', err);
       return null;
     }
   }, [state.anomalies, state.difficultyCalibration]);

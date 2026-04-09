@@ -38,6 +38,7 @@
  */
 
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 import type {
   SAILTask,
   SAILTaskType,
@@ -147,7 +148,7 @@ export class SAILTaskEngine {
         .single();
 
       if (error) {
-        console.warn('[SAIL TaskEngine] Failed to create task in DB:', error.message);
+        logger.warn('[SAIL TaskEngine] Failed to create task in DB:', error.message);
         // Return in-memory task
         return {
           id: `sail-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -181,7 +182,7 @@ export class SAILTaskEngine {
         .limit(limit);
 
       if (error) {
-        console.warn('[SAIL TaskEngine] Error fetching tasks:', error.message);
+        logger.warn('[SAIL TaskEngine] Error fetching tasks:', error.message);
         return [];
       }
 
@@ -221,7 +222,7 @@ export class SAILTaskEngine {
       const { data, error } = await query;
 
       if (error) {
-        console.warn('[SAIL TaskEngine] Error fetching tasks:', error.message);
+        logger.warn('[SAIL TaskEngine] Error fetching tasks:', error.message);
         return [];
       }
 
@@ -257,7 +258,7 @@ export class SAILTaskEngine {
         .eq('id', taskId);
 
       if (error) {
-        console.warn('[SAIL TaskEngine] Error updating task:', error.message);
+        logger.warn('[SAIL TaskEngine] Error updating task:', error.message);
         return false;
       }
 

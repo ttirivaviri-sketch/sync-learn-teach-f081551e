@@ -26,7 +26,7 @@
            .in('booking_id', bookingIds);
  
          if (error) {
-           console.error('Error fetching payments:', error);
+           logger.error('Error fetching payments:', error);
            return;
          }
  
@@ -48,7 +48,7 @@
  
          setPaymentStatuses(statusMap);
        } catch (error) {
-         console.error('Error in fetchPayments:', error);
+         logger.error('Error in fetchPayments:', error);
        } finally {
          setLoading(false);
        }

@@ -13,6 +13,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import StarRating from "./StarRating";
+import { logger } from "@/utils/logger";
 
 interface ReviewModalProps {
   isOpen: boolean;
@@ -72,7 +73,7 @@ const ReviewModal = ({
       setRating(0);
       setComment("");
     } catch (error) {
-      console.error('Error submitting review:', error);
+      logger.error('Error submitting review:', error);
       toast({
         title: "Error",
         description: "Failed to submit review. Please try again.",

@@ -9,6 +9,7 @@ import StarRating from "@/components/StarRating";
 import ReviewModal from "@/components/ReviewModal";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 interface Session {
   id: string;
@@ -65,7 +66,7 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
         const { data: bookings, error } = await query;
 
         if (error) {
-          console.error('Error fetching session history:', error);
+          logger.error('Error fetching session history:', error);
           toast({
             title: 'Error',
             description: 'Failed to load session history',
@@ -127,7 +128,7 @@ const SessionHistory = ({ userType, userId }: SessionHistoryProps) => {
 
         setSessions(transformedSessions);
       } catch (error) {
-        console.error('Error in fetchSessionHistory:', error);
+        logger.error('Error in fetchSessionHistory:', error);
       } finally {
         setLoading(false);
       }

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '../types/study';
+import { logger } from "@/utils/logger";
 
 interface UserProgressData {
   id: string;
@@ -53,7 +54,7 @@ export function useUserProgress() {
 
         if (error) {
           // Table may not exist yet in this Supabase instance
-          console.warn('[useUserProgress] user_progress table unavailable:', error.message);
+          logger.warn('[useUserProgress] user_progress table unavailable:', error.message);
           return null;
         }
 
@@ -67,7 +68,7 @@ export function useUserProgress() {
               .single();
 
             if (insertError) {
-              console.warn('[useUserProgress] Could not create progress record:', insertError.message);
+              logger.warn('[useUserProgress] Could not create progress record:', insertError.message);
               return null;
             }
             return {
@@ -159,7 +160,7 @@ export function useUserProgress() {
         }
         return newXp;
       } catch (err) {
-        console.warn('[addXp] Failed:', err);
+        logger.warn('[addXp] Failed:', err);
         return progress?.xp ?? 0;
       }
     },
@@ -200,7 +201,7 @@ export function useUserProgress() {
 
         return newStreak;
       } catch (err) {
-        console.warn('[updateStreak] Failed:', err);
+        logger.warn('[updateStreak] Failed:', err);
         return progress?.streak ?? 0;
       }
     },
@@ -233,7 +234,7 @@ export function useUserProgress() {
 
         return newBadges;
       } catch (err) {
-        console.warn('[awardBadge] Failed:', err);
+        logger.warn('[awardBadge] Failed:', err);
         return progress?.badges ?? [];
       }
     },

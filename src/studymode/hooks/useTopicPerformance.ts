@@ -13,6 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,7 +146,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         avgResponseTimeSecs: null,
       });
     } catch (err) {
-      console.error('[useTopicPerformance]', err);
+      logger.error('[useTopicPerformance]', err);
     } finally {
       setIsLoading(false);
     }

@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarWidget } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { logger } from "@/utils/logger";
 import {
   AcademicProfile,
   Curriculum,
@@ -114,7 +115,7 @@ export function AcademicProfileSetup({
         date: date.toISOString().split("T")[0],
       }));
 
-    console.log("[AcademicProfileSetup] Saving profile:", {
+    logger.info("[AcademicProfileSetup] Saving profile:", {
       curriculum,
       grade,
       subjects: subjects.length,

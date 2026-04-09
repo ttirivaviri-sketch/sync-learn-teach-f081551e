@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 const Support = () => {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -44,7 +45,7 @@ const Support = () => {
       if (error) throw error;
       setTickets(data || []);
     } catch (error) {
-      console.error('Error loading tickets:', error);
+      logger.error('Error loading tickets:', error);
       toast({
         title: "Error",
         description: "Failed to load support tickets",
@@ -71,7 +72,7 @@ const Support = () => {
 
       loadTickets();
     } catch (error) {
-      console.error('Error updating ticket:', error);
+      logger.error('Error updating ticket:', error);
       toast({
         title: "Error",
         description: "Failed to update ticket status",

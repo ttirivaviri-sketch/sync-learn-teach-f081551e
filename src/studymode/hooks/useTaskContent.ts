@@ -13,6 +13,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { aiRequest } from '../lib/aiClient';
 import type { AIContextPayload } from './useAIStudyIntelligence';
+import { logger } from "@/utils/logger";
 
 export interface TaskContentParams {
   taskType: string;
@@ -249,7 +250,7 @@ export function useTaskContent(): UseTaskContentReturn {
       }
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error';
-      console.error('[useTaskContent] Error:', message);
+      logger.error('[useTaskContent] Error:', message);
       setError(message);
     } finally {
       setIsLoading(false);

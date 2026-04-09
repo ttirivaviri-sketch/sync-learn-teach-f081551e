@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { analytics } from '@/utils/analytics';
+import { logger } from "@/utils/logger";
 
 export interface TutorSubject {
   id: string;
@@ -64,7 +65,7 @@ export const useTutorData = (
         .eq('user_type', 'tutor');
 
       if (profilesError) {
-        console.error('Error fetching tutors:', profilesError);
+        logger.error('Error fetching tutors:', profilesError);
         throw profilesError;
       }
 
@@ -193,7 +194,7 @@ export const useTutorData = (
         subjectFilter: options?.subjectFilter || null,
       });
     } catch (error) {
-      console.error('Error fetching tutors:', error);
+      logger.error('Error fetching tutors:', error);
       analytics.error(error as Error, 'fetch_tutors_failed');
       toast({
         title: 'Error',

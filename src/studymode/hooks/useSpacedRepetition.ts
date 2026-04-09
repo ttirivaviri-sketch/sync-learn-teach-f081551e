@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 export interface QuizAttempt {
   id: string;
@@ -91,7 +92,7 @@ export function useSpacedRepetition(userId: string | null) {
 
       setDueReviews((data as unknown as QuizAttempt[]) || []);
     } catch (err) {
-      console.error('Error fetching due reviews:', err);
+      logger.error('Error fetching due reviews:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch reviews');
     } finally {
       setIsLoading(false);
@@ -162,7 +163,7 @@ export function useSpacedRepetition(userId: string | null) {
 
       setTopicStats(stats);
     } catch (err) {
-      console.error('Error fetching topic stats:', err);
+      logger.error('Error fetching topic stats:', err);
     }
   }, [userId]);
 
@@ -276,7 +277,7 @@ export function useSpacedRepetition(userId: string | null) {
         return data;
       }
     } catch (err) {
-      console.error('Error recording quiz attempt:', err);
+      logger.error('Error recording quiz attempt:', err);
       setError(err instanceof Error ? err.message : 'Failed to record attempt');
       return null;
     }

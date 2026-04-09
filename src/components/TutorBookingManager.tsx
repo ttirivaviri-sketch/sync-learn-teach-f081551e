@@ -12,6 +12,7 @@ import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { RescheduleDialog } from "@/components/RescheduleDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { format, formatDistanceToNow, isToday, isTomorrow, isPast } from "date-fns";
+import { logger } from "@/utils/logger";
 
 interface TutorBookingManagerProps {
   bookings: BookingRequest[];
@@ -118,7 +119,7 @@ export const TutorBookingManager = ({
         description: "The learner has been notified of the new time.",
       });
     } catch (error) {
-      console.error('Reschedule error:', error);
+      logger.error('Reschedule error:', error);
       toast({
         title: "Error",
         description: "Failed to reschedule booking. Please try again.",

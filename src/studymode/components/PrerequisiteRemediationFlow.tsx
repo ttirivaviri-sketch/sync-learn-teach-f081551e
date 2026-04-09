@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MathMarkdown } from './MathMarkdown';
 import { aiRequestJSON } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 interface PrerequisiteGap {
   topic: string;
@@ -67,7 +68,7 @@ export function PrerequisiteRemediationFlow({
         onComplete();
       }
     } catch (error) {
-      console.error('Prerequisite analysis error:', error);
+      logger.error('Prerequisite analysis error:', error);
       toast({
         title: 'Analysis Error',
         description: 'Failed to analyze prerequisites. Continuing anyway.',
@@ -90,7 +91,7 @@ export function PrerequisiteRemediationFlow({
       });
       setTheoryContent(data.theory ?? '');
     } catch (error) {
-      console.error('Theory loading error:', error);
+      logger.error('Theory loading error:', error);
       toast({
         title: 'Error',
         description: 'Failed to load theory content.',
@@ -116,7 +117,7 @@ export function PrerequisiteRemediationFlow({
       setQuizQuestions(data.questions ?? []);
       setCurrentQuestionIndex(0);
     } catch (error) {
-      console.error('Quiz loading error:', error);
+      logger.error('Quiz loading error:', error);
       toast({
         title: 'Error',
         description: 'Failed to load quiz.',

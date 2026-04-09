@@ -3,6 +3,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { useEffect, useState, useCallback } from 'react';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
 import { useAdaptiveLearningEngine } from './useAdaptiveLearningEngine';
+import { logger } from "@/utils/logger";
 
 export interface StudyScheduleItem {
   id: string;
@@ -66,7 +67,7 @@ export function useStudySchedule(month?: Date) {
         .order('scheduled_date', { ascending: true });
 
       if (error) {
-        console.warn('[useStudySchedule] Table unavailable:', error.message);
+        logger.warn('[useStudySchedule] Table unavailable:', error.message);
         return [];
       }
       return (data || []) as unknown as StudyScheduleItem[];
@@ -114,7 +115,7 @@ export function useStudySchedule(month?: Date) {
 
       queryClient.invalidateQueries({ queryKey: ['user-progress'] });
     } catch (err) {
-      console.warn('[useStudySchedule] XP award failed:', err);
+      logger.warn('[useStudySchedule] XP award failed:', err);
     }
   }, [queryClient]);
 
@@ -139,10 +140,10 @@ export function useStudySchedule(month?: Date) {
 
       if (rate >= ADAPTATION_THRESHOLD) {
         // Cooldown check is inside checkAndAdapt
-        checkAndAdapt().catch(console.warn);
+        checkAndAdapt().catch((e) => logger.warn(e));
       }
     } catch (err) {
-      console.warn('[useStudySchedule] Adaptive check failed:', err);
+      logger.warn('[useStudySchedule] Adaptive check failed:', err);
     }
   }, [checkAndAdapt]);
 

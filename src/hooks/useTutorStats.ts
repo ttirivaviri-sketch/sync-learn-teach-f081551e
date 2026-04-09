@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { startOfDay, startOfWeek, startOfMonth, subDays, format } from 'date-fns';
+import { logger } from "@/utils/logger";
 
 interface TutorStats {
   todayEarnings: number;
@@ -72,7 +73,7 @@ export const useTutorStats = (userId?: string) => {
           .order('scheduled_at', { ascending: false });
 
         if (bookingsError) {
-          console.error('Error fetching bookings:', bookingsError);
+          logger.error('Error fetching bookings:', bookingsError);
           return;
         }
 
@@ -83,7 +84,7 @@ export const useTutorStats = (userId?: string) => {
           .eq('reviewed_id', userId);
 
         if (reviewsError) {
-          console.error('Error fetching reviews:', reviewsError);
+          logger.error('Error fetching reviews:', reviewsError);
         }
 
         // Calculate stats
@@ -176,7 +177,7 @@ export const useTutorStats = (userId?: string) => {
         setRecentEarnings(recentEarningsData);
 
       } catch (error) {
-        console.error('Error fetching tutor stats:', error);
+        logger.error('Error fetching tutor stats:', error);
       } finally {
         setLoading(false);
       }

@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from "@/utils/logger";
 
 /**
  * Hook for tutor-side management actions: online status, add/remove subjects.
@@ -30,7 +31,7 @@ export const useTutorManagement = () => {
           : 'Students won\'t see you as available',
       });
     } catch (error) {
-      console.error('Error updating online status:', error);
+      logger.error('Error updating online status:', error);
       toast({
         title: 'Error',
         description: 'Failed to update status. Please try again.',
@@ -55,7 +56,7 @@ export const useTutorManagement = () => {
         description: `${subject} (${level}) added to your profile`,
       });
     } catch (error) {
-      console.error('Error adding subject:', error);
+      logger.error('Error adding subject:', error);
       toast({
         title: 'Error',
         description: 'Failed to add subject. Please try again.',
@@ -78,7 +79,7 @@ export const useTutorManagement = () => {
         description: 'Subject has been removed from your profile',
       });
     } catch (error) {
-      console.error('Error removing subject:', error);
+      logger.error('Error removing subject:', error);
       toast({
         title: 'Error',
         description: 'Failed to remove subject. Please try again.',

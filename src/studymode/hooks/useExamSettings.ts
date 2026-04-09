@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 export interface ExamSettings {
   id: string;
@@ -36,14 +37,14 @@ export function useExamSettings() {
 
       if (fetchError) {
         // Table may not exist yet — treat as no settings
-        console.warn('[useExamSettings] exam_settings unavailable:', fetchError.message);
+        logger.warn('[useExamSettings] exam_settings unavailable:', fetchError.message);
         setIsLoading(false);
         return;
       }
 
       setSettings(data as unknown as ExamSettings | null);
     } catch (err) {
-      console.error('Error fetching exam settings:', err);
+      logger.error('Error fetching exam settings:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch settings');
     } finally {
       setIsLoading(false);
@@ -93,7 +94,7 @@ export function useExamSettings() {
 
       return true;
     } catch (err) {
-      console.error('Error saving exam settings:', err);
+      logger.error('Error saving exam settings:', err);
       setError(err instanceof Error ? err.message : 'Failed to save settings');
       return false;
     } finally {

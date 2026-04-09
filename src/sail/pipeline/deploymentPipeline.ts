@@ -38,6 +38,7 @@
  */
 
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 import type {
   DeploymentPipeline,
   PipelineStage,
@@ -104,7 +105,7 @@ export class SAILDeploymentPipeline {
         .single();
 
       if (error) {
-        console.warn('[SAIL Pipeline] Error creating pipeline:', error.message);
+        logger.warn('[SAIL Pipeline] Error creating pipeline:', error.message);
         return {
           id: `pipe-${Date.now()}`,
           ...pipelineData,
@@ -153,7 +154,7 @@ export class SAILDeploymentPipeline {
         .eq('id', pipelineId);
 
       if (error) {
-        console.warn('[SAIL Pipeline] Error advancing stage:', error.message);
+        logger.warn('[SAIL Pipeline] Error advancing stage:', error.message);
         return false;
       }
 
@@ -222,7 +223,7 @@ export class SAILDeploymentPipeline {
       const { data, error } = await query;
 
       if (error) {
-        console.warn('[SAIL Pipeline] Error fetching pipelines:', error.message);
+        logger.warn('[SAIL Pipeline] Error fetching pipelines:', error.message);
         return [];
       }
 

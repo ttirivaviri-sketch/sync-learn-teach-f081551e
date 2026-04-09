@@ -25,6 +25,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequestJSON } from '../lib/aiClient';
 import type { AIContextPayload } from './useAIStudyIntelligence';
+import { logger } from "@/utils/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -600,7 +601,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
       const ctx = await buildContext();
 
       if (ctx.completionRate >= ADAPTATION_THRESHOLD) {
-        console.log(
+        logger.info(
           `[AdaptiveEngine] Completion rate ${Math.round(ctx.completionRate * 100)}% >= ${ADAPTATION_THRESHOLD * 100}% — regenerating adaptive plan`
         );
         await generateStudyPlan('adaptive');
@@ -614,7 +615,7 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      checkAndAdapt().catch(console.warn);
+      checkAndAdapt().catch((e) => logger.warn(e));
     }, 5000);
     return () => clearTimeout(timer);
   }, [checkAndAdapt]);

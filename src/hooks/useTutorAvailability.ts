@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from "@/utils/logger";
 
 interface TimeSlot {
   id?: string;
@@ -66,7 +67,7 @@ export const useTutorAvailability = (tutorId?: string) => {
 
       setAvailability(transformedAvailability);
     } catch (error) {
-      console.error('Error fetching availability:', error);
+      logger.error('Error fetching availability:', error);
       toast({
         title: 'Error',
         description: 'Failed to load availability schedule',
@@ -105,7 +106,7 @@ export const useTutorAvailability = (tutorId?: string) => {
       });
       return true;
     } catch (error: any) {
-      console.error('Error adding time slot:', error);
+      logger.error('Error adding time slot:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to add time slot',
@@ -137,7 +138,7 @@ export const useTutorAvailability = (tutorId?: string) => {
       });
       return true;
     } catch (error) {
-      console.error('Error removing time slot:', error);
+      logger.error('Error removing time slot:', error);
       toast({
         title: 'Error',
         description: 'Failed to remove time slot',
@@ -165,7 +166,7 @@ export const useTutorAvailability = (tutorId?: string) => {
       await fetchAvailability();
       return true;
     } catch (error) {
-      console.error('Error toggling availability:', error);
+      logger.error('Error toggling availability:', error);
       toast({
         title: 'Error',
         description: 'Failed to update availability',
@@ -206,7 +207,7 @@ export const useTutorAvailability = (tutorId?: string) => {
       });
       return true;
     } catch (error) {
-      console.error('Error setting default schedule:', error);
+      logger.error('Error setting default schedule:', error);
       toast({
         title: 'Error',
         description: 'Failed to set default schedule',

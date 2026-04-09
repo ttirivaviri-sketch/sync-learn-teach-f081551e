@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
+import { logger } from "@/utils/logger";
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -168,7 +169,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
               }
             } else {
               const errData = await parseResp.json().catch(() => ({}));
-              console.error('Parse error:', edgeResult.error?.message || errData.error || parseResp.status);
+              logger.error('Parse error:', edgeResult.error?.message || errData.error || parseResp.status);
             }
           }
 
@@ -261,7 +262,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
             }
           }
         } catch (parseErr) {
-          console.error('Parse request failed:', parseErr);
+          logger.error('Parse request failed:', parseErr);
           // Non-fatal — document is still uploaded
         }
 
@@ -271,7 +272,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
         ));
 
       } catch (error) {
-        console.error("Upload error:", error);
+        logger.error("Upload error:", error);
         setFiles(prev => prev.map((f, idx) => 
           idx === i ? { ...f, status: 'error', error: 'Upload failed' } : f
         ));
@@ -286,7 +287,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
 
     // Trigger adaptive plan regeneration with new document context (runs in background)
     onDocumentUploaded().catch((err) =>
-      console.warn('[DocumentUpload] Adaptive plan regen failed:', err)
+      logger.warn('[DocumentUpload] Adaptive plan regen failed:', err)
     );
 
     onUploadComplete?.();

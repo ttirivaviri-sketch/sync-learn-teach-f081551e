@@ -29,6 +29,7 @@ import {
   GradeLevel,
 } from "@/types/academicProfile";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/utils/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,7 +102,7 @@ export function TutorCreatorDashboard({
           .eq("tutor_id", tutorId)
           .order("created_at", { ascending: false });
         if (error) {
-          console.warn("tutor_tutorials load error:", error.message);
+          logger.warn("tutor_tutorials load error:", error.message);
         } else if (data) {
           setTutorials(
             (data as unknown as Array<{
@@ -127,7 +128,7 @@ export function TutorCreatorDashboard({
           );
         }
       } catch (err) {
-        console.warn("Error loading tutorials:", err);
+        logger.warn("Error loading tutorials:", err);
       } finally {
         setLoadingTutorials(false);
       }
@@ -176,7 +177,7 @@ export function TutorCreatorDashboard({
 
         setTutorials(mapped);
       } catch (error) {
-        console.warn("Failed to load tutor tutorials:", error);
+        logger.warn("Failed to load tutor tutorials:", error);
       }
     };
 

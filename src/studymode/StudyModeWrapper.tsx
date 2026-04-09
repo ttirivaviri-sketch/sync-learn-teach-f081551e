@@ -13,11 +13,12 @@ import React, { lazy, Suspense, Component } from 'react';
 import './studymode.css';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { logger } from "@/utils/logger";
 
 // ── Lazy import of the heavy StudyMode component ──────────────────────────────
 const StudyModeInner = lazy(() =>
   import('./components/StudyMode').catch((err) => {
-    console.error('[StudyMode] Failed to load StudyMode component:', err);
+    logger.error('[StudyMode] Failed to load StudyMode component:', err);
     throw err;
   })
 );
@@ -80,7 +81,7 @@ class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error('[StudyMode] Component error caught by boundary:', error, info);
+    logger.error('[StudyMode] Component error caught by boundary:', error, info);
   }
 
   handleRetry = () => {
