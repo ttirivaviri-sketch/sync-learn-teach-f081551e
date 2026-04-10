@@ -176,6 +176,33 @@ const TutorApp = () => {
     await Promise.all([updateOnlineStatus(checked), setOnlineStatus(checked)]);
   };
 
+  // ── Dev mode: synthetic bootstrap ──────────────────────────────────────
+  useEffect(() => {
+    if (isDevMode && devRole === "tutor") {
+      setDevLoading(false);
+    }
+  }, [isDevMode, devRole]);
+
+  // Dev session launch
+  useEffect(() => {
+    if (isDevMode && devRole === "tutor" && devSessionActive) {
+      setVideoMeetingData({
+        partnerName: "Dev Learner",
+        subject: "Dev Test Session",
+        booking: {
+          id: "dev-booking-tutor-001",
+          room_name: "StudySync-Dev-Tutor-Room",
+          duration_minutes: 60,
+          scheduled_at: new Date().toISOString(),
+          learner_profile: { full_name: "Dev Learner" },
+          tutor_subjects: { subject: "Dev Test Session" },
+        },
+      });
+      setShowVideoMeeting(true);
+      setDevSessionActive(false);
+    }
+  }, [devSessionActive, isDevMode, devRole, setDevSessionActive]);
+
   // ── Early returns (loading / full-screen overlays) ──────────────────────
   if (loading) {
     return (
@@ -188,7 +215,7 @@ const TutorApp = () => {
     );
   }
 
-  if (!session?.user) return null;
+  if (!isDevMode && !session?.user) return null;
 
   if (showVideoMeeting && videoMeetingData) {
     return (
