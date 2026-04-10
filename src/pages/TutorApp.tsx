@@ -11,6 +11,7 @@ import { LogOut, MessageCircle, Home, BookOpen, Activity, User } from "lucide-re
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useDevMode } from "@/contexts/DevModeContext";
 import { useRealtimeBookings, BookingRequest } from "@/hooks/useRealtimeBookings";
 import { useTutorManagement } from "@/hooks/useTutorManagement";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
