@@ -140,7 +140,7 @@ export class SAILTaskEngine {
     };
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('sail_tasks')
         .insert(taskData)
         .select()
@@ -175,7 +175,7 @@ export class SAILTaskEngine {
       const { data, error } = await supabase
         .from('sail_tasks')
         .select('*')
-        .in('status', ['pending', 'assigned'])
+        .in('status', ['pending', 'assigned'] as any)
         .order('priority', { ascending: true })
         .order('created_at', { ascending: true })
         .limit(limit);
@@ -209,7 +209,7 @@ export class SAILTaskEngine {
         .limit(filters?.limit || 50);
 
       if (filters?.status && filters.status.length > 0) {
-        query = query.in('status', filters.status);
+        query = query.in('status', filters.status as any);
       }
       if (filters?.agent) {
         query = query.eq('agent', filters.agent);

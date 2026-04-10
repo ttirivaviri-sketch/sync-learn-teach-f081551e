@@ -79,7 +79,7 @@ export function NotificationSettings() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
-        await supabase
+        await (supabase as any)
           .from('notification_preferences')
           .upsert({
             user_id: user.id,

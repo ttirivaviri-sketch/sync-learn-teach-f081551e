@@ -53,7 +53,7 @@ export const LearnerLibraryTab = ({
       )}
     </div>
     <StudySyncLibrary
-      academicProfile={academicProfile}
+      academicProfile={academicProfile as any}
       onBookTutor={onBookTutor}
       onNeedHelp={onNeedHelp}
     />

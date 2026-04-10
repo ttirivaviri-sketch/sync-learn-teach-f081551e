@@ -263,7 +263,7 @@ export class SAILDetectionSystem {
           severity: signal.severity,
           title: signal.title,
           description: signal.description,
-          data: signal.data,
+          data: signal.data as any,
           suggested_task_type: signal.suggested_task_type,
           suggested_priority: signal.suggested_priority,
           suggested_agent: signal.suggested_agent,

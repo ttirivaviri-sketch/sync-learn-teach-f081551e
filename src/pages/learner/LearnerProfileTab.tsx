@@ -325,7 +325,7 @@ export const LearnerProfileTab = ({
       </Card>
 
       {/* Syllabus & Paper Codes Manager */}
-      {session?.user?.id && <SyllabusSetupGate userId={session.user.id} academicProfile={academicProfile} advisory />}
+      {session?.user?.id && <SyllabusSetupGate userId={session.user.id} academicProfile={academicProfile as any} advisory />}
 
       {/* Payment History */}
       {session?.user?.id && <PaymentHistory userId={session.user.id} limit={5} showViewAll onViewAll={onShowAllPayments} />}

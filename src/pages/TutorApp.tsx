@@ -344,10 +344,10 @@ const TutorApp = () => {
               tutorId={effectiveUserId || ""}
               user={session?.user || { id: "dev-tutor", email: "dev@studysync.test" } as any}
               formattedStats={formattedStats}
-              weeklyData={weeklyData}
+              weeklyData={weeklyData as any}
               recentEarnings={recentEarnings}
               statsLoading={statsLoading}
-              mySubjects={mySubjects}
+              mySubjects={mySubjects as any}
               onNavigateTab={setActiveTab}
               onToast={toast}
             />
