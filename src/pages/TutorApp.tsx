@@ -76,6 +76,9 @@ const TutorApp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Dev-aware user ID
+  const effectiveUserId = session?.user?.id || (isDevMode ? "dev-tutor" : undefined);
+
   // ── Data hooks ──────────────────────────────────────────────────────────
   const {
     bookings,
