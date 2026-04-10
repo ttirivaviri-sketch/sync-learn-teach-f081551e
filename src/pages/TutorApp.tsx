@@ -316,8 +316,8 @@ const TutorApp = () => {
           </TabsContent>
 
           <TabsContent value="tutorials" className="space-y-4">
-            {session.user.id ? (
-              <TutorCreatorDashboard tutorId={session.user.id} tutorName={session.user.email?.split("@")[0] || "Tutor"} />
+            {effectiveUserId ? (
+              <TutorCreatorDashboard tutorId={effectiveUserId} tutorName={session?.user?.email?.split("@")[0] || devUserName || "Tutor"} />
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">Sign in to manage your tutorials.</p>
             )}
@@ -327,7 +327,7 @@ const TutorApp = () => {
             <TutorActivityTab
               bookings={bookings}
               bookingsLoading={bookingsLoading}
-              tutorId={session.user.id}
+              tutorId={effectiveUserId || ""}
               onAccept={handleAcceptRequest}
               onDecline={handleDeclineRequest}
               onJoinSession={handleJoinVideoSession}
@@ -341,8 +341,8 @@ const TutorApp = () => {
 
           <TabsContent value="profile">
             <TutorProfileTab
-              tutorId={session.user.id}
-              user={session.user}
+              tutorId={effectiveUserId || ""}
+              user={session?.user || { id: "dev-tutor", email: "dev@studysync.test" } as any}
               formattedStats={formattedStats}
               weeklyData={weeklyData}
               recentEarnings={recentEarnings}
