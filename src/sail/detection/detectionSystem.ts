@@ -268,7 +268,7 @@ export class SAILDetectionSystem {
           suggested_priority: signal.suggested_priority,
           suggested_agent: signal.suggested_agent,
           auto_create_task: signal.auto_create_task,
-        });
+        }]);
     } catch {
       // Table may not exist yet
     }
