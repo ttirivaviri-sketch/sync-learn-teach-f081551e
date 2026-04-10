@@ -43,7 +43,7 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
 
     try {
       // Fetch wallet — table may not exist yet (migration pending)
-      const { data: walletData, error: walletError } = await supabase
+      const { data: walletData, error: walletError } = await (supabase as any)
         .from('tutor_wallets')
         .select('*')
         .eq('tutor_id', tutorId)
@@ -59,7 +59,7 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
       }
 
       // Fetch recent payouts — table may not exist yet
-      const { data: payoutData, error: payoutError } = await supabase
+      const { data: payoutData, error: payoutError } = await (supabase as any)
         .from('tutor_payouts')
         .select('*')
         .eq('tutor_id', tutorId)

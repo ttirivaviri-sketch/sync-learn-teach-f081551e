@@ -258,7 +258,7 @@ export class SAILDetectionSystem {
     try {
       await supabase
         .from('sail_detection_signals')
-        .insert({
+        .insert([{
           source: signal.source,
           severity: signal.severity,
           title: signal.title,
