@@ -17,6 +17,7 @@ import { detectionSystem } from '../detection/detectionSystem';
 import { subscriptionEngine } from '../monetization/subscriptionEngine';
 import { deploymentPipeline } from '../pipeline/deploymentPipeline';
 import { AGENT_CONFIGS, processTask } from '../agents';
+import { logger } from "@/utils/logger";
 import type {
   SAILTask,
   SAILTaskType,
@@ -128,7 +129,7 @@ export function useSAIL(): UseSAILReturn {
       }));
     };
 
-    init().catch(console.warn);
+    init().catch((e) => logger.warn(e));
   }, []);
 
   // ── Load tasks ────────────────────────────────────────────────────────────

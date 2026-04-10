@@ -16,6 +16,7 @@ import TutorAvailabilityDisplay from "@/components/TutorAvailabilityDisplay";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { logger } from "@/utils/logger";
 
 export const AdvancedBooking = () => {
   const [selectedTutor, setSelectedTutor] = useState<TutorProfile | null>(null);
@@ -115,7 +116,7 @@ export const AdvancedBooking = () => {
       setSelectedEndTime("");
       setNotes("");
     } catch (error) {
-      console.error('Booking error:', error);
+      logger.error('Booking error:', error);
       toast({
         title: "Booking failed",
         description: error instanceof Error ? error.message : "Could not create booking. Please try again.",

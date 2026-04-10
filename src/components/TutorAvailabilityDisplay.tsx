@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { logger } from "@/utils/logger";
 
 interface TimeSlot {
   id: string;
@@ -62,7 +63,7 @@ const TutorAvailabilityDisplay = ({
         if (error) throw error;
         setAvailability(data || []);
       } catch (error) {
-        console.error('Error fetching availability:', error);
+        logger.error('Error fetching availability:', error);
       } finally {
         setLoading(false);
       }

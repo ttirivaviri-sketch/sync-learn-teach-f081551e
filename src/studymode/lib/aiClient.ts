@@ -19,6 +19,7 @@
  */
 
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 // ─── Known Supabase project constants ─────────────────────────────────────────
 // These are public values (not secrets) — the anon key is safe to embed.
@@ -105,7 +106,7 @@ async function invokeEdgeFunction(
 
     return resp;
   } catch (err) {
-    console.warn(`[aiClient] Edge function "${fnName}" unavailable:`, err);
+    logger.warn(`[aiClient] Edge function "${fnName}" unavailable:`, err);
     return null;
   }
 }
@@ -154,7 +155,7 @@ export async function aiRequest(
       if (edgeResp.ok || (edgeResp.status >= 400 && edgeResp.status < 500)) {
         return edgeResp;
       }
-      console.warn(
+      logger.warn(
         `[aiClient] Edge function returned ${edgeResp.status}; falling back to local proxy`,
       );
     }

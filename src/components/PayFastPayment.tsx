@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Loader2, CreditCard, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 interface PayFastPaymentProps {
   bookingId: string;
@@ -66,7 +67,7 @@ export const PayFastPayment = ({
       document.body.appendChild(form);
       form.submit();
     } catch (error) {
-      console.error("Payment error:", error);
+      logger.error("Payment error:", error);
       toast({
         title: "Payment Error",
         description: error instanceof Error ? error.message : "Failed to initiate payment",

@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 const Payments = () => {
   const [payments, setPayments] = useState<any[]>([]);
@@ -40,7 +41,7 @@ const Payments = () => {
         completedToday: todayPayments.data?.reduce((sum, p) => sum + Number(p.amount), 0) || 0,
       });
     } catch (error) {
-      console.error('Error loading stats:', error);
+      logger.error('Error loading stats:', error);
     }
   };
 
@@ -68,7 +69,7 @@ const Payments = () => {
       if (error) throw error;
       setPayments(data || []);
     } catch (error) {
-      console.error('Error loading payments:', error);
+      logger.error('Error loading payments:', error);
       toast({
         title: "Error",
         description: "Failed to load payments",
@@ -96,7 +97,7 @@ const Payments = () => {
       loadPayments();
       loadStats();
     } catch (error) {
-      console.error('Error updating payment:', error);
+      logger.error('Error updating payment:', error);
       toast({
         title: "Error",
         description: "Failed to update payment status",

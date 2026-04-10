@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import type { AcademicProfile } from "@/types/academicProfile";
+import { logger } from "@/utils/logger";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 export interface SyllabusEntry {
@@ -126,7 +127,7 @@ export function SyllabusSetupGate({
         }
       }
     } catch (err) {
-      console.error("Error loading syllabus entries:", err);
+      logger.error("Error loading syllabus entries:", err);
     } finally {
       setLoading(false);
     }
@@ -228,7 +229,7 @@ export function SyllabusSetupGate({
           { onConflict: "user_id,subject" }
         );
       if (lsError && lsError.code !== "23505") {
-        console.warn("learner_subjects sync warning:", lsError);
+        logger.warn("learner_subjects sync warning:", lsError);
       }
 
       toast({ title: "Subject added", description: `${subject} has been saved.` });
@@ -239,7 +240,7 @@ export function SyllabusSetupGate({
       setShowAddForm(false);
       await loadEntries();
     } catch (err) {
-      console.error("Error saving syllabus entry:", err);
+      logger.error("Error saving syllabus entry:", err);
       toast({ title: "Error", description: "Failed to save subject.", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -303,7 +304,7 @@ export function SyllabusSetupGate({
       setEditingId(null);
       await loadEntries();
     } catch (err) {
-      console.error("Error updating syllabus entry:", err);
+      logger.error("Error updating syllabus entry:", err);
       toast({ title: "Error", description: "Failed to update.", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -318,7 +319,7 @@ export function SyllabusSetupGate({
       toast({ title: "Removed", description: `${entry.subject_name} has been removed.` });
       await loadEntries();
     } catch (err) {
-      console.error("Error deleting entry:", err);
+      logger.error("Error deleting entry:", err);
       toast({ title: "Error", description: "Failed to remove.", variant: "destructive" });
     } finally {
       setSaving(false);
@@ -359,7 +360,7 @@ export function SyllabusSetupGate({
       toast({ title: "Subjects imported", description: `${academicProfile.subjects.length} subjects from your academic profile.` });
       await loadEntries();
     } catch (err) {
-      console.error("Auto-populate error:", err);
+      logger.error("Auto-populate error:", err);
       toast({ title: "Error", description: "Failed to import subjects.", variant: "destructive" });
     } finally {
       setSaving(false);

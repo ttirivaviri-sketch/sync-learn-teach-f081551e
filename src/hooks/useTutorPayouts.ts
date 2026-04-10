@@ -9,6 +9,7 @@
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from "@/utils/logger";
 import type {
   PayoutRequest,
   PayoutResponse,
@@ -52,7 +53,7 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
       if (walletError) {
         // Silently ignore "relation does not exist" for unmigrated DBs
         if (!walletError.message?.includes('does not exist')) {
-          console.warn('Wallet fetch error:', walletError.message);
+          logger.warn('Wallet fetch error:', walletError.message);
         }
       } else if (walletData) {
         setWallet(walletData as unknown as TutorWallet);
@@ -68,14 +69,14 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
 
       if (payoutError) {
         if (!payoutError.message?.includes('does not exist')) {
-          console.warn('Payouts fetch error:', payoutError.message);
+          logger.warn('Payouts fetch error:', payoutError.message);
         }
       } else if (payoutData) {
         setPayouts(payoutData as unknown as TutorPayout[]);
       }
     } catch (err) {
       // Non-critical: payout tables may not be deployed yet
-      console.warn('Error fetching payout data (tables may not exist yet):', err);
+      logger.warn('Error fetching payout data (tables may not exist yet):', err);
     } finally {
       setIsLoading(false);
     }
@@ -125,7 +126,7 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
         setError(message);
-        console.error('Payout processing error:', err);
+        logger.error('Payout processing error:', err);
         return null;
       } finally {
         setIsProcessing(false);

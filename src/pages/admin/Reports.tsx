@@ -7,6 +7,7 @@ import { Download, TrendingUp, Users, BookOpen, DollarSign, Star } from "lucide-
 import { useToast } from "@/hooks/use-toast";
 import { format, subDays, startOfMonth } from "date-fns";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from "recharts";
+import { logger } from "@/utils/logger";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', '#f59e0b', '#ef4444'];
 
@@ -79,7 +80,7 @@ const Reports = () => {
       (subjectsRes.data || []).forEach(s => { subjectCounts[s.subject] = (subjectCounts[s.subject] || 0) + 1; });
       setTopSubjects(Object.entries(subjectCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count })));
     } catch (error) {
-      console.error('Error loading stats:', error);
+      logger.error('Error loading stats:', error);
     } finally {
       setLoading(false);
     }

@@ -16,6 +16,7 @@ import { Subject, Topic } from '../types/study';
 import { useSyllabusContext } from './useSyllabusContext';
 import { useTopicPerformance } from './useTopicPerformance';
 import { aiRequestJSON } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -185,7 +186,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         explanation: questionData.explanation,
       });
     } catch (err) {
-      console.error('Quiz generation error:', err);
+      logger.error('Quiz generation error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate question');
     } finally {
       setIsLoading(false);

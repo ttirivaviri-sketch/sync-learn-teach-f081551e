@@ -8,6 +8,7 @@
  */
 
 import { detectionSystem } from '../detection/detectionSystem';
+import { logger } from "@/utils/logger";
 
 let isInitialized = false;
 
@@ -66,5 +67,5 @@ export function initSAILErrorHandler(): void {
     }
   }
 
-  console.log('[SAIL] Global error handler initialized');
+  logger.info('[SAIL] Global error handler initialized');
 }

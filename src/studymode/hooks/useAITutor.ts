@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { aiRequest } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 type Message = {
   role: 'user' | 'assistant';
@@ -105,7 +106,7 @@ export function useAITutor(options: UseAITutorOptions = {}) {
         }
       }
     } catch (err) {
-      console.error('AI tutor error:', err);
+      logger.error('AI tutor error:', err);
       setError(err instanceof Error ? err.message : 'Failed to send message');
       setMessages(prev => prev.slice(0, -1));
     } finally {

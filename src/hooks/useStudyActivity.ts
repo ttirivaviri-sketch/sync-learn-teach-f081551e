@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { logger } from "@/utils/logger";
 
 export interface StudyActivityEntry {
   id: string;
@@ -45,13 +46,13 @@ export function useStudyActivity(userId?: string) {
         .limit(200);
 
       if (error) {
-        console.warn("[useStudyActivity] Fetch error (table may not exist):", error.message);
+        logger.warn("[useStudyActivity] Fetch error (table may not exist):", error.message);
         return;
       }
 
       setRecentActivity((data || []) as unknown as StudyActivityEntry[]);
     } catch (err) {
-      console.error("[useStudyActivity] Error:", err);
+      logger.error("[useStudyActivity] Error:", err);
     } finally {
       setLoading(false);
     }
@@ -89,14 +90,14 @@ export function useStudyActivity(userId?: string) {
           });
 
         if (error) {
-          console.warn("[useStudyActivity] Insert error:", error.message);
+          logger.warn("[useStudyActivity] Insert error:", error.message);
         } else {
-          console.log("[useStudyActivity] Logged:", entry.subject, entry.activity_type);
+          logger.info("[useStudyActivity] Logged:", entry.subject, entry.activity_type);
           // Refresh activity list
           fetchRecent();
         }
       } catch (err) {
-        console.error("[useStudyActivity] Log error:", err);
+        logger.error("[useStudyActivity] Log error:", err);
       }
     },
     [userId, fetchRecent]

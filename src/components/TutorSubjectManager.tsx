@@ -7,6 +7,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { TutorSubject } from '@/hooks/useTutorData';
 import { useTutorManagement } from '@/hooks/useTutorManagement';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { logger } from "@/utils/logger";
 
 interface TutorSubjectManagerProps {
   subjects: TutorSubject[];
@@ -46,7 +47,7 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
       setNewRate('');
       onSubjectAdded?.();
     } catch (error) {
-      console.error('Error adding subject:', error);
+      logger.error('Error adding subject:', error);
     } finally {
       setIsAdding(false);
     }
@@ -57,7 +58,7 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
       await removeTutorSubject(subjectId);
       onSubjectRemoved?.();
     } catch (error) {
-      console.error('Error removing subject:', error);
+      logger.error('Error removing subject:', error);
     }
   };
 

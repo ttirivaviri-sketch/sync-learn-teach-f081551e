@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Shield, AlertTriangle, CheckCircle, Eye, RefreshCw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 interface SecurityCheck {
   check_name: string;
@@ -54,7 +55,7 @@ const AdminSecurity = () => {
         .limit(50);
       
       if (auditError) {
-        console.error('Error loading audit logs:', auditError);
+        logger.error('Error loading audit logs:', auditError);
       } else {
         const formattedLogs = (auditData || []).map(log => ({
           id: log.id,
@@ -67,7 +68,7 @@ const AdminSecurity = () => {
         setAuditLogs(formattedLogs);
       }
     } catch (error) {
-      console.error('Error loading security data:', error);
+      logger.error('Error loading security data:', error);
       toast({
         title: "Error",
         description: "Failed to load security data",

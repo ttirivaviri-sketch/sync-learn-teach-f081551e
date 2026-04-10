@@ -25,6 +25,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequestJSON } from '../lib/aiClient';
 import type { AcademicProfile } from '@/types/academicProfile';
+import { logger } from "@/utils/logger";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -809,7 +810,7 @@ export function useAIStudyIntelligence(academicProfile?: AcademicProfile | null)
           intelligence.examBoardUpdates += '\n\n=== AI-ENRICHED UPDATES ===\n' + enrichResult.exam_updates;
         }
       } catch (enrichErr) {
-        console.warn('[AIStudyIntelligence] AI enrichment failed (non-critical):', enrichErr);
+        logger.warn('[AIStudyIntelligence] AI enrichment failed (non-critical):', enrichErr);
       }
 
       // Cache the intelligence
@@ -864,7 +865,7 @@ export function useAIStudyIntelligence(academicProfile?: AcademicProfile | null)
       profileRef.current = academicProfile;
       // Kick off background enrichment
       const timer = setTimeout(() => {
-        enrichSyllabusData().catch(console.warn);
+        enrichSyllabusData().catch((e) => logger.warn(e));
       }, 3000);
       return () => clearTimeout(timer);
     }
@@ -878,7 +879,7 @@ export function useAIStudyIntelligence(academicProfile?: AcademicProfile | null)
           if (profile) {
             setState(prev => ({ ...prev, learningProfile: profile }));
           }
-        }).catch(console.warn);
+        }).catch((e) => logger.warn(e));
       }, 1500);
       return () => clearTimeout(timer);
     }

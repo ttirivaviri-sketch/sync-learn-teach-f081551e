@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity, DollarSign, Users, BookOpen } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "date-fns";
+import { logger } from "@/utils/logger";
 
 const AdminDashboard = () => {
   const [stats, setStats] = useState({
@@ -58,7 +59,7 @@ const AdminDashboard = () => {
 
       setRecentBookings(bookings || []);
     } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      logger.error('Error loading dashboard data:', error);
     } finally {
       setLoading(false);
     }

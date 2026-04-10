@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 interface DailySummaryProps {
   onClose: () => void;
@@ -124,7 +125,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
         }
       }
     } catch (err) {
-      console.error('Daily summary AI error:', err);
+      logger.error('Daily summary AI error:', err);
       // Fallback to static message
       if (dailyStats.xpToday >= 100) setAiMessage("🔥 Outstanding session! You're crushing it!");
       else if (dailyStats.xpToday >= 50) setAiMessage("💪 Great work today! Keep the momentum going.");

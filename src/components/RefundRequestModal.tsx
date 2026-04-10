@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 interface RefundRequestModalProps {
   open: boolean;
@@ -42,7 +43,7 @@ export const RefundRequestModal = ({ open, onClose, paymentId, bookingId, amount
       toast({ title: "Refund Requested", description: "Your refund request has been submitted for review." });
       onClose();
     } catch (error) {
-      console.error("Refund request error:", error);
+      logger.error("Refund request error:", error);
       toast({ title: "Error", description: "Failed to submit refund request.", variant: "destructive" });
     } finally {
       setSubmitting(false);

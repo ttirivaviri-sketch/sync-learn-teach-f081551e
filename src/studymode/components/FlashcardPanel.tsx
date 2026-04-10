@@ -13,6 +13,7 @@ import { useUserProgress } from '../hooks/useUserProgress';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { logger } from "@/utils/logger";
 
 interface FlashcardPanelProps {
   task: DailyTask;
@@ -245,10 +246,10 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         .upsert(rows, { onConflict: 'user_id,subject,topic,front', ignoreDuplicates: true });
 
       if (upsertErr) {
-        console.warn('[FlashcardPanel] Persist error:', upsertErr.message);
+        logger.warn('[FlashcardPanel] Persist error:', upsertErr.message);
       }
     } catch (err) {
-      console.warn('[FlashcardPanel] Persist failed:', err);
+      logger.warn('[FlashcardPanel] Persist failed:', err);
     }
   }, [subject]);
 

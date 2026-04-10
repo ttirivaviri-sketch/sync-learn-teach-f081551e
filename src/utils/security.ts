@@ -2,6 +2,7 @@
 
 // Import supabase client — must be at top so all functions below can use it
 import { supabase } from '@/integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 export const security = {
   // Validate and sanitize user input
@@ -99,7 +100,7 @@ export const security = {
         });
       }
     } catch (error) {
-      console.error('Failed to log security event:', error);
+      logger.error('Failed to log security event:', error);
     }
   },
 

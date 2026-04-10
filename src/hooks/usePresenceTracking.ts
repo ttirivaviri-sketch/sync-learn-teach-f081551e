@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Session } from '@supabase/supabase-js';
 import { RealtimeChannel } from '@supabase/supabase-js';
+import { logger } from "@/utils/logger";
 
 interface PresenceState {
   user_id: string;
@@ -51,21 +52,21 @@ export const usePresenceTracking = (session: Session | null) => {
         });
         
         setOnlineUsers(users);
-        console.log('Presence sync - online users:', users.length);
+        logger.info('Presence sync - online users:', users.length);
       })
       .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        console.log('User joined:', key, newPresences);
+        logger.info('User joined:', key, newPresences);
       })
       .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        console.log('User left:', key, leftPresences);
+        logger.info('User left:', key, leftPresences);
       })
       .subscribe(async (status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('Presence channel subscribed, tracking user:', presenceState);
+          logger.info('Presence channel subscribed, tracking user:', presenceState);
           
           // Track this user's presence
           const trackStatus = await channel.track(presenceState);
-          console.log('Presence track status:', trackStatus);
+          logger.info('Presence track status:', trackStatus);
 
           // Update database with online status
           await updateDatabaseOnlineStatus(true);
@@ -80,7 +81,7 @@ export const usePresenceTracking = (session: Session | null) => {
           last_seen: new Date().toISOString(),
         };
         await channelRef.current.track(updatedState);
-        console.log('Presence heartbeat sent');
+        logger.info('Presence heartbeat sent');
       }
     }, 30000);
 
@@ -109,12 +110,12 @@ export const usePresenceTracking = (session: Session | null) => {
         .eq('id', session.user.id);
 
       if (error) {
-        console.error('Error updating database online status:', error);
+        logger.error('Error updating database online status:', error);
       } else {
-        console.log('Database online status updated:', isOnline);
+        logger.info('Database online status updated:', isOnline);
       }
     } catch (error) {
-      console.error('Error updating online status:', error);
+      logger.error('Error updating online status:', error);
     }
   };
 
@@ -133,16 +134,16 @@ export const usePresenceTracking = (session: Session | null) => {
 
       if (isOnline) {
         await channelRef.current.track(updatedState);
-        console.log('User went online');
+        logger.info('User went online');
       } else {
         await channelRef.current.untrack();
-        console.log('User went offline');
+        logger.info('User went offline');
       }
 
       // Update database
       await updateDatabaseOnlineStatus(isOnline);
     } catch (error) {
-      console.error('Error setting online status:', error);
+      logger.error('Error setting online status:', error);
     }
   };
 

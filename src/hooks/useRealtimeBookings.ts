@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { security } from '@/utils/security';
+import { logger } from "@/utils/logger";
 
 export interface BookingRequest {
   id: string;
@@ -74,7 +75,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       .single();
 
     if (error) {
-      console.error('Error fetching booking details:', error);
+      logger.error('Error fetching booking details:', error);
       return null;
     }
 
@@ -90,7 +91,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       // Validate session before loading sensitive data
       const validation = await security.validateSession();
       if (!validation.valid) {
-        console.error('Invalid session for booking access');
+        logger.error('Invalid session for booking access');
         setSyncStatus('error');
         return;
       }
@@ -108,7 +109,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error loading bookings:', error);
+        logger.error('Error loading bookings:', error);
         toast({
           title: 'Error',
           description: 'Failed to load bookings',
@@ -122,7 +123,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       setLastSyncedAt(new Date());
       setSyncStatus('synced');
     } catch (error) {
-      console.error('Error in loadBookings:', error);
+      logger.error('Error in loadBookings:', error);
       setSyncStatus('error');
     } finally {
       setLoading(false);
@@ -153,7 +154,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
           filter: userType === 'learner' ? `learner_id=eq.${userId}` : `tutor_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('New booking received:', payload);
+          logger.info('New booking received:', payload);
 
           const newBooking = await fetchBookingById(payload.new.id as string);
           if (!newBooking) return;
@@ -179,7 +180,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
           filter: userType === 'learner' ? `learner_id=eq.${userId}` : `tutor_id=eq.${userId}`,
         },
         async (payload) => {
-          console.log('Booking updated:', payload);
+          logger.info('Booking updated:', payload);
 
           const updatedBooking = await fetchBookingById(payload.new.id as string);
           if (!updatedBooking) return;
@@ -248,7 +249,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
     // Generate unique room name for Jitsi session
     const roomName = `session-${crypto.randomUUID()}`;
-    console.log('🎯 Generated unique room name:', roomName);
+    logger.info('🎯 Generated unique room name:', roomName);
 
     const { data, error } = await supabase
       .from('bookings')
@@ -261,12 +262,12 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       .single();
 
     if (error) {
-      console.error('Error creating booking:', error);
+      logger.error('Error creating booking:', error);
       security.logSecurityEvent('booking_creation_failed', { error: error.message, userId });
       throw error;
     }
 
-    console.log('✅ Booking created with room:', { bookingId: data.id, roomName: data.room_name });
+    logger.info('✅ Booking created with room:', { bookingId: data.id, roomName: data.room_name });
     security.logSecurityEvent('booking_created', { bookingId: data.id, userId, roomName: data.room_name });
     return data;
   };
@@ -287,7 +288,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       .eq('id', bookingId);
 
     if (error) {
-      console.error('Error updating booking status:', error);
+      logger.error('Error updating booking status:', error);
       throw error;
     }
   };
@@ -303,7 +304,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       const sessionTime = new Date(booking.scheduled_at);
       const isUpcoming = sessionTime > now;
 
-      console.log('📅 Session check:', {
+      logger.info('📅 Session check:', {
         id: booking.id,
         scheduled_at: booking.scheduled_at,
         sessionTime: sessionTime.toISOString(),
@@ -316,7 +317,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       return isConfirmed && isUpcoming;
     });
 
-    console.log('📊 Total bookings:', bookings.length, 'Upcoming sessions:', upcoming.length);
+    logger.info('📊 Total bookings:', bookings.length, 'Upcoming sessions:', upcoming.length);
     return upcoming;
   };
 

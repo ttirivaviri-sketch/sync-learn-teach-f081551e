@@ -22,6 +22,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { format } from "date-fns";
+import { logger } from "@/utils/logger";
 
 type PaymentMethod = "card" | "eft" | "instant_eft" | "mobicred";
 
@@ -133,7 +134,7 @@ export const PaymentCheckout = ({
       onPaymentInitiated();
       form.submit();
     } catch (error) {
-      console.error("Payment error:", error);
+      logger.error("Payment error:", error);
       toast({
         title: "Payment Error",
         description:

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 interface ProfilePhotoUploadProps {
   userId: string;
@@ -73,7 +74,7 @@ export const ProfilePhotoUpload = ({
       onUploaded?.(url);
       toast({ title: "Photo updated", description: "Your profile photo has been updated." });
     } catch (error) {
-      console.error("Upload error:", error);
+      logger.error("Upload error:", error);
       toast({ title: "Upload failed", description: "Failed to upload photo. Please try again.", variant: "destructive" });
     } finally {
       setUploading(false);

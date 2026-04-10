@@ -15,6 +15,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -244,7 +245,7 @@ async function fetchSubjectDataDirect(
       result.pastPaperQuestions
     );
   } catch (err) {
-    console.warn('[useSyllabusContext] Direct fetch error:', err);
+    logger.warn('[useSyllabusContext] Direct fetch error:', err);
   }
 
   return result;
@@ -307,7 +308,7 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
           rpcSuccess = true;
         }
       } catch (rpcErr) {
-        console.warn('[useSyllabusContext] RPC unavailable, using direct fallback:', rpcErr);
+        logger.warn('[useSyllabusContext] RPC unavailable, using direct fallback:', rpcErr);
       }
 
       // Fallback: fetch data directly from tables
@@ -316,7 +317,7 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
         setData(directData);
       }
     } catch (err) {
-      console.error('[useSyllabusContext]', err);
+      logger.error('[useSyllabusContext]', err);
       setData(prev => ({ ...prev, isLoaded: true }));
     }
   }, [subjectId, topicName]);

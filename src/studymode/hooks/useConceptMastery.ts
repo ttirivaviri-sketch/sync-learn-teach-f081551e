@@ -9,6 +9,7 @@
 
 import { useCallback } from 'react';
 import { supabase } from '../../integrations/supabase/client';
+import { logger } from "@/utils/logger";
 
 const MASTERY_THRESHOLD = 3; // correct spaced attempts needed
 
@@ -132,14 +133,14 @@ export function useConceptMastery() {
             });
         }
 
-        console.log(
+        logger.info(
           `[ConceptMastery] ${topicName}: ${masteredCount}/${totalConcepts} concepts mastered → ${masteryPercentage}%`
         );
       }
 
       return { masteredCount, totalConcepts, masteryPercentage };
     } catch (err) {
-      console.error('[useConceptMastery] Error:', err);
+      logger.error('[useConceptMastery] Error:', err);
       return null;
     }
   }, []);

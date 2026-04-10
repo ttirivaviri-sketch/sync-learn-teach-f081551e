@@ -12,6 +12,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import type { AcademicProfile } from '@/types/academicProfile';
+import { logger } from "@/utils/logger";
 
 interface CurriculumLevel {
   id: string;
@@ -294,12 +295,12 @@ export function OnboardingFlow({ onComplete, academicProfile }: OnboardingFlowPr
             );
 
           if (profileError) {
-            console.error('[OnboardingFlow] Profile save error:', profileError);
+            logger.error('[OnboardingFlow] Profile save error:', profileError);
           } else {
-            console.log('[OnboardingFlow] Profile saved with exam_dates:', examDatesArray.length);
+            logger.info('[OnboardingFlow] Profile saved with exam_dates:', examDatesArray.length);
           }
         } catch (profileErr) {
-          console.error('[OnboardingFlow] Profile save exception:', profileErr);
+          logger.error('[OnboardingFlow] Profile save exception:', profileErr);
         }
 
         // 2. Create subjects
@@ -332,7 +333,7 @@ export function OnboardingFlow({ onComplete, academicProfile }: OnboardingFlowPr
                 .single();
 
               if (subjectError) {
-                console.error(`[OnboardingFlow] Subject "${subjectName}" insert error:`, subjectError);
+                logger.error(`[OnboardingFlow] Subject "${subjectName}" insert error:`, subjectError);
                 continue;
               }
               subjectId = newSubject?.id;
@@ -356,7 +357,7 @@ export function OnboardingFlow({ onComplete, academicProfile }: OnboardingFlowPr
                     { onConflict: 'user_id' }
                   );
               } catch (examSettingsErr) {
-                console.warn('[OnboardingFlow] exam_settings upsert error:', examSettingsErr);
+                logger.warn('[OnboardingFlow] exam_settings upsert error:', examSettingsErr);
               }
 
               // Insert per-subject exam record
@@ -371,11 +372,11 @@ export function OnboardingFlow({ onComplete, academicProfile }: OnboardingFlowPr
                     exam_date: examDateStr,
                   });
               } catch (subjectExamErr) {
-                console.warn(`[OnboardingFlow] subject_exams insert error for "${subjectName}":`, subjectExamErr);
+                logger.warn(`[OnboardingFlow] subject_exams insert error for "${subjectName}":`, subjectExamErr);
               }
             }
           } catch (subjectErr) {
-            console.error(`[OnboardingFlow] Subject "${subjectName}" processing error:`, subjectErr);
+            logger.error(`[OnboardingFlow] Subject "${subjectName}" processing error:`, subjectErr);
           }
         }
       }
@@ -389,12 +390,12 @@ export function OnboardingFlow({ onComplete, academicProfile }: OnboardingFlowPr
 
       // Trigger initial AI study plan generation in the background
       onSignupComplete().catch((err) =>
-        console.warn('[OnboardingFlow] Initial plan generation failed:', err)
+        logger.warn('[OnboardingFlow] Initial plan generation failed:', err)
       );
 
       onComplete();
     } catch (error) {
-      console.error('Onboarding error:', error);
+      logger.error('Onboarding error:', error);
       toast({
         title: 'Setup Error',
         description: 'Something went wrong. Your selections were saved locally and you can continue.',

@@ -42,6 +42,7 @@ import { LearnerHomeTab } from "./learner/LearnerHomeTab";
 import { LearnerLibraryTab } from "./learner/LearnerLibraryTab";
 import { LearnerActivityTab } from "./learner/LearnerActivityTab";
 import { LearnerProfileTab } from "./learner/LearnerProfileTab";
+import { logger } from "@/utils/logger";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -211,13 +212,13 @@ const LearnerApp = () => {
     try {
       const { data, error } = await supabase
         .from("profiles").select("*").eq("id", session.user.id).single();
-      if (error && error.code !== "PGRST116") { console.error("Error loading profile:", error); return; }
+      if (error && error.code !== "PGRST116") { logger.error("Error loading profile:", error); return; }
       setProfile(data);
       if (!data?.study_level) {
         toast({ title: "Select your study level", description: "Choose your level to personalize your search." });
         navigate("/learner/choose-level");
       }
-    } catch (err) { console.error("Profile load error:", err); }
+    } catch (err) { logger.error("Profile load error:", err); }
   };
 
   const handleSignOut = () => setShowSignOutConfirm(true);

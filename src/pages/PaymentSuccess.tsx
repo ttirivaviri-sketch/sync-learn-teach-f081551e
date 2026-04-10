@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle, Loader2, AlertCircle, Calendar, Clock, User, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
+import { logger } from "@/utils/logger";
 
 interface BookingDetails {
   id: string;
@@ -56,7 +57,7 @@ const PaymentSuccess = () => {
           .single();
 
         if (bookingError) {
-          console.error("Booking fetch error:", bookingError);
+          logger.error("Booking fetch error:", bookingError);
         } else if (bookingData) {
           setBooking(bookingData as unknown as BookingDetails);
         }
@@ -70,7 +71,7 @@ const PaymentSuccess = () => {
           .limit(1);
 
         if (paymentError) {
-          console.error("Payment fetch error:", paymentError);
+          logger.error("Payment fetch error:", paymentError);
         }
 
         const latestPayment = payments?.[0];
@@ -100,7 +101,7 @@ const PaymentSuccess = () => {
 
         timeoutId = setTimeout(checkPayment, 3000);
       } catch (error) {
-        console.error("Verification error:", error);
+        logger.error("Verification error:", error);
         attempts++;
         if (attempts >= maxAttempts) {
           setStatus("pending");

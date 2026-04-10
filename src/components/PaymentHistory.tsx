@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CreditCard, CheckCircle, Clock, XCircle, RefreshCw, ChevronRight, ChevronDown } from "lucide-react";
 import { format } from "date-fns";
+import { logger } from "@/utils/logger";
 
 interface Payment {
   id: string;
@@ -91,7 +92,7 @@ export const PaymentHistory = ({
       const total = allPayments?.reduce((sum, p) => sum + Number(p.amount), 0) || 0;
       setTotalSpent(total);
     } catch (error) {
-      console.error("Error loading payments:", error);
+      logger.error("Error loading payments:", error);
     } finally {
       setLoading(false);
     }

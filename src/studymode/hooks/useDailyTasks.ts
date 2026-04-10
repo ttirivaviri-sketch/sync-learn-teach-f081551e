@@ -3,6 +3,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { DailyTask, Subject } from '../types/study';
 import type { AIContextPayload } from './useAIStudyIntelligence';
+import { logger } from "@/utils/logger";
 
 interface DbDailyTask {
   id: string;
@@ -45,7 +46,7 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
 
         if (error) {
           // Table might not exist yet — fall back to in-memory
-          console.warn('daily_tasks table not available:', error.message);
+          logger.warn('daily_tasks table not available:', error.message);
           return [];
         }
         return (data as unknown as DbDailyTask[]) || [];
@@ -158,7 +159,7 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
           .insert(tasksToInsert);
 
         if (error) {
-          console.warn('Could not persist tasks:', error.message);
+          logger.warn('Could not persist tasks:', error.message);
         }
       } catch {
         // Table doesn't exist yet
@@ -186,7 +187,7 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
           .eq('user_id', userId);
 
         if (error) {
-          console.warn('Could not persist task completion:', error.message);
+          logger.warn('Could not persist task completion:', error.message);
         }
 
         // Also unlock next task

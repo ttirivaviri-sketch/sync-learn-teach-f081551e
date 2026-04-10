@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar, Clock, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 const Bookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
@@ -41,7 +42,7 @@ const Bookings = () => {
       if (error) throw error;
       setBookings(data || []);
     } catch (error) {
-      console.error('Error loading bookings:', error);
+      logger.error('Error loading bookings:', error);
       toast({
         title: "Error",
         description: "Failed to load bookings",
@@ -68,7 +69,7 @@ const Bookings = () => {
 
       loadBookings();
     } catch (error) {
-      console.error('Error updating booking:', error);
+      logger.error('Error updating booking:', error);
       toast({
         title: "Error",
         description: "Failed to update booking status",

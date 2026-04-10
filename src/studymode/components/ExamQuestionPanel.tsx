@@ -19,6 +19,7 @@ import { useAdaptiveLearningEngine, MarkResult } from '../hooks/useAdaptiveLearn
 import { Subject, Topic } from '../types/study';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequest } from '../lib/aiClient';
+import { logger } from "@/utils/logger";
 
 interface ExamQuestionPanelProps {
   question?: {
@@ -157,7 +158,7 @@ export function ExamQuestionPanel({
         }
       }
     } catch (err) {
-      console.error('Explanation error:', err);
+      logger.error('Explanation error:', err);
       setExplanationError(err instanceof Error ? err.message : 'Failed to get explanation');
     } finally {
       setIsExplaining(false);
@@ -231,7 +232,7 @@ export function ExamQuestionPanel({
 
       setPhase('feedback');
     } catch (err) {
-      console.error('AI marking error:', err);
+      logger.error('AI marking error:', err);
       // Fallback to self-assessment
       setPhase('self-assess');
     } finally {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { logger } from "@/utils/logger";
 
 export interface LearnerSubject {
   id: string;
@@ -31,7 +32,7 @@ export const useLearnerSubjects = (userId?: string) => {
       if (error) throw error;
       setSubjects(data || []);
     } catch (error) {
-      console.error('Error fetching learner subjects:', error);
+      logger.error('Error fetching learner subjects:', error);
     } finally {
       setLoading(false);
     }
@@ -64,7 +65,7 @@ export const useLearnerSubjects = (userId?: string) => {
       await fetchSubjects();
       return true;
     } catch (error) {
-      console.error('Error adding subject:', error);
+      logger.error('Error adding subject:', error);
       toast({ title: 'Error', description: 'Failed to add subject.', variant: 'destructive' });
       return false;
     }
@@ -85,7 +86,7 @@ export const useLearnerSubjects = (userId?: string) => {
       toast({ title: 'Subject removed', description: 'Subject removed from your syllabus.' });
       await fetchSubjects();
     } catch (error) {
-      console.error('Error removing subject:', error);
+      logger.error('Error removing subject:', error);
       toast({ title: 'Error', description: 'Failed to remove subject.', variant: 'destructive' });
     }
   };

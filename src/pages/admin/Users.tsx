@@ -8,6 +8,7 @@ import { Search, Mail, Phone, Calendar } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/utils/logger";
 
 const Users = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -38,7 +39,7 @@ const Users = () => {
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error);
       toast({
         title: "Error",
         description: "Failed to load users",

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LibraryResource, AcademicProfile } from "@/types/academicProfile";
+import { logger } from "@/utils/logger";
 
 /** Try to extract a video URL from a text string (description, summary, etc.) */
 const extractVideoUrl = (text: string | null | undefined): string | undefined => {
@@ -271,7 +272,7 @@ export function useLibraryResources(
             },
           }));
 
-          console.log("[useLibraryResources] RPC tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
+          logger.info("[useLibraryResources] RPC tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
           setDbResources(mapped);
           setDbFetched(true);
           return;
@@ -279,7 +280,7 @@ export function useLibraryResources(
 
         // ── Fallback: direct query to tutor_tutorials ───────────────────────
         if (rpcError) {
-          console.warn(
+          logger.warn(
             "get_published_tutorials RPC unavailable, falling back to direct query:",
             rpcError.message
           );
@@ -298,7 +299,7 @@ export function useLibraryResources(
           .order("created_at", { ascending: false });
 
         if (directError) {
-          console.warn("tutor_tutorials direct query failed:", directError.message);
+          logger.warn("tutor_tutorials direct query failed:", directError.message);
           setDbFetched(true);
           return;
         }
@@ -338,11 +339,11 @@ export function useLibraryResources(
           })
         );
 
-        console.log("[useLibraryResources] Direct query tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
+        logger.info("[useLibraryResources] Direct query tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
         setDbResources(mapped);
         setDbFetched(true);
       } catch (err) {
-        console.warn("Tutorial fetch error (non-critical):", err);
+        logger.warn("Tutorial fetch error (non-critical):", err);
         setDbFetched(true); // Mark as fetched so we show empty state, not seed data
       } finally {
         setLoading(false);
