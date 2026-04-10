@@ -7,6 +7,7 @@ export interface DevModeState {
   devUserName: string;
   bypassPayments: boolean;
   bypassSchedule: boolean;
+  isAuthenticated: boolean;
   enableDevMode: (role: "learner" | "tutor") => void;
   disableDevMode: () => void;
   toggleBypassPayments: () => void;
@@ -14,14 +15,18 @@ export interface DevModeState {
   launchDevSession: () => void;
   devSessionActive: boolean;
   setDevSessionActive: (v: boolean) => void;
+  authenticateDevMode: (passphrase: string) => boolean;
 }
 
 const DEV_USER_ID = "00000000-0000-0000-0000-000000000001";
 const DEV_TUTOR_USER_ID = "00000000-0000-0000-0000-000000000002";
+// Simple passphrase — change this to your own secret
+const DEV_PASSPHRASE = "studysync-dev-2026";
 
 const DevModeContext = createContext<DevModeState | null>(null);
 
 const STORAGE_KEY = "studysync_dev_mode";
+const AUTH_KEY = "studysync_dev_auth";
 
 export const DevModeProvider = ({ children }: { children: ReactNode }) => {
   const [isDevMode, setIsDevMode] = useState(false);
@@ -29,10 +34,13 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
   const [bypassPayments, setBypassPayments] = useState(true);
   const [bypassSchedule, setBypassSchedule] = useState(true);
   const [devSessionActive, setDevSessionActive] = useState(false);
-  const [sessionTrigger, setSessionTrigger] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Persist dev mode across reloads
   useEffect(() => {
+    const authStored = localStorage.getItem(AUTH_KEY);
+    if (authStored === "true") setIsAuthenticated(true);
+
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
@@ -55,6 +63,15 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [isDevMode, devRole, bypassPayments, bypassSchedule]);
 
+  const authenticateDevMode = (passphrase: string): boolean => {
+    if (passphrase === DEV_PASSPHRASE) {
+      setIsAuthenticated(true);
+      localStorage.setItem(AUTH_KEY, "true");
+      return true;
+    }
+    return false;
+  };
+
   const enableDevMode = (role: "learner" | "tutor") => {
     setIsDevMode(true);
     setDevRole(role);
@@ -71,7 +88,6 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
 
   const launchDevSession = () => {
     setDevSessionActive(true);
-    setSessionTrigger(t => !t);
   };
 
   const devUserId = devRole === "tutor" ? DEV_TUTOR_USER_ID : DEV_USER_ID;
@@ -85,6 +101,7 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
       devUserName,
       bypassPayments,
       bypassSchedule,
+      isAuthenticated,
       enableDevMode,
       disableDevMode,
       toggleBypassPayments,
@@ -92,6 +109,7 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
       launchDevSession,
       devSessionActive,
       setDevSessionActive,
+      authenticateDevMode,
     }}>
       {children}
     </DevModeContext.Provider>

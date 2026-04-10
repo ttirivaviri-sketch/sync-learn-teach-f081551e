@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useDevMode } from '@/contexts/DevModeContext';
 
 export interface Subscription {
   id: string;
@@ -12,9 +13,24 @@ export interface Subscription {
 }
 
 export const useSubscription = () => {
+  const { isDevMode } = useDevMode();
+
   const subscription = useQuery({
     queryKey: ['subscription'],
     queryFn: async () => {
+      if (isDevMode) {
+        // Return a synthetic active premium subscription
+        return {
+          id: 'dev-sub',
+          user_id: 'dev-user',
+          plan: 'premium',
+          trial_start: null,
+          trial_end: null,
+          status: 'active',
+          created_at: new Date().toISOString(),
+        } as Subscription;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return null;
       const { data, error } = await supabase
@@ -28,6 +44,7 @@ export const useSubscription = () => {
   });
 
   const isTrialActive = () => {
+    if (isDevMode) return false; // premium in dev mode, not trial
     const sub = subscription.data;
     if (!sub) return false;
     if (sub.status !== 'trial') return false;
@@ -35,12 +52,16 @@ export const useSubscription = () => {
   };
 
   const isPremium = () => {
+    if (isDevMode) return true;
     const sub = subscription.data;
     if (!sub) return false;
     return sub.plan === 'premium' && sub.status === 'active';
   };
 
-  const hasAccess = () => isTrialActive() || isPremium();
+  const hasAccess = () => {
+    if (isDevMode) return true;
+    return isTrialActive() || isPremium();
+  };
 
   return { subscription, isTrialActive, isPremium, hasAccess };
 };
