@@ -57,6 +57,11 @@ const TutorApp = () => {
   const session = isDevMode && devRole === "tutor" ? null : auth.session;
   const loading = isDevMode && devRole === "tutor" ? devLoading : auth.loading;
 
+  // ── UI state ────────────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState("home");
+  const [isOnline, setIsOnline] = useState(true);
+  const [mySubjects, setMySubjects] = useState<unknown[]>([]);
+
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
   const [videoMeetingData, setVideoMeetingData] = useState<VideoMeetingData | null>(null);
