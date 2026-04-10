@@ -17,8 +17,8 @@ import { logger } from "@/utils/logger";
 interface TutorBookingManagerProps {
   bookings: BookingRequest[];
   loading: boolean;
-  onAccept: (booking: BookingRequest) => Promise<void>;
-  onDecline: (booking: BookingRequest) => Promise<void>;
+  onAccept: (booking: BookingRequest) => void | Promise<void>;
+  onDecline: (booking: BookingRequest) => void | Promise<void>;
   onJoinSession: (booking: BookingRequest) => void;
   onStartChat: (booking: BookingRequest) => void;
 }

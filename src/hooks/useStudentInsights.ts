@@ -36,7 +36,7 @@ export function useStudentInsights(tutorId?: string): UseStudentInsightsReturn {
       if (!tutorId) return null;
 
       try {
-        const { data, error: fetchError } = await supabase
+        const { data, error: fetchError } = await (supabase as any)
           .from('student_insights_cache')
           .select('insights, expires_at')
           .eq('student_id', studentId)

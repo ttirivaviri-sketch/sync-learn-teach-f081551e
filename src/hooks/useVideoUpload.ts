@@ -46,7 +46,7 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
     setIsLoading(true);
 
     try {
-      const { data, error: fetchError } = await supabase
+      const { data, error: fetchError } = await (supabase as any)
         .from('video_content')
         .select('*')
         .eq('tutor_id', tutorId)
@@ -118,7 +118,7 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
   const confirmOwnership = useCallback(
     async (videoId: string): Promise<boolean> => {
       try {
-        const { error: updateError } = await supabase
+        const { error: updateError } = await (supabase as any)
           .from('video_content')
           .update({
             ownership_confirmed: true,
@@ -148,7 +148,7 @@ export function useVideoUpload(tutorId?: string): UseVideoUploadReturn {
   const deleteVideo = useCallback(
     async (videoId: string): Promise<boolean> => {
       try {
-        const { error: deleteError } = await supabase
+        const { error: deleteError } = await (supabase as any)
           .from('video_content')
           .delete()
           .eq('id', videoId)

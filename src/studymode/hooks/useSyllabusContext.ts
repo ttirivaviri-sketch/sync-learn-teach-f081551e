@@ -288,7 +288,7 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
           p_topic_name: topicName,
         });
 
-        if (!error && contextData && !contextData.error) {
+        if (!error && contextData && !(contextData as any).error) {
           const payload = contextData as Record<string, unknown>;
 
           setData({

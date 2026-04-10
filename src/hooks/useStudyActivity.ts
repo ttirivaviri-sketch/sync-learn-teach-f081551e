@@ -50,7 +50,7 @@ export function useStudyActivity(userId?: string) {
         return;
       }
 
-      setRecentActivity(data || []);
+      setRecentActivity((data || []) as unknown as StudyActivityEntry[]);
     } catch (err) {
       logger.error("[useStudyActivity] Error:", err);
     } finally {
@@ -75,7 +75,7 @@ export function useStudyActivity(userId?: string) {
     }) => {
       if (!userId) return;
       try {
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from("study_activity")
           .insert({
             user_id: userId,

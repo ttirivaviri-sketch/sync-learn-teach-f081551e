@@ -34,7 +34,7 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
         if (!session) return;
 
         // Query tutor assignments table directly (no edge function needed)
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('tutor_assignments')
           .select('id, subject, topic, focus_area, difficulty_override, notes, due_date')
           .eq('learner_id', session.user.id)
@@ -68,7 +68,7 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
       if (!session) { onOpenStudyMode(); return; }
 
       // Track session start directly in Supabase (no edge function needed)
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from('study_sessions')
         .insert({ user_id: session.user.id, started_at: new Date().toISOString() })
         .select('id')

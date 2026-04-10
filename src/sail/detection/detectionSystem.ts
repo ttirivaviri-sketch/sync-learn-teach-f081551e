@@ -258,17 +258,17 @@ export class SAILDetectionSystem {
     try {
       await supabase
         .from('sail_detection_signals')
-        .insert({
+        .insert([{
           source: signal.source,
           severity: signal.severity,
           title: signal.title,
           description: signal.description,
-          data: signal.data,
+          data: signal.data as any,
           suggested_task_type: signal.suggested_task_type,
           suggested_priority: signal.suggested_priority,
           suggested_agent: signal.suggested_agent,
           auto_create_task: signal.auto_create_task,
-        });
+        }]);
     } catch {
       // Table may not exist yet
     }
