@@ -44,13 +44,18 @@ interface DirectionsRequest {
 
 // ─────────────────────────────────────────────────────────────────────────────
 const TutorApp = () => {
-  // ── Shared auth ─────────────────────────────────────────────────────────
-  const { session, loading } = useAuth({ redirectTo: "/tutor/auth" });
+  const {
+    isDevMode, devRole, devUserName,
+    devSessionActive, setDevSessionActive,
+    bypassPayments,
+  } = useDevMode();
 
-  // ── UI state ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("home");
-  const [isOnline, setIsOnline] = useState(true);
-  const [mySubjects, setMySubjects] = useState<unknown[]>([]);
+  // ── Shared auth ─────────────────────────────────────────────────────────
+  const auth = useAuth(isDevMode && devRole === "tutor" ? {} : { redirectTo: "/tutor/auth" });
+  const [devLoading, setDevLoading] = useState(true);
+
+  const session = isDevMode && devRole === "tutor" ? null : auth.session;
+  const loading = isDevMode && devRole === "tutor" ? devLoading : auth.loading;
 
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
