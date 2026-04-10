@@ -11,8 +11,8 @@ interface TutorActivityTabProps {
   bookings: BookingRequest[];
   bookingsLoading: boolean;
   tutorId: string;
-  onAccept: (booking: BookingRequest) => void;
-  onDecline: (booking: BookingRequest) => void;
+  onAccept: (booking: BookingRequest) => void | Promise<void>;
+  onDecline: (booking: BookingRequest) => void | Promise<void>;
   onJoinSession: (booking: BookingRequest) => void;
   onStartChat: (booking: BookingRequest) => void;
 }

@@ -400,7 +400,7 @@ const LearnerApp = () => {
               allSubjects={allSubjects}
               selectedSubject={selectedSubject}
               onSelectSubject={setSelectedSubject}
-              userGeoLocation={userGeoLocation}
+              userGeoLocation={userGeoLocation ? { lat: userGeoLocation.latitude, lng: userGeoLocation.longitude } : null}
               locationLoading={locationLoading}
               onUpdateLocation={getCurrentLocation}
               tutors={tutors}

@@ -34,10 +34,10 @@ interface TutorProfileTabProps {
   tutorId: string;
   user?: UserType;
   formattedStats: FormattedStats;
-  weeklyData: Array<{ name: string; amount: number }>;
+  weeklyData: Array<{ name: string; earnings: number; sessions: number }>;
   recentEarnings: RecentEarning[];
   statsLoading: boolean;
-  mySubjects: unknown[];
+  mySubjects: Array<{ id: string; subject: string; level: string; hourly_rate: number | null; [key: string]: unknown }>;
   onNavigateTab: (tab: string) => void;
   onToast: (opts: { title: string; description: string }) => void;
 }
