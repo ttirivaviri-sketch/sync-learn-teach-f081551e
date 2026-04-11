@@ -1,45 +1,30 @@
 
 
-# Show Academic Profile in Profile Tab & Study Mode
+## Plan: Fix Build Errors + Video & Payment Flow Improvements
 
-## Problem
-1. The Learner Profile tab shows academic details (curriculum, grade, exam year, subjects) but only if the user has already saved them -- no deep integration with Study Mode.
-2. Study Mode has its own separate `OnboardingFlow` that duplicates academic profile setup and doesn't read from `academic_profiles` table.
-3. Study Mode Dashboard jumps straight to "Upload Syllabi" without showing the student's curriculum, grade, exam year, or subjects.
-4. There's no gating to require document uploads before generating quizzes/tasks.
+### Phase 1: Fix Current Build Errors
 
-## Plan
+**File 1: `src/hooks/useBookingPayments.ts`**
+- Add `import { logger } from '@/utils/logger';` at the top
 
-### 1. Pass academic profile into Study Mode
-- In `StudySyncLibrary.tsx`, pass the `academicProfile` prop through `StudyModeWrapper` down to `StudyMode` and then to `Dashboard`.
-- Update `StudyModeWrapper` props to accept `academicProfile`.
-- Update `StudyMode` and `Dashboard` to receive and use the academic profile.
+**File 2: `supabase/functions/generate-tutor-booking-insights/index.ts`**
+- Change line 168 from `recommendations: [],` to `recommendations: [] as string[],` to fix the `never[]` type inference
 
-### 2. Show academic profile card in Study Mode Dashboard
-- Add an "Academic Profile" summary card at the top of the Dashboard showing: curriculum, grade, exam year, and subject badges.
-- If no academic profile exists, show a prompt directing back to the Profile tab.
-- Replace the separate `OnboardingFlow` curriculum/subject selection with reading from the existing academic profile -- the OnboardingFlow should only handle the readiness check and exam date setup, not re-ask for curriculum/subjects.
+### Phase 2: Video Meeting Improvements (optional, user to confirm)
 
-### 3. Gate quizzes/tasks behind document uploads
-- In the Dashboard, after showing the academic profile card, check if the user has any `documents` (syllabi/past papers) uploaded.
-- If no documents exist, show a prominent "Upload your syllabus and past papers" card with the upload button, and disable/hide task generation and quiz buttons.
-- If documents exist, show the normal subject cards and task flows.
+1. **Save session notes to database** -- persist notes from the summary screen to the booking record or a new `session_notes` column
+2. **Connect rating to reviews table** -- on summary submit, insert into `reviews`
+3. **Add reconnection logic** -- detect Jitsi disconnect events and auto-retry with exponential backoff
+4. **Waiting indicator** -- show "Waiting for [partner]..." when `participantCount === 1`
 
-### 4. Enhance Profile tab academic card
-- Add the student's full name, email at the top of the profile academic card.
-- Show all fields: curriculum, grade, exam year, exam board, school name, target grade, learning style -- whatever is populated.
-- Ensure subjects are displayed as badges.
+### Phase 3: Payment Flow Improvements (optional, user to confirm)
 
-### Files to modify
-- `src/components/StudySyncLibrary.tsx` -- pass academicProfile to StudyModeWrapper
-- `src/studymode/StudyModeWrapper.tsx` -- accept and forward academicProfile prop
-- `src/studymode/components/StudyMode.tsx` -- accept academicProfile, pass to Dashboard
-- `src/studymode/components/Dashboard.tsx` -- render academic profile card, gate content behind document uploads
-- `src/studymode/components/OnboardingFlow.tsx` -- simplify to skip curriculum/subject steps if academic profile exists
-- `src/pages/LearnerApp.tsx` -- minor: ensure all academic profile fields render in Profile tab
+1. **Server-side amount validation** -- in `payfast-create-payment`, compare `amount` from request body against `bookingData.price` and reject mismatches
+2. **Payment expiry** -- auto-fail pending payments older than 24 hours (could be a scheduled function or checked on fetch)
+3. **Receipt generation** -- generate a simple payment receipt after successful payment
 
-### Technical details
-- Academic profile data comes from `useAcademicProfile` hook (already used in LearnerApp).
-- Document check: query `documents` table filtered by `user_id` to see if any syllabi/past papers exist.
-- No database changes needed -- all tables and columns already exist.
+### Technical Details
+
+- Phase 1 is two single-line fixes that resolve all remaining build errors
+- Phase 2 and 3 are incremental improvements that can be prioritized based on what matters most to you
 
