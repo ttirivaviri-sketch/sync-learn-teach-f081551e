@@ -1308,6 +1308,42 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_payment_methods: {
+        Row: {
+          card_brand: string | null
+          card_last4: string | null
+          created_at: string | null
+          id: string
+          is_default: boolean | null
+          provider: string
+          token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          card_brand?: string | null
+          card_last4?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          provider?: string
+          token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          card_brand?: string | null
+          card_last4?: string | null
+          created_at?: string | null
+          id?: string
+          is_default?: boolean | null
+          provider?: string
+          token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       security_audit_logs: {
         Row: {
           action: string

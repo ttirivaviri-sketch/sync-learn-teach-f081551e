@@ -194,6 +194,28 @@ serve(async (req) => {
         );
       }
 
+      // Save tokenization token if returned
+      if (pfData.token) {
+        try {
+          await supabase
+            .from("saved_payment_methods")
+            .upsert(
+              {
+                user_id: payment.payer_id,
+                provider: "payfast",
+                token: pfData.token,
+                card_last4: pfData.card_last4 || null,
+                card_brand: pfData.card_type || null,
+                is_default: true,
+              },
+              { onConflict: "user_id,token" }
+            );
+          console.log(`Saved payment token for user ${payment.payer_id}`);
+        } catch (tokenError) {
+          console.warn("Failed to save payment token:", tokenError);
+        }
+      }
+
       // Create a notification for the learner
       try {
         const { data: paymentRecord } = await supabase

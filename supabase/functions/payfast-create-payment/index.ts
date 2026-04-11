@@ -164,6 +164,7 @@ serve(async (req) => {
       item_description: `StudySync tutoring session booking ${bookingId.slice(0, 8)}`.substring(0, 255),
       email_confirmation: "1",
       confirmation_address: (profile.email || user.email || "").substring(0, 100),
+      subscription_type: "1",
     };
 
     // Add payment method if specified (PayFast payment_method parameter)

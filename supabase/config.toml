@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.payfast-itn]
 verify_jwt = false
 
+[functions.payfast-charge-token]
+verify_jwt = true
+
 [functions.parse-document]
 verify_jwt = false
 
