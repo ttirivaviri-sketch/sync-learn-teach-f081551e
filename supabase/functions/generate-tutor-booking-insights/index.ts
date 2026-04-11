@@ -165,7 +165,7 @@ serve(async (req) => {
       exam_date: examEntry?.date || null,
       days_until_exam: daysUntilExam,
       risk_level: riskLevel,
-      recommendations: [],
+      recommendations: [] as string[],
     };
 
     // Generate AI recommendations if OpenAI is available
