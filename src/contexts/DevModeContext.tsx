@@ -1,43 +1,66 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { DevService, DevConfig, DEFAULT_DEV_CONFIG } from "@/services/DevService";
 
+// ── Public interface ────────────────────────────────────────────────────────
 export interface DevModeState {
+  // Core
   isDevMode: boolean;
   devRole: "learner" | "tutor";
   devUserId: string;
   devUserName: string;
+  isAuthenticated: boolean;
+
+  // Granular config
+  config: DevConfig;
+  updateConfig: (patch: Partial<DevConfig>) => void;
+
+  // Convenience accessors (backwards compat)
   bypassPayments: boolean;
   bypassSchedule: boolean;
-  isAuthenticated: boolean;
-  enableDevMode: (role: "learner" | "tutor") => void;
-  disableDevMode: () => void;
   toggleBypassPayments: () => void;
   toggleBypassSchedule: () => void;
+
+  // Actions
+  enableDevMode: (role: "learner" | "tutor") => void;
+  disableDevMode: () => void;
+  authenticateDevMode: (passphrase: string) => boolean;
+  resetDevState: () => void;
+
+  // Video session
   launchDevSession: () => void;
   devSessionActive: boolean;
   setDevSessionActive: (v: boolean) => void;
-  authenticateDevMode: (passphrase: string) => boolean;
+
+  // 5-tap secret activation
+  registerTap: () => void;
 }
 
-const DEV_USER_ID = "00000000-0000-0000-0000-000000000001";
-const DEV_TUTOR_USER_ID = "00000000-0000-0000-0000-000000000002";
-// Simple passphrase — change this to your own secret
+// ── Constants ───────────────────────────────────────────────────────────────
 const DEV_PASSPHRASE = "studysync-dev-2026";
+const STORAGE_KEY = "studysync_dev_mode";
+const AUTH_KEY = "studysync_dev_auth";
+const CONFIG_KEY = "studysync_dev_config";
 
 const DevModeContext = createContext<DevModeState | null>(null);
 
-const STORAGE_KEY = "studysync_dev_mode";
-const AUTH_KEY = "studysync_dev_auth";
-
+// ── Provider ────────────────────────────────────────────────────────────────
 export const DevModeProvider = ({ children }: { children: ReactNode }) => {
   const [isDevMode, setIsDevMode] = useState(false);
   const [devRole, setDevRole] = useState<"learner" | "tutor">("learner");
-  const [bypassPayments, setBypassPayments] = useState(true);
-  const [bypassSchedule, setBypassSchedule] = useState(true);
   const [devSessionActive, setDevSessionActive] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [config, setConfig] = useState<DevConfig>(DEFAULT_DEV_CONFIG);
 
-  // Persist dev mode across reloads
+  // 5-tap tracking
+  const [tapTimestamps, setTapTimestamps] = useState<number[]>([]);
+
+  // ── Production safety ─────────────────────────────────────────────────
+  const allowed = DevService.isAllowed();
+
+  // ── Persist / restore ─────────────────────────────────────────────────
   useEffect(() => {
+    if (!allowed) return;
+
     const authStored = localStorage.getItem(AUTH_KEY);
     if (authStored === "true") setIsAuthenticated(true);
 
@@ -48,22 +71,40 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
         if (parsed.isDevMode) {
           setIsDevMode(true);
           setDevRole(parsed.devRole || "learner");
-          setBypassPayments(parsed.bypassPayments ?? true);
-          setBypassSchedule(parsed.bypassSchedule ?? true);
         }
-      } catch {}
+      } catch { /* ignore */ }
     }
-  }, []);
+
+    const cfgStored = localStorage.getItem(CONFIG_KEY);
+    if (cfgStored) {
+      try {
+        setConfig({ ...DEFAULT_DEV_CONFIG, ...JSON.parse(cfgStored) });
+      } catch { /* ignore */ }
+    }
+  }, [allowed]);
 
   useEffect(() => {
+    if (!allowed) return;
     if (isDevMode) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ isDevMode, devRole, bypassPayments, bypassSchedule }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ isDevMode, devRole }));
     } else {
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, [isDevMode, devRole, bypassPayments, bypassSchedule]);
+  }, [isDevMode, devRole, allowed]);
 
+  useEffect(() => {
+    if (!allowed) return;
+    localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+  }, [config, allowed]);
+
+  // ── Config updates ────────────────────────────────────────────────────
+  const updateConfig = useCallback((patch: Partial<DevConfig>) => {
+    setConfig((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  // ── Auth ──────────────────────────────────────────────────────────────
   const authenticateDevMode = (passphrase: string): boolean => {
+    if (!allowed) return false;
     if (passphrase === DEV_PASSPHRASE) {
       setIsAuthenticated(true);
       localStorage.setItem(AUTH_KEY, "true");
@@ -72,7 +113,9 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
     return false;
   };
 
+  // ── Enable / Disable ─────────────────────────────────────────────────
   const enableDevMode = (role: "learner" | "tutor") => {
+    if (!allowed) return;
     setIsDevMode(true);
     setDevRole(role);
   };
@@ -83,34 +126,61 @@ export const DevModeProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(STORAGE_KEY);
   };
 
-  const toggleBypassPayments = () => setBypassPayments(v => !v);
-  const toggleBypassSchedule = () => setBypassSchedule(v => !v);
-
-  const launchDevSession = () => {
-    setDevSessionActive(true);
+  const resetDevState = () => {
+    setConfig(DEFAULT_DEV_CONFIG);
+    localStorage.removeItem(CONFIG_KEY);
   };
 
-  const devUserId = devRole === "tutor" ? DEV_TUTOR_USER_ID : DEV_USER_ID;
-  const devUserName = devRole === "tutor" ? "Dev Tutor" : "Dev Learner";
+  // ── Convenience ───────────────────────────────────────────────────────
+  const toggleBypassPayments = () =>
+    updateConfig({ bypassPayments: !config.bypassPayments, forcePaidBookings: !config.bypassPayments });
+  const toggleBypassSchedule = () =>
+    updateConfig({ bypassSchedule: !config.bypassSchedule });
+
+  const launchDevSession = () => setDevSessionActive(true);
+
+  // ── 5-tap secret activation ───────────────────────────────────────────
+  const registerTap = useCallback(() => {
+    if (!allowed || isAuthenticated) return;
+    const now = Date.now();
+    setTapTimestamps((prev) => {
+      const recent = [...prev, now].filter((t) => now - t < 2000);
+      if (recent.length >= 5) {
+        // Navigate to /dev
+        window.location.href = "/dev";
+        return [];
+      }
+      return recent;
+    });
+  }, [allowed, isAuthenticated]);
+
+  // ── Derived values ────────────────────────────────────────────────────
+  const user = DevService.getUser(devRole);
 
   return (
-    <DevModeContext.Provider value={{
-      isDevMode,
-      devRole,
-      devUserId,
-      devUserName,
-      bypassPayments,
-      bypassSchedule,
-      isAuthenticated,
-      enableDevMode,
-      disableDevMode,
-      toggleBypassPayments,
-      toggleBypassSchedule,
-      launchDevSession,
-      devSessionActive,
-      setDevSessionActive,
-      authenticateDevMode,
-    }}>
+    <DevModeContext.Provider
+      value={{
+        isDevMode,
+        devRole,
+        devUserId: user.id,
+        devUserName: user.name,
+        isAuthenticated,
+        config,
+        updateConfig,
+        bypassPayments: config.bypassPayments,
+        bypassSchedule: config.bypassSchedule,
+        toggleBypassPayments,
+        toggleBypassSchedule,
+        enableDevMode,
+        disableDevMode,
+        authenticateDevMode,
+        resetDevState,
+        launchDevSession,
+        devSessionActive,
+        setDevSessionActive,
+        registerTap,
+      }}
+    >
       {children}
     </DevModeContext.Provider>
   );

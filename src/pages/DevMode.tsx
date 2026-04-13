@@ -8,14 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   Code2, Video, Users, CreditCard, Calendar, Zap,
-  GraduationCap, BookOpen, ArrowRight, Shield, Lock
+  GraduationCap, BookOpen, ArrowRight, Shield, Lock,
+  ShieldCheck, AlertTriangle, Wifi, RotateCcw
 } from "lucide-react";
 
 const DevMode = () => {
   const {
     isAuthenticated, authenticateDevMode,
-    enableDevMode, bypassPayments, bypassSchedule,
-    toggleBypassPayments, toggleBypassSchedule,
+    enableDevMode, config, updateConfig, resetDevState,
   } = useDevMode();
 
   const [passphrase, setPassphrase] = useState("");
@@ -36,11 +36,11 @@ const DevMode = () => {
   // Gate: passphrase required
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-6">
+      <div className="min-h-screen flex items-center justify-center p-6" style={{ background: "linear-gradient(135deg, hsl(220 20% 10%), hsl(220 15% 15%), hsl(220 20% 10%))" }}>
         <Card className="w-full max-w-sm border-yellow-500/30 bg-gray-900/80 text-white">
           <CardHeader className="text-center">
-            <Lock className="h-10 w-10 text-yellow-400 mx-auto mb-2" />
-            <CardTitle className="text-lg text-yellow-400">Developer Access</CardTitle>
+            <Lock className="h-10 w-10 mx-auto mb-2" style={{ color: "hsl(48 96% 53%)" }} />
+            <CardTitle className="text-lg" style={{ color: "hsl(48 96% 53%)" }}>Developer Access</CardTitle>
             <p className="text-xs text-gray-400 mt-1">Enter passphrase to continue</p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -54,7 +54,8 @@ const DevMode = () => {
             />
             {authError && <p className="text-red-400 text-xs text-center">Invalid passphrase</p>}
             <Button
-              className="w-full bg-yellow-500 hover:bg-yellow-400 text-yellow-950 font-bold"
+              className="w-full font-bold"
+              style={{ backgroundColor: "hsl(48 96% 53%)", color: "hsl(40 80% 10%)" }}
               onClick={handleAuth}
             >
               Unlock Dev Mode
@@ -66,10 +67,13 @@ const DevMode = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-yellow-50 via-yellow-100 to-amber-100 flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6" style={{ background: "linear-gradient(135deg, hsl(48 100% 96%), hsl(48 80% 92%), hsl(40 60% 90%))" }}>
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 bg-yellow-400 text-yellow-900 rounded-full px-4 py-2 mb-4 font-bold text-sm shadow">
+        <div
+          className="inline-flex items-center gap-2 rounded-full px-4 py-2 mb-4 font-bold text-sm shadow"
+          style={{ backgroundColor: "hsl(48 96% 53%)", color: "hsl(40 80% 15%)" }}
+        >
           <Code2 className="h-4 w-4" />
           DEVELOPER MODE
         </div>
@@ -79,40 +83,33 @@ const DevMode = () => {
           </span>
         </div>
         <p className="text-gray-500 text-sm max-w-sm">
-          Full app access — auth, payments, subscriptions & scheduling all bypassed.
+          Full simulation layer — auth, payments, subscriptions & scheduling all controlled.
         </p>
       </div>
 
       <div className="w-full max-w-lg space-y-4">
         {/* Config Panel */}
-        <Card className="border-yellow-300 bg-white/80 shadow-sm">
+        <Card className="bg-white/80 shadow-sm" style={{ borderColor: "hsl(48 60% 75%)" }}>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2 text-yellow-800">
+            <CardTitle className="text-sm flex items-center gap-2" style={{ color: "hsl(40 80% 25%)" }}>
               <Shield className="h-4 w-4" />
-              Bypass Configuration
+              Feature Toggles
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-              <div className="flex items-center gap-2">
-                <CreditCard className="h-4 w-4 text-yellow-700" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-900">Bypass Payments</p>
-                  <p className="text-xs text-yellow-600">Skip PayFast, mark all bookings as paid</p>
-                </div>
-              </div>
-              <Switch checked={bypassPayments} onCheckedChange={toggleBypassPayments} className="data-[state=checked]:bg-yellow-500" />
-            </div>
-            <div className="flex items-center justify-between p-3 rounded-lg bg-yellow-50 border border-yellow-200">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-yellow-700" />
-                <div>
-                  <p className="text-sm font-medium text-yellow-900">Bypass Schedule</p>
-                  <p className="text-xs text-yellow-600">Join sessions regardless of scheduled time</p>
-                </div>
-              </div>
-              <Switch checked={bypassSchedule} onCheckedChange={toggleBypassSchedule} className="data-[state=checked]:bg-yellow-500" />
-            </div>
+            <ToggleRow icon={<ShieldCheck className="h-4 w-4" />} label="Bypass Auth" desc="Skip login, always authenticated" checked={config.bypassAuth} onChange={(v) => updateConfig({ bypassAuth: v })} />
+            <ToggleRow icon={<CreditCard className="h-4 w-4" />} label="Bypass Payments" desc="Skip PayFast, mark all as paid" checked={config.bypassPayments} onChange={(v) => updateConfig({ bypassPayments: v, forcePaidBookings: v })} />
+            <ToggleRow icon={<Calendar className="h-4 w-4" />} label="Bypass Schedule" desc="Join sessions regardless of time" checked={config.bypassSchedule} onChange={(v) => updateConfig({ bypassSchedule: v })} />
+
+            <hr className="border-gray-200" />
+
+            <ToggleRow icon={<AlertTriangle className="h-4 w-4" />} label="Simulate Failures" desc="30% chance of random errors" checked={config.simulateFailures} onChange={(v) => updateConfig({ simulateFailures: v })} destructive />
+            <ToggleRow icon={<Wifi className="h-4 w-4" />} label="Slow Network" desc="Add 2-5s delay to operations" checked={config.simulateSlowNetwork} onChange={(v) => updateConfig({ simulateSlowNetwork: v })} destructive />
+
+            <Button variant="outline" size="sm" className="w-full gap-1.5 text-xs" onClick={resetDevState}>
+              <RotateCcw className="h-3 w-3" />
+              Reset All Toggles
+            </Button>
           </CardContent>
         </Card>
 
@@ -151,16 +148,16 @@ const DevMode = () => {
           </Card>
         </div>
 
-        {/* What dev mode enables */}
+        {/* What dev mode controls */}
         <Card className="border-gray-200 bg-white/80">
           <CardContent className="p-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Everything Bypassed</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Simulation Layer</p>
             <div className="grid grid-cols-2 gap-2">
               {[
-                { icon: Shield, label: "Auth bypassed", color: "text-red-500" },
+                { icon: Shield, label: "Auth simulated", color: "text-red-500" },
                 { icon: CreditCard, label: "Payments auto-paid", color: "text-green-500" },
                 { icon: Zap, label: "Subscriptions active", color: "text-yellow-500" },
-                { icon: Calendar, label: "Schedule ignored", color: "text-purple-500" },
+                { icon: Calendar, label: "Schedule bypassed", color: "text-purple-500" },
                 { icon: Video, label: "Instant video session", color: "text-blue-500" },
                 { icon: Users, label: "Simulated partner", color: "text-orange-500" },
               ].map(({ icon: Icon, label, color }) => (
@@ -194,5 +191,33 @@ const DevMode = () => {
     </div>
   );
 };
+
+// ── Toggle row helper ───────────────────────────────────────────────────────
+function ToggleRow({
+  icon, label, desc, checked, onChange, destructive = false,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  desc: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  destructive?: boolean;
+}) {
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg" style={{
+      backgroundColor: destructive ? "hsl(0 80% 97%)" : "hsl(48 80% 96%)",
+      border: `1px solid ${destructive ? "hsl(0 50% 88%)" : "hsl(48 60% 85%)"}`,
+    }}>
+      <div className="flex items-center gap-2">
+        <span style={{ color: destructive ? "hsl(0 60% 45%)" : "hsl(40 60% 35%)" }}>{icon}</span>
+        <div>
+          <p className="text-sm font-medium" style={{ color: destructive ? "hsl(0 60% 30%)" : "hsl(40 80% 15%)" }}>{label}</p>
+          <p className="text-xs" style={{ color: destructive ? "hsl(0 30% 50%)" : "hsl(40 30% 50%)" }}>{desc}</p>
+        </div>
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} />
+    </div>
+  );
+}
 
 export default DevMode;
