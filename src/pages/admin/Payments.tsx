@@ -8,11 +8,14 @@ import { DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import type { Database } from "@/integrations/supabase/types";
+
+type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
 const Payments = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<PaymentStatus | "all">("all");
   const [stats, setStats] = useState({
     totalRevenue: 0,
     pendingPayouts: 0,
@@ -61,7 +64,7 @@ const Payments = () => {
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter as any);
+        query = query.eq('status', statusFilter);
       }
 
       const { data, error } = await query;
@@ -213,7 +216,7 @@ const Payments = () => {
                       <td className="px-4 py-3">
                         <Select
                           value={payment.status}
-                          onValueChange={(value) => updatePaymentStatus(payment.id, value as any)}
+                          onValueChange={(value) => updatePaymentStatus(payment.id, value as PaymentStatus)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />

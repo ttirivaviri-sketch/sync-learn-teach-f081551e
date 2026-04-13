@@ -1,15 +1,25 @@
-import { useState, useEffect, useRef } from "react";
-import { Send, MessageCircle, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+/**
+ * ChatInterface — Full-page messaging experience with theme selector.
+ *
+ * Takes over the entire viewport when open. On mobile the conversation
+ * sidebar is hidden behind a toggle; on desktop it's a fixed column.
+ * Theme choice is persisted in localStorage.
+ */
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Session } from "@supabase/supabase-js";
 import { logger } from "@/utils/logger";
 
+import { ConversationList, type Conversation } from "./chat/ConversationList";
+import { ChatArea, EmptyChatArea } from "./chat/ChatArea";
+import {
+  getThemeById,
+  CHAT_THEME_STORAGE_KEY,
+  type ChatTheme,
+} from "./chat/chatThemes";
+
+// ── Types ──────────────────────────────────────────────────────────────────
 interface Message {
   id: string;
   content: string;
@@ -18,29 +28,11 @@ interface Message {
   created_at: string;
   read_at?: string;
   sender_name?: string;
-  sender_avatar?: string;
-  profiles?: {
-    full_name: string;
-  };
-}
-
-interface Conversation {
-  id: string;
-  tutor_id: string;
-  learner_id: string;
-  last_message_at: string;
-  other_user_name?: string;
-  other_user_avatar?: string;
-  unread_count?: number;
-  profiles?: {
-    full_name: string;
-    id: string;
-  };
 }
 
 interface ChatInterfaceProps {
-  session: Session;
-  userType: 'tutor' | 'learner';
+  session: Session | null;
+  userType: "tutor" | "learner";
   isOpen: boolean;
   onClose: () => void;
   initialConversationId?: string;
@@ -48,75 +40,240 @@ interface ChatInterfaceProps {
   otherUserName?: string;
 }
 
-const ChatInterface = ({ 
-  session, 
-  userType, 
-  isOpen, 
-  onClose, 
+// ── Helpers ────────────────────────────────────────────────────────────────
+function formatTime(timestamp: string) {
+  const date = new Date(timestamp);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
+// ── Component ──────────────────────────────────────────────────────────────
+const ChatInterface = ({
+  session,
+  userType,
+  isOpen,
+  onClose,
   initialConversationId,
   otherUserId,
-  otherUserName 
+  otherUserName,
 }: ChatInterfaceProps) => {
+  /* ── State ──────────────────────────────────────────────────── */
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<string | null>(initialConversationId || null);
+  const [activeConversation, setActiveConversation] = useState<string | null>(
+    initialConversationId || null,
+  );
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [mobileSidebar, setMobileSidebar] = useState(true); // start with sidebar visible
   const { toast } = useToast();
 
-  // Auto-scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
-  // Load conversations
-  useEffect(() => {
-    if (isOpen && session?.user) {
-      loadConversations();
+  // Theme (persisted)
+  const [theme, setTheme] = useState<ChatTheme>(() => {
+    try {
+      const saved = localStorage.getItem(CHAT_THEME_STORAGE_KEY);
+      return saved ? getThemeById(saved) : getThemeById("studysync-blue");
+    } catch {
+      return getThemeById("studysync-blue");
     }
-  }, [isOpen, session?.user]);
+  });
 
-  // Set up real-time subscriptions
+  const handleThemeChange = useCallback((t: ChatTheme) => {
+    setTheme(t);
+    try { localStorage.setItem(CHAT_THEME_STORAGE_KEY, t.id); } catch { /* noop */ }
+  }, []);
+
+  // ── Data fetching ──────────────────────────────────────────
+  const loadConversations = useCallback(async () => {
+    if (!session?.user) return;
+    try {
+      const { data: convos, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq(userType === "tutor" ? "tutor_id" : "learner_id", session.user.id)
+        .order("last_message_at", { ascending: false });
+      if (error) throw error;
+
+      const withUserInfo = await Promise.all(
+        (convos || []).map(async (conv) => {
+          const oId = userType === "tutor" ? conv.learner_id : conv.tutor_id;
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, id")
+            .eq("id", oId)
+            .maybeSingle();
+          return {
+            ...conv,
+            other_user_name: profile?.full_name || "Unknown User",
+          };
+        }),
+      );
+      setConversations(withUserInfo);
+    } catch (error) {
+      logger.error("Error loading conversations:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load conversations",
+        variant: "destructive",
+      });
+    }
+  }, [session?.user, userType, toast]);
+
+  const loadMessages = useCallback(
+    async (conversationId: string) => {
+      if (!session?.user) return;
+      try {
+        setLoading(true);
+        const { data: msgs, error } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: true });
+        if (error) throw error;
+
+        const withSenderInfo = await Promise.all(
+          (msgs || []).map(async (msg) => {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name")
+              .eq("id", msg.sender_id)
+              .maybeSingle();
+            return { ...msg, sender_name: profile?.full_name || "Unknown User" };
+          }),
+        );
+        setMessages(withSenderInfo);
+
+        // Mark unread as read
+        const unread = msgs?.filter(
+          (m) => m.sender_id !== session.user.id && !m.read_at,
+        );
+        if (unread?.length) {
+          await Promise.all(unread.map((m) => markMessageAsRead(m.id)));
+        }
+      } catch (error) {
+        logger.error("Error loading messages:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load messages",
+          variant: "destructive",
+        });
+      } finally {
+        setLoading(false);
+      }
+    },
+    [session?.user, toast],
+  );
+
+  const createOrGetConversation = useCallback(
+    async (oUserId: string, _oUserName: string) => {
+      if (!session?.user) return;
+      try {
+        const tutorId = userType === "tutor" ? session.user.id : oUserId;
+        const learnerId = userType === "learner" ? session.user.id : oUserId;
+        const { data: existing, error: existingError } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("tutor_id", tutorId)
+          .eq("learner_id", learnerId)
+          .maybeSingle();
+        if (existingError) throw existingError;
+        if (existing) {
+          setActiveConversation(existing.id);
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("conversations")
+          .insert({ tutor_id: tutorId, learner_id: learnerId })
+          .select()
+          .single();
+        if (error) throw error;
+        setActiveConversation(data.id);
+        loadConversations();
+      } catch (error) {
+        logger.error("Error creating conversation:", error);
+        toast({
+          title: "Error",
+          description: "Failed to create conversation",
+          variant: "destructive",
+        });
+      }
+    },
+    [session?.user, userType, loadConversations, toast],
+  );
+
+  const sendMessage = useCallback(async () => {
+    if (!newMessage.trim() || !activeConversation || !session?.user) return;
+    try {
+      const { error } = await supabase.from("messages").insert({
+        conversation_id: activeConversation,
+        sender_id: session.user.id,
+        content: newMessage.trim(),
+      });
+      if (error) throw error;
+      setNewMessage("");
+    } catch (error) {
+      logger.error("Error sending message:", error);
+      toast({
+        title: "Error",
+        description: "Failed to send message",
+        variant: "destructive",
+      });
+    }
+  }, [newMessage, activeConversation, session?.user, toast]);
+
+  const markMessageAsRead = async (messageId: string) => {
+    try {
+      await supabase
+        .from("messages")
+        .update({ read_at: new Date().toISOString() })
+        .eq("id", messageId);
+    } catch (error) {
+      logger.error("Error marking message as read:", error);
+    }
+  };
+
+  // ── Effects ────────────────────────────────────────────────
+  useEffect(() => {
+    if (isOpen && session?.user) loadConversations();
+  }, [isOpen, session?.user, loadConversations]);
+
   useEffect(() => {
     if (!isOpen || !session?.user) return;
-
     const conversationChannel = supabase
-      .channel('conversations-channel')
+      .channel("conversations-channel")
       .on(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'conversations',
-          filter: userType === 'tutor' 
-            ? `tutor_id=eq.${session.user.id}` 
-            : `learner_id=eq.${session.user.id}`
+          event: "*",
+          schema: "public",
+          table: "conversations",
+          filter:
+            userType === "tutor"
+              ? `tutor_id=eq.${session.user.id}`
+              : `learner_id=eq.${session.user.id}`,
         },
-        () => {
-          loadConversations();
-        }
+        () => loadConversations(),
       )
       .subscribe();
 
     const messageChannel = supabase
-      .channel('messages-channel')
+      .channel("messages-channel")
       .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages'
-        },
+        "postgres_changes",
+        { event: "*", schema: "public", table: "messages" },
         (payload) => {
-          if (payload.eventType === 'INSERT') {
-            const newMessage = payload.new as Message;
-            if (newMessage.conversation_id === activeConversation) {
-              setMessages(prev => [...prev, newMessage]);
-              markMessageAsRead(newMessage.id);
+          if (payload.eventType === "INSERT") {
+            const msg = payload.new as Message;
+            if (msg.conversation_id === activeConversation) {
+              setMessages((prev) => [...prev, msg]);
+              markMessageAsRead(msg.id);
             }
           }
-        }
+        },
       )
       .subscribe();
 
@@ -124,344 +281,76 @@ const ChatInterface = ({
       supabase.removeChannel(conversationChannel);
       supabase.removeChannel(messageChannel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, session?.user, activeConversation, userType]);
 
-  // Load messages when conversation changes
   useEffect(() => {
-    if (activeConversation) {
-      loadMessages(activeConversation);
-    }
-  }, [activeConversation]);
+    if (activeConversation) loadMessages(activeConversation);
+  }, [activeConversation, loadMessages]);
 
-  // Handle initial conversation setup
   useEffect(() => {
     if (otherUserId && otherUserName && !activeConversation) {
       createOrGetConversation(otherUserId, otherUserName);
     }
-  }, [otherUserId, otherUserName, activeConversation]);
+  }, [otherUserId, otherUserName, activeConversation, createOrGetConversation]);
 
-  const loadConversations = async () => {
-    try {
-      // Get conversations and fetch profile data separately to avoid relation issues
-      const { data: conversations, error } = await supabase
-        .from('conversations')
-        .select('*')
-        .eq(userType === 'tutor' ? 'tutor_id' : 'learner_id', session.user.id)
-        .order('last_message_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch profile data for each conversation
-      const conversationsWithUserInfo = await Promise.all(
-        (conversations || []).map(async (conv) => {
-          const otherUserId = userType === 'tutor' ? conv.learner_id : conv.tutor_id;
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name, id')
-            .eq('id', otherUserId)
-            .maybeSingle();
-
-          return {
-            ...conv,
-            other_user_name: profile?.full_name || 'Unknown User',
-            other_user_id: profile?.id
-          };
-        })
-      );
-
-      setConversations(conversationsWithUserInfo);
-    } catch (error) {
-      logger.error('Error loading conversations:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load conversations",
-        variant: "destructive",
-      });
-    }
+  // When a conversation is selected on mobile, close the sidebar
+  const handleSelectConversation = (id: string) => {
+    setActiveConversation(id);
+    setMobileSidebar(false);
   };
 
-  const loadMessages = async (conversationId: string) => {
-    try {
-      setLoading(true);
-      const { data: messages, error } = await supabase
-        .from('messages')
-        .select('*')
-        .eq('conversation_id', conversationId)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-
-      // Fetch sender names separately
-      const messagesWithSenderInfo = await Promise.all(
-        (messages || []).map(async (msg) => {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('id', msg.sender_id)
-            .maybeSingle();
-
-          return {
-            ...msg,
-            sender_name: profile?.full_name || 'Unknown User'
-          };
-        })
-      );
-
-      setMessages(messagesWithSenderInfo);
-      
-      // Mark unread messages as read
-      const unreadMessages = messages?.filter(msg => 
-        msg.sender_id !== session.user.id && !msg.read_at
-      );
-      
-      if (unreadMessages?.length) {
-        await Promise.all(
-          unreadMessages.map(msg => markMessageAsRead(msg.id))
-        );
-      }
-    } catch (error) {
-      logger.error('Error loading messages:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load messages",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createOrGetConversation = async (otherUserId: string, otherUserName: string) => {
-    try {
-      const tutorId = userType === 'tutor' ? session.user.id : otherUserId;
-      const learnerId = userType === 'learner' ? session.user.id : otherUserId;
-
-      // Check if conversation already exists
-      const { data: existing, error: existingError } = await supabase
-        .from('conversations')
-        .select('id')
-        .eq('tutor_id', tutorId)
-        .eq('learner_id', learnerId)
-        .maybeSingle();
-
-      if (existingError) throw existingError;
-
-      if (existing) {
-        setActiveConversation(existing.id);
-        return;
-      }
-
-      // Create new conversation
-      const { data, error } = await supabase
-        .from('conversations')
-        .insert({
-          tutor_id: tutorId,
-          learner_id: learnerId
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      setActiveConversation(data.id);
-      loadConversations();
-    } catch (error) {
-      logger.error('Error creating conversation:', error);
-      toast({
-        title: "Error",
-        description: "Failed to create conversation",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !activeConversation) return;
-
-    try {
-      const { error } = await supabase
-        .from('messages')
-        .insert({
-          conversation_id: activeConversation,
-          sender_id: session.user.id,
-          content: newMessage.trim()
-        });
-
-      if (error) throw error;
-
-      setNewMessage("");
-    } catch (error) {
-      logger.error('Error sending message:', error);
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const markMessageAsRead = async (messageId: string) => {
-    try {
-      await supabase
-        .from('messages')
-        .update({ read_at: new Date().toISOString() })
-        .eq('id', messageId);
-    } catch (error) {
-      logger.error('Error marking message as read:', error);
-    }
-  };
-
-  const formatTime = (timestamp: string) => {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    
-    if (isToday) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
-  };
-
+  // ── Render ─────────────────────────────────────────────────
   if (!isOpen) return null;
 
+  const activeConvName =
+    conversations.find((c) => c.id === activeConversation)?.other_user_name ||
+    otherUserName ||
+    "User";
+
   return (
-    <div className="fixed inset-0 bg-background z-50 flex">
-      {/* Conversations List */}
-      <div className="w-80 border-r bg-muted/30">
-        <div className="p-4 border-b">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold flex items-center gap-2">
-              <MessageCircle className="h-5 w-5" />
-              Messages
-            </h2>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-        
-        <div className="overflow-y-auto h-[calc(100vh-80px)]">
-          {conversations.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground">
-              No conversations yet
-            </div>
-          ) : (
-            conversations.map((conv) => (
-              <div
-                key={conv.id}
-                className={`p-4 border-b cursor-pointer hover:bg-muted/50 ${
-                  activeConversation === conv.id ? 'bg-muted' : ''
-                }`}
-                onClick={() => setActiveConversation(conv.id)}
-              >
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={conv.other_user_avatar} />
-                    <AvatarFallback>
-                      {conv.other_user_name?.[0]?.toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium truncate">{conv.other_user_name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {formatTime(conv.last_message_at)}
-                    </p>
-                  </div>
-                  {conv.unread_count && conv.unread_count > 0 && (
-                    <Badge variant="destructive" className="text-xs">
-                      {conv.unread_count}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </div>
+    <div className="fixed inset-0 z-50 flex h-screen w-screen overflow-hidden">
+      {/* Mobile backdrop when sidebar is open */}
+      {mobileSidebar && (
+        <div
+          className="fixed inset-0 bg-black/30 z-40 md:hidden"
+          onClick={() => setMobileSidebar(false)}
+        />
+      )}
 
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
+      {/* Sidebar */}
+      <ConversationList
+        conversations={conversations}
+        activeConversationId={activeConversation}
+        onSelect={handleSelectConversation}
+        onClose={onClose}
+        formatTime={formatTime}
+        theme={theme}
+        onThemeChange={handleThemeChange}
+        isMobileOpen={mobileSidebar}
+      />
+
+      {/* Main chat area */}
+      <div className="flex-1 flex flex-col min-w-0 h-full">
         {activeConversation ? (
-          <>
-            {/* Chat Header */}
-            <div className="p-4 border-b bg-muted/30">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback>
-                    {conversations.find(c => c.id === activeConversation)?.other_user_name?.[0]?.toUpperCase() || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">
-                    {conversations.find(c => c.id === activeConversation)?.other_user_name || otherUserName}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    {userType === 'tutor' ? 'Student' : 'Tutor'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {loading ? (
-                <div className="text-center text-muted-foreground">Loading messages...</div>
-              ) : messages.length === 0 ? (
-                <div className="text-center text-muted-foreground">
-                  No messages yet. Start the conversation!
-                </div>
-              ) : (
-                messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      message.sender_id === session.user.id ? 'justify-end' : 'justify-start'
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[70%] rounded-lg p-3 ${
-                        message.sender_id === session.user.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      }`}
-                    >
-                      <p className="text-sm">{message.content}</p>
-                      <p className={`text-xs mt-1 ${
-                        message.sender_id === session.user.id
-                          ? 'text-primary-foreground/70'
-                          : 'text-muted-foreground'
-                      }`}>
-                        {formatTime(message.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Message Input */}
-            <div className="p-4 border-t">
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                />
-                <Button onClick={sendMessage} disabled={!newMessage.trim()}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
+          <ChatArea
+            messages={messages}
+            loading={loading}
+            newMessage={newMessage}
+            currentUserId={session?.user?.id || ""}
+            otherUserName={activeConvName}
+            userType={userType}
+            onNewMessageChange={setNewMessage}
+            onSendMessage={sendMessage}
+            formatTime={formatTime}
+            theme={theme}
+            onToggleSidebar={() => setMobileSidebar((v) => !v)}
+          />
         ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            <div className="text-center">
-              <MessageCircle className="h-12 w-12 mx-auto mb-4" />
-              <p>Select a conversation to start messaging</p>
-            </div>
-          </div>
+          <EmptyChatArea
+            theme={theme}
+            onToggleSidebar={() => setMobileSidebar((v) => !v)}
+          />
         )}
       </div>
     </div>
@@ -469,6 +358,4 @@ const ChatInterface = ({
 };
 
 export default ChatInterface;
-
-// Explicit named export as well to resolve any module issues
 export { ChatInterface };
