@@ -117,7 +117,7 @@ const Support = () => {
       <p className="text-muted-foreground mt-1">Manage customer support requests</p>
 
       <div className="mt-6 flex items-center gap-4">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as SupportStatus | "all")}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>

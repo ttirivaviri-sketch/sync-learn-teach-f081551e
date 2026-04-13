@@ -96,7 +96,7 @@ const StudySyncLibrary = ({
       const videoUrlRegex =
         /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?[^\s)"']*|shorts\/[^\s)"']*|embed\/[^\s)"']*|live\/[^\s)"']*)|youtu\.be\/[^\s)"']*|(?:www\.)?vimeo\.com\/[^\s)"']*|(?:www\.)?loom\.com\/share\/[^\s)"']*|[^\s)"']*supabase\.co[^\s)"']*\/storage\/[^\s)"']*|[^\s)"']*\.(?:mp4|webm|mov|m4v|ogg)(?:\?[^\s)"']*)?)/i;
       // Search summary, title, and any extra string-valued fields for video URLs
-      const extra = resource as Record<string, unknown>;
+      const extra = resource as unknown as Record<string, unknown>;
       const textsToSearch = [
         resource.summary,
         resource.title,
