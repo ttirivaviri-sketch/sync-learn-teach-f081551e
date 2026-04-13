@@ -7,10 +7,9 @@
  */
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, User, MessageCircle, CreditCard, Zap } from "lucide-react";
+import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
 import { useDevMode } from "@/contexts/DevModeContext";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
 import StudySyncLibrary from "@/components/StudySyncLibrary";
@@ -21,10 +20,8 @@ import { LoadingScreen } from "@/components/LoadingSpinner";
 import { NotificationCenter } from "@/components/NotificationCenter";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { QuickBookingModal } from "@/components/QuickBookingModal";
-import { PaymentHistory } from "@/components/PaymentHistory";
 import { PaymentCheckout } from "@/components/PaymentCheckout";
 import { RescheduleDialog } from "@/components/RescheduleDialog";
-import { AcademicProfileSetup } from "@/components/AcademicProfileSetup";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -43,6 +40,9 @@ import { LearnerLibraryTab } from "./learner/LearnerLibraryTab";
 import { LearnerActivityTab } from "./learner/LearnerActivityTab";
 import { LearnerProfileTab } from "./learner/LearnerProfileTab";
 import { logger } from "@/utils/logger";
+import { PaymentMethodsModal } from "@/components/learner-modals/PaymentMethodsModal";
+import { PaymentHistoryModal } from "@/components/learner-modals/PaymentHistoryModal";
+import { AcademicSetupModal } from "@/components/learner-modals/AcademicSetupModal";
 
 // ── Types ───────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -502,89 +502,40 @@ const LearnerApp = () => {
         }}
       />
 
-      {/* Payment Methods Modal */}
-      {showPaymentMethods && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowPaymentMethods(false)}>
-          <div className="bg-background w-full rounded-t-2xl p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-lg">Payment Methods</h3>
-              <button onClick={() => setShowPaymentMethods(false)} className="text-muted-foreground text-sm">&#x2715;</button>
-            </div>
-            <div className="space-y-3">
-              {[
-                { name: "Credit / Debit Card", desc: "Visa, Mastercard, Amex via PayFast" },
-                { name: "EFT / Bank Transfer", desc: "Pay via your bank's online portal" },
-                { name: "Instant EFT", desc: "Secure instant bank payment via Ozow" },
-                { name: "Mobicred", desc: "Buy now, pay later in instalments" },
-              ].map((m) => (
-                <div key={m.name} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm">{m.name}</p>
-                    <p className="text-xs text-muted-foreground">{m.desc}</p>
-                  </div>
-                  <Badge variant="default" className="bg-green-500">Active</Badge>
-                </div>
-              ))}
-              {bypassPayments && (
-                <div className="flex items-center gap-3 p-3 border border-yellow-300 rounded-lg bg-yellow-50">
-                  <Zap className="h-5 w-5 text-yellow-600" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm text-yellow-800">Dev Bypass</p>
-                    <p className="text-xs text-yellow-600">Payments skipped in dev mode</p>
-                  </div>
-                  <Badge variant="outline" className="border-yellow-400 text-yellow-700">Dev</Badge>
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground text-center pt-2">
-                All payments are processed securely by PayFast, South Africa's trusted payment gateway.
-              </p>
-            </div>
-          </div>
-        </div>
+      <PaymentMethodsModal
+        open={showPaymentMethods}
+        onClose={() => setShowPaymentMethods(false)}
+        bypassPayments={bypassPayments}
+      />
+
+      {session?.user?.id && (
+        <PaymentHistoryModal
+          open={showAllPayments}
+          onClose={() => setShowAllPayments(false)}
+          userId={session.user.id}
+        />
       )}
 
-      {/* Full Payment History Modal */}
-      {showAllPayments && session?.user?.id && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-end" onClick={() => setShowAllPayments(false)}>
-          <div className="bg-background w-full rounded-t-2xl max-h-[80vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="sticky top-0 bg-background flex items-center justify-between px-5 pt-5 pb-3 border-b">
-              <h3 className="font-bold text-lg">Full Payment History</h3>
-              <button onClick={() => setShowAllPayments(false)} className="text-muted-foreground text-sm">&#x2715;</button>
-            </div>
-            <div className="p-4">
-              <PaymentHistory userId={session.user.id} limit={50} showViewAll={false} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Academic Profile Setup Modal */}
-      {showAcademicSetup && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-end sm:items-center justify-center" onClick={() => setShowAcademicSetup(false)}>
-          <div className="bg-background w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-            <AcademicProfileSetup
-              userId={session?.user?.id || "dev-user"}
-              existingProfile={academicProfile}
-              onSave={async (data) => {
-                const ok = await saveAcademicProfile(data);
-                if (ok) {
-                  setShowAcademicSetup(false);
-                  setProfileSetupDismissed(true);
-                  toast({ title: "Profile saved!", description: "Your library and Study Mode have been personalised." });
-                  setActiveTab("library");
-                } else {
-                  toast({ title: "Save failed", description: "Please try again or check your connection.", variant: "destructive" });
-                }
-                return ok;
-              }}
-              saving={academicProfileSaving}
-              onSkip={() => { setShowAcademicSetup(false); setProfileSetupDismissed(true); }}
-              compact
-            />
-          </div>
-        </div>
-      )}
+      <AcademicSetupModal
+        open={showAcademicSetup}
+        onClose={() => { setShowAcademicSetup(false); setProfileSetupDismissed(true); }}
+        userId={session?.user?.id || "dev-user"}
+        academicProfile={academicProfile}
+        saving={academicProfileSaving}
+        onSave={async (data) => {
+          const ok = await saveAcademicProfile(data);
+          if (!ok) {
+            toast({ title: "Save failed", description: "Please try again or check your connection.", variant: "destructive" });
+          }
+          return ok;
+        }}
+        onSaved={() => {
+          setShowAcademicSetup(false);
+          setProfileSetupDismissed(true);
+          toast({ title: "Profile saved!", description: "Your library and Study Mode have been personalised." });
+          setActiveTab("library");
+        }}
+      />
 
       {/* Review Modal */}
       {reviewData && (

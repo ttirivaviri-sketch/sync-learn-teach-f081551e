@@ -10,11 +10,14 @@ import { AlertCircle, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import type { Database } from "@/integrations/supabase/types";
+
+type SupportStatus = Database["public"]["Enums"]["support_status"];
 
 const Support = () => {
   const [tickets, setTickets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<SupportStatus | "all">("all");
   const [selectedTicket, setSelectedTicket] = useState<any>(null);
   const [responseMessage, setResponseMessage] = useState("");
   const { toast } = useToast();
@@ -37,7 +40,7 @@ const Support = () => {
         .order('created_at', { ascending: false });
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter as any);
+        query = query.eq('status', statusFilter);
       }
 
       const { data, error } = await query;
@@ -187,7 +190,7 @@ const Support = () => {
                       <td className="px-4 py-3">
                         <Select
                           value={ticket.status}
-                          onValueChange={(value) => updateTicketStatus(ticket.id, value as any)}
+                          onValueChange={(value) => updateTicketStatus(ticket.id, value as SupportStatus)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />

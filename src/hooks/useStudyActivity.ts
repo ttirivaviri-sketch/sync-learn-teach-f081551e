@@ -75,7 +75,7 @@ export function useStudyActivity(userId?: string) {
     }) => {
       if (!userId) return;
       try {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("study_activity")
           .insert({
             user_id: userId,

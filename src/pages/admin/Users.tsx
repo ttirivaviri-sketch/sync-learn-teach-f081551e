@@ -73,7 +73,7 @@ const Users = () => {
         <Button onClick={loadUsers} variant="outline">Refresh</Button>
       </div>
 
-      <Tabs value={userType} onValueChange={(v) => setUserType(v as any)} className="mt-4">
+      <Tabs value={userType} onValueChange={(v) => setUserType(v as "all" | "learner" | "tutor")} className="mt-4">
         <TabsList>
           <TabsTrigger value="all">All Users</TabsTrigger>
           <TabsTrigger value="learner">Learners</TabsTrigger>

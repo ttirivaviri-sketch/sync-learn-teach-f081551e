@@ -8,11 +8,14 @@ import { Calendar, Clock, DollarSign } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import type { Database } from "@/integrations/supabase/types";
+
+type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
 const Bookings = () => {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState<string | 'all'>("all");
+  const [statusFilter, setStatusFilter] = useState<BookingStatus | 'all'>("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,7 +37,7 @@ const Bookings = () => {
         .order('scheduled_at', { ascending: false });
 
       if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter as any);
+        query = query.eq('status', statusFilter);
       }
 
       const { data, error } = await query;
@@ -171,7 +174,7 @@ const Bookings = () => {
                       <td className="px-4 py-3">
                         <Select
                           value={booking.status}
-                          onValueChange={(value) => updateBookingStatus(booking.id, value as any)}
+                          onValueChange={(value) => updateBookingStatus(booking.id, value as BookingStatus)}
                         >
                           <SelectTrigger className="h-8 text-xs">
                             <SelectValue />
