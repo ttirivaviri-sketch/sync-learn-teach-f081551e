@@ -85,7 +85,7 @@ export function useStudyActivity(userId?: string) {
             score: entry.score ?? null,
             topic: entry.topic ?? null,
             duration_minutes: entry.duration_minutes ?? null,
-            metadata: entry.metadata ?? {},
+            metadata: (entry.metadata ?? {}) as Record<string, string | number | boolean | null>,
             date: new Date().toISOString().split("T")[0],
           }]);
 
