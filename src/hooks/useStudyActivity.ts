@@ -77,7 +77,7 @@ export function useStudyActivity(userId?: string) {
       try {
         const { error } = await supabase
           .from("study_activity")
-          .insert({
+          .insert([{
             user_id: userId,
             subject: entry.subject,
             activity_type: entry.activity_type || "task",
@@ -87,7 +87,7 @@ export function useStudyActivity(userId?: string) {
             duration_minutes: entry.duration_minutes ?? null,
             metadata: entry.metadata ?? {},
             date: new Date().toISOString().split("T")[0],
-          });
+          }]);
 
         if (error) {
           logger.warn("[useStudyActivity] Insert error:", error.message);
