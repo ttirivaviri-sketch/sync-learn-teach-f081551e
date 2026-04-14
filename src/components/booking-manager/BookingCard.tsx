@@ -25,6 +25,7 @@ interface BookingCardProps {
   isProfileExpanded: boolean;
   academicProfile?: AcademicProfileInfo;
   learnerSubjects?: string[];
+  tutorId?: string;
   onAccept: () => void;
   onDecline: () => void;
   onReschedule: () => void;
@@ -66,6 +67,7 @@ export function BookingCard({
   isProfileExpanded,
   academicProfile,
   learnerSubjects,
+  tutorId,
   onAccept,
   onDecline,
   onReschedule,
@@ -73,6 +75,7 @@ export function BookingCard({
   onStartChat,
   onToggleProfile,
 }: BookingCardProps) {
+  const [showInsights, setShowInsights] = useState(false);
   const hasProfile = academicProfile && (academicProfile.curriculum || academicProfile.grade || (academicProfile.subjects && academicProfile.subjects.length > 0));
   const hasSubjects = learnerSubjects && learnerSubjects.length > 0;
 
