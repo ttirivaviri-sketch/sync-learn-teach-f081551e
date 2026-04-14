@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { formatDistanceToNow } from "date-fns";
-import { useDevMode } from "@/contexts/DevModeContext";
+
 
 interface LiveBookingCardProps {
   booking: BookingRequest;
