@@ -1,34 +1,55 @@
 
 
-## Plan: Fix PayFast 400 Error + Uber-Style Payment UX
+## Plan: Uber-Style Clean Profile Tabs (Learner + Tutor)
 
-### Part 1: Fix the PayFast 400 Error
+Redesign both profile tabs to follow the Uber Account screen pattern: a clean header with avatar/name/rating, then a 2x2 grid of quick-action buttons, followed by organized menu rows — all detailed content hidden behind taps, not dumped on screen.
 
-**Root Cause**: Line 168 of `payfast-create-payment/index.ts` includes `subscription_type: "1"`, which tells PayFast to create a recurring subscription. PayFast then requires a `frequency` field (e.g., monthly, weekly). Since this is a one-time booking payment, `subscription_type` should be removed entirely.
+### Learner Profile Tab (`src/pages/learner/LearnerProfileTab.tsx`)
 
-**File**: `supabase/functions/payfast-create-payment/index.ts`
-- Remove `subscription_type: "1"` from the `paymentData` object (line 168)
-- This single-line fix resolves the 400 Bad Request error
+**Top section** — Large name (bold, left-aligned like "Solo Cash"), avatar on the right, star rating or study level badge below the name. Clean, no card wrapper.
 
-### Part 2: Uber-Style Payment UX
+**2x2 action grid** — Rounded gray buttons (like Uber's Help/Wallet/Safety/Inbox):
+- Academic Profile
+- Wallet (Payment Methods)
+- Bookings
+- Study Mode
 
-Redesign the payment flow to feel like the Uber wallet/checkout experience shown in the screenshots — a bottom sheet with saved cards, a clean booking summary, and one-tap payment.
+**Stacked menu rows** — Simple icon + label + chevron rows (no cards). Each navigates or opens a modal:
+- Payment History → `onShowAllPayments`
+- My Reviews → activity tab
+- Change Study Level → navigate
+- Syllabus & Paper Codes → existing SyllabusSetupGate
+- Settings (sign out lives here)
 
-**File**: `src/components/PaymentCheckout.tsx` — Major redesign:
-- **Wallet-style layout**: Show saved payment methods as a list with card brand icons (Mastercard, Visa), last 4 digits, and status (active/expired) — similar to the Uber Wallet screenshot
-- **Booking summary card at top**: Tutor name, subject, date/time, price — compact like the Uber trip selection card
-- **One-tap payment**: Tapping a saved card immediately initiates payment (no separate confirm step for saved cards)
-- **"Add payment method" button**: For new card payments, redirects to PayFast
-- **DevCard row**: Kept at top with amber styling for test mode
-- **Bottom fixed bar**: Shows selected payment method + total, with a single "Pay R{amount}" CTA button — similar to Uber's "Choose Uber Go" bar
-- **Trust badge**: "Secured by PayFast" remains
+**Remove from surface**: All the inline academic profile details (curriculum grid, exam dates, subjects list, contact info, goals) — these stay accessible via the "Academic Profile" button which opens the existing `onShowAcademicSetup` modal. Profile stats (sessions/upcoming/spent) move into a subtle single row below the name.
 
-**File**: `src/components/PayFastPayment.tsx` — Align with new design patterns (or deprecate if PaymentCheckout fully replaces it)
+### Tutor Profile Tab (`src/pages/tutor/TutorProfileTab.tsx`)
 
-### Technical Details
+**Top section** — Bold name, avatar right, rating below.
 
-- No database changes needed
-- Edge function redeployment needed for the `subscription_type` fix
-- Saved cards continue to use the existing `saved_payment_methods` table and `payfast-charge-token` edge function
-- Server-side price validation already in place (booking price checked in edge function)
+**2x2 action grid**:
+- Earnings (opens inline earnings detail or scrolls to it)
+- Wallet (TutorWalletPanel, opened as a section or modal)
+- Subjects (TutorSubjectManager)
+- Tutorials
+
+**Stacked menu rows**:
+- Recent Earnings → shows recent earnings list
+- Download Tax Report → existing CSV logic
+- Edit Profile → TutorProfile settings
+- Earn as Creator → tutorials tab
+
+**Remove from surface**: The 4 earnings stat cards, earnings chart, recent earnings list, wallet panel, subject manager, and profile editor — all hidden behind their respective menu buttons. Content appears when tapped (either scroll-to-section or expandable accordion).
+
+### Technical Approach
+
+- No new components needed — just restructuring JSX in both files
+- Use `useState` for toggling expanded sections (e.g., `showEarnings`, `showWallet`)
+- Reuse all existing child components (`TutorWalletPanel`, `TutorSubjectManager`, `PaymentHistory`, etc.)
+- Style: `bg-muted/50 rounded-2xl` for the 2x2 grid buttons, simple `border-b` divider rows for menu items, `ChevronRight` icons on the right
+
+### Files Changed
+
+- `src/pages/learner/LearnerProfileTab.tsx` — Full restructure
+- `src/pages/tutor/TutorProfileTab.tsx` — Full restructure
 
