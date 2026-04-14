@@ -10,6 +10,7 @@ import type { Curriculum } from "@/types/academicProfile";
 import { TutorialStatsGrid } from "@/components/tutor-creator/TutorialStatsGrid";
 import { TutorialCard, type Tutorial } from "@/components/tutor-creator/TutorialCard";
 import { TutorialFormDialog, type TutorialForm } from "@/components/tutor-creator/TutorialFormDialog";
+import { ContentComplianceModal, hasAcceptedCompliance } from "@/components/tutor-creator/ContentComplianceModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -33,11 +34,26 @@ interface TutorCreatorDashboardProps {
 export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashboardProps) {
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
   const [form, setForm] = useState<TutorialForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
+
+  const handleUploadClick = () => {
+    resetForm();
+    if (hasAcceptedCompliance()) {
+      setShowForm(true);
+    } else {
+      setShowCompliance(true);
+    }
+  };
+
+  const handleComplianceAccepted = () => {
+    setShowCompliance(false);
+    setShowForm(true);
+  };
 
   // ── Load tutorials from Supabase ────────────────────────────────────────
   useEffect(() => {
@@ -224,7 +240,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
             Create tutorials · reach thousands of students
           </p>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
+        <Button size="sm" onClick={handleUploadClick}>
           <Plus className="h-4 w-4 mr-1" />
           Upload Tutorial
         </Button>
@@ -253,7 +269,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
                 Upload your first tutorial and get discovered by thousands of students across ZIMSEC, Cambridge &amp; more.
               </p>
             </div>
-            <Button onClick={() => { resetForm(); setShowForm(true); }}>
+            <Button onClick={handleUploadClick}>
               <Upload className="h-4 w-4 mr-2" />
               Upload Your First Tutorial
             </Button>
@@ -273,6 +289,13 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         </div>
       )}
 
+      {/* Compliance Modal */}
+      <ContentComplianceModal
+        open={showCompliance}
+        onAccept={handleComplianceAccepted}
+        onCancel={() => setShowCompliance(false)}
+      />
+
       {/* Form Dialog */}
       <TutorialFormDialog
         open={showForm}
@@ -280,6 +303,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         form={form}
         saving={saving}
         formError={formError}
+        tutorId={tutorId}
         onOpenChange={setShowForm}
         onUpdateForm={updateForm}
         onSubmit={handleSubmit}
