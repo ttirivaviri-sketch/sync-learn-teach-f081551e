@@ -1,78 +1,70 @@
 
 
-## Plan: Replace Dev Mode with DevCard Virtual Payment Method
+## Plan: Gallery Video Upload + Content Compliance Agreement
 
 ### What Changes
 
-Remove the entire Dev Mode simulation layer (auth bypass, payment bypass, schedule bypass, 5-tap secret, /dev page, DevModeBanner). Replace it with a single "DevCard" — a virtual test card that appears as a saved payment method, simulates the payment flow through the real UI (no "bypassed" notifications), and allows testing the full booking → payment → video session flow using real authentication.
+Two features added to the tutor tutorial upload flow:
 
-### Why This Is Better
+1. **Direct video upload from phone gallery** — Replace the URL-only input with a file picker that accepts video files, uploads them to a Supabase storage bucket, and stores the resulting public URL as the tutorial's `video_url`.
 
-- Users test with real auth (actual Supabase login), not synthetic sessions
-- Payment flow is tested end-to-end through the same UI real users see
-- No confusing "Dev Mode" banners or bypass notifications
-- Other real cards (PayFast) work alongside DevCard
+2. **Content Compliance Agreement gate** — Before the upload form opens, tutors must read and accept content guidelines via a modal with a required checkbox. The "Continue to Upload" button stays disabled until agreed.
 
 ---
 
-### Files to Delete
+### Files to Create
 
-| File | Reason |
-|---|---|
-| `src/contexts/DevModeContext.tsx` | Entire dev mode context |
-| `src/services/DevService.ts` | Dev simulation service |
-| `src/components/DevModeBanner.tsx` | Floating dev panel |
-| `src/pages/DevMode.tsx` | /dev passphrase page |
+**`src/components/tutor-creator/ContentComplianceModal.tsx`**
+- Full-screen dialog with scrollable guidelines text
+- Guidelines cover: educational appropriateness, no offensive language, no nudity, no hate speech, no violence, original content ownership, consequence of violations
+- Checkbox: "I have read and agree that my content complies with the above guidelines"
+- "Continue to Upload" button disabled until checkbox is checked
+- Subtle footer line: "This step helps keep StudySync safe and valuable for all students."
+- Stores acceptance in `sessionStorage` so it's only shown once per session (resets on app reload)
 
 ### Files to Modify
 
-**1. `src/App.tsx`** — Remove DevModeProvider, DevModeBanner, /dev route import
+**`src/components/tutor-creator/TutorialFormDialog.tsx`**
+- Replace the Video URL text input with a dual-option section:
+  - **Option A**: "Upload from Gallery" — an `<input type="file" accept="video/*">` styled as a button. On file select, upload to `tutor-videos` storage bucket, then set the form's `videoUrl` to the public URL. Show upload progress.
+  - **Option B**: "Paste a link" — the existing URL text input (YouTube/Loom/Vimeo), kept as a fallback
+- Show a toggle or tabs between the two options
+- Display video thumbnail/filename after successful upload
 
-**2. `src/pages/Index.tsx`** — Remove `registerTap` and `useDevMode` import; remove the click wrapper around HeroSection
+**`src/components/TutorCreatorDashboard.tsx`**
+- Add state `showCompliance` (boolean)
+- When "Upload Tutorial" is clicked, check `sessionStorage` for prior acceptance:
+  - If not accepted → show `ContentComplianceModal`
+  - On accept → set sessionStorage flag, then open `TutorialFormDialog`
+  - If already accepted this session → open form directly
 
-**3. `src/pages/LearnerApp.tsx`** — Remove all `useDevMode` references. Remove dev-mode auth bypass (require real login). Remove dev session launching. Remove `bypassPayments`/`bypassSchedule` props passed to children. Clean up synthetic profile/bootstrap logic.
+### Storage Bucket Migration
 
-**4. `src/pages/TutorApp.tsx`** — Same cleanup: remove `useDevMode`, dev session logic, dev profile bootstrapping
+Create a new public storage bucket `tutor-videos` with RLS policies:
+- **SELECT**: anyone (public bucket for playback)
+- **INSERT**: authenticated users where `(bucket_id = 'tutor-videos' AND auth.uid()::text = (storage.foldername(name))[1])` — videos stored under `{user_id}/filename.mp4`
+- **DELETE**: owner only (same pattern)
 
-**5. `src/components/PayFastPayment.tsx`** — Remove dev bypass UI. Add DevCard as a permanent entry in the saved methods list. When DevCard is selected for payment, simulate a 1.5s delay then:
-  - Insert a real `payments` row with status `succeeded` via Supabase
-  - Update booking status to `confirmed`
-  - Fire the same toast as a real payment ("Payment confirmed!")
-  - No "bypassed" or "dev mode" language
+### Upload Flow
 
-**6. `src/components/PaymentCheckout.tsx`** — Add DevCard as a selectable payment method option (alongside card, EFT, etc.) with a distinct icon and "Test Card" badge. When selected, process locally like PayFastPayment's DevCard flow instead of redirecting to PayFast.
+```text
+Tutor taps "Upload Tutorial"
+  → Compliance modal (first time per session)
+  → Accepts → Form dialog opens
+  → Picks "Upload from Gallery"
+  → Selects video file (max 100MB)
+  → File uploads to tutor-videos/{tutor_id}/{timestamp}-{filename}
+  → Progress bar shown
+  → On success: videoUrl set to public URL
+  → Fills in title, subject, topic, etc.
+  → Publishes
+```
 
-**7. `src/hooks/useRealtimeBookings.ts`** — Remove `isDevUserId`, `buildDevBookings`, and all dev-mode branching. All bookings go through real Supabase.
+### Technical Details
 
-**8. `src/components/ChatInterface.tsx`** — Remove `isDevMode` branching that loads fake conversations
-
-**9. `src/components/learner-modals/PaymentMethodsModal.tsx`** — Remove `bypassPayments` prop and dev bypass card display. Add DevCard as a permanent listed method.
-
-**10. `src/pages/learner/LearnerHomeTab.tsx`** — Remove any `bypassPayments`/`bypassSchedule` prop usage
-
-**11. `src/pages/learner/LearnerProfileTab.tsx`** — Remove dev mode references if any
-
-### DevCard Implementation Details
-
-The DevCard is a **client-side virtual payment method** that:
-- Appears in the payment method list with icon `🧪` and label "DevCard (Test)"
-- Description: "Simulates payment — no real money charged"
-- Badge: "Test"
-- When used to pay:
-  1. Shows a 1.5s loading spinner ("Processing test payment...")
-  2. Inserts a row into `payments` table: `{ booking_id, payer_id, amount, status: 'succeeded', provider: 'devcard', currency: 'ZAR' }`
-  3. Updates booking status to `confirmed` (or keeps it if already confirmed)
-  4. Shows standard success toast: "Payment confirmed! Your session is now secured."
-  5. Proceeds to the normal post-payment flow (booking card shows "Paid", video join becomes available)
-
-The DevCard is always visible to all users (it's a test tool for the platform). It uses real database writes so the full notification pipeline (PostgreSQL triggers → notifications table → real-time subscription → toast) fires exactly as it would for a real payment.
-
-### What Users Can Still Do
-
-- **Add real cards**: The existing PayFast saved card flow remains untouched — users can pay with real cards, and those get tokenized/saved as before
-- **Test full flow**: DevCard → payment succeeds → booking confirmed → join video session — all through the real UI with no "bypass" messaging
-
-### Migration Note
-
-No database migration needed — the `payments` table already supports arbitrary `provider` values (text field), so `'devcard'` works out of the box.
+- File size limit: 100MB enforced client-side before upload
+- Accepted formats: `video/mp4, video/quicktime, video/webm`
+- Upload uses `supabase.storage.from('tutor-videos').upload(path, file)`
+- Public URL via `supabase.storage.from('tutor-videos').getPublicUrl(path)`
+- No new database tables needed — `video_url` column on `tutor_tutorials` already stores the URL
 
