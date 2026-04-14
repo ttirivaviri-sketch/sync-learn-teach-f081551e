@@ -105,7 +105,7 @@ export const LiveBookingCard = ({
           {canJoin && (
             <Badge variant="default" className="bg-green-500">
               <Video className="h-3 w-3 mr-1" />
-              {devBypass ? 'Dev — Ready' : 'Ready to Join'}
+              Ready to Join
             </Badge>
           )}
           {needsPayment && (
@@ -155,7 +155,7 @@ export const LiveBookingCard = ({
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
               <Video className="h-4 w-4 mr-1" />
-              {devBypass ? '▶ Join (Dev)' : 'Join Session'}
+              Join Session
             </Button>
           )}
 
