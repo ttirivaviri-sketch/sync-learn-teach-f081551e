@@ -84,7 +84,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
     setPaused((p) => !p);
   };
 
-  const tutorName = resource.tutor?.name || "Tutor";
+  const tutorName = resource.tutor?.name || resource.author || "Unknown";
   const tutorId = resource.tutor?.id || "";
 
   return (
@@ -276,7 +276,7 @@ export function StudyClipsFeed({
             isSaved={myLibraryItems.includes(String(video.id))}
             onBookTutor={() => {
               const tid = video.tutor?.id || "";
-              const tname = video.tutor?.name || "Tutor";
+              const tname = video.tutor?.name || video.author || "Unknown";
               if (tid) onBookTutor(tid, tname);
             }}
             onToggleSave={() => toggleSave(String(video.id), video.title)}
