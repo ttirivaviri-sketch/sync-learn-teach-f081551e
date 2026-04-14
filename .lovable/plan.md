@@ -1,38 +1,22 @@
 
 
-## Plan: Declutter Study Mode — Subjects-Only First Tab + New Profile Tab
+## Plan: Replace "Tutor" Fallback with Author Name
 
-### Current Problem
-The Study Mode Subjects tab is overloaded with: academic profile card, AI intelligence status, risk indicators, syllabus setup gate, document upload gate, AI readiness message, quick action buttons, exam date prompts, and daily progress stats — all before the actual subject cards.
+The `StudyClipsFeed` and `VideoPlayerOverlay` components fall back to the string `"Tutor"` when `resource.tutor?.name` is missing. Fix: use `resource.author` as a secondary fallback before showing a generic label.
 
 ### Changes
 
-**Dashboard.tsx** — Restructure tabs from 4 to 5:
+**`src/components/library/StudyClipsFeed.tsx`**
+- Line 87: Change `resource.tutor?.name || "Tutor"` → `resource.tutor?.name || resource.author || "Unknown"`
+- Line 279: Same change for the `onBookTutor` callback fallback
 
-**Tab 1: Subjects** (clean, subjects only)
-- Show ONLY the subject cards grid (sorted by exam proximity)
-- Keep the "No subjects yet" empty state
-- Keep the document gate badge on individual cards
-- Remove everything else from this tab: academic profile card, syllabus gate, document upload CTA, AI message, quick actions bar, exam date prompt, daily progress grid
+**`src/components/library/VideoPlayerOverlay.tsx`**
+- No changes needed — it only shows tutor info when `resource.tutor` exists
 
-**Tab 2: Progress** (unchanged)
-- AI Progress Insights + Progress Charts (as-is)
-
-**Tab 3: Calendar** (unchanged)
-- Exam countdowns + Study Calendar (as-is)
-
-**Tab 4: Review** (unchanged)
-- Spaced repetition + weak topics (as-is)
-
-**Tab 5: Profile** (new tab — absorbs removed content)
-- Academic Profile card (curriculum/grade/exam year/subjects/AI status/risk levels)
-- Syllabus & Paper Codes setup gate (`SyllabusSetupGate`)
-- Document upload card
-- Daily progress summary grid
-- Quick action buttons (Upload, Past Papers, Daily Summary)
-
-**Tab bar**: Change from `grid-cols-4` to `grid-cols-5`, add a Profile tab with `GraduationCap` or `Settings` icon.
+**`src/hooks/useLibraryResources.ts`**
+- Lines 245, 268: Change fallback from `"Tutor"` → use `row.tutor_full_name || row.tutor_profile?.full_name || row.author || "Unknown"` so the tutor name is properly populated from the database when available
 
 ### Files Changed
-- `src/studymode/components/Dashboard.tsx` — Move content between tabs, add "profile" tab value to state type, add new TabsTrigger + TabsContent
+- `src/components/library/StudyClipsFeed.tsx` — Update 2 fallback strings
+- `src/hooks/useLibraryResources.ts` — Update 2 fallback strings in data mapping
 
