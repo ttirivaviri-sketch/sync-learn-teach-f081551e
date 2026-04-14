@@ -136,7 +136,7 @@ const PaymentSuccess = () => {
     if (status === "confirmed") {
       return (
         <>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-[scale-in_0.4s_ease-out,pulse_2s_ease-in-out_0.4s_2]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-scale-in">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <CardTitle className="text-2xl">Payment Confirmed!</CardTitle>
@@ -150,7 +150,7 @@ const PaymentSuccess = () => {
     if (status === "pending") {
       return (
         <>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-[scale-in_0.4s_ease-out]">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-scale-in">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <CardTitle className="text-2xl">Payment Submitted!</CardTitle>
