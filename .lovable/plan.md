@@ -1,39 +1,38 @@
 
 
-## Plan: Uber-Style Clean Activity Tabs
+## Plan: Declutter Study Mode — Subjects-Only First Tab + New Profile Tab
 
-Redesign both Learner and Tutor activity tabs to match the Uber Activity screenshot: bold section headers ("Upcoming", "Past"), minimal items shown by default, and "See all" buttons to reveal more.
+### Current Problem
+The Study Mode Subjects tab is overloaded with: academic profile card, AI intelligence status, risk indicators, syllabus setup gate, document upload gate, AI readiness message, quick action buttons, exam date prompts, and daily progress stats — all before the actual subject cards.
 
-### Learner Activity Tab (`src/pages/learner/LearnerActivityTab.tsx`)
+### Changes
 
-Convert from a stateless arrow function to a stateful component with `useState`:
+**Dashboard.tsx** — Restructure tabs from 4 to 5:
 
-- **Header**: Bold "Activity" title at top
-- **Pending Payments** (subsection under Upcoming): Show only the first pending payment. If more exist, show a "See all N pending" button. Collapsed by default.
-- **Upcoming Sessions**: Show only the latest 1 upcoming session. If more exist, show "See all N upcoming" button. Empty state: card saying "No upcoming sessions" with "Book a tutor →" link (like the Uber "Reserve your trip →" pattern).
-- **Past Sessions**: Show only 2 past sessions. If more exist, show "View all past sessions" button. Each past session card shows tutor name, date, price, and Rate/Rebook buttons (matching the Uber screenshot style).
+**Tab 1: Subjects** (clean, subjects only)
+- Show ONLY the subject cards grid (sorted by exam proximity)
+- Keep the "No subjects yet" empty state
+- Keep the document gate badge on individual cards
+- Remove everything else from this tab: academic profile card, syllabus gate, document upload CTA, AI message, quick actions bar, exam date prompt, daily progress grid
 
-State: `showAllPending`, `showAllUpcoming`, `showAllPast` — all default `false`.
+**Tab 2: Progress** (unchanged)
+- AI Progress Insights + Progress Charts (as-is)
 
-### Tutor Booking Manager (`src/components/TutorBookingManager.tsx`)
+**Tab 3: Calendar** (unchanged)
+- Exam countdowns + Study Calendar (as-is)
 
-Apply the same truncation pattern inside the existing tabbed view by modifying `renderBookingList` to accept `limit` and `showAll`/`onToggle` params:
+**Tab 4: Review** (unchanged)
+- Spaced repetition + weak topics (as-is)
 
-- **Pending tab**: Show 1 request by default, "See all N requests" to expand
-- **Upcoming tab**: Show 1 session by default, "See all N sessions" to expand
-- **History tab**: Show 2 sessions by default, "View all history" to expand
+**Tab 5: Profile** (new tab — absorbs removed content)
+- Academic Profile card (curriculum/grade/exam year/subjects/AI status/risk levels)
+- Syllabus & Paper Codes setup gate (`SyllabusSetupGate`)
+- Document upload card
+- Daily progress summary grid
+- Quick action buttons (Upload, Past Papers, Daily Summary)
 
-State: `showAllPending`, `showAllUpcoming`, `showAllPast`.
-
-### Styling
-
-- Section headers: `text-2xl font-bold` for "Activity", `text-lg font-semibold` for "Upcoming"/"Past"
-- "See all" buttons: `variant="ghost"` with subtle text, full width
-- Empty states: clean card with text + arrow link (no heavy icons)
-- Remove the `Badge` count from the section header — keep it minimal
+**Tab bar**: Change from `grid-cols-4` to `grid-cols-5`, add a Profile tab with `GraduationCap` or `Settings` icon.
 
 ### Files Changed
-
-- `src/pages/learner/LearnerActivityTab.tsx` — Add state, limit items, add expand buttons
-- `src/components/TutorBookingManager.tsx` — Add state, limit each tab's list
+- `src/studymode/components/Dashboard.tsx` — Move content between tabs, add "profile" tab value to state type, add new TabsTrigger + TabsContent
 
