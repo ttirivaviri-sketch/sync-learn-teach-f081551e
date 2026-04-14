@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LibraryResource } from "@/types/academicProfile";
 
-interface VideoReelsFeedProps {
+interface StudyClipsFeedProps {
   videos: LibraryResource[];
   startIndex: number;
   onClose: () => void;
@@ -198,7 +198,7 @@ export function StudyClipsFeed({
   onAddToLibrary,
   onRemoveFromLibrary,
   myLibraryItems,
-}: VideoReelsFeedProps) {
+}: StudyClipsFeedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(startIndex);
 

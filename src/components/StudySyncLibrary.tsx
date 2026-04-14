@@ -323,7 +323,7 @@ const StudySyncLibrary = ({
             {/* Tutorials Tab */}
             <TabsContent value="tutorials" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Video Tutorials</h3>
+                <h3 className="font-semibold">Study Clips</h3>
                 <div className="flex items-center gap-2">
                   {recommendedTutorials.length > 0 && (
                     <Button
