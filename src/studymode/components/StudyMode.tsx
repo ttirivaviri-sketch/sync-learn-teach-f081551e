@@ -8,7 +8,9 @@ import { StreakCelebration } from './StreakCelebration';
 import { ReadinessCheck as ReadinessCheckType } from '../types/study';
 import { MessageCircle, X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { useIsMobile } from '@/hooks/use-mobile';
 import type { AcademicProfile } from '@/types/academicProfile';
 
 export default function StudyMode({
@@ -24,6 +26,7 @@ export default function StudyMode({
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [chatContext, setChatContext] = useState<{ subject?: string; topic?: string }>({});
+  const isMobile = useIsMobile();
 
   const handleReadinessComplete = (data: ReadinessCheckType) => {
     setReadiness(data);
@@ -93,11 +96,21 @@ export default function StudyMode({
         )}
       </Button>
 
-      {/* Chat Panel */}
-      {showChatPanel && (
-        <div className="fixed bottom-24 right-6 w-[380px] h-[500px] bg-background border border-border rounded-2xl shadow-2xl z-50 overflow-hidden animate-fade-in">
-          <ChatPanel subject={chatContext.subject} topic={chatContext.topic} />
-        </div>
+      {/* Chat Panel — Bottom Sheet on mobile, floating panel on desktop */}
+      {isMobile ? (
+        <Sheet open={showChatPanel} onOpenChange={setShowChatPanel}>
+          <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0">
+            <div className="h-full pt-6">
+              <ChatPanel subject={chatContext.subject} topic={chatContext.topic} className="h-full" />
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : (
+        showChatPanel && (
+          <div className="fixed bottom-24 right-6 w-[380px] h-[500px] bg-background border border-border rounded-2xl shadow-2xl z-50 overflow-hidden animate-fade-in">
+            <ChatPanel subject={chatContext.subject} topic={chatContext.topic} />
+          </div>
+        )
       )}
     </div>
   );

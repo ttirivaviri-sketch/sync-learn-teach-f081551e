@@ -40,8 +40,13 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
     return 'text-destructive';
   };
 
+  const [xpPopup, setXpPopup] = useState<{ amount: number; key: number } | null>(null);
+  const [completionCard, setCompletionCard] = useState<{ task: DailyTask; nextTask: DailyTask | null } | null>(null);
+
   const handleTaskComplete = () => {
     if (!selectedTask) return;
+    
+    let nextUnlocked: DailyTask | null = null;
     
     setCurrentTasks(prev => {
       const updatedTasks = prev.map(t => 
@@ -51,16 +56,33 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
       const currentIndex = updatedTasks.findIndex(t => t.id === selectedTask.id);
       if (currentIndex < updatedTasks.length - 1) {
         updatedTasks[currentIndex + 1].isLocked = false;
+        nextUnlocked = updatedTasks[currentIndex + 1];
       }
       
       return updatedTasks;
     });
     
     // Award XP and update streak
-    addXp.mutate(10);
+    const xpAmount = 10;
+    addXp.mutate(xpAmount);
     updateStreak.mutate();
     
+    // Show XP popup
+    setXpPopup({ amount: xpAmount, key: Date.now() });
+    setTimeout(() => setXpPopup(null), 1500);
+    
+    // Show completion card with auto-advance
+    setCompletionCard({ task: selectedTask, nextTask: nextUnlocked });
     setSelectedTask(null);
+  };
+
+  const handleContinueToNext = (task: DailyTask) => {
+    setCompletionCard(null);
+    setSelectedTask(task);
+  };
+
+  const handleDismissCompletion = () => {
+    setCompletionCard(null);
   };
 
   const handleAdvanceTopic = () => {
