@@ -10,6 +10,7 @@ import type { Curriculum } from "@/types/academicProfile";
 import { TutorialStatsGrid } from "@/components/tutor-creator/TutorialStatsGrid";
 import { TutorialCard, type Tutorial } from "@/components/tutor-creator/TutorialCard";
 import { TutorialFormDialog, type TutorialForm } from "@/components/tutor-creator/TutorialFormDialog";
+import { ContentComplianceModal, hasAcceptedCompliance } from "@/components/tutor-creator/ContentComplianceModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
