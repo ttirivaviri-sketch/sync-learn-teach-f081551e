@@ -1,55 +1,39 @@
 
 
-## Plan: Uber-Style Clean Profile Tabs (Learner + Tutor)
+## Plan: Uber-Style Clean Activity Tabs
 
-Redesign both profile tabs to follow the Uber Account screen pattern: a clean header with avatar/name/rating, then a 2x2 grid of quick-action buttons, followed by organized menu rows — all detailed content hidden behind taps, not dumped on screen.
+Redesign both Learner and Tutor activity tabs to match the Uber Activity screenshot: bold section headers ("Upcoming", "Past"), minimal items shown by default, and "See all" buttons to reveal more.
 
-### Learner Profile Tab (`src/pages/learner/LearnerProfileTab.tsx`)
+### Learner Activity Tab (`src/pages/learner/LearnerActivityTab.tsx`)
 
-**Top section** — Large name (bold, left-aligned like "Solo Cash"), avatar on the right, star rating or study level badge below the name. Clean, no card wrapper.
+Convert from a stateless arrow function to a stateful component with `useState`:
 
-**2x2 action grid** — Rounded gray buttons (like Uber's Help/Wallet/Safety/Inbox):
-- Academic Profile
-- Wallet (Payment Methods)
-- Bookings
-- Study Mode
+- **Header**: Bold "Activity" title at top
+- **Pending Payments** (subsection under Upcoming): Show only the first pending payment. If more exist, show a "See all N pending" button. Collapsed by default.
+- **Upcoming Sessions**: Show only the latest 1 upcoming session. If more exist, show "See all N upcoming" button. Empty state: card saying "No upcoming sessions" with "Book a tutor →" link (like the Uber "Reserve your trip →" pattern).
+- **Past Sessions**: Show only 2 past sessions. If more exist, show "View all past sessions" button. Each past session card shows tutor name, date, price, and Rate/Rebook buttons (matching the Uber screenshot style).
 
-**Stacked menu rows** — Simple icon + label + chevron rows (no cards). Each navigates or opens a modal:
-- Payment History → `onShowAllPayments`
-- My Reviews → activity tab
-- Change Study Level → navigate
-- Syllabus & Paper Codes → existing SyllabusSetupGate
-- Settings (sign out lives here)
+State: `showAllPending`, `showAllUpcoming`, `showAllPast` — all default `false`.
 
-**Remove from surface**: All the inline academic profile details (curriculum grid, exam dates, subjects list, contact info, goals) — these stay accessible via the "Academic Profile" button which opens the existing `onShowAcademicSetup` modal. Profile stats (sessions/upcoming/spent) move into a subtle single row below the name.
+### Tutor Booking Manager (`src/components/TutorBookingManager.tsx`)
 
-### Tutor Profile Tab (`src/pages/tutor/TutorProfileTab.tsx`)
+Apply the same truncation pattern inside the existing tabbed view by modifying `renderBookingList` to accept `limit` and `showAll`/`onToggle` params:
 
-**Top section** — Bold name, avatar right, rating below.
+- **Pending tab**: Show 1 request by default, "See all N requests" to expand
+- **Upcoming tab**: Show 1 session by default, "See all N sessions" to expand
+- **History tab**: Show 2 sessions by default, "View all history" to expand
 
-**2x2 action grid**:
-- Earnings (opens inline earnings detail or scrolls to it)
-- Wallet (TutorWalletPanel, opened as a section or modal)
-- Subjects (TutorSubjectManager)
-- Tutorials
+State: `showAllPending`, `showAllUpcoming`, `showAllPast`.
 
-**Stacked menu rows**:
-- Recent Earnings → shows recent earnings list
-- Download Tax Report → existing CSV logic
-- Edit Profile → TutorProfile settings
-- Earn as Creator → tutorials tab
+### Styling
 
-**Remove from surface**: The 4 earnings stat cards, earnings chart, recent earnings list, wallet panel, subject manager, and profile editor — all hidden behind their respective menu buttons. Content appears when tapped (either scroll-to-section or expandable accordion).
-
-### Technical Approach
-
-- No new components needed — just restructuring JSX in both files
-- Use `useState` for toggling expanded sections (e.g., `showEarnings`, `showWallet`)
-- Reuse all existing child components (`TutorWalletPanel`, `TutorSubjectManager`, `PaymentHistory`, etc.)
-- Style: `bg-muted/50 rounded-2xl` for the 2x2 grid buttons, simple `border-b` divider rows for menu items, `ChevronRight` icons on the right
+- Section headers: `text-2xl font-bold` for "Activity", `text-lg font-semibold` for "Upcoming"/"Past"
+- "See all" buttons: `variant="ghost"` with subtle text, full width
+- Empty states: clean card with text + arrow link (no heavy icons)
+- Remove the `Badge` count from the section header — keep it minimal
 
 ### Files Changed
 
-- `src/pages/learner/LearnerProfileTab.tsx` — Full restructure
-- `src/pages/tutor/TutorProfileTab.tsx` — Full restructure
+- `src/pages/learner/LearnerActivityTab.tsx` — Add state, limit items, add expand buttons
+- `src/components/TutorBookingManager.tsx` — Add state, limit each tab's list
 
