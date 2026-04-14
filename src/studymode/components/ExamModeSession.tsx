@@ -583,7 +583,7 @@ function QuestionResult({
       {expanded && (
         <div className="mt-3 space-y-3 text-sm">
           <div className="text-muted-foreground">
-            <MathMarkdown>{question.substring(0, 200)}{question.length > 200 ? '...' : ''}</MathMarkdown>
+            <MathMarkdown>{question.substring(0, 200) + (question.length > 200 ? '...' : '')}</MathMarkdown>
           </div>
 
           {userAnswer && (
