@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -159,6 +159,17 @@ function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete
 export function MultiExamCountdown({ exams, subjects, onAddExam, onDeleteExam, isAdding }: MultiExamCountdownProps) {
   const [showAdd, setShowAdd] = useState(false);
   const [newExam, setNewExam] = useState({ subject_id: '', exam_name: '', exam_date: undefined as Date | undefined, paper_number: '' });
+
+  // Deduplicate exams by subject_id + exam_date (keep the first occurrence)
+  const dedupedExams = useMemo(() => {
+    const seen = new Set<string>();
+    return exams.filter((e) => {
+      const key = `${e.subject_id}_${e.exam_date}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [exams]);
 
   const handleAdd = () => {
     if (!newExam.subject_id || !newExam.exam_date) return;
