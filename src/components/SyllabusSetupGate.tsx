@@ -54,7 +54,7 @@ export function SyllabusSetupGate({
   const [saving, setSaving] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // New entry form state
   const [newSubjectName, setNewSubjectName] = useState("");

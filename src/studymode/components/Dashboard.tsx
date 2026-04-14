@@ -135,9 +135,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           (s) => s.name.toLowerCase() === ed.subject.toLowerCase()
         );
         if (matchingSubject) {
-          // Check if this exam date already exists in subject_exams
+          // Check if this exact exam date already exists (by subject_id AND date)
           const existing = subjectExams.find(
-            (se) => se.subject_id === matchingSubject.id
+            (se) => se.subject_id === matchingSubject.id && se.exam_date === ed.date
           );
           if (!existing) {
             try {
@@ -266,34 +266,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 <RiskLevelSummary risks={subjectRisks} />
               </div>
             )}
-            {/* Exam Dates from Profile */}
-            {profileExamDates.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[10px] text-muted-foreground font-medium mb-1">Upcoming Exams</p>
-                <div className="flex flex-wrap gap-1">
-                  {profileExamDates
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                    .slice(0, 4)
-                    .map((ed) => {
-                      const days = Math.ceil((new Date(ed.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                      return (
-                        <Badge
-                          key={ed.subject}
-                          variant="outline"
-                          className={`text-[9px] px-1.5 py-0 ${
-                            days <= 14 ? 'border-destructive/50 text-destructive' :
-                            days <= 30 ? 'border-warning/50 text-warning' :
-                            'border-border'
-                          }`}
-                        >
-                          <Clock className="h-2.5 w-2.5 mr-0.5" />
-                          {ed.subject}: {days}d
-                        </Badge>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
+            {/* Exam dates shown in Calendar tab MultiExamCountdown — removed here to avoid duplicates */}
             {/* AI Learning Profile Summary */}
             {aiIntelligence.learningProfile && (
               <div className="mt-2 pt-2 border-t border-border/50">
@@ -381,28 +354,20 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </p>
       </div>
 
-       {/* Exam Countdowns — always driven by subject_exams from calendar */}
-       {subjectExams.length > 0 ? (
-         <MultiExamCountdown
-           exams={subjectExams}
-           subjects={subjects}
-           onAddExam={(exam) => addExam.mutate(exam)}
-           onDeleteExam={(id) => deleteExam.mutate(id)}
-           isAdding={addExam.isPending}
-         />
-       ) : hasSubjects ? (
-         <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
-           <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
-           <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
-           <p className="text-sm text-muted-foreground mb-3">
-             Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.
-           </p>
-           <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')}>
-             <Calendar className="mr-2 h-4 w-4" />
-             Go to Calendar
-           </Button>
-         </div>
-       ) : null}
+       {/* Exam Countdowns — moved to Calendar tab only to avoid duplicates */}
+       {hasSubjects && subjectExams.length === 0 && (
+          <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
+            <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
+            <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')}>
+              <Calendar className="mr-2 h-4 w-4" />
+              Go to Calendar
+            </Button>
+          </div>
+       )}
  
       {!hasSubjects && !subjectsLoading && !syllabusSetupDone && (
         <div className="p-6 rounded-2xl bg-warning/10 border border-warning/30 text-center">
