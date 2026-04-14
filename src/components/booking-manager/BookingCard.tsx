@@ -1,10 +1,12 @@
-import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, BookOpen, GraduationCap, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, BookOpen, GraduationCap, ChevronDown, ChevronUp, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { format, formatDistanceToNow, isToday, isTomorrow } from "date-fns";
+import { StudentInsightsPanel } from "@/components/StudentInsightsPanel";
 
 interface AcademicProfileInfo {
   curriculum?: string | null;
@@ -23,6 +25,7 @@ interface BookingCardProps {
   isProfileExpanded: boolean;
   academicProfile?: AcademicProfileInfo;
   learnerSubjects?: string[];
+  tutorId?: string;
   onAccept: () => void;
   onDecline: () => void;
   onReschedule: () => void;
@@ -64,6 +67,7 @@ export function BookingCard({
   isProfileExpanded,
   academicProfile,
   learnerSubjects,
+  tutorId,
   onAccept,
   onDecline,
   onReschedule,
@@ -71,6 +75,7 @@ export function BookingCard({
   onStartChat,
   onToggleProfile,
 }: BookingCardProps) {
+  const [showInsights, setShowInsights] = useState(false);
   const hasProfile = academicProfile && (academicProfile.curriculum || academicProfile.grade || (academicProfile.subjects && academicProfile.subjects.length > 0));
   const hasSubjects = learnerSubjects && learnerSubjects.length > 0;
 
@@ -236,6 +241,30 @@ export function BookingCard({
           <p className="text-xs text-muted-foreground mt-2">
             Requested {formatDistanceToNow(new Date(booking.created_at), { addSuffix: true })}
           </p>
+        )}
+
+        {/* Student Insights */}
+        {tutorId && (booking.status === "confirmed" || booking.status === "requested") && (
+          <div className="mt-3 border-t pt-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full text-xs gap-1.5"
+              onClick={() => setShowInsights(!showInsights)}
+            >
+              <Brain className="h-3.5 w-3.5" />
+              {showInsights ? "Hide" : "View"} AI Student Insights
+            </Button>
+            {showInsights && (
+              <div className="mt-2">
+                <StudentInsightsPanel
+                  studentId={booking.learner_id}
+                  studentName={booking.learner_profile?.full_name || "Student"}
+                  tutorId={tutorId}
+                />
+              </div>
+            )}
+          </div>
         )}
       </CardContent>
     </Card>

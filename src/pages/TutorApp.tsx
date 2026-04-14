@@ -8,6 +8,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, MessageCircle, Home, BookOpen, Activity, User } from "lucide-react";
+import { NotificationCenter } from "@/components/NotificationCenter";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -278,6 +279,7 @@ const TutorApp = () => {
               <span className="text-xs font-medium text-white">{isOnline ? "Online" : "Offline"}</span>
               <Switch checked={isOnline} onCheckedChange={handleOnlineToggle} className="scale-75" />
             </div>
+            <NotificationCenter />
             <Button variant="ghost" size="sm" onClick={() => setShowChat(true)} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Open Chat">
               <MessageCircle className="h-5 w-5" />
             </Button>
@@ -311,6 +313,10 @@ const TutorApp = () => {
               statsLoading={statsLoading}
               bookingsLoading={bookingsLoading}
               upcomingSessions={getUpcomingSessions()}
+              pendingCount={bookings.filter(b => b.status === "requested").length}
+              tutorName={session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || devUserName || "Tutor"}
+              mySubjects={mySubjects as any}
+              tutorId={effectiveUserId}
               onNavigateTab={setActiveTab}
             />
           </TabsContent>
@@ -360,12 +366,15 @@ const TutorApp = () => {
             {[
               { id: "home", label: "Home", Icon: Home },
               { id: "tutorials", label: "Tutorials", Icon: BookOpen },
-              { id: "activity", label: "Activity", Icon: Activity },
+              { id: "activity", label: "Activity", Icon: Activity, badge: bookings.filter(b => b.status === "requested").length },
               { id: "profile", label: "Profile", Icon: User },
-            ].map(({ id, label, Icon }) => (
-              <button key={id} className={`nav-pill ${activeTab === id ? "nav-pill-active" : ""}`} onClick={() => setActiveTab(id)}>
+            ].map(({ id, label, Icon, badge }) => (
+              <button key={id} className={`nav-pill ${activeTab === id ? "nav-pill-active" : ""} relative`} onClick={() => setActiveTab(id)}>
                 <Icon className="h-5 w-5" />
                 <span className="text-[11px]">{label}</span>
+                {badge ? (
+                  <span className="absolute top-0.5 right-1/4 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-background" />
+                ) : null}
               </button>
             ))}
           </div>
