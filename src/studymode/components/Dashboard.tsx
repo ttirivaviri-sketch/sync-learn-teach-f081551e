@@ -266,34 +266,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 <RiskLevelSummary risks={subjectRisks} />
               </div>
             )}
-            {/* Exam Dates from Profile */}
-            {profileExamDates.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <p className="text-[10px] text-muted-foreground font-medium mb-1">Upcoming Exams</p>
-                <div className="flex flex-wrap gap-1">
-                  {profileExamDates
-                    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                    .slice(0, 4)
-                    .map((ed) => {
-                      const days = Math.ceil((new Date(ed.date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-                      return (
-                        <Badge
-                          key={ed.subject}
-                          variant="outline"
-                          className={`text-[9px] px-1.5 py-0 ${
-                            days <= 14 ? 'border-destructive/50 text-destructive' :
-                            days <= 30 ? 'border-warning/50 text-warning' :
-                            'border-border'
-                          }`}
-                        >
-                          <Clock className="h-2.5 w-2.5 mr-0.5" />
-                          {ed.subject}: {days}d
-                        </Badge>
-                      );
-                    })}
-                </div>
-              </div>
-            )}
+            {/* Exam dates shown in Calendar tab MultiExamCountdown — removed here to avoid duplicates */}
             {/* AI Learning Profile Summary */}
             {aiIntelligence.learningProfile && (
               <div className="mt-2 pt-2 border-t border-border/50">
