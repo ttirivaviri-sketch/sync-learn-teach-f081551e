@@ -294,14 +294,13 @@ export const PaymentCheckout = ({
               </CardContent>
             </Card>
 
-            {/* Security Notice */}
-            <div className="flex items-start gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
-              <Shield className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-              <div className="text-xs text-green-800 dark:text-green-300">
-                <p className="font-medium">Secure Payment</p>
-                <p className="mt-0.5 text-green-700 dark:text-green-400">
-                  Your payment is processed securely by PayFast, South Africa's trusted payment
-                  gateway. We never store your card details.
+            {/* Secured by PayFast Badge */}
+            <div className="flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900">
+              <Shield className="h-5 w-5 text-green-600" />
+              <div>
+                <p className="text-sm font-semibold text-green-800 dark:text-green-300">Secured by PayFast</p>
+                <p className="text-[10px] text-green-700 dark:text-green-400">
+                  South Africa's trusted payment gateway • 256-bit SSL encryption
                 </p>
               </div>
             </div>
