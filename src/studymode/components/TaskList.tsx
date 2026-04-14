@@ -1,4 +1,4 @@
-import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight, Layers, FileText, ClipboardList } from 'lucide-react';
+import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight, Layers, FileText, ClipboardList, Clock } from 'lucide-react';
 import { DailyTask } from '../types/study';
 import { cn } from '@/lib/utils';
 
@@ -27,12 +27,23 @@ const taskColors: Record<string, string> = {
   'revision-checklist': 'from-pink-500 to-rose-600',
 };
 
+const taskDurations: Record<string, string> = {
+  'micro-revision': '3 min',
+  'concept-learning': '8 min',
+  'active-recall': '10 min',
+  'exam-question': '15 min',
+  'flashcards': '5 min',
+  'summary': '6 min',
+  'revision-checklist': '4 min',
+};
+
 export function TaskList({ tasks, onTaskClick }: TaskListProps) {
   return (
     <div className="space-y-3">
       {tasks.map((task, index) => {
         const Icon = taskIcons[task.type];
         const colorClass = taskColors[task.type];
+        const duration = taskDurations[task.type];
 
         return (
           <div
@@ -80,9 +91,17 @@ export function TaskList({ tasks, onTaskClick }: TaskListProps) {
                   {task.title}
                 </h4>
               </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {task.description}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground truncate flex-1">
+                  {task.description}
+                </p>
+                {duration && (
+                  <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 bg-muted/50 px-1.5 py-0.5 rounded-full">
+                    <Clock className="h-2.5 w-2.5" />
+                    {duration}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Arrow */}

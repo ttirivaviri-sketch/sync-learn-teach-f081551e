@@ -70,3 +70,19 @@
 .studymode-root .animate-scale-in {
   animation: sm-scale-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both !important;
 }
+
+/* XP float animation */
+@keyframes xp-float {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-40px) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-80px) scale(0.9);
+  }
+}

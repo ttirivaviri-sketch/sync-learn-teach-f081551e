@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, Brain, Clock, BarChart3, Zap } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
 import { TaskList } from './TaskList';
@@ -40,8 +40,13 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
     return 'text-destructive';
   };
 
+  const [xpPopup, setXpPopup] = useState<{ amount: number; key: number } | null>(null);
+  const [completionCard, setCompletionCard] = useState<{ task: DailyTask; nextTask: DailyTask | null } | null>(null);
+
   const handleTaskComplete = () => {
     if (!selectedTask) return;
+    
+    let nextUnlocked: DailyTask | null = null;
     
     setCurrentTasks(prev => {
       const updatedTasks = prev.map(t => 
@@ -51,16 +56,33 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
       const currentIndex = updatedTasks.findIndex(t => t.id === selectedTask.id);
       if (currentIndex < updatedTasks.length - 1) {
         updatedTasks[currentIndex + 1].isLocked = false;
+        nextUnlocked = updatedTasks[currentIndex + 1];
       }
       
       return updatedTasks;
     });
     
     // Award XP and update streak
-    addXp.mutate(10);
+    const xpAmount = 10;
+    addXp.mutate(xpAmount);
     updateStreak.mutate();
     
+    // Show XP popup
+    setXpPopup({ amount: xpAmount, key: Date.now() });
+    setTimeout(() => setXpPopup(null), 1500);
+    
+    // Show completion card with auto-advance
+    setCompletionCard({ task: selectedTask, nextTask: nextUnlocked });
     setSelectedTask(null);
+  };
+
+  const handleContinueToNext = (task: DailyTask) => {
+    setCompletionCard(null);
+    setSelectedTask(task);
+  };
+
+  const handleDismissCompletion = () => {
+    setCompletionCard(null);
   };
 
   const handleAdvanceTopic = () => {
@@ -176,7 +198,58 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in relative">
+      {/* XP Popup Animation */}
+      {xpPopup && (
+        <div
+          key={xpPopup.key}
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] pointer-events-none animate-fade-in"
+          style={{ animation: 'xp-float 1.5s ease-out forwards' }}
+        >
+          <div className="bg-accent text-accent-foreground px-4 py-2 rounded-full font-bold text-lg shadow-lg flex items-center gap-1">
+            <Zap className="h-5 w-5" />
+            +{xpPopup.amount} XP
+          </div>
+        </div>
+      )}
+
+      {/* Task Completion Card with Auto-Advance */}
+      {completionCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm mx-4 p-6 rounded-2xl bg-card border border-success/30 shadow-lg text-center animate-scale-in">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success/20 text-3xl mb-3">
+              ✅
+            </div>
+            <h3 className="text-lg font-bold text-foreground mb-1">Task Complete!</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Great work on "{completionCard.task.title}"
+            </p>
+            {completionCard.nextTask ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => handleContinueToNext(completionCard.nextTask!)}
+                  className="w-full gradient-primary gap-2"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  Continue to Next Task
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDismissCompletion}
+                  className="w-full text-muted-foreground"
+                >
+                  Back to Task List
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={handleDismissCompletion} className="w-full gradient-primary">
+                🎉 All Tasks Done!
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">

@@ -1,8 +1,11 @@
-import { useState } from 'react';
-import { Moon, Battery, Smile, ChevronRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Moon, Battery, Smile, ChevronRight, SkipForward } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
 import { ReadinessCheck as ReadinessCheckType } from '../types/study';
+
+const READINESS_STORAGE_KEY = 'studymode_readiness_timestamp';
+const READINESS_COOLDOWN_MS = 4 * 60 * 60 * 1000; // 4 hours
 
 interface ReadinessCheckProps {
   onComplete: (readiness: ReadinessCheckType) => void;
@@ -14,6 +17,27 @@ export function ReadinessCheck({ onComplete }: ReadinessCheckProps) {
     energy: 3,
     mood: 3,
   });
+
+  // Auto-skip if completed within cooldown period
+  useEffect(() => {
+    const lastCompleted = localStorage.getItem(READINESS_STORAGE_KEY);
+    if (lastCompleted) {
+      const elapsed = Date.now() - parseInt(lastCompleted, 10);
+      if (elapsed < READINESS_COOLDOWN_MS) {
+        // Auto-skip with default neutral readiness
+        onComplete({ sleep: 3, energy: 3, mood: 3 });
+      }
+    }
+  }, [onComplete]);
+
+  const handleComplete = (data: ReadinessCheckType) => {
+    localStorage.setItem(READINESS_STORAGE_KEY, Date.now().toString());
+    onComplete(data);
+  };
+
+  const handleSkip = () => {
+    handleComplete({ sleep: 3, energy: 3, mood: 3 });
+  };
 
   const getEmoji = (value: number, type: 'sleep' | 'energy' | 'mood') => {
     const emojis = {
@@ -32,6 +56,19 @@ export function ReadinessCheck({ onComplete }: ReadinessCheckProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm animate-fade-in">
       <div className="w-full max-w-md mx-4 p-6 rounded-2xl bg-card border border-border shadow-lg animate-scale-in">
+        {/* Skip button */}
+        <div className="flex justify-end mb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleSkip}
+            className="text-muted-foreground hover:text-foreground gap-1 text-xs"
+          >
+            <SkipForward className="h-3.5 w-3.5" />
+            Skip
+          </Button>
+        </div>
+
         <div className="text-center mb-6">
           <div className="inline-flex h-16 w-16 items-center justify-center rounded-full gradient-accent text-3xl mb-4 shadow-glow">
             ✨
@@ -109,7 +146,7 @@ export function ReadinessCheck({ onComplete }: ReadinessCheckProps) {
         </div>
 
         <Button 
-          onClick={() => onComplete(readiness)} 
+          onClick={() => handleComplete(readiness)} 
           className="w-full mt-6 h-12 text-base font-semibold gradient-primary hover:opacity-90 transition-opacity"
         >
           Let's Get Started
