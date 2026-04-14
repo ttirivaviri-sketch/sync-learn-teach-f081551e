@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   CreditCard,
   Building2,
@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Banknote,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,7 +25,7 @@ import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { format } from "date-fns";
 import { logger } from "@/utils/logger";
 
-type PaymentMethod = "card" | "eft" | "instant_eft" | "mobicred";
+type PaymentMethod = "devcard" | "card" | "eft" | "instant_eft" | "mobicred";
 
 interface PaymentMethodOption {
   id: PaymentMethod;
@@ -41,6 +42,13 @@ interface PaymentCheckoutProps {
 }
 
 const PAYMENT_METHODS: PaymentMethodOption[] = [
+  {
+    id: "devcard",
+    name: "DevCard (Test)",
+    description: "Simulates payment — no real money charged",
+    icon: <FlaskConical className="h-5 w-5" />,
+    badge: "Test",
+  },
   {
     id: "card",
     name: "Credit / Debit Card",
@@ -83,7 +91,56 @@ export const PaymentCheckout = ({
   const itemName = `${booking.tutor_subjects?.subject || "Tutoring"} - ${booking.duration_minutes}min session`;
   const scheduledTime = new Date(booking.scheduled_at);
 
+  const handleDevCardPayment = async () => {
+    setLoading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user) throw new Error("Please log in to make a payment");
+
+      // Simulate processing delay
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // Insert a real payment record
+      const { error: paymentError } = await supabase.from("payments").insert({
+        booking_id: booking.id,
+        payer_id: sessionData.session.user.id,
+        amount,
+        status: "succeeded" as any,
+        provider: "devcard",
+        currency: "ZAR",
+      });
+
+      if (paymentError) throw paymentError;
+
+      // Update booking status to confirmed
+      await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", booking.id);
+
+      toast({
+        title: "Payment confirmed!",
+        description: `R${amount.toFixed(2)} paid with DevCard. Your session is now secured.`,
+      });
+      onPaymentInitiated();
+      onBack();
+    } catch (error) {
+      logger.error("DevCard payment error:", error);
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Failed to process test payment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePayment = async () => {
+    if (selectedMethod === "devcard") {
+      return handleDevCardPayment();
+    }
+
     setLoading(true);
     try {
       const returnUrl = `${window.location.origin}/payment-success?booking=${booking.id}`;
@@ -116,7 +173,6 @@ export const PaymentCheckout = ({
 
       const { payfastUrl, paymentData } = data;
 
-      // Create and submit form to PayFast
       const form = document.createElement("form");
       form.method = "POST";
       form.action = payfastUrl;
@@ -161,7 +217,7 @@ export const PaymentCheckout = ({
             <h1 className="font-semibold text-lg">
               {step === "method" ? "Payment" : "Confirm Payment"}
             </h1>
-            <p className="text-sm text-muted-foreground">Secure checkout via PayFast</p>
+            <p className="text-sm text-muted-foreground">Secure checkout</p>
           </div>
           <Shield className="h-5 w-5 text-green-600" />
         </div>
@@ -176,7 +232,6 @@ export const PaymentCheckout = ({
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Tutor & Session Info */}
             <div className="flex items-start gap-3">
               <Avatar className="h-12 w-12">
                 <AvatarFallback className="bg-primary/10 text-primary">
@@ -198,7 +253,6 @@ export const PaymentCheckout = ({
 
             <Separator />
 
-            {/* Session Details */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground flex items-center gap-1.5">
@@ -217,7 +271,6 @@ export const PaymentCheckout = ({
 
             <Separator />
 
-            {/* Price Breakdown */}
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Session Fee</span>
@@ -260,7 +313,9 @@ export const PaymentCheckout = ({
                     <div
                       className={`p-2 rounded-lg ${
                         selectedMethod === method.id
-                          ? "bg-primary/10 text-primary"
+                          ? method.id === "devcard"
+                            ? "bg-amber-100 text-amber-700"
+                            : "bg-primary/10 text-primary"
                           : "bg-muted text-muted-foreground"
                       }`}
                     >
@@ -272,7 +327,11 @@ export const PaymentCheckout = ({
                         {method.badge && (
                           <Badge
                             variant="secondary"
-                            className="text-xs px-1.5 py-0 h-5"
+                            className={`text-xs px-1.5 py-0 h-5 ${
+                              method.id === "devcard"
+                                ? "bg-amber-100 text-amber-700 border-amber-300"
+                                : ""
+                            }`}
                           >
                             {method.badge}
                           </Badge>
@@ -315,8 +374,18 @@ export const PaymentCheckout = ({
                 Confirm Payment
               </CardTitle>
               <CardDescription>
-                You'll be redirected to PayFast to complete your {getMethodLabel()} payment of{" "}
-                <span className="font-semibold text-foreground">R{amount.toFixed(2)}</span>
+                {selectedMethod === "devcard" ? (
+                  <>
+                    Test payment of{" "}
+                    <span className="font-semibold text-foreground">R{amount.toFixed(2)}</span>{" "}
+                    will be simulated with DevCard
+                  </>
+                ) : (
+                  <>
+                    You'll be redirected to PayFast to complete your {getMethodLabel()} payment of{" "}
+                    <span className="font-semibold text-foreground">R{amount.toFixed(2)}</span>
+                  </>
+                )}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -334,8 +403,9 @@ export const PaymentCheckout = ({
               <div className="flex items-start gap-2 text-xs text-muted-foreground">
                 <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 <p>
-                  After payment, you'll be redirected back to StudySync. Your session will be
-                  automatically confirmed once payment is verified.
+                  {selectedMethod === "devcard"
+                    ? "This is a test payment. No real money will be charged. Your session will be confirmed immediately."
+                    : "After payment, you'll be redirected back to StudySync. Your session will be automatically confirmed once payment is verified."}
                 </p>
               </div>
             </CardContent>
@@ -361,12 +431,16 @@ export const PaymentCheckout = ({
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Redirecting to PayFast...
+                    {selectedMethod === "devcard" ? "Processing test payment..." : "Redirecting to PayFast..."}
                   </>
                 ) : (
                   <>
-                    <Shield className="mr-2 h-5 w-5" />
-                    Pay R{amount.toFixed(2)} Securely
+                    {selectedMethod === "devcard" ? (
+                      <FlaskConical className="mr-2 h-5 w-5" />
+                    ) : (
+                      <Shield className="mr-2 h-5 w-5" />
+                    )}
+                    Pay R{amount.toFixed(2)} {selectedMethod === "devcard" ? "(Test)" : "Securely"}
                   </>
                 )}
               </Button>

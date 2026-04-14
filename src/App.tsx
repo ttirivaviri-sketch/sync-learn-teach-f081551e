@@ -7,8 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
-import { DevModeProvider } from "@/contexts/DevModeContext";
-import { DevModeBanner } from "@/components/DevModeBanner";
 
 // ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
 const Index = lazy(() => import("./pages/Index"));
@@ -21,7 +19,6 @@ const ChooseStudyLevel = lazy(() => import("./pages/ChooseStudyLevel"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentCancelled = lazy(() => import("./pages/PaymentCancelled"));
 const AdminAuth = lazy(() => import("./pages/AdminAuth"));
-const DevMode = lazy(() => import("./pages/DevMode"));
 
 // Admin sub-pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -54,48 +51,44 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <DevModeProvider>
-          <BrowserRouter>
-            <OfflineIndicator />
-            <DevModeBanner />
-            <Suspense fallback={<LoadingScreen message="Loading StudySync..." />}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/dev" element={<DevMode />} />
-                <Route path="/learner" element={<LearnerApp />} />
-                <Route path="/learner/auth" element={<LearnerAuth />} />
-                <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
-                <Route path="/tutor" element={<TutorApp />} />
-                <Route path="/tutor/auth" element={<TutorAuth />} />
+        <BrowserRouter>
+          <OfflineIndicator />
+          <Suspense fallback={<LoadingScreen message="Loading StudySync..." />}>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/learner" element={<LearnerApp />} />
+              <Route path="/learner/auth" element={<LearnerAuth />} />
+              <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
+              <Route path="/tutor" element={<TutorApp />} />
+              <Route path="/tutor/auth" element={<TutorAuth />} />
 
-                {/* Payment routes */}
-                <Route path="/payment-success" element={<PaymentSuccess />} />
-                <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+              {/* Payment routes */}
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/payment-cancelled" element={<PaymentCancelled />} />
 
-                {/* Admin routes */}
-                <Route path="/admin/auth" element={<AdminAuth />} />
-                <Route path="/admin" element={<AdminLayout />}>
-                  <Route index element={<AdminDashboard />} />
-                  <Route path="users" element={<AdminUsers />} />
-                  <Route path="bookings" element={<AdminBookings />} />
-                  <Route path="payments" element={<AdminPayments />} />
-                  <Route path="support" element={<AdminSupport />} />
-                  <Route path="reports" element={<AdminReports />} />
-                  <Route path="roles" element={<AdminRoles />} />
-                  <Route path="security" element={<AdminSecurity />} />
-                  <Route path="refunds" element={<AdminRefunds />} />
-                  <Route path="sail" element={<AdminSAIL />} />
-                </Route>
+              {/* Admin routes */}
+              <Route path="/admin/auth" element={<AdminAuth />} />
+              <Route path="/admin" element={<AdminLayout />}>
+                <Route index element={<AdminDashboard />} />
+                <Route path="users" element={<AdminUsers />} />
+                <Route path="bookings" element={<AdminBookings />} />
+                <Route path="payments" element={<AdminPayments />} />
+                <Route path="support" element={<AdminSupport />} />
+                <Route path="reports" element={<AdminReports />} />
+                <Route path="roles" element={<AdminRoles />} />
+                <Route path="security" element={<AdminSecurity />} />
+                <Route path="refunds" element={<AdminRefunds />} />
+                <Route path="sail" element={<AdminSAIL />} />
+              </Route>
 
-                {/* 404 handling */}
-                <Route path="/404" element={<NotFound />} />
-                <Route path="*" element={<Navigate to="/404" replace />} />
-              </Routes>
-            </Suspense>
-            <Toaster />
-            <Sonner />
-          </BrowserRouter>
-        </DevModeProvider>
+              {/* 404 handling */}
+              <Route path="/404" element={<NotFound />} />
+              <Route path="*" element={<Navigate to="/404" replace />} />
+            </Routes>
+          </Suspense>
+          <Toaster />
+          <Sonner />
+        </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>
   </ErrorBoundary>

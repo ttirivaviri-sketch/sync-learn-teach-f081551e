@@ -11,21 +11,15 @@ import { PWAInstallPrompt } from "@/components/PWAInstallPrompt";
 import { CookieConsent } from "@/components/CookieConsent";
 import { useEffect } from "react";
 import { analytics } from "@/utils/analytics";
-import { useDevMode } from "@/contexts/DevModeContext";
 
 const Index = () => {
-  const { registerTap } = useDevMode();
-
   useEffect(() => {
     analytics.pageView('home');
   }, []);
 
   return (
     <div className="min-h-screen bg-white">
-      {/* 5-tap secret: tap the hero area to activate dev mode */}
-      <div onClick={registerTap}>
-        <HeroSection />
-      </div>
+      <HeroSection />
       <AppShowcase />
       <HowItWorksSection />
       <FeaturesSection />

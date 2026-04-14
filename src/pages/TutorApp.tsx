@@ -12,7 +12,6 @@ import { NotificationCenter } from "@/components/NotificationCenter";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { useDevMode } from "@/contexts/DevModeContext";
 import { useRealtimeBookings, BookingRequest } from "@/hooks/useRealtimeBookings";
 import { useTutorManagement } from "@/hooks/useTutorManagement";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
@@ -45,18 +44,8 @@ interface DirectionsRequest {
 
 // ─────────────────────────────────────────────────────────────────────────────
 const TutorApp = () => {
-  const {
-    isDevMode, devRole, devUserName,
-    devSessionActive, setDevSessionActive,
-    bypassPayments,
-  } = useDevMode();
-
   // ── Shared auth ─────────────────────────────────────────────────────────
-  const auth = useAuth(isDevMode && devRole === "tutor" ? {} : { redirectTo: "/tutor/auth" });
-  const [devLoading, setDevLoading] = useState(true);
-
-  const session = isDevMode && devRole === "tutor" ? null : auth.session;
-  const loading = isDevMode && devRole === "tutor" ? devLoading : auth.loading;
+  const { session, loading } = useAuth({ redirectTo: "/tutor/auth" });
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("home");
@@ -77,8 +66,7 @@ const TutorApp = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Dev-aware user ID
-  const effectiveUserId = session?.user?.id || (isDevMode ? "dev-tutor" : undefined);
+  const userId = session?.user?.id;
 
   // ── Data hooks ──────────────────────────────────────────────────────────
   const {
@@ -86,7 +74,7 @@ const TutorApp = () => {
     loading: bookingsLoading,
     updateBookingStatus,
     getUpcomingSessions,
-  } = useRealtimeBookings("tutor", effectiveUserId);
+  } = useRealtimeBookings("tutor", userId);
 
   const { updateOnlineStatus } = useTutorManagement();
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
@@ -180,33 +168,6 @@ const TutorApp = () => {
     await Promise.all([updateOnlineStatus(checked), setOnlineStatus(checked)]);
   };
 
-  // ── Dev mode: synthetic bootstrap ──────────────────────────────────────
-  useEffect(() => {
-    if (isDevMode && devRole === "tutor") {
-      setDevLoading(false);
-    }
-  }, [isDevMode, devRole]);
-
-  // Dev session launch
-  useEffect(() => {
-    if (isDevMode && devRole === "tutor" && devSessionActive) {
-      setVideoMeetingData({
-        partnerName: "Dev Learner",
-        subject: "Dev Test Session",
-        booking: {
-          id: "dev-booking-tutor-001",
-          room_name: "StudySync-Dev-Tutor-Room",
-          duration_minutes: 60,
-          scheduled_at: new Date().toISOString(),
-          learner_profile: { full_name: "Dev Learner" },
-          tutor_subjects: { subject: "Dev Test Session" },
-        },
-      });
-      setShowVideoMeeting(true);
-      setDevSessionActive(false);
-    }
-  }, [devSessionActive, isDevMode, devRole, setDevSessionActive]);
-
   // ── Early returns (loading / full-screen overlays) ──────────────────────
   if (loading) {
     return (
@@ -219,7 +180,7 @@ const TutorApp = () => {
     );
   }
 
-  if (!isDevMode && !session?.user) return null;
+  if (!session?.user) return null;
 
   if (showVideoMeeting && videoMeetingData) {
     return (
@@ -314,16 +275,16 @@ const TutorApp = () => {
               bookingsLoading={bookingsLoading}
               upcomingSessions={getUpcomingSessions()}
               pendingCount={bookings.filter(b => b.status === "requested").length}
-              tutorName={session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || devUserName || "Tutor"}
+              tutorName={session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "Tutor"}
               mySubjects={mySubjects as any}
-              tutorId={effectiveUserId}
+              tutorId={userId}
               onNavigateTab={setActiveTab}
             />
           </TabsContent>
 
           <TabsContent value="tutorials" className="space-y-4">
-            {effectiveUserId ? (
-              <TutorCreatorDashboard tutorId={effectiveUserId} tutorName={session?.user?.email?.split("@")[0] || devUserName || "Tutor"} />
+            {userId ? (
+              <TutorCreatorDashboard tutorId={userId} tutorName={session?.user?.email?.split("@")[0] || "Tutor"} />
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">Sign in to manage your tutorials.</p>
             )}
@@ -333,7 +294,7 @@ const TutorApp = () => {
             <TutorActivityTab
               bookings={bookings}
               bookingsLoading={bookingsLoading}
-              tutorId={effectiveUserId || ""}
+              tutorId={userId || ""}
               onAccept={handleAcceptRequest}
               onDecline={handleDeclineRequest}
               onJoinSession={handleJoinVideoSession}
@@ -347,8 +308,8 @@ const TutorApp = () => {
 
           <TabsContent value="profile">
             <TutorProfileTab
-              tutorId={effectiveUserId || ""}
-              user={session?.user || { id: "dev-tutor", email: "dev@studysync.test" } as any}
+              tutorId={userId || ""}
+              user={session?.user as any}
               formattedStats={formattedStats}
               weeklyData={weeklyData as any}
               recentEarnings={recentEarnings}
