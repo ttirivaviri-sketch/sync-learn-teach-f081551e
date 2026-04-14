@@ -21,16 +21,16 @@ const Index = () => {
   }, []);
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-white">
       {/* 5-tap secret: tap the hero area to activate dev mode */}
       <div onClick={registerTap}>
         <HeroSection />
       </div>
-      <StatsSection />
-      <FeaturesSection />
-      <StudyModeSection />
       <AppShowcase />
       <HowItWorksSection />
+      <FeaturesSection />
+      <StudyModeSection />
+      <StatsSection />
       <TestimonialSection />
       <TrustSection />
       <Footer />
