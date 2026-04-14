@@ -381,15 +381,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </p>
       </div>
 
-       {/* Exam Countdowns — always driven by subject_exams from calendar */}
-       {subjectExams.length > 0 ? (
-         <MultiExamCountdown
-           exams={subjectExams}
-           subjects={subjects}
-           onAddExam={(exam) => addExam.mutate(exam)}
-           onDeleteExam={(id) => deleteExam.mutate(id)}
-           isAdding={addExam.isPending}
-         />
+       {/* Exam Countdowns — shown only in Calendar tab to avoid duplicates */}
        ) : hasSubjects ? (
          <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
            <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
