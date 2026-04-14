@@ -172,14 +172,14 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
           {resource.title}
         </h3>
         <div className="flex flex-wrap gap-1.5">
-          {resource.subject && (
+        {resource.category && (
             <Badge variant="secondary" className="text-[10px] bg-white/20 text-white border-0">
-              {resource.subject}
+              {resource.category}
             </Badge>
           )}
-          {(resource as any).topic && (
+          {resource.tags?.topic && (
             <Badge variant="secondary" className="text-[10px] bg-white/20 text-white border-0">
-              {(resource as any).topic}
+              {resource.tags.topic}
             </Badge>
           )}
         </div>
