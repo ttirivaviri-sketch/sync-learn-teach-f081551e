@@ -242,7 +242,7 @@ export function useLibraryResources(
             id: row.id,
             title: row.title,
             // RPC returns flat columns, not a nested object
-            author: row.tutor_full_name || row.tutor_profile?.full_name || "Tutor",
+            author: row.tutor_full_name || row.tutor_profile?.full_name || "Unknown",
             type: "video" as const,
             category: row.subject,
             gradeLevel: row.grade || "All Grades",
@@ -265,7 +265,7 @@ export function useLibraryResources(
             },
             tutor: {
               id: row.tutor_id,
-              name: row.tutor_full_name || row.tutor_profile?.full_name || "Tutor",
+              name: row.tutor_full_name || row.tutor_profile?.full_name || "Unknown",
               avatar_url: row.tutor_avatar_url || row.tutor_profile?.avatar_url,
               rating: row.rating || 0,
               reviews: row.review_count || 0,
