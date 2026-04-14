@@ -1,22 +1,19 @@
 
 
-## Plan: Replace "Tutor" Fallback with Author Name
+## Plan: Fix Remaining "Tutor" Hardcoded Fallbacks
 
-The `StudyClipsFeed` and `VideoPlayerOverlay` components fall back to the string `"Tutor"` when `resource.tutor?.name` is missing. Fix: use `resource.author` as a secondary fallback before showing a generic label.
+### Problem
+In `src/hooks/useLibraryResources.ts`, there's a **direct query fallback** path (line 306-337) that maps `tutor_tutorials` rows. Both `author` (line 310) and `tutor.name` (line 333) are hardcoded to `"Tutor"` instead of using the actual tutor name from the database row.
 
-### Changes
+### Fix
 
-**`src/components/library/StudyClipsFeed.tsx`**
-- Line 87: Change `resource.tutor?.name || "Tutor"` → `resource.tutor?.name || resource.author || "Unknown"`
-- Line 279: Same change for the `onBookTutor` callback fallback
+**`src/hooks/useLibraryResources.ts`** — 2 line changes:
 
-**`src/components/library/VideoPlayerOverlay.tsx`**
-- No changes needed — it only shows tutor info when `resource.tutor` exists
+- **Line 310**: Change `author: "Tutor"` to `author: row.tutor_full_name || "Unknown"`
+- **Line 333**: Change `name: "Tutor"` to `name: row.tutor_full_name || "Unknown"`
 
-**`src/hooks/useLibraryResources.ts`**
-- Lines 245, 268: Change fallback from `"Tutor"` → use `row.tutor_full_name || row.tutor_profile?.full_name || row.author || "Unknown"` so the tutor name is properly populated from the database when available
+The `tutor_full_name` field is returned by the `get_published_tutorials` database function (confirmed in the schema), which joins `profiles.full_name` as `tutor_full_name`.
 
 ### Files Changed
-- `src/components/library/StudyClipsFeed.tsx` — Update 2 fallback strings
-- `src/hooks/useLibraryResources.ts` — Update 2 fallback strings in data mapping
+- `src/hooks/useLibraryResources.ts` — Update 2 hardcoded strings in the direct query mapping
 
