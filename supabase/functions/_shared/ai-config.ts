@@ -282,6 +282,7 @@ export async function callAI(
     jsonMode?: boolean;
     tools?: unknown[];
     toolChoice?: unknown;
+    maxTokens?: number;
   } = {}
 ): Promise<string> {
   const makeRequest = async (prompt: string): Promise<string> => {
@@ -294,6 +295,7 @@ export async function callAI(
     };
 
     if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (options.maxTokens) body.max_tokens = options.maxTokens;
     if (options.jsonMode) body.response_format = { type: "json_object" };
     if (options.tools) body.tools = options.tools;
     if (options.toolChoice) body.tool_choice = options.toolChoice;
