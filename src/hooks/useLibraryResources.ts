@@ -307,7 +307,7 @@ export function useLibraryResources(
           (row) => ({
             id: row.id,
             title: row.title,
-            author: "Tutor",
+            author: row.tutor_full_name || "Unknown",
             type: "video" as const,
             category: row.subject || "General",
             gradeLevel: row.grade || "All Grades",
@@ -330,7 +330,7 @@ export function useLibraryResources(
             },
             tutor: {
               id: row.tutor_id,
-              name: "Tutor",
+              name: row.tutor_full_name || "Unknown",
               rating: row.rating || 0,
               reviews: row.review_count || 0,
             },
