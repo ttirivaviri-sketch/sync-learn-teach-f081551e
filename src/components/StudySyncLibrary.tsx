@@ -324,7 +324,20 @@ const StudySyncLibrary = ({
             <TabsContent value="tutorials" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
                 <h3 className="font-semibold">Video Tutorials</h3>
-                <Badge variant="secondary">{recommendedTutorials.length} available</Badge>
+                <div className="flex items-center gap-2">
+                  {recommendedTutorials.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => { setReelsStartIndex(0); setReelsFeedOpen(true); }}
+                    >
+                      <Play className="h-3.5 w-3.5" />
+                      Reels
+                    </Button>
+                  )}
+                  <Badge variant="secondary">{recommendedTutorials.length} available</Badge>
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {recommendedTutorials.map((r) => (
