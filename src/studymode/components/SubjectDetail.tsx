@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, Brain, Clock, BarChart3, Zap } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
 import { TaskList } from './TaskList';
