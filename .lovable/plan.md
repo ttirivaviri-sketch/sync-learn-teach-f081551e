@@ -1,79 +1,79 @@
 
 
-## Plan: Tutor App Improvements
+## Plan: Redesign Landing Page to Match Reference Images
 
-### Current State
+### What You Want
 
-The tutor app has four tabs (Home, Tutorials, Activity, Profile) with working booking management, availability scheduling, session history, earnings tracking, wallet/payouts, creator dashboard, chat, and video meetings. The build compiles without errors.
+Rebuild the landing page to match two reference designs:
+- **IMG_1084.png** (hero): "Learn smarter. Pass faster." -- split-screen layout with student group photo on the right, feature bullet points, two CTA buttons (yellow "Start Learning" + blue "Find a Tutor"), and 4 feature cards at the bottom
+- **IMG_1096.png** (mid-page): "Built for real students" section with photo + checklist, and "How StudySync Works" 5-step flow with icons
 
-### Issues and Missing Features Found
+Use the other uploaded images as real content:
+- **IMG_1136.png** (group of students) -- hero right side
+- **IMG_1091.png** (boy on video call with tutor) -- "Built for real students" or "How it Works" section
+- **IMG_1093.png** (girl using app on phone) -- app showcase / feature illustration
+- **IMG_1433.jpeg** (tutor matching screenshot) -- showcase tutor booking feature
+- **IMG_1432.jpeg** (StudyMode screenshot) -- showcase StudyMode feature
 
-**1. No Notification Bell in Tutor Header**
-The learner app has `NotificationCenter` but the tutor header has no notification bell. Tutors receive notifications (booking requests, payments) but have no way to see them without the bell icon.
+### Implementation Steps
 
-**Fix**: Add `NotificationCenter` component to the tutor header bar.
+**1. Copy uploaded images into project assets**
 
-**2. Home Tab is Sparse -- Missing Key Information**
-The home tab shows 4 stat cards, 2 quick actions, and today's schedule. It lacks:
-- A welcome/greeting with the tutor's name
-- Pending booking requests count (urgent action item)
-- A notification badge on the bottom nav for pending requests
+Copy all 7 images to `public/images/` for use on the landing page.
 
-**Fix**: Add a greeting row, pending requests alert card, and badge dot on the Activity tab icon when there are pending bookings.
+**2. Redesign HeroSection.tsx**
 
-**3. "Tax Report" Button is a Stub**
-The Download Tax Report button just shows "Feature coming soon!" toast.
+Replace the current dark gradient + phone mockup hero with:
+- **Light/white background** with subtle gradient
+- **Split-screen layout**: left = headline + copy + CTAs, right = student group photo (IMG_1136.png)
+- Headline: "Learn **smarter.** Pass **faster.**" with yellow accent on "faster"
+- Subtitle paragraph about AI-powered learning + verified tutors
+- 4 green-check bullet points in a 2x2 grid (AI study assistant, Expert tutors, Past paper exam practice, Personalized study schedules)
+- Two CTA buttons: yellow "Start Learning" + blue "Find a Tutor"
+- "Trusted by students preparing for exams across Africa" tagline
+- 4 feature cards row at bottom (AI Study Mode, Tutor Marketplace, Smart Learning Library, Personalized Algorithm)
+- Keep the Navbar but restyle: white background, dark text, add "Pricing" link, yellow "Get Started" pill button
 
-**Fix**: Generate a basic CSV export of completed sessions (date, student, subject, amount, duration) downloadable in-browser. No external service needed.
+**3. Redesign "Built for Real Students" section**
 
-**4. No Student Insights Integration in Booking Manager**
-The `StudentInsightsPanel` component exists but isn't used in the booking flow. Tutors can't see AI-generated learning profiles for their students before sessions.
+New component or rework `AppShowcase.tsx`:
+- Left: photo of student using phone (IMG_1093.png) in a rounded card
+- Right: "Built for **real** students" headline + paragraph + 4 green-check bullet points (safe online learning, diverse students, expert tutors, structured study)
+- Clean white background, minimal styling
 
-**Fix**: Add a "View Insights" button on each booking card in `TutorBookingManager` that expands to show the `StudentInsightsPanel` for that learner.
+**4. Redesign "How StudySync Works" section**
 
-**5. No Onboarding for New Tutors**
-When a tutor first signs up, there's no guided setup to add subjects, set availability, or complete their profile. They land on an empty home tab.
+Rework `HowItWorksSection.tsx`:
+- Left: photo of student on video call (IMG_1091.png)
+- Right: 5-step horizontal flow with numbered icons (Create profile, Upload syllabus, Book a tutor, Get daily tasks, Book tutors when needed)
+- Step 3 highlighted with a card-like border treatment
+- Clean, light design matching the reference
 
-**Fix**: Add a "Getting Started" checklist card on the Home tab that shows incomplete setup steps (add subjects, set availability, add bio/photo, add qualifications) and links to the relevant tabs/sections.
+**5. Add App Screenshots Showcase**
 
-**6. Console Warning: Fragment `data-lov-id` Prop**
-There's a React warning about an invalid `data-lov-id` prop on `React.Fragment` in `StudyModeWrapper.tsx`. This is a dev-only warning but should be cleaned up.
+New section or rework `StudyModeSection.tsx`:
+- Show the two real app screenshots (IMG_1433.jpeg for tutor matching, IMG_1432.jpeg for StudyMode) in phone mockup frames
+- Brief descriptions for each
 
-**Fix**: Move the `data-lov-id` prop from `<Fragment>` to a wrapper `<div>`.
+**6. Keep existing sections (restyle as needed)**
 
----
-
-### Implementation Priority
-
-| Task | Effort | Impact |
-|------|--------|--------|
-| Add NotificationCenter to tutor header | Small | High |
-| Add pending requests badge + alert card on Home | Small | High |
-| Add tutor greeting with name on Home | Small | Medium |
-| Add Getting Started checklist for new tutors | Medium | High |
-| Add Student Insights button in booking cards | Small | Medium |
-| Implement Tax Report CSV export | Medium | Medium |
-| Fix Fragment prop warning | Tiny | Low |
+- TestimonialSection, StatsSection, TrustSection, Footer -- keep but ensure they match the lighter, cleaner design language (white/light backgrounds, subtle shadows, rounded cards)
 
 ### Files to Change
 
 | File | Change |
-|------|--------|
-| `src/pages/TutorApp.tsx` | Import & render `NotificationCenter` in header; pass pending count to bottom nav badge |
-| `src/pages/tutor/TutorHomeTab.tsx` | Add greeting, pending requests alert, Getting Started checklist |
-| `src/components/booking-manager/BookingCard.tsx` | Add "View Insights" toggle with `StudentInsightsPanel` |
-| `src/pages/tutor/TutorProfileTab.tsx` | Replace stub toast with CSV generation logic for tax report |
-| `src/studymode/StudyModeWrapper.tsx` | Move `data-lov-id` off Fragment |
+|---|---|
+| `src/components/HeroSection.tsx` | Full rewrite -- light split-screen hero with photo, new navbar styling |
+| `src/components/AppShowcase.tsx` | Rewrite as "Built for real students" + app screenshots |
+| `src/components/HowItWorksSection.tsx` | Rewrite as 5-step flow with photo |
+| `src/components/FeaturesSection.tsx` | May merge into hero bottom cards or simplify |
+| `src/components/StudyModeSection.tsx` | Rework to showcase real app screenshots |
+| `src/pages/Index.tsx` | Adjust section order to match reference flow |
 
-### Technical Details
+### Design Language Shift
 
-**Notification Center** -- Already built as a standalone component. Just import and place it next to the chat/logout buttons in the header.
-
-**Pending Badge** -- Count bookings where `status === 'requested'` from the existing `bookings` array and render a red dot on the Activity nav icon.
-
-**Getting Started Checklist** -- Check: `mySubjects.length > 0`, availability slots exist (query `tutor_availability`), profile has bio and avatar. Show/hide the card based on completion.
-
-**Tax Report CSV** -- Use the existing `recentEarnings` data (or fetch all completed bookings) and generate a CSV blob with `URL.createObjectURL` for download. No backend needed.
-
-**Student Insights** -- The `StudentInsightsPanel` component already accepts `studentId`, `studentName`, `tutorId`. Just conditionally render it inside `BookingCard` when expanded.
+- Current: dark glassmorphism gradient hero
+- New: **light, clean, white-dominant** with subtle blue/indigo accents, yellow highlights, rounded cards with soft shadows
+- Typography: large bold headlines with colored accent words
+- The rest of the app (learner/tutor dashboards) keeps its current glassmorphism style -- only the landing page changes
 
