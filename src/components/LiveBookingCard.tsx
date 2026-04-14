@@ -1,10 +1,11 @@
-import { Clock, MapPin, Video, Check, X, User, CreditCard } from "lucide-react";
+import { Clock, MapPin, Video, Check, X, User, CreditCard, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { formatDistanceToNow } from "date-fns";
+import { useDevMode } from "@/contexts/DevModeContext";
 
 interface LiveBookingCardProps {
   booking: BookingRequest;
@@ -27,11 +28,17 @@ export const LiveBookingCard = ({
   onPayNow,
   hasPendingPayment = false,
 }: LiveBookingCardProps) => {
+  const { isDevMode, config } = useDevMode();
+  const devBypass = isDevMode && (config.bypassPayments || config.forcePaidBookings);
+
   const isIncoming = booking.status === 'requested' && userType === 'tutor';
   const isAccepted = booking.status === 'confirmed';
   const scheduledTime = new Date(booking.scheduled_at);
-  const isNow = Math.abs(scheduledTime.getTime() - new Date().getTime()) < 15 * 60 * 1000; // Within 15 minutes
-  const needsPayment = userType === 'learner' && isAccepted && hasPendingPayment;
+  const isNow = Math.abs(scheduledTime.getTime() - new Date().getTime()) < 15 * 60 * 1000;
+  // In dev mode with bypass, never show payment required
+  const needsPayment = !devBypass && userType === 'learner' && isAccepted && hasPendingPayment;
+  // In dev mode, always allow joining confirmed sessions
+  const canJoin = isAccepted && (devBypass || (isNow && !needsPayment));
 
   const getStatusBadge = () => {
     const statusConfig = {
@@ -41,7 +48,6 @@ export const LiveBookingCard = ({
       canceled: { label: 'Cancelled', variant: 'destructive' as const },
     };
     
-    // Override for pending payment state
     if (needsPayment) {
       return { label: 'Awaiting Payment', variant: 'secondary' as const };
     }
@@ -101,10 +107,10 @@ export const LiveBookingCard = ({
 
         <div className="flex items-center justify-between">
           <p className="font-semibold text-primary">R{booking.price}</p>
-          {isNow && isAccepted && !needsPayment && (
+          {canJoin && (
             <Badge variant="default" className="bg-green-500">
               <Video className="h-3 w-3 mr-1" />
-              Ready to Join
+              {devBypass ? 'Dev — Ready' : 'Ready to Join'}
             </Badge>
           )}
           {needsPayment && (
@@ -147,14 +153,14 @@ export const LiveBookingCard = ({
             </Button>
           )}
 
-          {isAccepted && isNow && !needsPayment && (
+          {canJoin && (
             <Button 
               size="sm" 
               onClick={() => onJoinSession?.(booking)}
-              className="flex-1"
+              className="flex-1 bg-green-600 hover:bg-green-700"
             >
               <Video className="h-4 w-4 mr-1" />
-              Join Session
+              {devBypass ? '▶ Join (Dev)' : 'Join Session'}
             </Button>
           )}
 

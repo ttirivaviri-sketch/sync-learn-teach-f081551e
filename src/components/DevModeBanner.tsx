@@ -24,11 +24,11 @@ export const DevModeBanner = () => {
     return (
       <button
         onClick={() => setExpanded(true)}
-        className="fixed bottom-24 right-3 z-[9999] flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-lg transition-colors"
-        style={{ backgroundColor: "hsl(48 96% 53%)", color: "hsl(40 80% 15%)" }}
+        className="fixed bottom-24 right-3 z-[9999] flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold shadow-lg transition-colors text-white"
+        style={{ background: "linear-gradient(135deg, hsl(280 80% 55%), hsl(260 70% 50%))" }}
       >
         <Code2 className="h-3.5 w-3.5" />
-        DEV
+        🧪 DEV
         <ChevronUp className="h-3 w-3" />
       </button>
     );
@@ -38,30 +38,30 @@ export const DevModeBanner = () => {
     <div
       className="fixed bottom-24 right-3 z-[9999] w-72 rounded-2xl shadow-2xl border overflow-hidden"
       style={{
-        borderColor: "hsl(48 96% 53% / 0.6)",
-        backgroundColor: "hsl(48 100% 97%)",
+        borderColor: "hsl(280 80% 55% / 0.6)",
+        backgroundColor: "hsl(280 40% 98%)",
       }}
     >
       {/* Header */}
       <div
         className="flex items-center justify-between px-3 py-2"
-        style={{ backgroundColor: "hsl(48 96% 53%)" }}
+        style={{ background: "linear-gradient(135deg, hsl(280 80% 55%), hsl(260 70% 50%))" }}
       >
         <div className="flex items-center gap-1.5">
-          <Code2 className="h-4 w-4" style={{ color: "hsl(40 80% 15%)" }} />
-          <span className="text-xs font-bold uppercase tracking-wide" style={{ color: "hsl(40 80% 15%)" }}>
-            Dev Mode
+          <Code2 className="h-4 w-4 text-white" />
+          <span className="text-xs font-bold uppercase tracking-wide text-white">
+            🧪 Dev Mode
           </span>
-          <Badge className="text-[10px] px-1.5 py-0 h-4" style={{ backgroundColor: "hsl(40 80% 15%)", color: "hsl(48 96% 80%)" }}>
+          <Badge className="text-[10px] px-1.5 py-0 h-4 bg-white/20 text-white border-0">
             {devRole}
           </Badge>
         </div>
         <div className="flex items-center gap-1">
           <button onClick={() => setExpanded(false)} className="p-0.5 opacity-80 hover:opacity-100">
-            <ChevronDown className="h-4 w-4" style={{ color: "hsl(40 80% 15%)" }} />
+            <ChevronDown className="h-4 w-4 text-white" />
           </button>
           <button onClick={disableDevMode} className="p-0.5 opacity-80 hover:opacity-100">
-            <X className="h-4 w-4" style={{ color: "hsl(40 80% 15%)" }} />
+            <X className="h-4 w-4 text-white" />
           </button>
         </div>
       </div>
@@ -69,9 +69,9 @@ export const DevModeBanner = () => {
       {/* Body */}
       <div className="p-3 space-y-3">
         {/* User info */}
-        <div className="rounded-lg px-3 py-2 text-xs" style={{ backgroundColor: "hsl(48 80% 90%)" }}>
-          <p className="font-semibold" style={{ color: "hsl(40 80% 15%)" }}>{devUserName}</p>
-          <p style={{ color: "hsl(40 40% 40%)" }}>Testing as {devRole}</p>
+        <div className="rounded-lg px-3 py-2 text-xs" style={{ backgroundColor: "hsl(280 40% 93%)" }}>
+          <p className="font-semibold" style={{ color: "hsl(280 50% 25%)" }}>{devUserName}</p>
+          <p style={{ color: "hsl(280 30% 45%)" }}>Testing as {devRole}</p>
         </div>
 
         {/* Core toggles */}
@@ -138,16 +138,16 @@ export const DevModeBanner = () => {
         {/* Launch session button */}
         <Button
           size="sm"
-          className="w-full font-bold text-xs gap-1.5"
-          style={{ backgroundColor: "hsl(48 96% 45%)", color: "hsl(40 80% 10%)" }}
+          className="w-full font-bold text-xs gap-1.5 text-white"
+          style={{ background: "linear-gradient(135deg, hsl(280 80% 55%), hsl(260 70% 50%))" }}
           onClick={launchDevSession}
         >
           <Zap className="h-3.5 w-3.5" />
           Launch Dev Video Session
         </Button>
 
-        <p className="text-[10px] text-center leading-tight" style={{ color: "hsl(40 40% 50%)" }}>
-          Dev mode simulates all outcomes. No real APIs called.
+        <p className="text-[10px] text-center leading-tight" style={{ color: "hsl(280 30% 50%)" }}>
+          🧪 Simulation layer active — no real APIs called.
         </p>
       </div>
     </div>
@@ -166,7 +166,7 @@ function ToggleRow({
 }) {
   return (
     <div className="flex items-center justify-between">
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: destructive ? "hsl(0 60% 45%)" : "hsl(40 80% 15%)" }}>
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: destructive ? "hsl(0 60% 45%)" : "hsl(280 50% 25%)" }}>
         {icon}
         {label}
       </div>
