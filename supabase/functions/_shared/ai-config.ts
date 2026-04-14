@@ -175,38 +175,48 @@ export function buildStudyModeContext(input: StudyModeContextInput): string {
  * Handles: raw JSON, markdown-fenced JSON, and partial extraction.
  */
 export function safeJsonParse<T = unknown>(raw: string): T {
-  // 1. Try direct parse
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    // continue
-  }
+  const attempts: string[] = [];
 
-  // 2. Try extracting from markdown fences
+  // Collect candidate strings to try parsing
+  // 1. Raw input
+  attempts.push(raw);
+
+  // 2. Extract from markdown fences
   const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
-  if (fenceMatch?.[1]) {
+  if (fenceMatch?.[1]) attempts.push(fenceMatch[1].trim());
+
+  // 3. Extract first JSON object by brace boundaries
+  const objStart = raw.indexOf("{");
+  const objEnd = raw.lastIndexOf("}");
+  if (objStart !== -1 && objEnd > objStart) {
+    attempts.push(raw.substring(objStart, objEnd + 1));
+  }
+
+  // 4. Extract JSON array
+  const arrStart = raw.indexOf("[");
+  const arrEnd = raw.lastIndexOf("]");
+  if (arrStart !== -1 && arrEnd > arrStart) {
+    attempts.push(raw.substring(arrStart, arrEnd + 1));
+  }
+
+  for (const candidate of attempts) {
+    // Try direct parse
     try {
-      return JSON.parse(fenceMatch[1].trim()) as T;
+      return JSON.parse(candidate) as T;
     } catch {
       // continue
     }
-  }
 
-  // 3. Try extracting first JSON object
-  const objMatch = raw.match(/\{[\s\S]*\}/);
-  if (objMatch) {
+    // Try after cleaning common issues
     try {
-      return JSON.parse(objMatch[0]) as T;
-    } catch {
-      // continue
-    }
-  }
-
-  // 4. Try extracting JSON array
-  const arrMatch = raw.match(/\[[\s\S]*\]/);
-  if (arrMatch) {
-    try {
-      return JSON.parse(arrMatch[0]) as T;
+      const cleaned = candidate
+        .replace(/,\s*}/g, "}")       // trailing commas in objects
+        .replace(/,\s*]/g, "]")       // trailing commas in arrays
+        .replace(/[\x00-\x1F\x7F]/g, (ch) =>
+          ch === "\n" || ch === "\r" || ch === "\t" ? ch : ""
+        ) // strip control chars except whitespace
+        .replace(/\\\n/g, "\\n");     // fix escaped newlines
+      return JSON.parse(cleaned) as T;
     } catch {
       // continue
     }
@@ -272,6 +282,7 @@ export async function callAI(
     jsonMode?: boolean;
     tools?: unknown[];
     toolChoice?: unknown;
+    maxTokens?: number;
   } = {}
 ): Promise<string> {
   const makeRequest = async (prompt: string): Promise<string> => {
@@ -284,6 +295,7 @@ export async function callAI(
     };
 
     if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (options.maxTokens) body.max_tokens = options.maxTokens;
     if (options.jsonMode) body.response_format = { type: "json_object" };
     if (options.tools) body.tools = options.tools;
     if (options.toolChoice) body.tool_choice = options.toolChoice;
