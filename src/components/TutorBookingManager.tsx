@@ -90,18 +90,16 @@ export const TutorBookingManager = ({
   };
 
   const handleReschedule = async (bookingId: string, newScheduledAt: string, _reason?: string) => {
-    try {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ scheduled_at: newScheduledAt, status: "requested" as const })
-        .eq("id", bookingId);
-      if (error) throw error;
-      toast({ title: "Reschedule Proposed", description: "The learner has been notified of the new time." });
-    } catch (error) {
+    const { error } = await supabase
+      .from("bookings")
+      .update({ scheduled_at: newScheduledAt, status: "requested" as any })
+      .eq("id", bookingId);
+    if (error) {
       logger.error("Reschedule error:", error);
       toast({ title: "Error", description: "Failed to reschedule booking. Please try again.", variant: "destructive" });
       throw error;
     }
+    toast({ title: "Reschedule Proposed", description: "The learner has been notified of the new time." });
   };
 
   const handleAcceptWithLoading = async (booking: BookingRequest) => {

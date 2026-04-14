@@ -52,6 +52,8 @@ export const RescheduleDialog = ({
       await onReschedule(booking.id, newScheduledAt.toISOString(), reason);
       onOpenChange(false);
       resetForm();
+    } catch (err) {
+      // Error already handled by parent via toast
     } finally {
       setIsSubmitting(false);
     }
