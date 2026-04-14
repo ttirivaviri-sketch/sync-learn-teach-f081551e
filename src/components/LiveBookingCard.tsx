@@ -31,7 +31,10 @@ export const LiveBookingCard = ({
   const isIncoming = booking.status === 'requested' && userType === 'tutor';
   const isAccepted = booking.status === 'confirmed';
   const scheduledTime = new Date(booking.scheduled_at);
-  const isNow = Math.abs(scheduledTime.getTime() - new Date().getTime()) < 15 * 60 * 1000;
+  const sessionEnd = new Date(scheduledTime.getTime() + booking.duration_minutes * 60 * 1000);
+  const now = new Date();
+  // Allow joining from 15 min before start until session end
+  const isNow = now >= new Date(scheduledTime.getTime() - 15 * 60 * 1000) && now <= sessionEnd;
   const needsPayment = userType === 'learner' && isAccepted && hasPendingPayment;
   const canJoin = isAccepted && isNow && !needsPayment;
 
