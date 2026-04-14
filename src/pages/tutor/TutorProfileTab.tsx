@@ -124,7 +124,24 @@ export const TutorProfileTab = ({
       variant="outline"
       className="w-full"
       size="lg"
-      onClick={() => onToast({ title: "Tax Report", description: "Feature coming soon!" })}
+      onClick={() => {
+        if (recentEarnings.length === 0) {
+          onToast({ title: "No Data", description: "No completed sessions to export." });
+          return;
+        }
+        const header = "Date,Student,Subject,Amount (ZAR)\n";
+        const rows = recentEarnings
+          .map((e) => `${e.date},"${e.student}","${e.subject}",${e.amount}`)
+          .join("\n");
+        const blob = new Blob([header + rows], { type: "text/csv" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `studysync-earnings-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        onToast({ title: "Downloaded!", description: "Your earnings report has been saved." });
+      }}
     >
       <Download className="h-4 w-4 mr-2" />
       Download Tax Report

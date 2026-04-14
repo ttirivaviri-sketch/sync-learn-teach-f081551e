@@ -1,9 +1,12 @@
-import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, BookOpen, GraduationCap, ChevronDown, ChevronUp } from "lucide-react";
+import { useState } from "react";
+import { Calendar, Clock, CheckCircle, XCircle, RefreshCw, Video, MessageCircle, User, BookOpen, GraduationCap, ChevronDown, ChevronUp, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
+import { format, formatDistanceToNow, isToday, isTomorrow } from "date-fns";
+import { StudentInsightsPanel } from "@/components/StudentInsightsPanel";
 import { format, formatDistanceToNow, isToday, isTomorrow } from "date-fns";
 
 interface AcademicProfileInfo {

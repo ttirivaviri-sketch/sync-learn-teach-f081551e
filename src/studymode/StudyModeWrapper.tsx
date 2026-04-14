@@ -98,7 +98,7 @@ class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
         />
       );
     }
-    return <React.Fragment key={this.state.key}>{this.props.children}</React.Fragment>;
+    return <div key={this.state.key}>{this.props.children}</div>;
   }
 }
 
