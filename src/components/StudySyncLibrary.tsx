@@ -20,7 +20,7 @@ import { ContentRack } from "@/components/library/ContentRack";
 import { SearchResultsView } from "@/components/library/SearchResultsView";
 import { VideoPlayerOverlay } from "@/components/library/VideoPlayerOverlay";
 import { StuckPrompt } from "@/components/library/StuckPrompt";
-import { VideoReelsFeed } from "@/components/library/VideoReelsFeed";
+import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
@@ -323,7 +323,7 @@ const StudySyncLibrary = ({
             {/* Tutorials Tab */}
             <TabsContent value="tutorials" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Video Tutorials</h3>
+                <h3 className="font-semibold">Study Clips</h3>
                 <div className="flex items-center gap-2">
                   {recommendedTutorials.length > 0 && (
                     <Button
@@ -333,7 +333,7 @@ const StudySyncLibrary = ({
                       onClick={() => { setReelsStartIndex(0); setReelsFeedOpen(true); }}
                     >
                       <Play className="h-3.5 w-3.5" />
-                      Reels
+                      Study Clips
                     </Button>
                   )}
                   <Badge variant="secondary">{recommendedTutorials.length} available</Badge>
@@ -454,9 +454,9 @@ const StudySyncLibrary = ({
         />
       )}
 
-      {/* Reels Feed */}
+      {/* Study Clips Feed */}
       {reelsFeedOpen && recommendedTutorials.length > 0 && (
-        <VideoReelsFeed
+        <StudyClipsFeed
           videos={recommendedTutorials}
           startIndex={reelsStartIndex}
           onClose={() => setReelsFeedOpen(false)}

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LibraryResource } from "@/types/academicProfile";
 
-interface VideoReelsFeedProps {
+interface StudyClipsFeedProps {
   videos: LibraryResource[];
   startIndex: number;
   onClose: () => void;
@@ -190,7 +190,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
 
 /* ── main feed ───────────────────────────────────────────── */
 
-export function VideoReelsFeed({
+export function StudyClipsFeed({
   videos,
   startIndex,
   onClose,
@@ -198,7 +198,7 @@ export function VideoReelsFeed({
   onAddToLibrary,
   onRemoveFromLibrary,
   myLibraryItems,
-}: VideoReelsFeedProps) {
+}: StudyClipsFeedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(startIndex);
 
