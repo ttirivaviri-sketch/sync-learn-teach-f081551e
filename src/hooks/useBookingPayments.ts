@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 
 interface PaymentStatus {
@@ -72,6 +73,13 @@ export const useBookingPayments = (bookingIds: string[]) => {
                 paymentId: newPayment.id,
               },
             }));
+
+            // Fire instant toast on payment status change
+            if (newPayment.status === 'succeeded') {
+              toast.success('Payment confirmed!', { description: 'Your session is now secured.' });
+            } else if (newPayment.status === 'failed') {
+              toast.error('Payment failed', { description: 'Please try again or use a different card.' });
+            }
           }
         }
       )

@@ -136,7 +136,7 @@ const PaymentSuccess = () => {
     if (status === "confirmed") {
       return (
         <>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-[scale-in_0.4s_ease-out,pulse_2s_ease-in-out_0.4s_2]">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <CardTitle className="text-2xl">Payment Confirmed!</CardTitle>
@@ -150,7 +150,7 @@ const PaymentSuccess = () => {
     if (status === "pending") {
       return (
         <>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-[scale-in_0.4s_ease-out]">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <CardTitle className="text-2xl">Payment Submitted!</CardTitle>
@@ -257,9 +257,9 @@ const PaymentSuccess = () => {
             <Button onClick={() => navigate("/learner")} className="w-full">
               Go to My Sessions
             </Button>
-            {status === "failed" && (
-              <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
-                Try Again
+            {status === "failed" && bookingId && (
+              <Button variant="destructive" onClick={() => navigate(`/learner?retryPayment=${bookingId}`)} className="w-full">
+                Retry Payment
               </Button>
             )}
             <Button variant="ghost" onClick={() => navigate("/")} className="w-full">
