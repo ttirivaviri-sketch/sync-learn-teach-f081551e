@@ -240,7 +240,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
             Create tutorials · reach thousands of students
           </p>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
+        <Button size="sm" onClick={handleUploadClick}>
           <Plus className="h-4 w-4 mr-1" />
           Upload Tutorial
         </Button>
