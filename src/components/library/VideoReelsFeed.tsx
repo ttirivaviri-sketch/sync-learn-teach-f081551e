@@ -84,8 +84,8 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
     setPaused((p) => !p);
   };
 
-  const tutorName = (resource as any).tutorName || "Tutor";
-  const tutorId = (resource as any).tutorId || "";
+  const tutorName = resource.tutor?.name || "Tutor";
+  const tutorId = resource.tutor?.id || "";
 
   return (
     <div className="h-[100dvh] w-full snap-start relative flex items-center justify-center bg-black shrink-0">
@@ -275,9 +275,9 @@ export function VideoReelsFeed({
             isActive={idx === activeIndex}
             isSaved={myLibraryItems.includes(String(video.id))}
             onBookTutor={() => {
-              const tutorId = (video as any).tutorId || "";
-              const tutorName = (video as any).tutorName || "Tutor";
-              if (tutorId) onBookTutor(tutorId, tutorName);
+              const tid = video.tutor?.id || "";
+              const tname = video.tutor?.name || "Tutor";
+              if (tid) onBookTutor(tid, tname);
             }}
             onToggleSave={() => toggleSave(String(video.id), video.title)}
           />
