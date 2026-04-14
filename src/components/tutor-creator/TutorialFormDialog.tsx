@@ -76,12 +76,19 @@ export function TutorialFormDialog({
       return;
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
+    const effectiveTutorId = tutorId || session?.user?.id;
+
+    if (!effectiveTutorId) {
+      setUploadError("Not signed in. Please refresh and try again.");
+      return;
+    }
+
     setUploading(true);
     setUploadProgress(10);
 
     try {
-      const ext = file.name.split(".").pop() || "mp4";
-      const path = `${tutorId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const path = `${effectiveTutorId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
 
       // Simulate progress since supabase upload doesn't expose it
       const progressInterval = setInterval(() => {
