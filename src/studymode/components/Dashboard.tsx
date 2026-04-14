@@ -135,9 +135,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           (s) => s.name.toLowerCase() === ed.subject.toLowerCase()
         );
         if (matchingSubject) {
-          // Check if this exam date already exists in subject_exams
+          // Check if this exact exam date already exists (by subject_id AND date)
           const existing = subjectExams.find(
-            (se) => se.subject_id === matchingSubject.id
+            (se) => se.subject_id === matchingSubject.id && se.exam_date === ed.date
           );
           if (!existing) {
             try {
