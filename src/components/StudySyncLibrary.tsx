@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from "react";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, GraduationCap, Sparkles, X,
+  Archive, Brain, Loader2, GraduationCap, Sparkles, X, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,7 +112,14 @@ const StudySyncLibrary = ({
       }
     }
     if (resource.type === "video" && videoUrl) {
-      setActiveVideoResource({ ...resource, videoUrl });
+      // Open in Reels feed at correct index
+      const idx = recommendedTutorials.findIndex((r) => String(r.id) === String(resource.id));
+      if (idx >= 0 && recommendedTutorials.length > 0) {
+        setReelsStartIndex(idx);
+        setReelsFeedOpen(true);
+      } else {
+        setActiveVideoResource({ ...resource, videoUrl });
+      }
       return;
     }
     if (resource.type === "video") {
