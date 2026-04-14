@@ -454,6 +454,19 @@ const StudySyncLibrary = ({
         />
       )}
 
+      {/* Reels Feed */}
+      {reelsFeedOpen && recommendedTutorials.length > 0 && (
+        <VideoReelsFeed
+          videos={recommendedTutorials}
+          startIndex={reelsStartIndex}
+          onClose={() => setReelsFeedOpen(false)}
+          onBookTutor={handleBookTutor}
+          onAddToLibrary={addToLibrary}
+          onRemoveFromLibrary={removeFromLibrary}
+          myLibraryItems={myLibraryItems}
+        />
+      )}
+
       {/* Featured Banner */}
       {!searchQuery && (
         <Card className="bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20">
