@@ -242,6 +242,30 @@ export function BookingCard({
             Requested {formatDistanceToNow(new Date(booking.created_at), { addSuffix: true })}
           </p>
         )}
+
+        {/* Student Insights */}
+        {tutorId && (booking.status === "confirmed" || booking.status === "requested") && (
+          <div className="mt-3 border-t pt-3">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="w-full text-xs gap-1.5"
+              onClick={() => setShowInsights(!showInsights)}
+            >
+              <Brain className="h-3.5 w-3.5" />
+              {showInsights ? "Hide" : "View"} AI Student Insights
+            </Button>
+            {showInsights && (
+              <div className="mt-2">
+                <StudentInsightsPanel
+                  studentId={booking.learner_id}
+                  studentName={booking.learner_profile?.full_name || "Student"}
+                  tutorId={tutorId}
+                />
+              </div>
+            )}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
