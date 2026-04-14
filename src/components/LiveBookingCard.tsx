@@ -28,17 +28,12 @@ export const LiveBookingCard = ({
   onPayNow,
   hasPendingPayment = false,
 }: LiveBookingCardProps) => {
-  const { isDevMode, config } = useDevMode();
-  const devBypass = isDevMode && (config.bypassPayments || config.forcePaidBookings);
-
   const isIncoming = booking.status === 'requested' && userType === 'tutor';
   const isAccepted = booking.status === 'confirmed';
   const scheduledTime = new Date(booking.scheduled_at);
   const isNow = Math.abs(scheduledTime.getTime() - new Date().getTime()) < 15 * 60 * 1000;
-  // In dev mode with bypass, never show payment required
-  const needsPayment = !devBypass && userType === 'learner' && isAccepted && hasPendingPayment;
-  // In dev mode, always allow joining confirmed sessions
-  const canJoin = isAccepted && (devBypass || (isNow && !needsPayment));
+  const needsPayment = userType === 'learner' && isAccepted && hasPendingPayment;
+  const canJoin = isAccepted && isNow && !needsPayment;
 
   const getStatusBadge = () => {
     const statusConfig = {

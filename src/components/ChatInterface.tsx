@@ -356,10 +356,11 @@ const ChatInterface = ({
           <ChatArea
             messages={messages}
             newMessage={newMessage}
-            onNewMessageChange={setNewMessage}
+            onNewMessageChange={(v) => setNewMessage(v)}
             onSendMessage={handleSendMessage}
             currentUserId={currentUserId || ""}
-            otherUserName={activeConversationData.other_user_name}
+            otherUserName={activeConversationData.other_user_name || "User"}
+            userType="learner"
             loading={loading}
             theme={theme}
             onToggleSidebar={() => setMobileSidebar(true)}
