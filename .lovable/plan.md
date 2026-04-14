@@ -1,58 +1,33 @@
 
 
-## Plan: Instagram Reels-Style Video Feed
+## Plan: Fix Uploaded Videos Not Showing in Library
 
-### What It Does
+### Root Cause
 
-Adds a fullscreen vertical-swipe video feed to the Library's **Tutorials tab**. When a learner taps any tutorial video (or a new "Reels" entry point), they enter a TikTok/Instagram Reels-style experience: fullscreen videos, swipe up/down to navigate, interaction buttons on the right side, tutor info at the bottom.
+Two issues prevent tutorials from loading:
 
-### Files to Create
+1. **RPC permission denied** — The `get_published_tutorials` function exists but has no `EXECUTE` grant for `anon` or `authenticated` roles. Every call fails silently.
+2. **Fallback query broken** — The fallback direct query uses `profiles!tutor_id` join syntax, which requires a foreign key relationship that doesn't exist on `tutor_tutorials`. So both paths fail.
 
-**`src/components/library/VideoReelsFeed.tsx`**
-- Fullscreen overlay (`fixed inset-0 z-50 bg-black`)
-- Uses CSS scroll-snap (`snap-y snap-mandatory`) on a vertical container — each video is one `snap-start` viewport-height slide
-- Each slide renders:
-  - **Center**: `<video>` element (direct URLs) or `<iframe>` (YouTube/Vimeo/Loom) — fullscreen, auto-plays when in view using IntersectionObserver, pauses when scrolled away
-  - **Right side** (vertical stack): Heart/Like, Bookmark/Save, Book Tutor (GraduationCap icon), Share
-  - **Bottom overlay** (gradient): Title, subject/topic badges, tutor avatar + name, duration
-  - **Top-right**: Close (X) button to exit feed
-- Tap-to-pause/play on direct videos
-- Preloads next 2 videos via `preload="metadata"` on upcoming `<video>` elements
-- Tracks which video is currently visible via IntersectionObserver (threshold 0.7)
-- Like/save state managed locally (mirrors existing `myLibraryItems` pattern)
-- Props: `videos: LibraryResource[]`, `startIndex: number`, `onClose`, `onBookTutor`, `onAddToLibrary`, `onRemoveFromLibrary`, `myLibraryItems`
+### Fix
 
-### Files to Modify
-
-**`src/components/StudySyncLibrary.tsx`**
-- Add state `reelsFeedOpen: boolean` and `reelsStartIndex: number`
-- In the Tutorials tab header, add a "Reels" button (Play icon) that opens the feed with all tutorial videos
-- When `openResource` is called on a video-type resource, instead of the current `VideoPlayerOverlay`, open `VideoReelsFeed` starting at that video's index in the `recommendedTutorials` array
-- Keep `VideoPlayerOverlay` as fallback for non-direct-video resources (e.g., PDFs, books)
-
-**`src/components/library/VideoPlayerOverlay.tsx`**
-- No changes needed — kept as fallback for single-video viewing when reels feed isn't appropriate
-
-### UX Details
-
-- Scroll-snap CSS provides the native "snap to next video" feel without external libraries
-- IntersectionObserver handles auto-play/pause — only the visible video plays
-- On mobile (414px viewport), videos fill the entire screen
-- Close button returns to the library view
-- "Book Tutor" button on each video slide triggers existing `onBookTutor` flow
-- Like count and save status shown on each slide's interaction buttons
-
-### Technical Approach
-
-```text
-User taps video card OR "Reels" button
-  → VideoReelsFeed opens fullscreen
-  → Scrolls to startIndex video
-  → IntersectionObserver auto-plays visible video
-  → Swipe up → next video snaps into view, auto-plays
-  → Tap right-side buttons → like/save/book tutor
-  → Tap X → returns to library
+**Database migration** — Grant execute permissions on the RPC function:
+```sql
+GRANT EXECUTE ON FUNCTION public.get_published_tutorials(text, text) TO anon, authenticated;
 ```
 
-No new database tables, no new API calls. Uses existing `recommendedTutorials` array from `useLibraryResources`. The interaction tracking (likes, watch time) can be added as a follow-up with a `tutorial_interactions` table.
+**`src/hooks/useLibraryResources.ts`** — Fix the fallback direct query to not use FK join syntax. Instead, fetch tutorials without the join and look up tutor names separately, or simply remove the join and use `tutor_id` directly (since the RPC path handles the join properly and should be the primary path once permissions are fixed):
+
+```typescript
+// Replace the FK-dependent join:
+//   tutor_profile:profiles!tutor_id(id, full_name, avatar_url)
+// With a simple select without the join:
+//   id, title, subject, topic, ..., tutor_id
+// Then fetch tutor profiles in a second query if needed
+```
+
+### Files Changed
+
+- **Migration**: Grant EXECUTE on `get_published_tutorials` to `anon` and `authenticated`
+- **`src/hooks/useLibraryResources.ts`**: Fix fallback query to remove the broken FK join
 
