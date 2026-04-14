@@ -34,11 +34,26 @@ interface TutorCreatorDashboardProps {
 export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashboardProps) {
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
   const [form, setForm] = useState<TutorialForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
+
+  const handleUploadClick = () => {
+    resetForm();
+    if (hasAcceptedCompliance()) {
+      setShowForm(true);
+    } else {
+      setShowCompliance(true);
+    }
+  };
+
+  const handleComplianceAccepted = () => {
+    setShowCompliance(false);
+    setShowForm(true);
+  };
 
   // ── Load tutorials from Supabase ────────────────────────────────────────
   useEffect(() => {
