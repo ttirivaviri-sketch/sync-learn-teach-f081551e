@@ -292,8 +292,7 @@ export function useLibraryResources(
             `id, title, subject, topic, subtopic, grade, curriculum,
              description, rating, review_count, thumbnail_url,
              duration_label, video_url, watch_count, completion_rate,
-             tutor_id,
-             tutor_profile:profiles!tutor_id(id, full_name, avatar_url)`
+             tutor_id`
           )
           .eq("status", "published")
           .order("created_at", { ascending: false });
@@ -308,9 +307,9 @@ export function useLibraryResources(
           (row) => ({
             id: row.id,
             title: row.title,
-            author: (row.tutor_profile as any)?.full_name || "Tutor",
+            author: "Tutor",
             type: "video" as const,
-            category: row.subject || row.category || "General",
+            category: row.subject || "General",
             gradeLevel: row.grade || "All Grades",
             summary: row.description || "",
             rating: row.rating || 0,
@@ -331,8 +330,7 @@ export function useLibraryResources(
             },
             tutor: {
               id: row.tutor_id,
-              name: (row.tutor_profile as any)?.full_name || "Tutor",
-              avatar_url: (row.tutor_profile as any)?.avatar_url,
+              name: "Tutor",
               rating: row.rating || 0,
               reviews: row.review_count || 0,
             },
