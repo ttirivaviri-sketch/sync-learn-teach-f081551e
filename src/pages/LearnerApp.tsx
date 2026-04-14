@@ -8,7 +8,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
-import { useDevMode } from "@/contexts/DevModeContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
@@ -62,24 +61,12 @@ interface VideoMeetingData {
 
 // ─────────────────────────────────────────────────────────────────────────────
 const LearnerApp = () => {
-  const {
-    isDevMode, devRole, devUserName,
-    bypassPayments, bypassSchedule,
-    devSessionActive, setDevSessionActive, launchDevSession,
-  } = useDevMode();
-
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
   // ── Auth ────────────────────────────────────────────────────────────────
-  // In dev-mode we skip the shared hook and provide synthetic state instead.
-  const auth = useAuth(isDevMode && devRole === "learner" ? {} : { redirectTo: "/learner/auth" });
-  const [devLoading, setDevLoading] = useState(true);
-
-  // Effective session / loading (dev-mode aware)
-  const session = isDevMode && devRole === "learner" ? null : auth.session;
-  const loading = isDevMode && devRole === "learner" ? devLoading : auth.loading;
+  const { session, loading } = useAuth({ redirectTo: "/learner/auth" });
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("home");
@@ -118,7 +105,7 @@ const LearnerApp = () => {
   } | null>(null);
 
   // ── Data hooks ──────────────────────────────────────────────────────────
-  const userId = session?.user?.id || (isDevMode ? "dev-user" : undefined);
+  const userId = session?.user?.id;
 
   const {
     bookings, loading: bookingsLoading,
@@ -148,35 +135,6 @@ const LearnerApp = () => {
     [bookings, needsPayment],
   );
 
-  // ── Dev mode: synthetic bootstrap ──────────────────────────────────────
-  useEffect(() => {
-    if (isDevMode && devRole === "learner") {
-      setDevLoading(false);
-      setShowLaunchScreen(false);
-      setProfile({ id: "dev-user", full_name: devUserName, user_type: "learner", study_level: "senior_high" });
-    }
-  }, [isDevMode, devRole, devUserName]);
-
-  // Dev session launch
-  useEffect(() => {
-    if (isDevMode && devRole === "learner" && devSessionActive) {
-      setVideoMeetingData({
-        partnerName: "Dev Tutor",
-        subject: "Dev Test Session",
-        booking: {
-          id: "dev-booking-001",
-          room_name: "StudySync-Dev-Test-Room",
-          duration_minutes: 60,
-          scheduled_at: new Date().toISOString(),
-          tutor_profile: { full_name: "Dev Tutor" },
-          tutor_subjects: { subject: "Dev Test Session" },
-        },
-      });
-      setShowVideoMeeting(true);
-      setDevSessionActive(false);
-    }
-  }, [devSessionActive, isDevMode, devRole, setDevSessionActive]);
-
   // ── Profile & analytics ────────────────────────────────────────────────
   useEffect(() => { analytics.pageView("learner-app"); }, []);
 
@@ -189,11 +147,11 @@ const LearnerApp = () => {
   }, [session?.user?.id]);
 
   useEffect(() => {
-    if (!academicProfileLoading && !academicProfile && !profileSetupDismissed && (session?.user || isDevMode)) {
+    if (!academicProfileLoading && !academicProfile && !profileSetupDismissed && session?.user) {
       const timer = setTimeout(() => setShowAcademicSetup(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [academicProfileLoading, academicProfile, profileSetupDismissed, session?.user, isDevMode]);
+  }, [academicProfileLoading, academicProfile, profileSetupDismissed, session?.user]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
@@ -242,7 +200,7 @@ const LearnerApp = () => {
       toast({ title: "No connection", description: "Please check your internet connection to book sessions.", variant: "destructive" });
       return;
     }
-    if (!session?.user && !isDevMode) {
+    if (!session?.user) {
       toast({ title: "Authentication required", description: "Please sign in to book sessions.", variant: "destructive" });
       navigate("/learner/auth");
       return;
@@ -314,12 +272,10 @@ const LearnerApp = () => {
   };
 
   const handlePayNow = (booking: unknown) => {
-    if (bypassPayments) { toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." }); return; }
     setCheckoutBooking(booking);
   };
 
   const handleStartCheckout = (booking: any) => {
-    if (bypassPayments) { toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." }); return; }
     setCheckoutBooking(booking);
   };
 
@@ -331,8 +287,8 @@ const LearnerApp = () => {
 
   // ── Early returns ──────────────────────────────────────────────────────
   if (loading) return <LoadingScreen message="Loading your account..." />;
-  if (!isDevMode && !session?.user) return null;
-  if (showLaunchScreen && !isDevMode) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
+  if (!session?.user) return null;
+  if (showLaunchScreen) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
 
   if (checkoutBooking) {
     return (
@@ -505,7 +461,6 @@ const LearnerApp = () => {
       <PaymentMethodsModal
         open={showPaymentMethods}
         onClose={() => setShowPaymentMethods(false)}
-        bypassPayments={bypassPayments}
       />
 
       {session?.user?.id && (
@@ -519,7 +474,7 @@ const LearnerApp = () => {
       <AcademicSetupModal
         open={showAcademicSetup}
         onClose={() => { setShowAcademicSetup(false); setProfileSetupDismissed(true); }}
-        userId={session?.user?.id || "dev-user"}
+        userId={session?.user?.id || ""}
         academicProfile={academicProfile}
         saving={academicProfileSaving}
         onSave={async (data) => {
