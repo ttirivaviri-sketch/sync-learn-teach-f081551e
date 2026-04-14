@@ -24,33 +24,33 @@ interface StudyModeFeature {
 const studyModeFeatures: StudyModeFeature[] = [
   {
     icon: Brain,
-    title: "AI Tutor Chat",
-    description: "Ask anything about your syllabus. Get instant, curriculum-aligned explanations 24/7.",
+    title: "Active Recall Engine",
+    description: "10+ AI questions per topic. Semantic answer evaluation scores 0-100%, identifies misconceptions, and gives structured feedback with model answers.",
+  },
+  {
+    icon: Clock,
+    title: "Exam Mode",
+    description: "Timed questions under exam conditions. No hints. AI examiner grades with mark breakdowns, reasoning, and grade boundaries.",
   },
   {
     icon: Target,
-    title: "Adaptive Study Plans",
-    description: "AI builds a personalised daily plan based on your exam date, weak areas, and past performance.",
-  },
-  {
-    icon: Zap,
-    title: "Real-Time Quiz Generation",
-    description: "Exam-style questions generated on demand -- matching your board's format, mark schemes, and command words.",
-  },
-  {
-    icon: BarChart3,
-    title: "Performance Analytics",
-    description: "Track mastery across every topic. See exactly where you need more practice before the exam.",
-  },
-  {
-    icon: FileText,
-    title: "Document Parser",
-    description: "Upload syllabus PDFs, past papers, or mark schemes -- AI extracts structured study material automatically.",
+    title: "Mastery System",
+    description: "Track mastery per topic using accuracy, improvement trends, and consistency. Classify as Mastered, Developing, or Needs Reinforcement.",
   },
   {
     icon: Layers,
-    title: "Spaced Repetition Engine",
-    description: "Flashcards resurface at the optimal interval so you retain more with less revision time.",
+    title: "Spaced Repetition",
+    description: "SM-2 algorithm resurfaces weak questions automatically. Previously incorrect answers get priority. Frequency adapts to your performance.",
+  },
+  {
+    icon: BarChart3,
+    title: "Insights Dashboard",
+    description: "Track accuracy per topic, weak areas, improvement trends, and common mistakes. AI generates insights like 'struggles with application questions'.",
+  },
+  {
+    icon: Zap,
+    title: "Personalisation Engine",
+    description: "Difficulty adapts dynamically. Struggling students get simpler questions; strong performers face harder challenges. Every answer feeds the data loop.",
   },
 ];
 
