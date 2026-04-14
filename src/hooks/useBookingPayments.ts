@@ -38,12 +38,21 @@ export const useBookingPayments = (bookingIds: string[]) => {
           statusMap[id] = { bookingId: id, status: 'none' };
         });
 
+        // Priority: succeeded > pending > failed > none
+        const priorityOrder: Record<string, number> = { succeeded: 4, pending: 3, failed: 2, refunded: 1 };
+
         payments?.forEach(payment => {
-          statusMap[payment.booking_id] = {
-            bookingId: payment.booking_id,
-            status: payment.status as PaymentStatus['status'],
-            paymentId: payment.id,
-          };
+          const existing = statusMap[payment.booking_id];
+          const existingPriority = priorityOrder[existing?.status || 'none'] || 0;
+          const newPriority = priorityOrder[payment.status] || 0;
+
+          if (newPriority > existingPriority) {
+            statusMap[payment.booking_id] = {
+              bookingId: payment.booking_id,
+              status: payment.status as PaymentStatus['status'],
+              paymentId: payment.id,
+            };
+          }
         });
 
         setPaymentStatuses(statusMap);
