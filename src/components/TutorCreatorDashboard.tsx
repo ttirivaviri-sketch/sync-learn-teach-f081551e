@@ -269,7 +269,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
                 Upload your first tutorial and get discovered by thousands of students across ZIMSEC, Cambridge &amp; more.
               </p>
             </div>
-            <Button onClick={() => { resetForm(); setShowForm(true); }}>
+            <Button onClick={handleUploadClick}>
               <Upload className="h-4 w-4 mr-2" />
               Upload Your First Tutorial
             </Button>
