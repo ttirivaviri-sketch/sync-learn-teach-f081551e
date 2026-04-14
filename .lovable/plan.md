@@ -1,29 +1,58 @@
 
 
-## Plan: Fix Video Upload RLS Error
+## Plan: Instagram Reels-Style Video Feed
 
-### Root Cause
+### What It Does
 
-The upload path is `tutor-videos/undefined/...` — the `tutorId` prop is `undefined` at upload time. This causes the RLS policy (`auth.uid()::text = (storage.foldername(name))[1]`) to reject the upload since `"undefined" ≠ "cad1e43c-..."`.
+Adds a fullscreen vertical-swipe video feed to the Library's **Tutorials tab**. When a learner taps any tutorial video (or a new "Reels" entry point), they enter a TikTok/Instagram Reels-style experience: fullscreen videos, swipe up/down to navigate, interaction buttons on the right side, tutor info at the bottom.
 
-The code passes `tutorId` correctly through props, but it appears to be undefined at runtime. This could be a stale build issue, or a subtle race condition.
+### Files to Create
 
-### Fix
+**`src/components/library/VideoReelsFeed.tsx`**
+- Fullscreen overlay (`fixed inset-0 z-50 bg-black`)
+- Uses CSS scroll-snap (`snap-y snap-mandatory`) on a vertical container — each video is one `snap-start` viewport-height slide
+- Each slide renders:
+  - **Center**: `<video>` element (direct URLs) or `<iframe>` (YouTube/Vimeo/Loom) — fullscreen, auto-plays when in view using IntersectionObserver, pauses when scrolled away
+  - **Right side** (vertical stack): Heart/Like, Bookmark/Save, Book Tutor (GraduationCap icon), Share
+  - **Bottom overlay** (gradient): Title, subject/topic badges, tutor avatar + name, duration
+  - **Top-right**: Close (X) button to exit feed
+- Tap-to-pause/play on direct videos
+- Preloads next 2 videos via `preload="metadata"` on upcoming `<video>` elements
+- Tracks which video is currently visible via IntersectionObserver (threshold 0.7)
+- Like/save state managed locally (mirrors existing `myLibraryItems` pattern)
+- Props: `videos: LibraryResource[]`, `startIndex: number`, `onClose`, `onBookTutor`, `onAddToLibrary`, `onRemoveFromLibrary`, `myLibraryItems`
 
-**`src/components/tutor-creator/TutorialFormDialog.tsx`**
-- Instead of relying solely on the `tutorId` prop, also fetch `auth.uid()` directly from the Supabase client as a fallback at upload time
-- Add a guard: if no valid tutor ID is available, show an error instead of uploading to `undefined/`
+### Files to Modify
 
-The key change in `handleFileSelect`:
-```typescript
-const { data: { session } } = await supabase.auth.getSession();
-const effectiveTutorId = tutorId || session?.user?.id;
-if (!effectiveTutorId) {
-  setUploadError("Not signed in. Please refresh and try again.");
-  return;
-}
-const path = `${effectiveTutorId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+**`src/components/StudySyncLibrary.tsx`**
+- Add state `reelsFeedOpen: boolean` and `reelsStartIndex: number`
+- In the Tutorials tab header, add a "Reels" button (Play icon) that opens the feed with all tutorial videos
+- When `openResource` is called on a video-type resource, instead of the current `VideoPlayerOverlay`, open `VideoReelsFeed` starting at that video's index in the `recommendedTutorials` array
+- Keep `VideoPlayerOverlay` as fallback for non-direct-video resources (e.g., PDFs, books)
+
+**`src/components/library/VideoPlayerOverlay.tsx`**
+- No changes needed — kept as fallback for single-video viewing when reels feed isn't appropriate
+
+### UX Details
+
+- Scroll-snap CSS provides the native "snap to next video" feel without external libraries
+- IntersectionObserver handles auto-play/pause — only the visible video plays
+- On mobile (414px viewport), videos fill the entire screen
+- Close button returns to the library view
+- "Book Tutor" button on each video slide triggers existing `onBookTutor` flow
+- Like count and save status shown on each slide's interaction buttons
+
+### Technical Approach
+
+```text
+User taps video card OR "Reels" button
+  → VideoReelsFeed opens fullscreen
+  → Scrolls to startIndex video
+  → IntersectionObserver auto-plays visible video
+  → Swipe up → next video snaps into view, auto-plays
+  → Tap right-side buttons → like/save/book tutor
+  → Tap X → returns to library
 ```
 
-This is a single-line defensive fix that guarantees the correct user ID is always used, regardless of prop timing.
+No new database tables, no new API calls. Uses existing `recommendedTutorials` array from `useLibraryResources`. The interaction tracking (likes, watch time) can be added as a follow-up with a `tutorial_interactions` table.
 
