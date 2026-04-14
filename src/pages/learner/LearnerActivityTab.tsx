@@ -1,6 +1,8 @@
 /**
- * LearnerActivityTab — Pending payments, upcoming & past sessions.
+ * LearnerActivityTab — Clean-first activity view with expandable sections.
  */
+import { useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,117 +39,197 @@ export const LearnerActivityTab = ({
   onStartCheckout,
   onStartChat,
   onReview,
-}: LearnerActivityTabProps) => (
-  <div className="space-y-4 p-4 mt-0">
-    {/* Bookings needing payment */}
-    {bookingsNeedingPayment.length > 0 && (
-      <div className="mb-4">
-        <h3 className="font-semibold mb-3 flex items-center gap-2">
-          <span className="relative flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500" />
-          </span>
-          Action Required — Complete Payment
-        </h3>
-        <div className="space-y-3">
-          {bookingsNeedingPayment.map((booking) => (
-            <PendingPaymentCard
-              key={booking.id}
-              booking={booking}
-              onPaymentComplete={() => {}}
-              onStartCheckout={onStartCheckout}
-            />
-          ))}
-        </div>
-      </div>
-    )}
+}: LearnerActivityTabProps) => {
+  const [showAllPending, setShowAllPending] = useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+  const [showAllPast, setShowAllPast] = useState(false);
 
-    {/* Upcoming Sessions */}
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="font-semibold">Upcoming Sessions</h3>
-        <Badge variant="outline">{bookings.length} active</Badge>
-      </div>
+  const upcomingBookings = bookings.filter(
+    (b) => b.status !== "completed" && b.status !== "canceled"
+  );
+  const pastBookings = bookings.filter(
+    (b) => b.status === "completed" || b.status === "canceled"
+  );
+
+  const displayedPending = showAllPending
+    ? bookingsNeedingPayment
+    : bookingsNeedingPayment.slice(0, 1);
+  const displayedUpcoming = showAllUpcoming
+    ? upcomingBookings
+    : upcomingBookings.slice(0, 1);
+  const displayedPast = showAllPast ? pastBookings : pastBookings.slice(0, 2);
+
+  return (
+    <div className="space-y-6 p-4">
+      <h2 className="text-2xl font-bold">Activity</h2>
 
       {bookingsLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
-          <p className="text-muted-foreground">Loading bookings...</p>
+          <p className="text-sm text-muted-foreground">Loading...</p>
         </div>
-      ) : bookings.length === 0 ? (
-        <Card className="p-6">
-          <div className="text-center text-muted-foreground">
-            <p className="text-sm">No upcoming sessions</p>
-          </div>
-        </Card>
       ) : (
-        <div className="space-y-3">
-          {bookings.map((booking) => (
-            <LiveBookingCard
-              key={booking.id}
-              booking={booking}
-              userType="learner"
-              onJoinSession={onJoinVideoSession}
-              onPayNow={onPayNow}
-              hasPendingPayment={needsPayment(booking.id)}
-              onStartChat={(b) => onStartChat(b as BookingRequest)}
-            />
-          ))}
-        </div>
-      )}
-    </div>
+        <>
+          {/* Upcoming */}
+          <section className="space-y-3">
+            <h3 className="text-lg font-semibold">Upcoming</h3>
 
-    {/* Past Sessions */}
-    <div className="mt-6">
-      <h3 className="font-semibold mb-3">Past Sessions</h3>
-      {bookings.filter((b) => b.status === "completed" || b.status === "canceled").length === 0 ? (
-        <Card className="p-6">
-          <div className="text-center text-muted-foreground">
-            <p className="text-sm">No past sessions yet</p>
-          </div>
-        </Card>
-      ) : (
-        bookings
-          .filter((b) => b.status === "completed" || b.status === "canceled")
-          .map((pastBooking) => (
-            <Card key={pastBooking.id} className="mb-3">
-              <CardContent className="p-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h4 className="font-medium">{pastBooking.tutor_profile?.full_name || "Tutor"}</h4>
-                    <p className="text-sm text-muted-foreground">{pastBooking.tutor_subjects?.subject}</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(pastBooking.scheduled_at).toLocaleDateString()} • {pastBooking.duration_minutes} min
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">R{pastBooking.price}</p>
-                    <Badge variant={pastBooking.status === "completed" ? "outline" : "destructive"} className="mt-1">
-                      {pastBooking.status === "completed" ? "Completed" : "Cancelled"}
-                    </Badge>
-                    {pastBooking.status === "completed" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() =>
-                          onReview({
-                            bookingId: pastBooking.id,
-                            reviewedId: pastBooking.tutor_id,
-                            reviewedName: pastBooking.tutor_profile?.full_name || "Tutor",
-                            userType: "learner",
-                          })
-                        }
-                      >
-                        Rate & Review
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+            {/* Pending payments subsection */}
+            {bookingsNeedingPayment.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-amber-600 flex items-center gap-1.5">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+                  </span>
+                  Payment required
+                </p>
+                {displayedPending.map((booking) => (
+                  <PendingPaymentCard
+                    key={booking.id}
+                    booking={booking}
+                    onPaymentComplete={() => {}}
+                    onStartCheckout={onStartCheckout}
+                  />
+                ))}
+                {bookingsNeedingPayment.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllPending(!showAllPending)}
+                  >
+                    {showAllPending
+                      ? "Show less"
+                      : `See all ${bookingsNeedingPayment.length} pending`}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {/* Upcoming sessions */}
+            {upcomingBookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-sm text-muted-foreground mb-1">
+                    No upcoming sessions
+                  </p>
+                  <button className="text-sm font-medium text-primary inline-flex items-center gap-1">
+                    Book a tutor <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {displayedUpcoming.map((booking) => (
+                  <LiveBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    userType="learner"
+                    onJoinSession={onJoinVideoSession}
+                    onPayNow={onPayNow}
+                    hasPendingPayment={needsPayment(booking.id)}
+                    onStartChat={(b) => onStartChat(b as BookingRequest)}
+                  />
+                ))}
+                {upcomingBookings.length > 1 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllUpcoming(!showAllUpcoming)}
+                  >
+                    {showAllUpcoming
+                      ? "Show less"
+                      : `See all ${upcomingBookings.length} upcoming`}
+                  </Button>
+                )}
+              </div>
+            )}
+          </section>
+
+          {/* Past */}
+          <section className="space-y-3">
+            <h3 className="text-lg font-semibold">Past</h3>
+
+            {pastBookings.length === 0 ? (
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    No past sessions yet
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {displayedPast.map((pastBooking) => (
+                  <Card key={pastBooking.id}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium">
+                            {pastBooking.tutor_profile?.full_name || "Tutor"}
+                          </h4>
+                          <p className="text-sm text-muted-foreground">
+                            {pastBooking.tutor_subjects?.subject}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(pastBooking.scheduled_at).toLocaleDateString()}{" "}
+                            • {pastBooking.duration_minutes} min
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">R{pastBooking.price}</p>
+                          <Badge
+                            variant={
+                              pastBooking.status === "completed"
+                                ? "outline"
+                                : "destructive"
+                            }
+                            className="mt-1"
+                          >
+                            {pastBooking.status === "completed"
+                              ? "Completed"
+                              : "Cancelled"}
+                          </Badge>
+                          {pastBooking.status === "completed" && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="mt-2"
+                              onClick={() =>
+                                onReview({
+                                  bookingId: pastBooking.id,
+                                  reviewedId: pastBooking.tutor_id,
+                                  reviewedName:
+                                    pastBooking.tutor_profile?.full_name ||
+                                    "Tutor",
+                                  userType: "learner",
+                                })
+                              }
+                            >
+                              Rate & Review
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {pastBookings.length > 2 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllPast(!showAllPast)}
+                  >
+                    {showAllPast
+                      ? "Show less"
+                      : `View all ${pastBookings.length} past sessions`}
+                  </Button>
+                )}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </div>
-  </div>
-);
+  );
+};

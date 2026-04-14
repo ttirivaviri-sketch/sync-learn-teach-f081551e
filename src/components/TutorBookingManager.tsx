@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Calendar, Clock, CheckCircle, Filter } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -40,9 +41,11 @@ export const TutorBookingManager = ({
     Record<string, { curriculum?: string | null; grade?: string | null; subjects?: string[] | null; exam_year?: number | null; school_name?: string | null; target_grade?: string | null }>
   >({});
   const [expandedProfiles, setExpandedProfiles] = useState<Set<string>>(new Set());
+  const [showAllPending, setShowAllPending] = useState(false);
+  const [showAllUpcoming, setShowAllUpcoming] = useState(false);
+  const [showAllPast, setShowAllPast] = useState(false);
   const { toast } = useToast();
 
-  // Fetch learner subjects and academic profiles for all bookings
   useEffect(() => {
     const learnerIds = [...new Set(bookings.map((b) => b.learner_id))];
     if (learnerIds.length === 0) return;
@@ -117,7 +120,6 @@ export const TutorBookingManager = ({
     return booking.status === "confirmed" && Math.abs(sessionTime.getTime() - Date.now()) < 15 * 60 * 1000;
   };
 
-  // Filter and categorize bookings
   const filteredBookings = bookings.filter((b) => statusFilter === "all" || b.status === statusFilter);
   const pendingRequests = filteredBookings.filter((b) => b.status === "requested");
   const upcomingSessions = filteredBookings.filter((b) => b.status === "confirmed" && !isPast(new Date(b.scheduled_at)));
@@ -135,7 +137,16 @@ export const TutorBookingManager = ({
     );
   }
 
-  const renderBookingList = (list: BookingRequest[], emptyIcon: React.ReactNode, emptyTitle: string, emptyDesc: string, showActions = true) => {
+  const renderBookingList = (
+    list: BookingRequest[],
+    emptyIcon: React.ReactNode,
+    emptyTitle: string,
+    emptyDesc: string,
+    showActions: boolean,
+    limit: number,
+    showAll: boolean,
+    onToggle: () => void
+  ) => {
     if (list.length === 0) {
       return (
         <Card>
@@ -147,29 +158,44 @@ export const TutorBookingManager = ({
         </Card>
       );
     }
-    return list.map((booking) => (
-      <BookingCard
-        key={booking.id}
-        booking={booking}
-        showActions={showActions}
-        isProcessing={processingId === booking.id}
-        isSessionReady={isSessionReady(booking)}
-        isProfileExpanded={expandedProfiles.has(booking.id)}
-        academicProfile={learnerAcademicProfiles[booking.learner_id]}
-        learnerSubjects={learnerSubjectsMap[booking.learner_id]}
-        onAccept={() => handleAcceptWithLoading(booking)}
-        onDecline={() => handleDeclineWithLoading(booking)}
-        onReschedule={() => setRescheduleBooking(booking)}
-        onJoinSession={() => onJoinSession(booking)}
-        onStartChat={() => onStartChat(booking)}
-        onToggleProfile={() => toggleProfileExpand(booking.id)}
-      />
-    ));
+
+    const displayed = showAll ? list : list.slice(0, limit);
+
+    return (
+      <>
+        {displayed.map((booking) => (
+          <BookingCard
+            key={booking.id}
+            booking={booking}
+            showActions={showActions}
+            isProcessing={processingId === booking.id}
+            isSessionReady={isSessionReady(booking)}
+            isProfileExpanded={expandedProfiles.has(booking.id)}
+            academicProfile={learnerAcademicProfiles[booking.learner_id]}
+            learnerSubjects={learnerSubjectsMap[booking.learner_id]}
+            onAccept={() => handleAcceptWithLoading(booking)}
+            onDecline={() => handleDeclineWithLoading(booking)}
+            onReschedule={() => setRescheduleBooking(booking)}
+            onJoinSession={() => onJoinSession(booking)}
+            onStartChat={() => onStartChat(booking)}
+            onToggleProfile={() => toggleProfileExpand(booking.id)}
+          />
+        ))}
+        {list.length > limit && (
+          <Button
+            variant="ghost"
+            className="w-full text-muted-foreground"
+            onClick={onToggle}
+          >
+            {showAll ? "Show less" : `See all ${list.length}`}
+          </Button>
+        )}
+      </>
+    );
   };
 
   return (
     <div className="space-y-4">
-      {/* Filter Bar */}
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as FilterStatus)}>
@@ -184,9 +210,6 @@ export const TutorBookingManager = ({
             <SelectItem value="canceled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
-        <Badge variant="secondary" className="ml-auto">
-          {filteredBookings.length} bookings
-        </Badge>
       </div>
 
       <Tabs defaultValue="pending" className="w-full">
@@ -197,12 +220,7 @@ export const TutorBookingManager = ({
               <Badge className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">{pendingRequests.length}</Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="upcoming">
-            Upcoming
-            {upcomingSessions.length > 0 && (
-              <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 flex items-center justify-center text-xs">{upcomingSessions.length}</Badge>
-            )}
-          </TabsTrigger>
+          <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
@@ -211,7 +229,11 @@ export const TutorBookingManager = ({
             pendingRequests,
             <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-3" />,
             "All caught up!",
-            "No pending booking requests right now."
+            "No pending booking requests right now.",
+            true,
+            1,
+            showAllPending,
+            () => setShowAllPending(!showAllPending)
           )}
         </TabsContent>
 
@@ -220,7 +242,11 @@ export const TutorBookingManager = ({
             upcomingSessions,
             <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-3" />,
             "No upcoming sessions",
-            "Confirmed sessions will appear here."
+            "Confirmed sessions will appear here.",
+            true,
+            1,
+            showAllUpcoming,
+            () => setShowAllUpcoming(!showAllUpcoming)
           )}
         </TabsContent>
 
@@ -230,7 +256,10 @@ export const TutorBookingManager = ({
             <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />,
             "No past sessions",
             "Your completed and cancelled sessions will appear here.",
-            false
+            false,
+            2,
+            showAllPast,
+            () => setShowAllPast(!showAllPast)
           )}
         </TabsContent>
       </Tabs>
