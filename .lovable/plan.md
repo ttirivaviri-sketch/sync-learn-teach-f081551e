@@ -1,33 +1,34 @@
 
 
-## Plan: Fix Uploaded Videos Not Showing in Library
+## Plan: Fix PayFast 400 Error + Uber-Style Payment UX
 
-### Root Cause
+### Part 1: Fix the PayFast 400 Error
 
-Two issues prevent tutorials from loading:
+**Root Cause**: Line 168 of `payfast-create-payment/index.ts` includes `subscription_type: "1"`, which tells PayFast to create a recurring subscription. PayFast then requires a `frequency` field (e.g., monthly, weekly). Since this is a one-time booking payment, `subscription_type` should be removed entirely.
 
-1. **RPC permission denied** — The `get_published_tutorials` function exists but has no `EXECUTE` grant for `anon` or `authenticated` roles. Every call fails silently.
-2. **Fallback query broken** — The fallback direct query uses `profiles!tutor_id` join syntax, which requires a foreign key relationship that doesn't exist on `tutor_tutorials`. So both paths fail.
+**File**: `supabase/functions/payfast-create-payment/index.ts`
+- Remove `subscription_type: "1"` from the `paymentData` object (line 168)
+- This single-line fix resolves the 400 Bad Request error
 
-### Fix
+### Part 2: Uber-Style Payment UX
 
-**Database migration** — Grant execute permissions on the RPC function:
-```sql
-GRANT EXECUTE ON FUNCTION public.get_published_tutorials(text, text) TO anon, authenticated;
-```
+Redesign the payment flow to feel like the Uber wallet/checkout experience shown in the screenshots — a bottom sheet with saved cards, a clean booking summary, and one-tap payment.
 
-**`src/hooks/useLibraryResources.ts`** — Fix the fallback direct query to not use FK join syntax. Instead, fetch tutorials without the join and look up tutor names separately, or simply remove the join and use `tutor_id` directly (since the RPC path handles the join properly and should be the primary path once permissions are fixed):
+**File**: `src/components/PaymentCheckout.tsx` — Major redesign:
+- **Wallet-style layout**: Show saved payment methods as a list with card brand icons (Mastercard, Visa), last 4 digits, and status (active/expired) — similar to the Uber Wallet screenshot
+- **Booking summary card at top**: Tutor name, subject, date/time, price — compact like the Uber trip selection card
+- **One-tap payment**: Tapping a saved card immediately initiates payment (no separate confirm step for saved cards)
+- **"Add payment method" button**: For new card payments, redirects to PayFast
+- **DevCard row**: Kept at top with amber styling for test mode
+- **Bottom fixed bar**: Shows selected payment method + total, with a single "Pay R{amount}" CTA button — similar to Uber's "Choose Uber Go" bar
+- **Trust badge**: "Secured by PayFast" remains
 
-```typescript
-// Replace the FK-dependent join:
-//   tutor_profile:profiles!tutor_id(id, full_name, avatar_url)
-// With a simple select without the join:
-//   id, title, subject, topic, ..., tutor_id
-// Then fetch tutor profiles in a second query if needed
-```
+**File**: `src/components/PayFastPayment.tsx` — Align with new design patterns (or deprecate if PaymentCheckout fully replaces it)
 
-### Files Changed
+### Technical Details
 
-- **Migration**: Grant EXECUTE on `get_published_tutorials` to `anon` and `authenticated`
-- **`src/hooks/useLibraryResources.ts`**: Fix fallback query to remove the broken FK join
+- No database changes needed
+- Edge function redeployment needed for the `subscription_type` fix
+- Saved cards continue to use the existing `saved_payment_methods` table and `payfast-charge-token` edge function
+- Server-side price validation already in place (booking price checked in edge function)
 
