@@ -20,6 +20,7 @@ import { ContentRack } from "@/components/library/ContentRack";
 import { SearchResultsView } from "@/components/library/SearchResultsView";
 import { VideoPlayerOverlay } from "@/components/library/VideoPlayerOverlay";
 import { StuckPrompt } from "@/components/library/StuckPrompt";
+import { VideoReelsFeed } from "@/components/library/VideoReelsFeed";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
@@ -42,6 +43,8 @@ const StudySyncLibrary = ({
   const [studyModeActive, setStudyModeActive] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
+  const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
+  const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
   const {
     allResources,
