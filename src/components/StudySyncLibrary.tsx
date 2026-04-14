@@ -20,7 +20,7 @@ import { ContentRack } from "@/components/library/ContentRack";
 import { SearchResultsView } from "@/components/library/SearchResultsView";
 import { VideoPlayerOverlay } from "@/components/library/VideoPlayerOverlay";
 import { StuckPrompt } from "@/components/library/StuckPrompt";
-import { VideoReelsFeed } from "@/components/library/VideoReelsFeed";
+import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
@@ -333,7 +333,7 @@ const StudySyncLibrary = ({
                       onClick={() => { setReelsStartIndex(0); setReelsFeedOpen(true); }}
                     >
                       <Play className="h-3.5 w-3.5" />
-                      Reels
+                      Study Clips
                     </Button>
                   )}
                   <Badge variant="secondary">{recommendedTutorials.length} available</Badge>
