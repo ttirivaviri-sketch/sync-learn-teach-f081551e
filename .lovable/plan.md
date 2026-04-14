@@ -1,78 +1,146 @@
 
 
-## Plan: Improve In-App Payment Notifications
+## Plan: Study Mode — Comprehensive Improvement Roadmap
 
-### What Already Exists
-- A PostgreSQL trigger (`notify_payment_status`) that creates notification rows when payment status changes to `succeeded` or `failed`
-- Real-time subscription in `useNotifications` that pushes new notifications to the UI
-- `NotificationCenter` component that displays them in a bell popover
-- `PaymentSuccess` and `PaymentCancelled` pages with booking details
+### Current Architecture Summary
 
-### What's Missing / Can Be Improved
-
-**1. Tutor is not notified when payment succeeds**
-The current trigger only notifies the `payer_id` (learner). The tutor should also get a "Payment received — session secured" notification.
-
-**Fix**: Add a migration with an updated `notify_payment_status` function that also inserts a notification for the tutor (looked up via `booking.tutor_id`).
-
-**2. No instant sonner toast on payment events**
-When a real-time payment update arrives, the notification silently appears in the bell icon. There's no visible toast to grab attention.
-
-**Fix**: In the `useBookingPayments` hook, fire a `sonner` toast when a real-time payment status change is detected (`succeeded` or `failed`).
-
-**3. PaymentSuccess page has no success animation**
-The green checkmark is static. A brief celebration animation would feel more premium.
-
-**Fix**: Add a subtle scale-in + pulse CSS animation to the success icon on `PaymentSuccess.tsx`.
-
-**4. Payment failed state lacks a prominent retry button**
-The `PaymentCancelled` page has a retry button, but `PaymentSuccess` page's failed state only shows a generic "Try Again" that navigates back.
-
-**Fix**: Add a direct "Retry Payment" button on the failed state in `PaymentSuccess.tsx`.
+Study Mode is a sophisticated system with: AI Study Intelligence engine, Active Recall with semantic evaluation, spaced repetition, mastery tracking, daily task generation, exam mode, flashcards, and an AI tutor chat panel. The AI backbone uses Supabase edge functions calling the Lovable AI Gateway.
 
 ---
 
-### Files to Change
+### 1. AI Logic Improvements
 
-| File | Change |
-|------|--------|
-| New migration SQL | Update `notify_payment_status` to also notify the tutor |
-| `src/hooks/useBookingPayments.ts` | Add sonner toast on real-time payment status change |
-| `src/pages/PaymentSuccess.tsx` | Add success animation + improve failed retry UX |
+**A. Smarter Task Generation (Dynamic, not Template-Based)**
 
-### Technical Details
+Currently `useDailyTasks.ts` generates the same 5 task types per subject every day from a static template. The AI context adjusts descriptions but not the task *composition*.
 
-**Migration** — Replace the trigger function:
-```sql
-CREATE OR REPLACE FUNCTION public.notify_payment_status()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
-DECLARE
-  v_tutor_id UUID;
-BEGIN
-  IF NEW.status = 'succeeded' AND OLD.status = 'pending' THEN
-    -- Notify learner
-    INSERT INTO public.notifications (user_id, title, message, type, related_booking_id)
-    VALUES (NEW.payer_id, 'Payment Successful', 'Your payment of R' || NEW.amount || ' has been processed. Your session is confirmed!', 'success', NEW.booking_id);
-    -- Notify tutor
-    SELECT tutor_id INTO v_tutor_id FROM public.bookings WHERE id = NEW.booking_id;
-    IF v_tutor_id IS NOT NULL THEN
-      INSERT INTO public.notifications (user_id, title, message, type, related_booking_id)
-      VALUES (v_tutor_id, 'Payment Received', 'A student has paid R' || NEW.amount || ' for your session. You''re all set!', 'success', NEW.booking_id);
-    END IF;
-  END IF;
-  -- ... keep failed notification as-is
-END;
-$$;
-```
+**Fix**: Call an AI edge function to dynamically select which task types to assign based on:
+- Mastery level (high mastery → skip concept-learning, add exam-question)
+- Spaced repetition schedule (due cards → prioritize flashcards)
+- Days until exam (close → more exam-mode, less concept-learning)
+- Readiness check (low energy → lighter tasks like micro-revision)
+- Weak areas (struggling topics → add prerequisite remediation tasks)
 
-**Sonner toast** — In the real-time handler of `useBookingPayments.ts`:
-```typescript
-import { toast } from "sonner";
-// In the postgres_changes callback:
-if (newPayment.status === 'succeeded') {
-  toast.success("Payment confirmed!", { description: "Your session is now secured." });
-} else if (newPayment.status === 'failed') {
-  toast.error("Payment failed", { description: "Please try again or use a different card." });
-}
-```
+**B. Persistent AI Memory Across Sessions**
+
+Currently the AI Chat panel (`ChatPanel.tsx`) clears messages when subject/topic changes and has no cross-session memory. The AI tutor forgets everything.
+
+**Fix**: Persist chat messages to a `study_chat_messages` table so the AI tutor remembers past conversations, common misconceptions, and can reference "last time we discussed X."
+
+**C. Smarter Readiness-to-Task Mapping**
+
+The readiness check collects sleep/energy/mood but only changes a greeting message. It doesn't actually affect task difficulty or count.
+
+**Fix**: Pass readiness scores into the task generation pipeline:
+- Low readiness → fewer tasks, lower difficulty, more review-type tasks
+- High readiness → add bonus challenge tasks, higher difficulty
+
+---
+
+### 2. User Experience Improvements
+
+**A. Skip Readiness Check Option**
+
+The readiness check is a full-screen blocker every time Study Mode loads. Returning users may find this annoying.
+
+**Fix**: Add a "Skip" button and remember preference. Auto-skip if user completed it within the last 4 hours (store timestamp in localStorage).
+
+**B. Progress Animations & Micro-Feedback**
+
+Task completion feels flat — the task just gets a "Done" badge. No celebration, no XP animation.
+
+**Fix**:
+- Add XP counter animation (+10 XP pop-up) on task completion
+- Add confetti/particle burst on completing all daily tasks
+- Add a progress ring around the subject card showing daily task completion %
+
+**C. Mobile Chat Panel UX**
+
+The chat panel is a fixed 380×500px floating panel that doesn't work well on mobile (414px viewport).
+
+**Fix**: On mobile, make the chat panel full-screen (bottom sheet style) instead of a floating box. Use the `Sheet` component from shadcn.
+
+**D. Dashboard Information Density**
+
+The dashboard has too many cards before the user reaches their subjects — academic profile, syllabus gate, document upload gate, AI message, exam date prompt, upload prompt. On a 640px viewport, subjects may be below the fold.
+
+**Fix**: Collapse informational cards into a compact accordion/summary row. Keep the subject list above the fold.
+
+---
+
+### 3. Task Interface & Interaction Improvements
+
+**A. Task Timer & Estimated Duration**
+
+Tasks have no time indication. Students don't know if a task takes 2 minutes or 20 minutes.
+
+**Fix**: Add estimated duration per task type (micro-revision: 3min, concept-learning: 8min, flashcards: 5min, etc.) and an optional countdown timer during the task.
+
+**B. Task Completion Flow — Keep Momentum**
+
+After completing a task in `SubjectDetail`, the user is sent back to the task list (`setSelectedTask(null)`). This breaks flow.
+
+**Fix**: After completing a task, show a brief completion card (2s) then auto-advance to the next unlocked task with a "Continue to next task" button.
+
+**C. Undo/Retry Tasks**
+
+Once a task is marked complete, there's no way to redo it for extra practice.
+
+**Fix**: Add a "Practice Again" option on completed tasks that re-launches the task without affecting the completion status.
+
+**D. Swipe Gestures on Task Cards**
+
+Mobile users should be able to swipe right to start a task or swipe to see quick actions.
+
+---
+
+### 4. Additional Suggestions
+
+**A. Study Session Timer**
+
+Add a global study session timer (Pomodoro-style) that tracks total study time per day and per subject. Show this on the dashboard.
+
+**B. Weekly Review Report**
+
+Generate a weekly AI summary: topics covered, mastery changes, streak status, recommendations for next week. This exists partially in `DailySummary` but there's no weekly aggregation shown to the user.
+
+**C. Offline Task Caching**
+
+Pre-generate task content so students can study without internet. Cache the last generated content per task type in localStorage/IndexedDB.
+
+**D. Sound Effects & Haptics**
+
+Add optional subtle sound effects on correct answers, task completion, and streak milestones (can be toggled off).
+
+---
+
+### Implementation Priority
+
+| Improvement | Impact | Effort | Priority |
+|---|---|---|---|
+| Skip/remember readiness check | High UX | Small | 1 |
+| Auto-advance to next task | High UX | Small | 2 |
+| Add task duration estimates | Medium UX | Small | 3 |
+| Mobile chat panel (bottom sheet) | High UX | Medium | 4 |
+| XP animation on task complete | Medium UX | Small | 5 |
+| Dynamic AI task generation | High AI | Large | 6 |
+| Readiness → task difficulty mapping | Medium AI | Medium | 7 |
+| Dashboard density reduction | Medium UX | Medium | 8 |
+| Persistent AI chat memory | High AI | Medium | 9 |
+| Practice Again on completed tasks | Medium UX | Small | 10 |
+| Study session timer (Pomodoro) | Medium UX | Medium | 11 |
+| Weekly AI review report | Medium AI | Large | 12 |
+
+---
+
+### Recommended First Batch (Quick Wins)
+
+Items 1-5 above can be done in one pass — they're all small UI changes with high impact:
+1. Add "Skip" to readiness check + 4hr cooldown
+2. Auto-advance to next task after completion
+3. Show estimated duration on each task card
+4. Convert chat panel to bottom sheet on mobile
+5. Add XP pop-up animation on task completion
+
+Shall I proceed with this first batch, or would you like to prioritize differently?
 
