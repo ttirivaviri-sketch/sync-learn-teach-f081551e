@@ -294,7 +294,9 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
     return bookings.filter((booking) => {
       const isConfirmed = booking.status === 'confirmed';
       const sessionTime = new Date(booking.scheduled_at);
-      return isConfirmed && sessionTime > now;
+      const sessionEnd = new Date(sessionTime.getTime() + booking.duration_minutes * 60 * 1000);
+      // Show sessions that haven't ended yet (including ones currently in progress)
+      return isConfirmed && sessionEnd > now;
     });
   };
 
