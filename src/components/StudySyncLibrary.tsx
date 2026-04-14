@@ -454,9 +454,9 @@ const StudySyncLibrary = ({
         />
       )}
 
-      {/* Reels Feed */}
+      {/* Study Clips Feed */}
       {reelsFeedOpen && recommendedTutorials.length > 0 && (
-        <VideoReelsFeed
+        <StudyClipsFeed
           videos={recommendedTutorials}
           startIndex={reelsStartIndex}
           onClose={() => setReelsFeedOpen(false)}

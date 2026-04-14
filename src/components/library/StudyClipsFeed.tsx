@@ -190,7 +190,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
 
 /* ── main feed ───────────────────────────────────────────── */
 
-export function VideoReelsFeed({
+export function StudyClipsFeed({
   videos,
   startIndex,
   onClose,
