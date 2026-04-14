@@ -1,57 +1,95 @@
 
 
-## Plan: Add Saved Cards with One-Tap Payment via PayFast Tokenization
+## Plan: Full App Health Check and Fixes
 
-### How it works
+### Current State
 
-PayFast supports **tokenization** (also called "recurring billing"). After a learner's first card payment, PayFast returns a `token` in the ITN callback. We store that token and use the PayFast **ad hoc charge API** to charge the saved card instantly on future bookings -- no redirect, no re-entering card details.
+The app has **one build error** and several areas that need attention for production readiness. Here is the complete scope.
 
-### What changes
+---
 
-**1. Database: New `saved_payment_methods` table**
+### Phase 1: Fix Build Error (blocks everything)
 
-```sql
-CREATE TABLE saved_payment_methods (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  provider text NOT NULL DEFAULT 'payfast',
-  token text NOT NULL,           -- PayFast tokenization token
-  card_last4 text,               -- e.g. "4242"
-  card_brand text,               -- e.g. "Visa"
-  is_default boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
--- RLS: users can only see/manage their own saved methods
+**File: `src/studymode/components/ExamModeSession.tsx` line 586**
+
+The `MathMarkdown` component expects `children: string` but receives two separate JSX expressions (a `string[]`). Fix by concatenating into a single string:
+
+```tsx
+// Before (broken)
+<MathMarkdown>{question.substring(0, 200)}{question.length > 200 ? '...' : ''}</MathMarkdown>
+
+// After (fixed)
+<MathMarkdown>{question.substring(0, 200) + (question.length > 200 ? '...' : '')}</MathMarkdown>
 ```
 
-**2. Edge Function: Update `payfast-create-payment`**
-- Add `subscription_type: 1` to the PayFast form data -- this tells PayFast to return a token after the first successful payment.
+---
 
-**3. Edge Function: Update `payfast-itn`**
-- On `COMPLETE` status, check if `pfData.token` exists. If so, save it to `saved_payment_methods` for that user (upsert by token to avoid duplicates).
+### Phase 2: Core Functional Audit
 
-**4. New Edge Function: `payfast-charge-token`**
-- Accepts `bookingId` + `savedMethodId`.
-- Fetches the token from `saved_payment_methods`.
-- Calls PayFast's ad hoc charge API (`https://api.payfast.co.za/subscriptions/{token}/adhoc`) to charge the card server-side.
-- Creates a payment record, updates booking status on success.
+These are the key user flows that need to work end-to-end:
 
-**5. Frontend: Update `PayFastPayment` component**
-- On mount, check if the user has a saved card.
-- If yes, show a "Pay with Visa ...4242" button that calls `payfast-charge-token` directly (instant, no redirect).
-- Still show "Pay with new card" as a fallback.
-- Add a "Manage saved cards" option in the profile tab to delete saved methods.
+**1. Authentication Flow**
+- Learner signup/login via `/learner/auth`
+- Tutor signup/login via `/tutor/auth`
+- Admin login via `/admin/auth`
+- Profile creation trigger (`handle_new_user`) is in place
 
-### User experience after implementation
+**2. Booking Flow**
+- Learner browses tutors and creates a booking (status: `requested`)
+- Tutor accepts (status: `confirmed`)
+- Payment triggered via PayFast or saved card
+- ITN webhook updates payment status
+- Video session gated behind `paymentStatus === 'succeeded'`
+- Already implemented; needs end-to-end testing
 
-1. **First booking**: Learner pays via PayFast redirect as usual. Card is tokenized automatically.
-2. **Future bookings**: Learner sees "Pay with Visa ...4242" -- one tap, payment completes instantly without leaving the app.
-3. **Profile**: Learner can remove saved cards anytime.
+**3. Payment Flow**
+- PayFast redirect with tokenization (`subscription_type: 1`)
+- ITN handler saves tokens for one-tap future payments
+- `payfast-charge-token` for saved card payments
+- Server-side amount validation against booking price
+- All edge functions exist and are configured
 
-### Technical details
+**4. Study Mode**
+- Subject management, daily tasks, quizzes, flashcards, exam mode
+- AI-powered features via edge functions (generate-quiz, ai-tutor, etc.)
+- Document upload and parsing
+- All hooks and components are wired up
 
-- PayFast ad hoc API requires the merchant to be on a plan that supports tokenization -- you may need to verify this is enabled on your PayFast account.
-- Tokens are stored encrypted-at-rest by Supabase. RLS ensures only the card owner can access them.
-- The `payfast-charge-token` function validates the booking belongs to the user and the amount matches `bookingData.price` (server-side validation from Phase 3).
+**5. Video Meeting**
+- Pre-call screen, connecting screen, meeting controls
+- Dev mode bypass for instant access (already implemented)
+- Production mode gates behind payment status
+
+**6. Chat System**
+- Conversations between tutors and learners
+- Real-time messages with read receipts
+- RLS policies in place
+
+---
+
+### Phase 3: Edge Function Verification
+
+The build error list mentions all edge functions -- these are **Deno-based Supabase functions** and are not part of the Vite/TypeScript build. They deploy separately and are already configured in `supabase/config.toml`. No action needed unless specific runtime failures surface.
+
+---
+
+### Phase 4: Polish Items (from previous discussion)
+
+1. **Payment failed retry UX** -- improve error states with clear retry buttons in `PayFastPayment.tsx`
+2. **Email/notification on payment success** -- currently only in-app; could add edge function for email
+3. **"Start Lesson" gating** -- already implemented in `LiveBookingCard.tsx` with `needsPayment` check
+4. **"Secured by PayFast" badge** -- already added to `PayFastPayment.tsx` and `PaymentCheckout.tsx`
+
+---
+
+### Summary of Required Work
+
+| Task | Effort | Priority |
+|------|--------|----------|
+| Fix `MathMarkdown` children type on line 586 | 1 min | Critical (blocks build) |
+| End-to-end testing of auth + booking + payment | Manual testing | High |
+| Payment retry UX improvement | 15 min | Medium |
+| Email notifications on payment | New edge function | Low |
+
+The only code change needed right now is the single-line fix on `ExamModeSession.tsx`. Everything else is already implemented and needs testing rather than new code.
 
