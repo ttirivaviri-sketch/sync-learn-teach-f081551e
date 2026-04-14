@@ -289,6 +289,13 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         </div>
       )}
 
+      {/* Compliance Modal */}
+      <ContentComplianceModal
+        open={showCompliance}
+        onAccept={handleComplianceAccepted}
+        onCancel={() => setShowCompliance(false)}
+      />
+
       {/* Form Dialog */}
       <TutorialFormDialog
         open={showForm}
@@ -296,6 +303,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         form={form}
         saving={saving}
         formError={formError}
+        tutorId={tutorId}
         onOpenChange={setShowForm}
         onUpdateForm={updateForm}
         onSubmit={handleSubmit}
