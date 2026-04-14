@@ -381,20 +381,20 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </p>
       </div>
 
-       {/* Exam Countdowns — shown only in Calendar tab to avoid duplicates */}
-       ) : hasSubjects ? (
-         <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
-           <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
-           <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
-           <p className="text-sm text-muted-foreground mb-3">
-             Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.
-           </p>
-           <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')}>
-             <Calendar className="mr-2 h-4 w-4" />
-             Go to Calendar
-           </Button>
-         </div>
-       ) : null}
+       {/* Exam Countdowns — moved to Calendar tab only to avoid duplicates */}
+       {hasSubjects && subjectExams.length === 0 && (
+          <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
+            <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
+            <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
+            <p className="text-sm text-muted-foreground mb-3">
+              Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')}>
+              <Calendar className="mr-2 h-4 w-4" />
+              Go to Calendar
+            </Button>
+          </div>
+       )}
  
       {!hasSubjects && !subjectsLoading && !syllabusSetupDone && (
         <div className="p-6 rounded-2xl bg-warning/10 border border-warning/30 text-center">
