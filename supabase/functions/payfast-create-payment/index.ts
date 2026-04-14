@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto as stdCrypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -197,10 +198,10 @@ serve(async (req) => {
         ).replace(/%20/g, "+")}`
       : signatureString;
 
-    // Create MD5 hash
+    // Create MD5 hash using Deno std crypto (Web Crypto doesn't support MD5)
     const encoder = new TextEncoder();
     const data = encoder.encode(signatureWithPassphrase);
-    const hashBuffer = await crypto.subtle.digest("MD5", data);
+    const hashBuffer = await stdCrypto.subtle.digest("MD5", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     const signature = hashArray
       .map((b) => b.toString(16).padStart(2, "0"))
