@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, Brain, Clock, BarChart3, Zap } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
 import { TaskList } from './TaskList';
 import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
 import { FlashcardPanel } from './FlashcardPanel';
+import { ActiveRecallSession } from './ActiveRecallSession';
+import { ExamModeSession } from './ExamModeSession';
+import { InsightsDashboardPanel } from './InsightsDashboardPanel';
+import { MasteryTrackerPanel } from './MasteryTrackerPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { useTopicProgression } from '../hooks/useTopicProgression';
@@ -24,6 +28,8 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
   const [currentTasks, setCurrentTasks] = useState(tasks);
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
   const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
+  const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery'>('tasks');
+  const [recallTopic, setRecallTopic] = useState<string | null>(null);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
 
@@ -61,6 +67,64 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
     const topicIndex = getCurrentTopicIndex(subject);
     advanceToNextTopic.mutate({ subject, currentTopicIndex: topicIndex });
   };
+
+  // ── Active Recall Session ──────────────────────────────────────────────
+  if (activeView === 'recall') {
+    const targetTopic = recallTopic
+      ? subject.topics.find(t => t.name === recallTopic)
+      : subject.currentTopic;
+    return (
+      <div className="animate-fade-in">
+        <ActiveRecallSession
+          subject={subject}
+          topic={targetTopic || subject.currentTopic}
+          onComplete={() => { setActiveView('tasks'); setRecallTopic(null); }}
+          onBack={() => { setActiveView('tasks'); setRecallTopic(null); }}
+        />
+      </div>
+    );
+  }
+
+  // ── Exam Mode Session ────────────────────────────────────────────────
+  if (activeView === 'exam') {
+    const targetTopic = recallTopic
+      ? subject.topics.find(t => t.name === recallTopic)
+      : subject.currentTopic;
+    return (
+      <div className="animate-fade-in">
+        <ExamModeSession
+          subject={subject}
+          topic={targetTopic || subject.currentTopic}
+          onComplete={() => { setActiveView('tasks'); setRecallTopic(null); }}
+          onBack={() => { setActiveView('tasks'); setRecallTopic(null); }}
+        />
+      </div>
+    );
+  }
+
+  // ── Insights Dashboard ───────────────────────────────────────────────
+  if (activeView === 'insights') {
+    return (
+      <InsightsDashboardPanel
+        subjectId={subject.id}
+        subjectName={subject.name}
+        topicName={subject.currentTopic.name}
+        onBack={() => setActiveView('tasks')}
+      />
+    );
+  }
+
+  // ── Mastery Tracker ──────────────────────────────────────────────────
+  if (activeView === 'mastery') {
+    return (
+      <MasteryTrackerPanel
+        subject={subject}
+        onBack={() => setActiveView('tasks')}
+        onStartRecall={(topicName) => { setRecallTopic(topicName); setActiveView('recall'); }}
+        onStartExam={(topicName) => { setRecallTopic(topicName); setActiveView('exam'); }}
+      />
+    );
+  }
 
   // Show prerequisite remediation flow
   if (showPrerequisiteCheck) {
@@ -229,6 +293,52 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
             Ask AI Tutor about this topic
           </Button>
         )}
+      </div>
+
+      {/* ── Quick Launch: Active Recall, Exam Mode, Insights, Mastery ─── */}
+      <div className="grid grid-cols-2 gap-3">
+        <Button
+          onClick={() => setActiveView('recall')}
+          className="h-auto py-4 flex-col gap-2 gradient-primary"
+        >
+          <Brain className="h-6 w-6" />
+          <div className="text-center">
+            <p className="text-sm font-bold">Active Recall</p>
+            <p className="text-[10px] opacity-80">10+ AI questions</p>
+          </div>
+        </Button>
+        <Button
+          onClick={() => setActiveView('exam')}
+          className="h-auto py-4 flex-col gap-2 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+        >
+          <Clock className="h-6 w-6" />
+          <div className="text-center">
+            <p className="text-sm font-bold">Exam Mode</p>
+            <p className="text-[10px] opacity-80">Timed, no hints</p>
+          </div>
+        </Button>
+        <Button
+          onClick={() => setActiveView('mastery')}
+          variant="outline"
+          className="h-auto py-4 flex-col gap-2 border-accent/30 hover:bg-accent/10"
+        >
+          <Target className="h-6 w-6 text-accent" />
+          <div className="text-center">
+            <p className="text-sm font-bold text-foreground">Mastery Tracker</p>
+            <p className="text-[10px] text-muted-foreground">Per-topic progress</p>
+          </div>
+        </Button>
+        <Button
+          onClick={() => setActiveView('insights')}
+          variant="outline"
+          className="h-auto py-4 flex-col gap-2 border-accent/30 hover:bg-accent/10"
+        >
+          <BarChart3 className="h-6 w-6 text-accent" />
+          <div className="text-center">
+            <p className="text-sm font-bold text-foreground">Insights</p>
+            <p className="text-[10px] text-muted-foreground">Analytics & trends</p>
+          </div>
+        </Button>
       </div>
 
       {/* Task List */}

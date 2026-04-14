@@ -123,7 +123,7 @@ const LearnerApp = () => {
   const {
     bookings, loading: bookingsLoading,
     createBooking, updateBookingStatus, getUpcomingSessions,
-  } = useRealtimeBookings("learner", session?.user?.id);
+  } = useRealtimeBookings("learner", userId);
 
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
   const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {

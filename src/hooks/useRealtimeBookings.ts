@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { security } from '@/utils/security';
@@ -39,12 +39,74 @@ const bookingTransitions: Record<BookingRequest['status'], BookingRequest['statu
   canceled: [],
 };
 
+// ── Dev-mode mock bookings ──────────────────────────────────────────────────
+const isDevUserId = (id?: string) => id?.startsWith('dev-') ?? false;
+
+function buildDevBookings(userType: 'learner' | 'tutor', userId: string): BookingRequest[] {
+  const now = new Date();
+  // Confirmed session starting in 5 minutes (joinable)
+  const soonSession: BookingRequest = {
+    id: 'dev-booking-001',
+    learner_id: userType === 'learner' ? userId : 'dev-learner-peer',
+    tutor_id: userType === 'tutor' ? userId : 'dev-tutor-peer',
+    tutor_subject_id: 'dev-subject-math',
+    scheduled_at: new Date(now.getTime() + 5 * 60_000).toISOString(),
+    duration_minutes: 60,
+    status: 'confirmed',
+    price: 300,
+    created_at: new Date(now.getTime() - 86400_000).toISOString(),
+    updated_at: new Date(now.getTime() - 3600_000).toISOString(),
+    learner_profile: { full_name: 'Sipho Mokoena', email: 'sipho@test.co.za', study_level: 'O Level' },
+    tutor_profile: { full_name: 'Ms. Naledi Mbeki', email: 'naledi@test.co.za' },
+    tutor_subjects: { subject: 'Mathematics', level: 'O Level' },
+  };
+
+  // Requested session (pending acceptance)
+  const pendingSession: BookingRequest = {
+    id: 'dev-booking-002',
+    learner_id: userType === 'learner' ? userId : 'dev-learner-peer-2',
+    tutor_id: userType === 'tutor' ? userId : 'dev-tutor-peer-2',
+    tutor_subject_id: 'dev-subject-physics',
+    scheduled_at: new Date(now.getTime() + 86400_000).toISOString(),
+    duration_minutes: 45,
+    status: 'requested',
+    price: 200,
+    created_at: new Date(now.getTime() - 3600_000).toISOString(),
+    updated_at: new Date(now.getTime() - 3600_000).toISOString(),
+    learner_profile: { full_name: 'Amara Dlamini', email: 'amara@test.co.za', study_level: 'A Level' },
+    tutor_profile: { full_name: 'Mr. James Oduro', email: 'james@test.co.za' },
+    tutor_subjects: { subject: 'Physics', level: 'A Level' },
+  };
+
+  // Completed session (history)
+  const pastSession: BookingRequest = {
+    id: 'dev-booking-003',
+    learner_id: userType === 'learner' ? userId : 'dev-learner-peer-3',
+    tutor_id: userType === 'tutor' ? userId : 'dev-tutor-peer-3',
+    tutor_subject_id: 'dev-subject-english',
+    scheduled_at: new Date(now.getTime() - 86400_000).toISOString(),
+    duration_minutes: 60,
+    status: 'completed',
+    price: 250,
+    created_at: new Date(now.getTime() - 2 * 86400_000).toISOString(),
+    updated_at: new Date(now.getTime() - 86400_000).toISOString(),
+    learner_profile: { full_name: 'Lerato Khumalo', email: 'lerato@test.co.za', study_level: 'IGCSE' },
+    tutor_profile: { full_name: 'Dr. Priya Naidoo', email: 'priya@test.co.za' },
+    tutor_subjects: { subject: 'English Literature', level: 'IGCSE' },
+  };
+
+  return [soonSession, pendingSession, pastSession];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: string) => {
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connecting');
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const { toast } = useToast();
+  const devMode = isDevUserId(userId);
+  const devInitRef = useRef(false);
 
   const bookingSelect = `
     *,
@@ -130,16 +192,27 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
     }
   }, [bookingSelect, toast, userId, userType]);
 
-  // Load initial bookings
+  // ── Dev-mode: seed mock bookings once ────────────────────────────────────
   useEffect(() => {
-    if (!userId) return;
+    if (!devMode || !userId || devInitRef.current) return;
+    devInitRef.current = true;
+    setBookings(buildDevBookings(userType, userId));
+    setLoading(false);
+    setSyncStatus('synced');
+    setLastSyncedAt(new Date());
+    logger.info('[DEV] Seeded mock bookings for', userType, userId);
+  }, [devMode, userId, userType]);
+
+  // Load initial bookings (real mode only)
+  useEffect(() => {
+    if (!userId || devMode) return;
 
     loadBookings();
-  }, [loadBookings, userId]);
+  }, [loadBookings, userId, devMode]);
 
-  // Set up real-time subscriptions with fallback resync
+  // Set up real-time subscriptions with fallback resync (real mode only)
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || devMode) return;
 
     let reconnectAttempts = 0;
 
@@ -237,6 +310,28 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   }) => {
     if (!userId) throw new Error('User not authenticated');
 
+    // Dev-mode: create a mock booking locally
+    if (devMode) {
+      const mockBooking: BookingRequest = {
+        id: `dev-booking-${Date.now()}`,
+        learner_id: userType === 'learner' ? userId : bookingData.tutor_id,
+        tutor_id: userType === 'tutor' ? userId : bookingData.tutor_id,
+        tutor_subject_id: bookingData.tutor_subject_id,
+        scheduled_at: bookingData.scheduled_at,
+        duration_minutes: bookingData.duration_minutes,
+        status: 'confirmed',
+        price: bookingData.price,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        tutor_profile: { full_name: 'Dev Tutor', email: 'dev@test.co.za' },
+        learner_profile: { full_name: 'Dev Learner', email: 'dev@test.co.za' },
+        tutor_subjects: { subject: 'Dev Subject', level: 'Test' },
+      };
+      setBookings((prev) => [mockBooking, ...prev]);
+      toast({ title: 'Dev Mode', description: 'Mock booking created (local only).' });
+      return mockBooking as unknown as Record<string, unknown>;
+    }
+
     // Validate session and rate limit
     const validation = await security.validateSession();
     if (!validation.valid) {
@@ -280,6 +375,15 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       if (!allowedNextStatus.includes(status)) {
         throw new Error(`Invalid status transition: ${currentBooking.status} -> ${status}`);
       }
+    }
+
+    // Dev-mode: update locally only
+    if (devMode) {
+      setBookings((prev) =>
+        prev.map((b) => (b.id === bookingId ? { ...b, status, updated_at: new Date().toISOString() } : b)),
+      );
+      logger.info('[DEV] Booking status updated locally:', bookingId, status);
+      return;
     }
 
     const { error } = await supabase
