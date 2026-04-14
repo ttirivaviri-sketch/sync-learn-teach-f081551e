@@ -85,7 +85,7 @@ const TutorApp = () => {
     loading: bookingsLoading,
     updateBookingStatus,
     getUpcomingSessions,
-  } = useRealtimeBookings("tutor", session?.user?.id);
+  } = useRealtimeBookings("tutor", effectiveUserId);
 
   const { updateOnlineStatus } = useTutorManagement();
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
