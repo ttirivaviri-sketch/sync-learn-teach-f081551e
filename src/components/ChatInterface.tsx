@@ -326,8 +326,7 @@ const ChatInterface = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex"
-      style={{ background: theme.background }}
+      className="fixed inset-0 z-50 flex bg-background"
     >
       {/* Sidebar */}
       <div
@@ -337,12 +336,13 @@ const ChatInterface = ({
       >
         <ConversationList
           conversations={conversations}
-          activeConversation={activeConversation}
+          activeConversationId={activeConversation}
           onSelect={handleSelectConversation}
           onClose={onClose}
+          formatTime={formatTime}
           theme={theme}
           onThemeChange={handleThemeChange}
-          currentUserId={currentUserId || ""}
+          isMobileOpen={mobileSidebar}
         />
       </div>
 
@@ -356,19 +356,20 @@ const ChatInterface = ({
           <ChatArea
             messages={messages}
             newMessage={newMessage}
-            onNewMessageChange={setNewMessage}
+            onNewMessageChange={(v) => setNewMessage(v)}
             onSendMessage={handleSendMessage}
             currentUserId={currentUserId || ""}
-            otherUserName={activeConversationData.other_user_name}
+            otherUserName={activeConversationData.other_user_name || "User"}
+            userType="learner"
             loading={loading}
             theme={theme}
-            onBackToList={() => setMobileSidebar(true)}
+            onToggleSidebar={() => setMobileSidebar(true)}
             formatTime={formatTime}
           />
         ) : (
           <EmptyChatArea
             theme={theme}
-            onBackToList={() => setMobileSidebar(true)}
+            onToggleSidebar={() => setMobileSidebar(true)}
           />
         )}
       </div>
