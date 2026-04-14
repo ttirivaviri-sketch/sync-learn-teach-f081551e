@@ -270,7 +270,7 @@ export function MultiExamCountdown({ exams, subjects, onAddExam, onDeleteExam, i
       </AnimatePresence>
 
       {/* Exam Cards */}
-      {exams.length === 0 && !showAdd ? (
+      {dedupedExams.length === 0 && !showAdd ? (
         <div className="p-6 rounded-2xl border border-dashed border-border text-center">
           <GraduationCap className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
           <p className="text-sm text-muted-foreground mb-2">No exam dates set yet</p>
@@ -278,7 +278,7 @@ export function MultiExamCountdown({ exams, subjects, onAddExam, onDeleteExam, i
         </div>
       ) : (
         <AnimatePresence>
-          {exams.map(exam => (
+          {dedupedExams.map(exam => (
             <ExamCard key={exam.id} exam={exam} onDelete={() => onDeleteExam(exam.id)} />
           ))}
         </AnimatePresence>
