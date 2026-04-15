@@ -2,7 +2,7 @@
  * LearnerHomeTab — Search, subject filters, location, tutor cards.
  */
 import { useState } from "react";
-import { MapPin, Video, MessageCircle, Search, Award, CalendarCheck, Clock, CreditCard } from "lucide-react";
+import { MapPin, Video, MessageCircle, Search, Award, CalendarCheck, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -134,7 +134,6 @@ export const LearnerHomeTab = ({
               const subject = (booking.tutor_subjects as any)?.subject || "Session";
               const avatarUrl = (booking.tutor_profile as any)?.avatar_url;
               const initials = tutorName.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
-              const requiresPayment = needsPayment?.(booking.id);
               const joinable = isJoinable(booking);
 
               return (
