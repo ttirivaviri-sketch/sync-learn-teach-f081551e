@@ -1,34 +1,34 @@
 
 
-## Plan: Auto-Join Session After Successful Payment
+## Plan: Fix Video Meeting Connection — Jitsi Container Lifecycle Bug
 
 ### Problem
-After paying for a booking, `PaymentCheckout` calls `onBack()` which dismisses the checkout screen and returns the user to the home tab. There's no transition to the video session — the user has to manually find the lesson and click "Join."
+When a user clicks "Join Session," Jitsi initializes during the `ConnectingScreen` phase and mounts its iframe into a **hidden** div (`className="hidden"`). When the screen transitions to "meeting," `ConnectingScreen` unmounts — **destroying the Jitsi iframe**. A new container div renders in the meeting screen, but Jitsi never re-mounts because `initJitsi` guards against re-initialization (`if (jitsiApi.current) return`).
 
-### Solution
-After payment succeeds, automatically open the video meeting for the paid booking (if the session is within the joinable window), or show a clear "Join Now" prompt.
+Both tutor and learner see "Waiting for [other] to join…" because neither side's Jitsi iframe actually survives into the visible meeting view.
 
-### Changes
+### Fix
 
-**`src/pages/LearnerApp.tsx`**
-- Replace the empty `onPaymentInitiated={() => {}}` with a handler that:
-  1. Clears the checkout screen (`setCheckoutBooking(null)`)
-  2. Checks if the booking is within the joinable window (15 min before → session end)
-  3. If joinable: immediately open the video meeting (`setVideoMeetingData(...)` + `setShowVideoMeeting(true)`)
-  4. If not yet joinable: show a toast saying "Payment confirmed! Your session will be available to join closer to the scheduled time."
-- Move `onBack` logic into `onPaymentInitiated` so it handles both closing checkout AND launching the session
+**`src/components/VideoMeeting.tsx`**
+- Move the Jitsi container ref out of `ConnectingScreen` and into the main component's render tree, so it persists across screen transitions
+- Render a single `<div ref={jitsiContainer}>` that is always in the DOM but visually hidden during "connecting" and shown during "meeting"
+- Remove the ref prop from `ConnectingScreen`
 
-**`src/components/PaymentCheckout.tsx`**
-- Update `onPaymentInitiated` callback signature to pass the booking object back: `onPaymentInitiated: (booking: BookingRequest) => void`
-- In `handleDevCardPayment`, `handleSavedCardPayment`, and `handleNewCardPayment` success paths: call `onPaymentInitiated(booking)` instead of calling both `onPaymentInitiated()` and `onBack()` separately
+**`src/components/video-meeting/ConnectingScreen.tsx`**
+- Remove the `forwardRef` wrapper and the hidden div — it no longer needs to host the Jitsi container
 
-### Flow After Fix
-1. Learner pays → payment succeeds
-2. Checkout dismisses automatically
-3. If session is joinable now → Video meeting opens immediately
-4. If session is later → Toast confirms payment, user returns to home
+### Technical Detail
+
+The root component will always render:
+```
+<div ref={jitsiContainer}
+     className={screen === "meeting" ? "w-full h-full" : "fixed top-0 left-0 w-0 h-0 overflow-hidden"}
+/>
+```
+
+This keeps Jitsi mounted and connected throughout, while hiding it during the connecting animation. When `videoConferenceJoined` fires, the screen switches to "meeting" and the container becomes visible — with the iframe already connected.
 
 ### Files Changed
-- `src/pages/LearnerApp.tsx` — Wire up `onPaymentInitiated` to launch video session
-- `src/components/PaymentCheckout.tsx` — Pass booking to `onPaymentInitiated` callback
+- `src/components/VideoMeeting.tsx` — Persistent Jitsi container across all screens
+- `src/components/video-meeting/ConnectingScreen.tsx` — Remove forwardRef and hidden container div
 
