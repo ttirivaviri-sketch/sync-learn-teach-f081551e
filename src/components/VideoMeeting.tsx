@@ -248,7 +248,12 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   }
 
   if (screen === "connecting") {
-    return <ConnectingScreen ref={jitsiContainer} partnerName={partnerName} />;
+    return (
+      <>
+        <ConnectingScreen partnerName={partnerName} />
+        <div ref={jitsiContainer} className="fixed top-0 left-0 w-0 h-0 overflow-hidden" />
+      </>
+    );
   }
 
   if (screen === "summary") {
