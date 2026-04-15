@@ -1,19 +1,29 @@
 
 
-## Plan: Fix Remaining "Tutor" Hardcoded Fallbacks
+## Plan: Add "My Lessons" Button on Home Tab → Opens Lessons Sheet
 
-### Problem
-In `src/hooks/useLibraryResources.ts`, there's a **direct query fallback** path (line 306-337) that maps `tutor_tutorials` rows. Both `author` (line 310) and `tutor.name` (line 333) are hardcoded to `"Tutor"` instead of using the actual tutor name from the database row.
+Instead of adding session cards inline, add a prominent button at the top of the Home tab that opens a bottom sheet with the learner's confirmed/paid upcoming lessons.
 
-### Fix
+### What the Learner Sees
 
-**`src/hooks/useLibraryResources.ts`** — 2 line changes:
+- A prominent "My Lessons" button at the top of the Home tab (above AdvancedBooking), styled with a primary gradient and a badge showing the count of upcoming confirmed sessions
+- Tapping it opens a bottom Sheet with their upcoming confirmed bookings — tutor name, subject, date/time, and action buttons (Join / Pay / Chat)
+- If no lessons, the sheet shows a friendly empty state
+- The button is always visible but the badge count only shows when there are sessions
 
-- **Line 310**: Change `author: "Tutor"` to `author: row.tutor_full_name || "Unknown"`
-- **Line 333**: Change `name: "Tutor"` to `name: row.tutor_full_name || "Unknown"`
+### Technical Changes
 
-The `tutor_full_name` field is returned by the `get_published_tutorials` database function (confirmed in the schema), which joins `profiles.full_name` as `tutor_full_name`.
+**`src/pages/learner/LearnerHomeTab.tsx`**
+- Add new props: `upcomingBookings`, `bookingsNeedingPayment`, `needsPayment`, `onJoinVideoSession`, `onPayNow`, `onStartCheckout`
+- Add state for sheet open/close
+- Render a "My Lessons" button (with `CalendarCheck` icon + count badge) above `<AdvancedBooking />`
+- Render a `<Sheet>` (bottom side) with the list of upcoming confirmed bookings using existing `LiveBookingCard` or a compact lesson card
+- Import `Sheet, SheetContent, SheetHeader, SheetTitle` from ui/sheet
+
+**`src/pages/LearnerApp.tsx`**
+- Pass `upcomingBookings` (filtered: status !== completed/canceled), `bookingsNeedingPayment`, `needsPayment`, `onJoinVideoSession: handleJoinVideoSession`, `onPayNow: handlePayNow`, `onStartCheckout: handleStartCheckout` to `LearnerHomeTab`
 
 ### Files Changed
-- `src/hooks/useLibraryResources.ts` — Update 2 hardcoded strings in the direct query mapping
+- `src/pages/learner/LearnerHomeTab.tsx` — Add button + sheet + new props
+- `src/pages/LearnerApp.tsx` — Pass additional booking props to LearnerHomeTab
 
