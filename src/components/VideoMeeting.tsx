@@ -229,6 +229,13 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   }, [screen]);
 
   // ─── Screen routing ───────────────────────────────────────
+  // ─── Persistent Jitsi container ────────────────────────────
+  // Always rendered so Jitsi iframe survives screen transitions
+  const jitsiContainerClass =
+    screen === "meeting"
+      ? "flex-1 relative w-full overflow-hidden"
+      : "fixed top-0 left-0 w-0 h-0 overflow-hidden";
+
   if (screen === "precall") {
     return (
       <PreCallScreen
@@ -251,7 +258,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     return (
       <>
         <ConnectingScreen partnerName={partnerName} />
-        <div ref={jitsiContainer} className="fixed top-0 left-0 w-0 h-0 overflow-hidden" />
+        <div ref={jitsiContainer} className={jitsiContainerClass} />
       </>
     );
   }
@@ -330,8 +337,8 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         </div>
       )}
 
-      {/* Jitsi container */}
-      <div className="flex-1 relative w-full overflow-hidden">
+      {/* Jitsi container — persistent across connecting → meeting */}
+      <div className={jitsiContainerClass}>
         <div ref={jitsiContainer} className="w-full h-full" />
       </div>
 
