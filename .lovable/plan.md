@@ -1,29 +1,33 @@
 
 
-## Plan: Add "My Lessons" Button on Home Tab → Opens Lessons Sheet
+## Plan: Filter "My Lessons" to Paid, Upcoming-Only Sessions
 
-Instead of adding session cards inline, add a prominent button at the top of the Home tab that opens a bottom sheet with the learner's confirmed/paid upcoming lessons.
+### Problem
+"My Lessons" currently shows all non-completed/non-canceled bookings. It should only show lessons that are:
+1. **Confirmed** (status = "confirmed")
+2. **Paid** (`!needsPayment(booking.id)`)
+3. **Not yet past** (scheduled time + duration is in the future)
 
-### What the Learner Sees
+Completed lessons and lessons whose scheduled time has already passed must not appear.
 
-- A prominent "My Lessons" button at the top of the Home tab (above AdvancedBooking), styled with a primary gradient and a badge showing the count of upcoming confirmed sessions
-- Tapping it opens a bottom Sheet with their upcoming confirmed bookings — tutor name, subject, date/time, and action buttons (Join / Pay / Chat)
-- If no lessons, the sheet shows a friendly empty state
-- The button is always visible but the badge count only shows when there are sessions
+### Changes
 
-### Technical Changes
+**`src/pages/LearnerApp.tsx`** — Line 369
+- Change the filter from:
+  ```
+  b.status !== "completed" && b.status !== "canceled"
+  ```
+  to:
+  ```
+  b.status === "confirmed" && !needsPayment(b.id) &&
+  (new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000) > Date.now()
+  ```
 
 **`src/pages/learner/LearnerHomeTab.tsx`**
-- Add new props: `upcomingBookings`, `bookingsNeedingPayment`, `needsPayment`, `onJoinVideoSession`, `onPayNow`, `onStartCheckout`
-- Add state for sheet open/close
-- Render a "My Lessons" button (with `CalendarCheck` icon + count badge) above `<AdvancedBooking />`
-- Render a `<Sheet>` (bottom side) with the list of upcoming confirmed bookings using existing `LiveBookingCard` or a compact lesson card
-- Import `Sheet, SheetContent, SheetHeader, SheetTitle` from ui/sheet
-
-**`src/pages/LearnerApp.tsx`**
-- Pass `upcomingBookings` (filtered: status !== completed/canceled), `bookingsNeedingPayment`, `needsPayment`, `onJoinVideoSession: handleJoinVideoSession`, `onPayNow: handlePayNow`, `onStartCheckout: handleStartCheckout` to `LearnerHomeTab`
+- Remove the "Pay Now" button branch from lesson cards (all displayed lessons are already paid)
+- Update empty state text to: "No confirmed lessons" / "Paid and confirmed sessions will appear here"
 
 ### Files Changed
-- `src/pages/learner/LearnerHomeTab.tsx` — Add button + sheet + new props
-- `src/pages/LearnerApp.tsx` — Pass additional booking props to LearnerHomeTab
+- `src/pages/LearnerApp.tsx` — Update filter on line 369
+- `src/pages/learner/LearnerHomeTab.tsx` — Remove pay button, update empty state copy
 
