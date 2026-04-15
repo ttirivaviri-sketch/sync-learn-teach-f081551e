@@ -1,33 +1,24 @@
 
 
-## Plan: Filter "My Lessons" to Paid, Upcoming-Only Sessions
+## Plan: Fix Study Level Mismatch Filtering Out All Tutors
 
 ### Problem
-"My Lessons" currently shows all non-completed/non-canceled bookings. It should only show lessons that are:
-1. **Confirmed** (status = "confirmed")
-2. **Paid** (`!needsPayment(booking.id)`)
-3. **Not yet past** (scheduled time + duration is in the future)
+The learner's `study_level` values (`junior_primary`, `senior_primary`, `junior_high`, `senior_high`, `tertiary`) don't match tutor subject `level` values (`Grade 1-3`, `Grade 4-6`, `Grade 7-9`, `Grade 10-12`, `University`, `Adult Education`). The current filter uses `includes()` which finds no matches, so **all tutors are hidden**.
 
-Completed lessons and lessons whose scheduled time has already passed must not appear.
+### Fix
 
-### Changes
+**`src/hooks/useTutorData.ts`** — Replace the study level filter (around line 140) with a mapping function that translates the learner's study level to the corresponding tutor subject levels:
 
-**`src/pages/LearnerApp.tsx`** — Line 369
-- Change the filter from:
-  ```
-  b.status !== "completed" && b.status !== "canceled"
-  ```
-  to:
-  ```
-  b.status === "confirmed" && !needsPayment(b.id) &&
-  (new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000) > Date.now()
-  ```
+```
+junior_primary  → ["Grade 1-3"]
+senior_primary  → ["Grade 4-6"]
+junior_high     → ["Grade 7-9"]
+senior_high     → ["Grade 10-12"]
+tertiary        → ["University", "Adult Education"]
+```
 
-**`src/pages/learner/LearnerHomeTab.tsx`**
-- Remove the "Pay Now" button branch from lesson cards (all displayed lessons are already paid)
-- Update empty state text to: "No confirmed lessons" / "Paid and confirmed sessions will appear here"
+The filter will check if any of the tutor's subjects have a level that matches one of the mapped values (case-insensitive).
 
 ### Files Changed
-- `src/pages/LearnerApp.tsx` — Update filter on line 369
-- `src/pages/learner/LearnerHomeTab.tsx` — Remove pay button, update empty state copy
+- `src/hooks/useTutorData.ts` — Add level mapping and fix the study level filter logic
 
