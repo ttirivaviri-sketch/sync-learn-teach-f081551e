@@ -155,12 +155,21 @@ export const useTutorData = (
         );
       }
 
-      // Filter by study level — only show tutors who teach at the learner's level
+      // Filter by study level — map learner enum to tutor subject level strings
       if (options?.studyLevel) {
-        const levelLower = options.studyLevel.toLowerCase();
-        filtered = filtered.filter(t =>
-          t.subjects.some(s => s.level.toLowerCase().includes(levelLower))
-        );
+        const levelMap: Record<string, string[]> = {
+          junior_primary: ['grade 1-3'],
+          senior_primary: ['grade 4-6'],
+          junior_high: ['grade 7-9'],
+          senior_high: ['grade 10-12'],
+          tertiary: ['university', 'adult education'],
+        };
+        const matchLevels = levelMap[options.studyLevel.toLowerCase()] || [];
+        if (matchLevels.length > 0) {
+          filtered = filtered.filter(t =>
+            t.subjects.some(s => matchLevels.includes(s.level.toLowerCase()))
+          );
+        }
       }
 
       // Filter by search query (name or subject)
