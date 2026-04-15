@@ -366,6 +366,11 @@ const LearnerApp = () => {
               onBookTutor={handleBookTutor}
               onStartChat={handleStartChat}
               isUserOnline={isUserOnline}
+              upcomingBookings={bookings.filter((b) => b.status !== "completed" && b.status !== "cancelled")}
+              needsPayment={needsPayment}
+              onJoinVideoSession={handleJoinVideoSession}
+              onPayNow={handlePayNow}
+              onStartCheckout={handleStartCheckout}
             />
           </TabsContent>
 
