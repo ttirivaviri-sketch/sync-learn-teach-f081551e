@@ -30,6 +30,7 @@ interface TutorHomeTabProps {
   mySubjects: Array<{ id: string; [key: string]: unknown }>;
   tutorId?: string;
   onNavigateTab: (tab: string) => void;
+  onJoinSession?: (booking: BookingRequest) => void;
 }
 
 export const TutorHomeTab = ({
