@@ -1,13 +1,15 @@
 /**
  * LearnerHomeTab — Search, subject filters, location, tutor cards.
  */
-import { MapPin, Video, MessageCircle, Search, Award } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Video, MessageCircle, Search, Award, CalendarCheck, Clock, CreditCard } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { AdvancedBooking } from "@/components/AdvancedBooking";
 import StarRating from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
@@ -50,6 +52,11 @@ interface LearnerHomeTabProps {
   onBookTutor: (tutor: TutorProfile) => void;
   onStartChat: (tutor: { id: string | number; full_name?: string; name?: string }) => void;
   isUserOnline: (userId: string) => boolean;
+  upcomingBookings?: any[];
+  needsPayment?: (id: string) => boolean;
+  onJoinVideoSession?: (booking: any) => void;
+  onPayNow?: (booking: any) => void;
+  onStartCheckout?: (booking: any) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -68,8 +75,141 @@ export const LearnerHomeTab = ({
   onBookTutor,
   onStartChat,
   isUserOnline,
-}: LearnerHomeTabProps) => (
+  upcomingBookings = [],
+  needsPayment,
+  onJoinVideoSession,
+  onPayNow,
+  onStartCheckout,
+}: LearnerHomeTabProps) => {
+  const [lessonsOpen, setLessonsOpen] = useState(false);
+  const upcomingCount = upcomingBookings.length;
+
+  const isJoinable = (booking: any) => {
+    const start = new Date(booking.scheduled_at).getTime();
+    const now = Date.now();
+    return now >= start - 15 * 60 * 1000 && now <= start + booking.duration_minutes * 60 * 1000;
+  };
+
+  const formatDateTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-ZA", { weekday: "short", day: "numeric", month: "short" }) +
+      " · " + d.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" });
+  };
+
+  return (
   <div className="space-y-4 p-4 mt-0">
+    {/* My Lessons Button */}
+    <Button
+      onClick={() => setLessonsOpen(true)}
+      className="w-full justify-between h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+    >
+      <span className="flex items-center gap-2">
+        <CalendarCheck className="h-5 w-5" />
+        <span className="font-semibold">My Lessons</span>
+      </span>
+      {upcomingCount > 0 && (
+        <Badge variant="secondary" className="ml-2 bg-white/20 text-primary-foreground border-0">
+          {upcomingCount}
+        </Badge>
+      )}
+    </Button>
+
+    {/* Lessons Bottom Sheet */}
+    <Sheet open={lessonsOpen} onOpenChange={setLessonsOpen}>
+      <SheetContent side="bottom" className="max-h-[80vh] overflow-y-auto rounded-t-2xl">
+        <SheetHeader className="pb-3">
+          <SheetTitle>My Upcoming Lessons</SheetTitle>
+        </SheetHeader>
+
+        {upcomingBookings.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-10 text-center">
+            <CalendarCheck className="h-12 w-12 text-muted-foreground/40 mb-3" />
+            <p className="font-medium text-foreground">No upcoming lessons</p>
+            <p className="text-sm text-muted-foreground mt-1">Book a tutor to get started!</p>
+          </div>
+        ) : (
+          <div className="space-y-3 pb-4">
+            {upcomingBookings.map((booking) => {
+              const tutorName = (booking.tutor_profile as any)?.full_name || "Tutor";
+              const subject = (booking.tutor_subjects as any)?.subject || "Session";
+              const avatarUrl = (booking.tutor_profile as any)?.avatar_url;
+              const initials = tutorName.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
+              const requiresPayment = needsPayment?.(booking.id);
+              const joinable = isJoinable(booking);
+
+              return (
+                <Card key={booking.id} className="border-l-4 border-l-primary shadow-sm">
+                  <CardContent className="p-3">
+                    <div className="flex items-start gap-3">
+                      <Avatar className="h-10 w-10 shrink-0">
+                        <AvatarImage src={avatarUrl || "/placeholder.svg"} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate">{tutorName}</p>
+                            <p className="text-xs text-muted-foreground">{subject}</p>
+                          </div>
+                          <Badge variant={booking.status === "confirmed" ? "default" : "outline"} className="text-[10px] shrink-0">
+                            {booking.status}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-1 mt-1.5 text-xs text-muted-foreground">
+                          <Clock className="h-3 w-3" />
+                          <span>{formatDateTime(booking.scheduled_at)}</span>
+                          <span className="ml-1">({booking.duration_minutes}min)</span>
+                        </div>
+                        <div className="flex gap-2 mt-2">
+                          {requiresPayment ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-8 text-xs flex-1"
+                              onClick={() => { onStartCheckout?.(booking); setLessonsOpen(false); }}
+                            >
+                              <CreditCard className="h-3 w-3 mr-1" />
+                              Pay Now
+                            </Button>
+                          ) : joinable ? (
+                            <Button
+                              size="sm"
+                              variant="default"
+                              className="h-8 text-xs flex-1"
+                              onClick={() => { onJoinVideoSession?.(booking); setLessonsOpen(false); }}
+                            >
+                              <Video className="h-3 w-3 mr-1" />
+                              Join
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline" className="h-8 text-xs flex-1" disabled>
+                              <Clock className="h-3 w-3 mr-1" />
+                              Upcoming
+                            </Button>
+                          )}
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="h-8 text-xs"
+                            onClick={() => {
+                              onStartChat?.({ id: booking.tutor_id, full_name: tutorName });
+                              setLessonsOpen(false);
+                            }}
+                          >
+                            <MessageCircle className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
+
     <AdvancedBooking />
 
     {/* Search Bar */}
@@ -191,4 +331,5 @@ export const LearnerHomeTab = ({
       )}
     </div>
   </div>
-);
+  );
+};
