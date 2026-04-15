@@ -291,11 +291,31 @@ const LearnerApp = () => {
   if (showLaunchScreen) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
 
   if (checkoutBooking) {
-    return (
+     return (
       <PaymentCheckout
         booking={checkoutBooking}
         onBack={() => setCheckoutBooking(null)}
-        onPaymentInitiated={() => {}}
+        onPaymentInitiated={(booking) => {
+          setCheckoutBooking(null);
+          const now = Date.now();
+          const startTime = new Date(booking.scheduled_at).getTime();
+          const endTime = startTime + booking.duration_minutes * 60000;
+          const joinWindowStart = startTime - 15 * 60000;
+
+          if (now >= joinWindowStart && now < endTime) {
+            setVideoMeetingData({
+              partnerName: booking.tutor_profile?.full_name || "Tutor",
+              subject: booking.tutor_subjects?.subject || "Study Session",
+              booking: booking as unknown as Record<string, unknown>,
+            });
+            setShowVideoMeeting(true);
+          } else {
+            toast({
+              title: "Payment confirmed!",
+              description: "Your session will be available to join closer to the scheduled time.",
+            });
+          }
+        }}
       />
     );
   }

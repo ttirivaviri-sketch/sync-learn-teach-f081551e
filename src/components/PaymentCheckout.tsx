@@ -32,7 +32,7 @@ interface SavedMethod {
 interface PaymentCheckoutProps {
   booking: BookingRequest;
   onBack: () => void;
-  onPaymentInitiated: () => void;
+  onPaymentInitiated: (booking: BookingRequest) => void;
 }
 
 const CARD_BRAND_COLORS: Record<string, string> = {
@@ -121,12 +121,7 @@ export const PaymentCheckout = ({
         .update({ status: "confirmed" })
         .eq("id", booking.id);
 
-      toast({
-        title: "Payment confirmed!",
-        description: `R${amount.toFixed(2)} paid with DevCard. Your session is now secured.`,
-      });
-      onPaymentInitiated();
-      onBack();
+      onPaymentInitiated(booking);
     } catch (error) {
       logger.error("DevCard payment error:", error);
       toast({
@@ -153,12 +148,7 @@ export const PaymentCheckout = ({
 
       const result = response.data;
       if (result.success) {
-        toast({
-          title: "Payment Successful",
-          description: `Paid R${amount.toFixed(2)} with ${method.card_brand || "card"} •••• ${method.card_last4 || "****"}`,
-        });
-        onPaymentInitiated();
-        onBack();
+        onPaymentInitiated(booking);
       } else {
         throw new Error(result.error || "Payment failed");
       }
@@ -214,7 +204,7 @@ export const PaymentCheckout = ({
       });
 
       document.body.appendChild(form);
-      onPaymentInitiated();
+      onPaymentInitiated(booking);
       form.submit();
     } catch (error) {
       logger.error("Payment error:", error);
