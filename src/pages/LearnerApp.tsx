@@ -366,7 +366,7 @@ const LearnerApp = () => {
               onBookTutor={handleBookTutor}
               onStartChat={handleStartChat}
               isUserOnline={isUserOnline}
-              upcomingBookings={bookings.filter((b) => b.status !== "completed" && b.status !== "canceled")}
+              upcomingBookings={bookings.filter((b) => b.status === "confirmed" && !needsPayment(b.id) && (new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000) > Date.now())}
               needsPayment={needsPayment}
               onJoinVideoSession={handleJoinVideoSession}
               onPayNow={handlePayNow}
