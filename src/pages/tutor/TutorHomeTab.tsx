@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import {
   DollarSign, Clock, Users, Star, Bell, Settings, AlertTriangle,
-  CheckCircle2, Circle, ChevronRight,
+  CheckCircle2, Circle, ChevronRight, Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -43,6 +43,7 @@ export const TutorHomeTab = ({
   mySubjects,
   tutorId,
   onNavigateTab,
+  onJoinSession,
 }: TutorHomeTabProps) => {
   // Onboarding checklist state
   const [hasAvailability, setHasAvailability] = useState<boolean | null>(null);
