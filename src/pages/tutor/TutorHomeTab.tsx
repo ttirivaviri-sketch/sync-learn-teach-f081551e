@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import {
   DollarSign, Clock, Users, Star, Bell, Settings, AlertTriangle,
-  CheckCircle2, Circle, ChevronRight,
+  CheckCircle2, Circle, ChevronRight, Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,7 @@ interface TutorHomeTabProps {
   mySubjects: Array<{ id: string; [key: string]: unknown }>;
   tutorId?: string;
   onNavigateTab: (tab: string) => void;
+  onJoinSession?: (booking: BookingRequest) => void;
 }
 
 export const TutorHomeTab = ({
@@ -42,6 +43,7 @@ export const TutorHomeTab = ({
   mySubjects,
   tutorId,
   onNavigateTab,
+  onJoinSession,
 }: TutorHomeTabProps) => {
   // Onboarding checklist state
   const [hasAvailability, setHasAvailability] = useState<boolean | null>(null);
@@ -209,21 +211,36 @@ export const TutorHomeTab = ({
               No sessions scheduled for today
             </p>
           ) : (
-            upcomingSessions.slice(0, 3).map((booking) => (
-              <div key={booking.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
-                <div>
-                  <h4 className="font-medium">{booking.learner_profile?.full_name}</h4>
-                  <p className="text-sm text-muted-foreground">{booking.tutor_subjects?.subject}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(booking.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
+            upcomingSessions.slice(0, 3).map((booking) => {
+              const now = Date.now();
+              const startTime = new Date(booking.scheduled_at).getTime();
+              const endTime = startTime + booking.duration_minutes * 60000;
+              const isJoinable = booking.status === "confirmed" && now >= startTime - 15 * 60000 && now < endTime;
+
+              return (
+                <div key={booking.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                  <div>
+                    <h4 className="font-medium">{booking.learner_profile?.full_name}</h4>
+                    <p className="text-sm text-muted-foreground">{booking.tutor_subjects?.subject}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {new Date(booking.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-right">
+                      <p className="font-semibold text-primary">R{booking.price}</p>
+                      <p className="text-xs text-muted-foreground">{booking.duration_minutes} min</p>
+                    </div>
+                    {isJoinable && onJoinSession && (
+                      <Button size="sm" className="h-8 gap-1" onClick={() => onJoinSession(booking)}>
+                        <Video className="h-3.5 w-3.5" />
+                        Join
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-primary">R{booking.price}</p>
-                  <p className="text-xs text-muted-foreground">{booking.duration_minutes} min</p>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>

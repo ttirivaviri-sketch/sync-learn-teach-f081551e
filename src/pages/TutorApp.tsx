@@ -279,6 +279,7 @@ const TutorApp = () => {
               mySubjects={mySubjects as any}
               tutorId={userId}
               onNavigateTab={setActiveTab}
+              onJoinSession={handleJoinVideoSession}
             />
           </TabsContent>
 
