@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
-import { Clock, Calendar, Check } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Clock, Calendar, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, startOfWeek, isSameDay } from "date-fns";
+import { format, addDays, isSameDay } from "date-fns";
 import { logger } from "@/utils/logger";
 
 interface TimeSlot {
@@ -20,37 +21,51 @@ interface TutorAvailabilityDisplayProps {
   onSelectSlot?: (date: Date, startTime: string, endTime: string) => void;
   selectedDate?: Date;
   selectedTime?: string;
+  durationMinutes?: number;
 }
 
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-const formatTime = (time: string) => {
-  const [hours] = time.split(':');
-  const hour = parseInt(hours);
-  if (hour === 0) return '12 AM';
-  if (hour === 12) return '12 PM';
-  if (hour > 12) return `${hour - 12} PM`;
-  return `${hour} AM`;
+const formatTime12 = (time: string) => {
+  const [h, m] = time.split(':');
+  const hour = parseInt(h);
+  const min = m || '00';
+  if (hour === 0) return `12:${min} AM`;
+  if (hour === 12) return `12:${min} PM`;
+  if (hour > 12) return `${hour - 12}:${min} PM`;
+  return `${hour}:${min} AM`;
 };
 
-const TutorAvailabilityDisplay = ({ 
-  tutorId, 
+const timeToMinutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+};
+
+const minutesToTime = (mins: number) => {
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+};
+
+const TutorAvailabilityDisplay = ({
+  tutorId,
   onSelectSlot,
   selectedDate,
-  selectedTime 
+  selectedTime,
+  durationMinutes = 60,
 }: TutorAvailabilityDisplayProps) => {
   const [availability, setAvailability] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedHour, setSelectedHour] = useState<string>("");
+  const [selectedMinute, setSelectedMinute] = useState<string>("");
 
-  // Generate next 7 days starting from today
   const today = new Date();
   const next7Days = Array.from({ length: 7 }, (_, i) => addDays(today, i));
 
   useEffect(() => {
     const fetchAvailability = async () => {
       if (!tutorId) return;
-
       try {
         const { data, error } = await supabase
           .from('tutor_availability')
@@ -59,7 +74,6 @@ const TutorAvailabilityDisplay = ({
           .eq('is_available', true)
           .order('day_of_week')
           .order('start_time');
-
         if (error) throw error;
         setAvailability(data || []);
       } catch (error) {
@@ -68,30 +82,96 @@ const TutorAvailabilityDisplay = ({
         setLoading(false);
       }
     };
-
     fetchAvailability();
   }, [tutorId]);
 
-  const getSlotsForDay = (dayOfWeek: number) => {
-    return availability.filter(slot => slot.day_of_week === dayOfWeek);
-  };
+  const getSlotsForDay = (dayOfWeek: number) =>
+    availability.filter(slot => slot.day_of_week === dayOfWeek);
 
-  const isDayAvailable = (date: Date) => {
-    const dayOfWeek = date.getDay();
-    return getSlotsForDay(dayOfWeek).length > 0;
-  };
+  const isDayAvailable = (date: Date) =>
+    getSlotsForDay(date.getDay()).length > 0;
 
   const handleDayClick = (date: Date) => {
     if (isDayAvailable(date)) {
       setSelectedDay(date);
+      setSelectedHour("");
+      setSelectedMinute("");
     }
   };
 
-  const handleSlotClick = (date: Date, slot: TimeSlot) => {
-    if (onSelectSlot) {
-      onSelectSlot(date, slot.start_time, slot.end_time);
+  // Get available windows for selected day
+  const daySlots = selectedDay ? getSlotsForDay(selectedDay.getDay()) : [];
+
+  // Build valid hours from available windows
+  const validHours = useMemo(() => {
+    const hours = new Set<number>();
+    daySlots.forEach(slot => {
+      const startMin = timeToMinutes(slot.start_time);
+      const endMin = timeToMinutes(slot.end_time);
+      for (let m = startMin; m + durationMinutes <= endMin; m += 5) {
+        hours.add(Math.floor(m / 60));
+      }
+    });
+    return Array.from(hours).sort((a, b) => a - b);
+  }, [daySlots, durationMinutes]);
+
+  // Build valid minutes for the selected hour
+  const validMinutes = useMemo(() => {
+    if (!selectedHour) return [];
+    const h = parseInt(selectedHour);
+    const mins = new Set<number>();
+    daySlots.forEach(slot => {
+      const startMin = timeToMinutes(slot.start_time);
+      const endMin = timeToMinutes(slot.end_time);
+      for (let minute = 0; minute < 60; minute += 5) {
+        const total = h * 60 + minute;
+        if (total >= startMin && total + durationMinutes <= endMin) {
+          mins.add(minute);
+        }
+      }
+    });
+    return Array.from(mins).sort((a, b) => a - b);
+  }, [selectedHour, daySlots, durationMinutes]);
+
+  // When both hour and minute are selected, fire onSelectSlot
+  useEffect(() => {
+    if (selectedDay && selectedHour && selectedMinute && onSelectSlot) {
+      const startTime = `${selectedHour.padStart(2, '0')}:${selectedMinute.padStart(2, '0')}`;
+      const endMins = timeToMinutes(startTime) + durationMinutes;
+      const endTime = minutesToTime(endMins);
+      onSelectSlot(selectedDay, startTime, endTime);
+    }
+  }, [selectedDay, selectedHour, selectedMinute, durationMinutes]);
+
+  // "Now" button handler
+  const handleNow = () => {
+    if (!selectedDay || !isSameDay(selectedDay, today)) return;
+    const now = new Date();
+    // Round up to next 5-min
+    const currentMins = now.getHours() * 60 + Math.ceil(now.getMinutes() / 5) * 5;
+    const fits = daySlots.some(slot => {
+      const startMin = timeToMinutes(slot.start_time);
+      const endMin = timeToMinutes(slot.end_time);
+      return currentMins >= startMin && currentMins + durationMinutes <= endMin;
+    });
+    if (fits) {
+      const h = Math.floor(currentMins / 60);
+      const m = currentMins % 60;
+      setSelectedHour(h.toString());
+      setSelectedMinute(m.toString());
     }
   };
+
+  const isNowAvailable = useMemo(() => {
+    if (!selectedDay || !isSameDay(selectedDay, today)) return false;
+    const now = new Date();
+    const currentMins = now.getHours() * 60 + Math.ceil(now.getMinutes() / 5) * 5;
+    return daySlots.some(slot => {
+      const startMin = timeToMinutes(slot.start_time);
+      const endMin = timeToMinutes(slot.end_time);
+      return currentMins >= startMin && currentMins + durationMinutes <= endMin;
+    });
+  }, [selectedDay, today, daySlots, durationMinutes]);
 
   if (loading) {
     return (
@@ -138,23 +218,17 @@ const TutorAvailabilityDisplay = ({
               disabled={!isAvailable}
               className={`
                 flex flex-col items-center min-w-[56px] p-2 rounded-lg border transition-all
-                ${isSelected 
-                  ? 'bg-primary text-primary-foreground border-primary' 
-                  : isAvailable 
-                    ? 'bg-card hover:bg-accent border-border cursor-pointer' 
+                ${isSelected
+                  ? 'bg-primary text-primary-foreground border-primary'
+                  : isAvailable
+                    ? 'bg-card hover:bg-accent border-border cursor-pointer'
                     : 'bg-muted text-muted-foreground border-transparent cursor-not-allowed opacity-50'
                 }
               `}
             >
-              <span className="text-xs font-medium">
-                {DAYS_OF_WEEK[date.getDay()]}
-              </span>
-              <span className="text-lg font-bold">
-                {format(date, 'd')}
-              </span>
-              {isToday && (
-                <span className="text-[10px]">Today</span>
-              )}
+              <span className="text-xs font-medium">{DAYS_OF_WEEK[date.getDay()]}</span>
+              <span className="text-lg font-bold">{format(date, 'd')}</span>
+              {isToday && <span className="text-[10px]">Today</span>}
               {isAvailable && !isSelected && (
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1" />
               )}
@@ -163,33 +237,57 @@ const TutorAvailabilityDisplay = ({
         })}
       </div>
 
-      {/* Time slots for selected day */}
+      {/* Time picker for selected day */}
       {selectedDay && (
         <div className="space-y-3">
+          {/* Available windows */}
           <div className="flex items-center gap-2 text-sm font-medium">
             <Clock className="h-4 w-4 text-primary" />
-            Available Times for {format(selectedDay, 'EEEE, MMM d')}
+            Pick a Time for {format(selectedDay, 'EEEE, MMM d')}
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {getSlotsForDay(selectedDay.getDay()).map((slot) => {
-              const isSlotSelected = selectedDate && 
-                isSameDay(selectedDate, selectedDay) && 
-                selectedTime === slot.start_time;
 
-              return (
-                <Button
-                  key={slot.id}
-                  variant={isSlotSelected ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => handleSlotClick(selectedDay, slot)}
-                  className="gap-2"
-                >
-                  {isSlotSelected && <Check className="h-3 w-3" />}
-                  {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                </Button>
-              );
-            })}
+          <div className="flex flex-wrap gap-1 mb-2">
+            {daySlots.map(slot => (
+              <Badge key={slot.id} variant="secondary" className="text-xs">
+                {formatTime12(slot.start_time)} – {formatTime12(slot.end_time)}
+              </Badge>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Select value={selectedHour} onValueChange={(v) => { setSelectedHour(v); setSelectedMinute(""); }}>
+              <SelectTrigger className="w-24">
+                <SelectValue placeholder="Hour" />
+              </SelectTrigger>
+              <SelectContent>
+                {validHours.map(h => (
+                  <SelectItem key={h} value={h.toString()}>
+                    {h === 0 ? '12 AM' : h === 12 ? '12 PM' : h > 12 ? `${h - 12} PM` : `${h} AM`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <span className="text-muted-foreground font-bold">:</span>
+
+            <Select value={selectedMinute} onValueChange={setSelectedMinute} disabled={!selectedHour}>
+              <SelectTrigger className="w-20">
+                <SelectValue placeholder="Min" />
+              </SelectTrigger>
+              <SelectContent>
+                {validMinutes.map(m => (
+                  <SelectItem key={m} value={m.toString()}>
+                    {m.toString().padStart(2, '0')}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {isNowAvailable && (
+              <Button variant="outline" size="sm" onClick={handleNow} className="gap-1">
+                <Zap className="h-3 w-3" /> Now
+              </Button>
+            )}
           </div>
         </div>
       )}
@@ -201,10 +299,9 @@ const TutorAvailabilityDisplay = ({
           {DAYS_OF_WEEK.map((day, index) => {
             const slots = getSlotsForDay(index);
             if (slots.length === 0) return null;
-
             return (
               <Badge key={day} variant="secondary" className="text-xs">
-                {day}: {slots.map(s => `${formatTime(s.start_time)}-${formatTime(s.end_time)}`).join(', ')}
+                {day}: {slots.map(s => `${formatTime12(s.start_time)}-${formatTime12(s.end_time)}`).join(', ')}
               </Badge>
             );
           })}
