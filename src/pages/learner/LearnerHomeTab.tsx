@@ -124,8 +124,8 @@ export const LearnerHomeTab = ({
         {upcomingBookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <CalendarCheck className="h-12 w-12 text-muted-foreground/40 mb-3" />
-            <p className="font-medium text-foreground">No upcoming lessons</p>
-            <p className="text-sm text-muted-foreground mt-1">Book a tutor to get started!</p>
+            <p className="font-medium text-foreground">No confirmed lessons</p>
+            <p className="text-sm text-muted-foreground mt-1">Paid and confirmed sessions will appear here</p>
           </div>
         ) : (
           <div className="space-y-3 pb-4">
@@ -161,17 +161,7 @@ export const LearnerHomeTab = ({
                           <span className="ml-1">({booking.duration_minutes}min)</span>
                         </div>
                         <div className="flex gap-2 mt-2">
-                          {requiresPayment ? (
-                            <Button
-                              size="sm"
-                              variant="default"
-                              className="h-8 text-xs flex-1"
-                              onClick={() => { onStartCheckout?.(booking); setLessonsOpen(false); }}
-                            >
-                              <CreditCard className="h-3 w-3 mr-1" />
-                              Pay Now
-                            </Button>
-                          ) : joinable ? (
+                          {joinable ? (
                             <Button
                               size="sm"
                               variant="default"
