@@ -105,6 +105,24 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
     }
   }, [card.front, card.tags]);
 
+  const handleSubmitAnswer = () => {
+    setHasAttempted(true);
+    setSkipped(false);
+    setFlipped(true);
+    onResult(true, false);
+    // Fetch AI feedback comparing student answer to correct answer
+    if (userAnswer.trim()) {
+      fetchFeedback(userAnswer.trim(), card.back);
+    }
+  };
+
+  const handleSkip = () => {
+    setHasAttempted(true);
+    setSkipped(true);
+    setFlipped(true);
+    onResult(false, true);
+  };
+
   return (
     <div className="flex flex-col items-center gap-4">
       {/* Progress + difficulty */}
