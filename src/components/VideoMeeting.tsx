@@ -109,7 +109,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       initJitsi();
     } else {
       const script = document.createElement("script");
-      script.src = "https://meet.jit.si/external_api.js";
+      script.src = "https://8x8.vc/external_api.js";
       script.async = true;
       script.onload = () => initJitsi();
       script.onerror = () => {
@@ -123,11 +123,12 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
   const initJitsi = () => {
     if (!jitsiContainer.current || jitsiApi.current) return;
-    const roomName = booking?.room_name || `StudySync-${booking?.id || "demo-session"}`;
+    const roomName = `StudySync-${booking?.id || "demo-session"}`;
+    console.log("[VideoMeeting] Joining room:", roomName);
     const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
     try {
-      jitsiApi.current = new window.JitsiMeetExternalAPI("meet.jit.si", {
+      jitsiApi.current = new window.JitsiMeetExternalAPI("8x8.vc", {
         roomName,
         width: "100%",
         height: "100%",
@@ -149,7 +150,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
           SHOW_BRAND_WATERMARK: false,
-          TOOLBAR_BUTTONS: [],
+          TOOLBAR_BUTTONS: ['microphone', 'camera', 'hangup'],
           DISABLE_DOMINANT_SPEAKER_INDICATOR: false,
         },
         userInfo: { displayName },
@@ -157,7 +158,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
       jitsiApi.current.addEventListener("videoConferenceJoined", () => {
         setIsLoading(false); setScreen("meeting"); setSessionStartTime(new Date());
-        toast({ title: "Connected ✓", description: "You've joined the session." });
+        toast({ title: "Connected ✓", description: `Joined room: ${roomName}` });
       });
       jitsiApi.current.addEventListener("participantJoined", (p: any) => {
         setParticipantCount((c) => c + 1);
