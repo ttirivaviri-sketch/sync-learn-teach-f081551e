@@ -216,6 +216,8 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           tasks={dynamicTasks}
           onBack={() => setSelectedSubject(null)}
           onOpenChat={onOpenChat}
+          onCompleteTask={(taskId) => completeTask.mutate(taskId)}
+          onAddBonusTask={() => addBonusTask.mutate(selectedSubject.id)}
         />
       </div>
     );
