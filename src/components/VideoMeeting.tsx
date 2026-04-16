@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 // Sub-components
 import { PreCallScreen } from "@/components/video-meeting/PreCallScreen";
@@ -105,31 +106,62 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       return;
     }
 
-    if (window.JitsiMeetExternalAPI) {
-      initJitsi();
-    } else {
-      const script = document.createElement("script");
-      script.src = "https://8x8.vc/external_api.js";
-      script.async = true;
-      script.onload = () => initJitsi();
-      script.onerror = () => {
+    // Fetch JaaS JWT
+    try {
+      const { data: jwtData, error: jwtError } = await supabase.functions.invoke("generate-jitsi-jwt", {
+        body: {
+          roomName: `StudySync-${booking?.id || "demo-session"}`,
+          userName: sessionType === "tutor" ? "Tutor" : "Learner",
+          userEmail: "",
+          isModerator: sessionType === "tutor",
+        },
+      });
+
+      if (jwtError || !jwtData?.token) {
+        console.error("[VideoMeeting] JWT fetch failed:", jwtError, jwtData);
+        toast({ title: "Auth Failed", description: "Could not authenticate video session. Please try again.", variant: "destructive" });
+        setScreen("precall");
         setIsLoading(false);
-        setScreen("meeting");
-        toast({ title: "Connection Failed", description: "Unable to load video service.", variant: "destructive" });
-      };
-      document.body.appendChild(script);
+        return;
+      }
+
+      const appId = jwtData.appId;
+      const jwt = jwtData.token;
+      const scriptSrc = `https://8x8.vc/${appId}/external_api.js`;
+
+      if (window.JitsiMeetExternalAPI) {
+        initJitsi(appId, jwt);
+      } else {
+        const script = document.createElement("script");
+        script.src = scriptSrc;
+        script.async = true;
+        script.onload = () => initJitsi(appId, jwt);
+        script.onerror = () => {
+          setIsLoading(false);
+          setScreen("meeting");
+          toast({ title: "Connection Failed", description: "Unable to load video service.", variant: "destructive" });
+        };
+        document.body.appendChild(script);
+      }
+    } catch (err: any) {
+      console.error("[VideoMeeting] JWT error:", err);
+      toast({ title: "Setup Failed", description: err.message || "Video setup failed.", variant: "destructive" });
+      setScreen("precall");
+      setIsLoading(false);
     }
   };
 
-  const initJitsi = () => {
+  const initJitsi = (appId: string, jwt: string) => {
     if (!jitsiContainer.current || jitsiApi.current) return;
     const roomName = `StudySync-${booking?.id || "demo-session"}`;
-    console.log("[VideoMeeting] Joining room:", roomName);
+    const fullRoomName = `${appId}/${roomName}`;
+    console.log("[VideoMeeting] Joining JaaS room:", fullRoomName);
     const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
     try {
       jitsiApi.current = new window.JitsiMeetExternalAPI("8x8.vc", {
-        roomName,
+        roomName: fullRoomName,
+        jwt,
         width: "100%",
         height: "100%",
         parentNode: jitsiContainer.current,
