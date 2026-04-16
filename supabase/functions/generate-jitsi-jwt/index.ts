@@ -1,4 +1,7 @@
-import { corsHeaders } from '@supabase/supabase-js/cors'
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
 
 const JAAS_APP_ID = Deno.env.get("JAAS_APP_ID") || "";
 const JAAS_API_KEY_ID = Deno.env.get("JAAS_API_KEY_ID") || "";
