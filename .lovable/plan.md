@@ -1,30 +1,38 @@
 
 
-## Plan: Fix Jitsi Meet Connection — Both Users Stuck on "Waiting"
+## Plan: Proper 8x8 JaaS Setup for Auto-Join Video Meetings
 
-### Root Cause
+### Why it's broken now
+The screenshot shows the 8x8.vc **prejoin page** appearing with a manual "Join meeting" button. This happens because `8x8.vc` is the JaaS (Jitsi-as-a-Service) platform, and without a valid **AppID** and **JWT token**, it ignores `prejoinPageEnabled: false` and forces the prejoin screen. Both users get stuck there.
 
-The `meet.jit.si` public instance has increasingly restricted External API (`JitsiMeetExternalAPI`) usage. The free public Jitsi server now requires authentication for embedded iframe use, causing both participants to join what appear to be isolated rooms — the `participantJoined` event never fires because the server doesn't bridge them.
+### What's needed
 
-Additionally, there's a defensive issue: if `room_name` happens to be `null` in the DB (e.g., older bookings created before the `room_name` field was added), the fallback uses `booking?.id` which could differ if the booking object shape varies between tutor and learner queries.
+**Step 1: You create a free JaaS account**
+1. Go to [https://jaas.8x8.vc](https://jaas.8x8.vc) and sign up (free tier: 25 users/month)
+2. In the JaaS dashboard, copy your **AppID** (looks like `vpaas-magic-cookie-abc123...`)
+3. Generate an **API Key** — download the **Private Key** file (.pk) and note the **Key ID** (kid)
 
-### Fix
+**Step 2: Store secrets in Supabase**
+- `JAAS_APP_ID` — your AppID string
+- `JAAS_API_KEY_ID` — the kid from your API key
+- `JAAS_PRIVATE_KEY` — the RSA private key contents
 
-**1. Switch Jitsi domain to `8x8.vc` (JaaS free tier) (`src/components/VideoMeeting.tsx`)**
-- Replace `"meet.jit.si"` with `"8x8.vc"` which still supports the free External API for basic usage
-- Alternatively, add `"jitsi1.oovoo.com"` or another public instance as a fallback
-- Add logging of the actual `roomName` used so mismatches can be debugged
+**Step 3: Create a `generate-jitsi-jwt` Edge Function**
+- Accepts: `roomName`, `userName`, `userEmail`, `isModerator`
+- Signs a JWT with RS256 using the private key
+- Returns a short-lived JWT (1 hour expiry) with proper JaaS claims (`aud: "jitsi"`, `sub: AppID`, `room: "*"`, `context.user`)
 
-**2. Ensure deterministic room names (`src/components/VideoMeeting.tsx`)**
-- Change the fallback from `booking?.room_name || StudySync-${booking?.id || "demo-session"}` to always use the booking ID as the canonical room name: `StudySync-${booking?.id}`
-- This guarantees both sides join the same room even if `room_name` is null
+**Step 4: Update `VideoMeeting.tsx`**
+- Before initializing Jitsi, call the edge function to get a JWT
+- Pass `roomName` in format `<AppID>/<room>` (e.g., `vpaas-magic-cookie-abc123/StudySync-booking-id`)
+- Pass the JWT in the `jwt` option
+- Load the script from `https://8x8.vc/<AppID>/external_api.js`
+- Keep `prejoinPageEnabled: false` — with a valid JWT, 8x8 will respect it and auto-join
 
-**3. Add debug toast showing room name on join (`src/components/VideoMeeting.tsx`)**
-- Temporarily show the room name in the "Connected" toast so you can verify both users are in the same room during testing
+### Files changed
+1. `supabase/functions/generate-jitsi-jwt/index.ts` — new Edge Function for JWT generation
+2. `src/components/VideoMeeting.tsx` — call edge function for JWT, update domain/roomName format
 
-**4. Remove `TOOLBAR_BUTTONS: []` override (`src/components/VideoMeeting.tsx`)**
-- Empty toolbar buttons array may cause Jitsi to behave unexpectedly on some instances — remove it and let the custom control bar handle the UI (toolbarButtons are already hidden by the z-index overlay)
-
-### Files Changed
-1. `src/components/VideoMeeting.tsx` — Switch domain, fix room name fallback, add debug logging, clean config
+### Result
+Both tutor and learner will auto-join the same room without seeing the prejoin screen. The JWT authenticates both participants and 8x8 respects the `prejoinPageEnabled: false` config.
 
