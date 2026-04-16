@@ -1,50 +1,30 @@
 
 
-## Plan: Fix Jitsi Container Lifecycle — Iframe Destroyed on Screen Transition
+## Plan: Fix Jitsi Meet Connection — Both Users Stuck on "Waiting"
 
 ### Root Cause
-The `jitsiContainer` ref div exists in **two separate conditional returns**:
-- Line 261: inside `if (screen === "connecting")` return
-- Line 342: inside the meeting screen return
 
-When the screen transitions from `connecting` → `meeting`, React unmounts the connecting return (destroying the Jitsi iframe) and mounts the meeting return with a **new empty div**. Both tutor and learner lose their Jitsi connection and see "waiting for the other person."
+The `meet.jit.si` public instance has increasingly restricted External API (`JitsiMeetExternalAPI`) usage. The free public Jitsi server now requires authentication for embedded iframe use, causing both participants to join what appear to be isolated rooms — the `participantJoined` event never fires because the server doesn't bridge them.
 
-The `precall` return (line 239) doesn't include the container at all, so the ref is null when `initJitsi` first runs if timing is tight.
+Additionally, there's a defensive issue: if `room_name` happens to be `null` in the DB (e.g., older bookings created before the `room_name` field was added), the fallback uses `booking?.id` which could differ if the booking object shape varies between tutor and learner queries.
 
-### Fix (`src/components/VideoMeeting.tsx`)
+### Fix
 
-**Move the Jitsi container div to a single persistent location rendered in ALL screen states:**
+**1. Switch Jitsi domain to `8x8.vc` (JaaS free tier) (`src/components/VideoMeeting.tsx`)**
+- Replace `"meet.jit.si"` with `"8x8.vc"` which still supports the free External API for basic usage
+- Alternatively, add `"jitsi1.oovoo.com"` or another public instance as a fallback
+- Add logging of the actual `roomName` used so mismatches can be debugged
 
-1. Remove `<div ref={jitsiContainer}>` from the `connecting` return (line 261)
-2. Remove `<div ref={jitsiContainer}>` from the meeting screen body (lines 340-343)
-3. Add a single persistent Jitsi container div that renders **after every conditional return** — this won't work with early returns. Instead, restructure so all screens render inside a single return, with the Jitsi container always present:
+**2. Ensure deterministic room names (`src/components/VideoMeeting.tsx`)**
+- Change the fallback from `booking?.room_name || StudySync-${booking?.id || "demo-session"}` to always use the booking ID as the canonical room name: `StudySync-${booking?.id}`
+- This guarantees both sides join the same room even if `room_name` is null
 
-```
-return (
-  <>
-    {/* Persistent Jitsi container — always in DOM */}
-    <div className={jitsiContainerClass}>
-      <div ref={jitsiContainer} className="w-full h-full" />
-    </div>
+**3. Add debug toast showing room name on join (`src/components/VideoMeeting.tsx`)**
+- Temporarily show the room name in the "Connected" toast so you can verify both users are in the same room during testing
 
-    {screen === "precall" && <PreCallScreen ... />}
-    {screen === "connecting" && <ConnectingScreen ... />}
-    {screen === "summary" && <MeetingSummaryScreen ... />}
-    {screen === "meeting" && (
-      <div className="fixed inset-0 flex flex-col bg-[#0d0d1a]">
-        <MeetingTopBar ... />
-        {/* errors, waiting banner, loading overlay, notes, controls */}
-      </div>
-    )}
-  </>
-);
-```
-
-4. Update `jitsiContainerClass` to show full-screen during `meeting` and `connecting`, and be hidden (`w-0 h-0 overflow-hidden`) during `precall` and `summary`.
-
-### Why This Fixes It
-The Jitsi iframe mounts once during `initJitsi` and stays in the DOM across all screen transitions. When `videoConferenceJoined` fires and screen flips to `meeting`, the iframe is already connected — no re-creation needed. Both users stay in the same room.
+**4. Remove `TOOLBAR_BUTTONS: []` override (`src/components/VideoMeeting.tsx`)**
+- Empty toolbar buttons array may cause Jitsi to behave unexpectedly on some instances — remove it and let the custom control bar handle the UI (toolbarButtons are already hidden by the z-index overlay)
 
 ### Files Changed
-1. `src/components/VideoMeeting.tsx` — Restructure to single return with persistent Jitsi container
+1. `src/components/VideoMeeting.tsx` — Switch domain, fix room name fallback, add debug logging, clean config
 
