@@ -19,13 +19,25 @@ function strToUint8(str: string): Uint8Array {
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
+  console.log("[DEBUG] Raw key length:", pem.length);
+  console.log("[DEBUG] First 50 chars:", pem.substring(0, 50));
+  console.log("[DEBUG] Last 50 chars:", pem.substring(pem.length - 50));
+  console.log("[DEBUG] Contains literal backslash-n:", pem.includes("\\n"));
+  console.log("[DEBUG] Contains actual newlines:", pem.includes("\n"));
+  console.log("[DEBUG] Contains BEGIN:", pem.includes("BEGIN"));
+  
   // Handle literal \n strings (common when pasting into secret managers)
   let cleaned = pem.replace(/\\n/g, "\n");
-  // Remove all PEM header/footer lines
-  cleaned = cleaned.replace(/-----BEGIN [A-Z ]+-----/g, "");
-  cleaned = cleaned.replace(/-----END [A-Z ]+-----/g, "");
-  // Remove all whitespace (spaces, newlines, tabs, carriage returns)
+  // Remove all PEM header/footer lines (case insensitive, any key type)
+  cleaned = cleaned.replace(/-----BEGIN [A-Za-z0-9 ]+-----/g, "");
+  cleaned = cleaned.replace(/-----END [A-Za-z0-9 ]+-----/g, "");
+  // Remove all whitespace
   cleaned = cleaned.replace(/\s+/g, "");
+  // Remove any non-base64 characters that might have been introduced
+  cleaned = cleaned.replace(/[^A-Za-z0-9+/=]/g, "");
+  
+  console.log("[DEBUG] Cleaned key length:", cleaned.length);
+  console.log("[DEBUG] First 20 cleaned chars:", cleaned.substring(0, 20));
   
   if (!cleaned) {
     throw new Error("Private key is empty after parsing. Check JAAS_PRIVATE_KEY secret format.");
