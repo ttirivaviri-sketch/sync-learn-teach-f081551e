@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.sail-agent]
 verify_jwt = false
+
+[functions.generate-jitsi-jwt]
+verify_jwt = false
