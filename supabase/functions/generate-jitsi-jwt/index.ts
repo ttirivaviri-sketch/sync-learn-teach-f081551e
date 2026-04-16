@@ -18,35 +18,48 @@ function strToUint8(str: string): Uint8Array {
   return new TextEncoder().encode(str);
 }
 
+function normalizePem(pem: string): string {
+  return pem.replace(/\\n/g, "\n").trim();
+}
+
+function detectPemFormat(pem: string): "pkcs8" | "pkcs1" {
+  if (/-----BEGIN RSA PRIVATE KEY-----/.test(pem)) return "pkcs1";
+  return "pkcs8";
+}
+
 function pemToArrayBuffer(pem: string): ArrayBuffer {
-  console.log("[DEBUG] Raw key length:", pem.length);
-  console.log("[DEBUG] First 50 chars:", pem.substring(0, 50));
-  console.log("[DEBUG] Last 50 chars:", pem.substring(pem.length - 50));
-  console.log("[DEBUG] Contains literal backslash-n:", pem.includes("\\n"));
-  console.log("[DEBUG] Contains actual newlines:", pem.includes("\n"));
-  console.log("[DEBUG] Contains BEGIN:", pem.includes("BEGIN"));
-  
-  // Handle literal \n strings (common when pasting into secret managers)
-  let cleaned = pem.replace(/\\n/g, "\n");
-  // Remove all PEM header/footer lines (case insensitive, any key type)
+  let cleaned = normalizePem(pem);
   cleaned = cleaned.replace(/-----BEGIN [A-Za-z0-9 ]+-----/g, "");
   cleaned = cleaned.replace(/-----END [A-Za-z0-9 ]+-----/g, "");
-  // Remove all whitespace
   cleaned = cleaned.replace(/\s+/g, "");
-  // Remove any non-base64 characters that might have been introduced
   cleaned = cleaned.replace(/[^A-Za-z0-9+/=]/g, "");
-  
-  console.log("[DEBUG] Cleaned key length:", cleaned.length);
-  console.log("[DEBUG] First 20 cleaned chars:", cleaned.substring(0, 20));
-  
+
   if (!cleaned) {
     throw new Error("Private key is empty after parsing. Check JAAS_PRIVATE_KEY secret format.");
   }
-  
+
   const binary = atob(cleaned);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes.buffer;
+}
+
+async function importPrivateKey(pem: string): Promise<CryptoKey> {
+  const normalizedPem = normalizePem(pem);
+  const keyData = pemToArrayBuffer(normalizedPem);
+  const format = detectPemFormat(normalizedPem);
+
+  if (format === "pkcs8") {
+    return crypto.subtle.importKey(
+      "pkcs8",
+      keyData,
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+  }
+
+  throw new Error("JAAS_PRIVATE_KEY is in PKCS#1 (RSA PRIVATE KEY) format. Please re-save it as PKCS#8 PEM (BEGIN PRIVATE KEY) in Supabase secrets.");
 }
 
 async function signJwt(payload: Record<string, unknown>): Promise<string> {
@@ -55,14 +68,7 @@ async function signJwt(payload: Record<string, unknown>): Promise<string> {
   const payloadB64 = base64url(strToUint8(JSON.stringify(payload)));
   const data = strToUint8(`${headerB64}.${payloadB64}`);
 
-  const key = await crypto.subtle.importKey(
-    "pkcs8",
-    pemToArrayBuffer(JAAS_PRIVATE_KEY),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
+  const key = await importPrivateKey(JAAS_PRIVATE_KEY);
   const signature = new Uint8Array(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, data));
   return `${headerB64}.${payloadB64}.${base64url(signature)}`;
 }
@@ -113,7 +119,8 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("[generate-jitsi-jwt] Error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    return new Response(JSON.stringify({ error: message }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
