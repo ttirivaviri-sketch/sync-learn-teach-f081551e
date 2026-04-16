@@ -43,6 +43,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const [sessionDuration, setSessionDuration] = useState(0);
   const scheduledDuration = booking?.duration_minutes || 60;
   const [isLoading, setIsLoading] = useState(true);
+  const [hasJoinedSession, setHasJoinedSession] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [participantCount, setParticipantCount] = useState(1);
   const [connectionQuality, setConnectionQuality] = useState<"good" | "poor" | "unknown">("unknown");
@@ -93,6 +94,12 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   // Jitsi init
   const initSession = async () => {
     setScreen("connecting");
+    setIsLoading(true);
+    setPermissionError(null);
+    setHasJoinedSession(false);
+    setParticipantCount(1);
+    setSessionStartTime(null);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       stream.getTracks().forEach((t) => t.stop());
@@ -171,6 +178,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           startWithVideoMuted: false,
           enableWelcomePage: false,
           prejoinPageEnabled: false,
+          prejoinConfig: { enabled: false },
           disableDeepLinking: true,
           enableNoisyMicDetection: true,
           enableNoAudioDetection: true,
@@ -189,8 +197,14 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         userInfo: { displayName },
       });
 
+      setScreen("meeting");
+      setIsLoading(false);
+
       jitsiApi.current.addEventListener("videoConferenceJoined", () => {
-        setIsLoading(false); setScreen("meeting"); setSessionStartTime(new Date());
+        setHasJoinedSession(true);
+        setIsLoading(false);
+        setScreen("meeting");
+        setSessionStartTime(new Date());
         toast({ title: "Connected ✓", description: `Joined room: ${roomName}` });
       });
       jitsiApi.current.addEventListener("participantJoined", (p: any) => {
@@ -211,10 +225,6 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       jitsiApi.current.addEventListener("errorOccurred", (e: any) => {
         toast({ title: "Connection Error", description: e.message || "Video error occurred.", variant: "destructive" });
       });
-
-      setTimeout(() => {
-        if (isLoading) { setIsLoading(false); setScreen("meeting"); }
-      }, 30000);
     } catch {
       setIsLoading(false);
       setScreen("meeting");
@@ -225,6 +235,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   // Controls
   const handleEndCall = () => {
     if (jitsiApi.current) { jitsiApi.current.dispose(); jitsiApi.current = null; }
+    setHasJoinedSession(false);
     setSummaryNotes(notes);
     setScreen("summary");
   };
@@ -304,21 +315,24 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           className="fixed inset-0 z-10 flex flex-col pointer-events-none"
           onPointerMove={resetHideTimer}
           onPointerDown={resetHideTimer}
-          style={{ pointerEvents: "auto" }}
         >
-          <MeetingTopBar
-            subject={subject}
-            partnerName={partnerName}
-            connectionQuality={connectionQuality}
-            participantCount={participantCount}
-            sessionDuration={sessionDuration}
-            scheduledDuration={scheduledDuration}
-            hidden={controlsHidden}
-          />
+          {hasJoinedSession && (
+            <div className="pointer-events-auto">
+              <MeetingTopBar
+                subject={subject}
+                partnerName={partnerName}
+                connectionQuality={connectionQuality}
+                participantCount={participantCount}
+                sessionDuration={sessionDuration}
+                scheduledDuration={scheduledDuration}
+                hidden={controlsHidden}
+              />
+            </div>
+          )}
 
           {/* Permission Error */}
           {permissionError && (
-            <div className="absolute top-16 left-4 right-4 z-40">
+            <div className="absolute top-16 left-4 right-4 z-40 pointer-events-auto">
               <Alert variant="destructive" className="border-red-500/50 bg-red-950/80 text-red-200">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
@@ -332,7 +346,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           )}
 
           {/* Waiting banner */}
-          {!isLoading && participantCount === 1 && !permissionError && (
+          {hasJoinedSession && !isLoading && participantCount === 1 && !permissionError && (
             <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-xs px-4">
               <div className="flex items-center gap-2 bg-black/50 backdrop-blur border border-white/10 rounded-2xl px-4 py-3 text-white/80">
                 <div className="relative flex h-2 w-2 shrink-0">
@@ -363,8 +377,8 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           <div className="flex-1" />
 
           {/* Session Notes panel */}
-          {showNotes && (
-            <div className="absolute right-0 top-0 bottom-20 w-72 bg-[#0d0d1a]/95 border-l border-white/10 z-25 flex flex-col">
+          {hasJoinedSession && showNotes && (
+            <div className="absolute right-0 top-0 bottom-20 w-72 bg-[#0d0d1a]/95 border-l border-white/10 z-25 flex flex-col pointer-events-auto">
               <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                 <div className="flex items-center gap-2 text-white">
                   <PenLine className="h-4 w-4" />
@@ -384,26 +398,30 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
             </div>
           )}
 
-          <MeetingControlBar
-            isAudioMuted={isAudioMuted}
-            isVideoMuted={isVideoMuted}
-            isScreenSharing={isScreenSharing}
-            isHandRaised={isHandRaised}
-            isFullscreen={isFullscreen}
-            showNotes={showNotes}
-            hidden={controlsHidden}
-            onToggleAudio={toggleAudio}
-            onToggleVideo={toggleVideo}
-            onToggleScreenShare={toggleScreenShare}
-            onToggleHandRaise={toggleHandRaise}
-            onToggleFullscreen={toggleFullscreen}
-            onToggleNotes={() => setShowNotes((n) => !n)}
-            onEndCall={handleEndCall}
-          />
+          {hasJoinedSession && (
+            <div className="pointer-events-auto">
+              <MeetingControlBar
+                isAudioMuted={isAudioMuted}
+                isVideoMuted={isVideoMuted}
+                isScreenSharing={isScreenSharing}
+                isHandRaised={isHandRaised}
+                isFullscreen={isFullscreen}
+                showNotes={showNotes}
+                hidden={controlsHidden}
+                onToggleAudio={toggleAudio}
+                onToggleVideo={toggleVideo}
+                onToggleScreenShare={toggleScreenShare}
+                onToggleHandRaise={toggleHandRaise}
+                onToggleFullscreen={toggleFullscreen}
+                onToggleNotes={() => setShowNotes((n) => !n)}
+                onEndCall={handleEndCall}
+              />
+            </div>
+          )}
 
           {/* Tap anywhere to reveal controls when hidden */}
-          {controlsHidden && (
-            <button className="absolute inset-0 z-20 cursor-default" onClick={resetHideTimer} aria-label="Show controls" />
+          {hasJoinedSession && controlsHidden && (
+            <button className="absolute inset-0 z-20 cursor-default pointer-events-auto" onClick={resetHideTimer} aria-label="Show controls" />
           )}
         </div>
       )}
