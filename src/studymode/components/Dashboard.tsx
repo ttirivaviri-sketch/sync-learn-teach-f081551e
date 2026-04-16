@@ -107,7 +107,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const hasSubjects = subjects.length > 0;
   
   // Task persistence — enhanced with AI context
-  const { getTasksForSubject } = useDailyTasks(subjects, aiContextPayload);
+  const { getTasksForSubject, completeTask, ensureTasks, addBonusTask, yesterdayIncomplete, todayIncomplete } = useDailyTasks(subjects, aiContextPayload);
+
+  // Seed today's tasks on mount
+  useEffect(() => {
+    if (subjects.length > 0) {
+      ensureTasks.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects.length]);
+
+  // Streak reminder state
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+  const currentHour = new Date().getHours();
   
   // Badge earning — auto-checks on progress changes
   useBadgeEarning();
