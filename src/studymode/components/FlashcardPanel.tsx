@@ -215,6 +215,26 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
               </p>
             )}
           </div>
+
+          {/* What you missed — AI feedback */}
+          {!skipped && userAnswer.trim() && (feedbackLoading || feedback) && (
+            <div className="w-full rounded-xl border border-warning/30 p-4 bg-warning/5">
+              <div className="flex items-center gap-2 mb-2">
+                <XCircle className="h-4 w-4 text-warning shrink-0" />
+                <p className="text-xs font-semibold text-warning uppercase tracking-wide">What You Missed</p>
+              </div>
+              {feedbackLoading && !feedback ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Analysing your answer...</span>
+                </div>
+              ) : feedback ? (
+                <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+                  <MathMarkdown>{feedback}</MathMarkdown>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
 
