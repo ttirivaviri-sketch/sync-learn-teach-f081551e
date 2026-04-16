@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import { AdvancedBooking } from "@/components/AdvancedBooking";
+
 import StarRating from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
 import type { TutorProfile } from "@/hooks/useTutorData";
@@ -199,7 +199,7 @@ export const LearnerHomeTab = ({
       </SheetContent>
     </Sheet>
 
-    <AdvancedBooking />
+    
 
     {/* Search Bar */}
     <div className="relative">

@@ -1,7 +1,8 @@
-import { DollarSign, MapPin } from "lucide-react";
+import { DollarSign, MapPin, CalendarCheck } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { OnlineStatus } from "@/components/OnlineStatus";
 import { TutorProfile } from "@/hooks/useTutorData";
 
@@ -41,7 +42,7 @@ export function TutorBrowseCard({ tutor, isSelected, onSelect }: TutorBrowseCard
               ))}
             </div>
             {tutor.bio && <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{tutor.bio}</p>}
-            <div className="flex items-center gap-4 text-sm">
+            <div className="flex items-center gap-4 text-sm mb-3">
               <span className="flex items-center gap-1 text-primary font-medium">
                 <DollarSign className="w-4 h-4" />
                 R{tutor.subjects[0]?.hourly_rate || 0}/hour
@@ -51,6 +52,10 @@ export function TutorBrowseCard({ tutor, isSelected, onSelect }: TutorBrowseCard
                 {tutor.distance || "Location unknown"}
               </span>
             </div>
+            <Button size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+              <CalendarCheck className="w-4 h-4 mr-1" />
+              Book Now
+            </Button>
           </div>
         </div>
       </CardContent>
