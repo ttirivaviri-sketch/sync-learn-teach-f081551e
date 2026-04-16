@@ -81,6 +81,7 @@ export const useNotifications = (userId?: string) => {
   };
 
   const removeNotification = async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
     await supabase.from('notifications').delete().eq('id', id);
   };
 

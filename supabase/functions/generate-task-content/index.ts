@@ -78,7 +78,16 @@ ${GLOBAL_ALIGNMENT}`,
 
 YOUR TASK: Create a concept deep-dive lesson.
 
+IMPORTANT — SUBTOPIC DIVERSIFICATION:
+- You MUST focus on a DIFFERENT subtopic each time this task is generated.
+- If "previouslyStudiedSubtopics" are provided, you MUST NOT repeat those subtopics. Choose a subtopic that has NOT been covered yet.
+- If all subtopics have been covered, revisit the weakest or least-recently-studied one with a fresh angle (different examples, deeper application, exam edge cases).
+- Pick ONE specific subtopic and go deep rather than giving a shallow overview of the whole topic.
+- State which subtopic you are covering at the top of your response.
+
 FORMAT:
+## Subtopic Focus: [Specific subtopic name]
+
 ## Why This Matters
 [Exam relevance, weighting, how often it appears]
 
@@ -267,6 +276,7 @@ serve(async (req) => {
       weakAreas,
       notesOrDocuments,
       pastPaperContext,
+      previouslyStudiedSubtopics,
     } = body;
 
     if (!taskType || !subject || !topic) {
@@ -302,7 +312,11 @@ serve(async (req) => {
       masteryStatus,
     });
 
-    const userPrompt = `Generate ${taskType} content for the topic "${topic}" in ${subject}.\n\n${context}`;
+    let userPrompt = `Generate ${taskType} content for the topic "${topic}" in ${subject}.\n\n${context}`;
+
+    if (previouslyStudiedSubtopics && previouslyStudiedSubtopics.length > 0) {
+      userPrompt += `\n\nPREVIOUSLY STUDIED SUBTOPICS (do NOT repeat these — pick a different one):\n- ${previouslyStudiedSubtopics.join('\n- ')}`;
+    }
 
     // ── Make streaming request to AI API ──────────────────────────────────
     const aiResponse = await fetch(ai.url, {
