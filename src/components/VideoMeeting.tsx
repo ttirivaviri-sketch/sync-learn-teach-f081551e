@@ -58,7 +58,6 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const [rating, setRating] = useState(0);
   const [summaryNotes, setSummaryNotes] = useState("");
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const hasJoinedRef = useRef(false);
 
   // Timer
   useEffect(() => {
@@ -98,7 +97,8 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     setIsLoading(true);
     setPermissionError(null);
     setHasJoinedSession(false);
-    hasJoinedRef.current = false;
+    setParticipantCount(1);
+    setSessionStartTime(null);
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -201,7 +201,6 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       setIsLoading(false);
 
       jitsiApi.current.addEventListener("videoConferenceJoined", () => {
-        hasJoinedRef.current = true;
         setHasJoinedSession(true);
         setIsLoading(false);
         setScreen("meeting");
@@ -236,7 +235,6 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   // Controls
   const handleEndCall = () => {
     if (jitsiApi.current) { jitsiApi.current.dispose(); jitsiApi.current = null; }
-    hasJoinedRef.current = false;
     setHasJoinedSession(false);
     setSummaryNotes(notes);
     setScreen("summary");
