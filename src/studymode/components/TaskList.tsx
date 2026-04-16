@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 interface TaskListProps {
   tasks: DailyTask[];
   onTaskClick: (task: DailyTask) => void;
+  onAddBonusTask?: () => void;
 }
 
 const taskIcons: Record<string, typeof BookOpen> = {
