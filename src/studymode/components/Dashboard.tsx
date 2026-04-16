@@ -107,7 +107,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const hasSubjects = subjects.length > 0;
   
   // Task persistence — enhanced with AI context
-  const { getTasksForSubject } = useDailyTasks(subjects, aiContextPayload);
+  const { getTasksForSubject, completeTask, ensureTasks, addBonusTask, yesterdayIncomplete, todayIncomplete } = useDailyTasks(subjects, aiContextPayload);
+
+  // Seed today's tasks on mount
+  useEffect(() => {
+    if (subjects.length > 0) {
+      ensureTasks.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects.length]);
+
+  // Streak reminder state
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+  const currentHour = new Date().getHours();
   
   // Badge earning — auto-checks on progress changes
   useBadgeEarning();
@@ -204,6 +216,8 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           tasks={dynamicTasks}
           onBack={() => setSelectedSubject(null)}
           onOpenChat={onOpenChat}
+          onCompleteTask={(taskId) => completeTask.mutate(taskId)}
+          onAddBonusTask={() => addBonusTask.mutate(selectedSubject.id)}
         />
       </div>
     );
@@ -262,6 +276,36 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             </div>
           ) : (
             <>
+              {/* Streak & Missed Task Reminders */}
+              {!reminderDismissed && hasSubjects && (
+                <>
+                  {yesterdayIncomplete.length > 0 && (
+                    <div className="mb-4 p-3 rounded-xl bg-warning/10 border border-warning/30 flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          You left {yesterdayIncomplete.length} task{yesterdayIncomplete.length > 1 ? 's' : ''} unfinished yesterday.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Complete today's tasks to keep your streak going!
+                        </p>
+                      </div>
+                      <button onClick={() => setReminderDismissed(true)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+                    </div>
+                  )}
+                  {currentHour >= 20 && todayIncomplete.length > 0 && yesterdayIncomplete.length === 0 && (
+                    <div className="mb-4 p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-start gap-3">
+                      <Clock className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          Don't forget to finish today's {todayIncomplete.length} remaining task{todayIncomplete.length > 1 ? 's' : ''} before midnight!
+                        </p>
+                      </div>
+                      <button onClick={() => setReminderDismissed(true)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+                    </div>
+                  )}
+                </>
+              )}
               {hasSubjects ? (
                 <>
                   <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>

@@ -21,9 +21,11 @@ interface SubjectDetailProps {
   tasks: DailyTask[];
   onBack: () => void;
   onOpenChat?: (subject: string, topic: string) => void;
+  onCompleteTask?: (taskId: string) => void;
+  onAddBonusTask?: () => void;
 }
 
-export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDetailProps) {
+export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTask, onAddBonusTask }: SubjectDetailProps) {
   const [selectedTask, setSelectedTask] = useState<DailyTask | null>(null);
   const [currentTasks, setCurrentTasks] = useState(tasks);
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
@@ -45,6 +47,9 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
 
   const handleTaskComplete = () => {
     if (!selectedTask) return;
+    
+    // Persist to DB
+    onCompleteTask?.(selectedTask.id);
     
     let nextUnlocked: DailyTask | null = null;
     
@@ -423,7 +428,11 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
              AI-powered content
            </span>
          </div>
-        <TaskList tasks={currentTasks} onTaskClick={setSelectedTask} />
+        <TaskList 
+          tasks={currentTasks} 
+          onTaskClick={setSelectedTask}
+          onAddBonusTask={onAddBonusTask}
+        />
       </div>
     </div>
   );

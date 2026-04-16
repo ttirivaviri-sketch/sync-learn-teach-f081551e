@@ -20,6 +20,10 @@ interface DbDailyTask {
   updated_at: string;
 }
 
+const TASK_TYPES: DailyTask['type'][] = [
+  'micro-revision', 'concept-learning', 'flashcards', 'active-recall', 'exam-question'
+];
+
 export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload | null) {
   const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
@@ -45,7 +49,6 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
           .eq('task_date', today);
 
         if (error) {
-          // Table might not exist yet — fall back to in-memory
           logger.warn('daily_tasks table not available:', error.message);
           return [];
         }
@@ -57,13 +60,35 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
     enabled: !!userId,
   });
 
+  // Fetch yesterday's incomplete tasks for streak reminder
+  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const { data: yesterdayTasks } = useQuery({
+    queryKey: ['daily-tasks-yesterday', userId, yesterday],
+    queryFn: async (): Promise<DbDailyTask[]> => {
+      if (!userId) return [];
+      try {
+        const { data, error } = await supabase
+          .from('daily_tasks')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('task_date', yesterday);
+        if (error) return [];
+        return (data as unknown as DbDailyTask[]) || [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!userId,
+  });
+
+  const yesterdayIncomplete = yesterdayTasks?.filter(t => !t.is_completed) || [];
+  const todayIncomplete = dbTasks?.filter(t => !t.is_completed) || [];
+
   // Generate tasks for a subject (used when no DB tasks exist)
-  // Enhanced with AI intelligence context for personalised task descriptions
   const generateTasksForSubject = (subject: Subject): DailyTask[] => {
     const topicName = subject.currentTopic?.name || 'General Review';
     const examWeight = subject.currentTopic?.examWeight || 5;
 
-    // Extract AI-driven context for richer task descriptions
     const diffLevel = aiContext?.difficultyLevel || 'medium';
     const weakAreas = aiContext?.weakAreas || [];
     const isWeakTopic = weakAreas.some(w =>
@@ -71,7 +96,6 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
       topicName.toLowerCase().includes(w.toLowerCase())
     );
 
-    // Adjust descriptions based on AI intelligence
     const difficultyLabel = diffLevel === 'easy' ? 'foundational'
       : diffLevel === 'exam-level' ? 'exam-style'
       : diffLevel;
@@ -138,7 +162,6 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
       // Check if tasks already exist for today
       if (dbTasks && dbTasks.length > 0) return;
 
-      // Generate enriched tasks using AI intelligence
       const tasksToInsert = subjects.flatMap(subject => {
         const generated = generateTasksForSubject(subject);
         return generated.map(task => ({
@@ -176,7 +199,6 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
       if (!userId) throw new Error('Not authenticated');
 
       try {
-        // Try to update in DB
         const { error } = await supabase
           .from('daily_tasks')
           .update({
@@ -213,6 +235,53 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
     },
   });
 
+  // Add a bonus task for a subject
+  const addBonusTask = useMutation({
+    mutationFn: async (subjectId: string) => {
+      if (!userId) throw new Error('Not authenticated');
+
+      const subject = subjects.find(s => s.id === subjectId);
+      if (!subject) throw new Error('Subject not found');
+
+      const topicName = subject.currentTopic?.name || 'General Review';
+      const randomType = TASK_TYPES[Math.floor(Math.random() * TASK_TYPES.length)];
+      const taskTitles: Record<string, string> = {
+        'micro-revision': 'Bonus Review',
+        'concept-learning': 'Bonus Concept Deep Dive',
+        'flashcards': 'Bonus Flashcards',
+        'active-recall': 'Bonus Active Recall',
+        'exam-question': 'Bonus Exam Question',
+      };
+
+      const taskRow = {
+        user_id: userId,
+        subject_id: subjectId,
+        task_type: randomType,
+        title: taskTitles[randomType] || 'Bonus Task',
+        description: `Extra practice on ${topicName} — keep building mastery!`,
+        is_completed: false,
+        is_locked: false,
+        task_date: today,
+      };
+
+      const { data, error } = await supabase
+        .from('daily_tasks')
+        .insert(taskRow)
+        .select()
+        .single();
+
+      if (error) {
+        logger.warn('Could not create bonus task:', error.message);
+        throw error;
+      }
+
+      return data as unknown as DbDailyTask;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['daily-tasks', userId, today] });
+    },
+  });
+
   // Get tasks for a specific subject — prefer DB, fallback to generated
   const getTasksForSubject = (subject: Subject): DailyTask[] => {
     const subjectDbTasks = dbTasks?.filter(t => t.subject_id === subject.id) || [];
@@ -236,7 +305,10 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
     getTasksForSubject,
     completeTask,
     ensureTasks,
+    addBonusTask,
     isLoading,
     tasksCount: dbTasks?.length || 0,
+    yesterdayIncomplete,
+    todayIncomplete,
   };
 }

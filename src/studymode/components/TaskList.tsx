@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 interface TaskListProps {
   tasks: DailyTask[];
   onTaskClick: (task: DailyTask) => void;
+  onAddBonusTask?: () => void;
 }
 
 const taskIcons: Record<string, typeof BookOpen> = {
@@ -37,7 +38,9 @@ const taskDurations: Record<string, string> = {
   'revision-checklist': '4 min',
 };
 
-export function TaskList({ tasks, onTaskClick }: TaskListProps) {
+export function TaskList({ tasks, onTaskClick, onAddBonusTask }: TaskListProps) {
+  const allCompleted = tasks.length > 0 && tasks.every(t => t.isCompleted);
+
   return (
     <div className="space-y-3">
       {tasks.map((task, index) => {
@@ -118,6 +121,17 @@ export function TaskList({ tasks, onTaskClick }: TaskListProps) {
           </div>
         );
       })}
+
+      {/* Practice More button when all tasks completed */}
+      {allCompleted && onAddBonusTask && (
+        <button
+          onClick={onAddBonusTask}
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent font-semibold"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Practice More — Add Another Task
+        </button>
+      )}
     </div>
   );
 }
