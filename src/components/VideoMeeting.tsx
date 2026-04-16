@@ -109,7 +109,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       initJitsi();
     } else {
       const script = document.createElement("script");
-      script.src = "https://meet.jit.si/external_api.js";
+      script.src = "https://8x8.vc/external_api.js";
       script.async = true;
       script.onload = () => initJitsi();
       script.onerror = () => {
