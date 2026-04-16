@@ -85,6 +85,8 @@ export const LearnerHomeTab = ({
   const upcomingCount = upcomingBookings.length;
 
   const isJoinable = (booking: any) => {
+    if (booking.status !== "confirmed") return false;
+    if (needsPayment?.(booking.id)) return false;
     const start = new Date(booking.scheduled_at).getTime();
     const now = Date.now();
     return now >= start - 15 * 60 * 1000 && now <= start + booking.duration_minutes * 60 * 1000;
