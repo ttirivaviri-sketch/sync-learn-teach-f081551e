@@ -8,6 +8,7 @@ import { useTaskContent } from '../hooks/useTaskContent';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface TaskContentPanelProps {
@@ -70,28 +71,60 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
     setRevealedEarly(false);
     setXpChange(0);
 
-    let performanceContext = '';
-    if (performance && performance.totalAttempts > 0) {
-      performanceContext = `Student accuracy on this topic: ${Math.round(performance.accuracy * 100)}%. `;
-      if (performance.masteryStatus === 'mastered') {
-        performanceContext += 'Student has mastered this topic — focus on exam application and edge cases.';
-      } else if (performance.weakConcepts.length > 0) {
-        performanceContext += `Student struggles with: ${performance.weakConcepts.join(', ')}. Prioritise these areas.`;
+    const loadAndGenerate = async () => {
+      let performanceContext = '';
+      if (performance && performance.totalAttempts > 0) {
+        performanceContext = `Student accuracy on this topic: ${Math.round(performance.accuracy * 100)}%. `;
+        if (performance.masteryStatus === 'mastered') {
+          performanceContext += 'Student has mastered this topic — focus on exam application and edge cases.';
+        } else if (performance.weakConcepts.length > 0) {
+          performanceContext += `Student struggles with: ${performance.weakConcepts.join(', ')}. Prioritise these areas.`;
+        }
       }
-    }
 
-    generateContent({
-      taskType: task.type,
-      subject: subject.name,
-      subjectId: subject.id,
-      topic: subject.currentTopic.name,
-      subtopics: subject.currentTopic.subtopics,
-      examWeight: examWeightFromPapers || subject.currentTopic.examWeight,
-      curriculumContext: curriculumContext || undefined,
-      performanceContext: performanceContext || undefined,
-      masteryStatus: performance?.masteryStatus,
-      difficulty: performance?.recommendedDifficulty,
-    });
+      // Query recently studied subtopics for concept-learning diversification
+      let previouslyStudiedSubtopics: string[] = [];
+      if (task.type === 'concept-learning') {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: recentActivity } = await supabase
+              .from('study_activity')
+              .select('metadata')
+              .eq('user_id', user.id)
+              .eq('subject', subject.name)
+              .eq('topic', subject.currentTopic.name)
+              .eq('activity_type', 'concept-learning')
+              .order('created_at', { ascending: false })
+              .limit(20);
+
+            if (recentActivity) {
+              previouslyStudiedSubtopics = recentActivity
+                .map(a => (a.metadata as any)?.subtopicFocus)
+                .filter(Boolean);
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      generateContent({
+        taskType: task.type,
+        subject: subject.name,
+        subjectId: subject.id,
+        topic: subject.currentTopic.name,
+        subtopics: subject.currentTopic.subtopics,
+        examWeight: examWeightFromPapers || subject.currentTopic.examWeight,
+        curriculumContext: curriculumContext || undefined,
+        performanceContext: performanceContext || undefined,
+        masteryStatus: performance?.masteryStatus,
+        difficulty: performance?.recommendedDifficulty,
+        previouslyStudiedSubtopics: previouslyStudiedSubtopics.length > 0 ? previouslyStudiedSubtopics : undefined,
+      });
+    };
+
+    loadAndGenerate();
   }, [task.id, contextLoaded]);
 
   const hasCurriculumData = !!curriculumContext;

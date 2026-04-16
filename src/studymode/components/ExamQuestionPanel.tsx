@@ -79,7 +79,7 @@ export function ExamQuestionPanel({
     if (quizGenerator && !quizGenerator.question && !quizGenerator.isLoading) {
       quizGenerator.generateQuestion();
     }
-  }, []);
+  }, [quizGenerator?.isLoading, quizGenerator?.question]);
 
   useEffect(() => {
     if (quizGenerator?.question) {
