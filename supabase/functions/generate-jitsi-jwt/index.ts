@@ -19,11 +19,19 @@ function strToUint8(str: string): Uint8Array {
 }
 
 function pemToArrayBuffer(pem: string): ArrayBuffer {
-  const lines = pem
-    .replace(/-----BEGIN .*-----/, "")
-    .replace(/-----END .*-----/, "")
-    .replace(/\s/g, "");
-  const binary = atob(lines);
+  // Handle literal \n strings (common when pasting into secret managers)
+  let cleaned = pem.replace(/\\n/g, "\n");
+  // Remove all PEM header/footer lines
+  cleaned = cleaned.replace(/-----BEGIN [A-Z ]+-----/g, "");
+  cleaned = cleaned.replace(/-----END [A-Z ]+-----/g, "");
+  // Remove all whitespace (spaces, newlines, tabs, carriage returns)
+  cleaned = cleaned.replace(/\s+/g, "");
+  
+  if (!cleaned) {
+    throw new Error("Private key is empty after parsing. Check JAAS_PRIVATE_KEY secret format.");
+  }
+  
+  const binary = atob(cleaned);
   const bytes = new Uint8Array(binary.length);
   for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
   return bytes.buffer;
