@@ -119,7 +119,8 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
       if (jwtError || !jwtData?.token) {
         console.error("[VideoMeeting] JWT fetch failed:", jwtError, jwtData);
-        toast({ title: "Auth Failed", description: "Could not authenticate video session. Please try again.", variant: "destructive" });
+        const description = jwtData?.error || jwtError?.message || "Could not authenticate video session. Please try again.";
+        toast({ title: "Auth Failed", description, variant: "destructive" });
         setScreen("precall");
         setIsLoading(false);
         return;
