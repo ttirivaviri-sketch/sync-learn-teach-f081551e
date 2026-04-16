@@ -172,6 +172,19 @@ export const LearnerHomeTab = ({
                               <Video className="h-3 w-3 mr-1" />
                               Join
                             </Button>
+                          ) : booking.status === "requested" ? (
+                            <Button size="sm" variant="outline" className="h-8 text-xs flex-1" disabled>
+                              <Clock className="h-3 w-3 mr-1" />
+                              Awaiting Tutor
+                            </Button>
+                          ) : needsPayment?.(booking.id) ? (
+                            <Button
+                              size="sm"
+                              className="h-8 text-xs flex-1 bg-amber-500 hover:bg-amber-600 text-white"
+                              onClick={() => { onPayNow?.(booking); setLessonsOpen(false); }}
+                            >
+                              Pay to Join
+                            </Button>
                           ) : (
                             <Button size="sm" variant="outline" className="h-8 text-xs flex-1" disabled>
                               <Clock className="h-3 w-3 mr-1" />
