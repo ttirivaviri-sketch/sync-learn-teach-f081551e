@@ -213,7 +213,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
         setIsLoading(false);
         setScreen("meeting");
         setSessionStartTime(new Date());
-        toast({ title: "Connected ✓", description: `Joined room: ${roomName}` });
+        toast({ title: "Connected ✓", description: `Joined session` });
       });
       jitsiApi.current.addEventListener("participantJoined", (p: any) => {
         setParticipantCount((c) => c + 1);
