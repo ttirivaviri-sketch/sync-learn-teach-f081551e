@@ -63,7 +63,8 @@ async function importPrivateKey(pem: string): Promise<CryptoKey> {
 }
 
 async function signJwt(payload: Record<string, unknown>): Promise<string> {
-  const header = { alg: "RS256", typ: "JWT", kid: JAAS_API_KEY_ID };
+  // JaaS requires kid in the format "{APP_ID}/{KEY_ID}"
+  const header = { alg: "RS256", typ: "JWT", kid: `${JAAS_APP_ID}/${JAAS_API_KEY_ID}` };
   const headerB64 = base64url(strToUint8(JSON.stringify(header)));
   const payloadB64 = base64url(strToUint8(JSON.stringify(payload)));
   const data = strToUint8(`${headerB64}.${payloadB64}`);
