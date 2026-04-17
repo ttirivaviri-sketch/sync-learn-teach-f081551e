@@ -91,6 +91,10 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     setTimeout(() => setChecksDone(true), 1400);
   };
 
+  // JaaS auth state
+  const jaasAppId = useRef<string | null>(null);
+  const jaasJwt = useRef<string | null>(null);
+
   // Jitsi init
   const initSession = async () => {
     setScreen("connecting");
@@ -113,8 +117,37 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       return;
     }
 
-    // Public Jitsi - no JWT required
-    const scriptSrc = "https://meet.jit.si/external_api.js";
+    // Fetch JaaS JWT
+    const room = `room-${booking?.id || "demo"}`;
+    const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
+    let appId = "", jwt = "";
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke("generate-jitsi-jwt", {
+        body: {
+          room,
+          userName: userData?.user?.user_metadata?.full_name || displayName,
+          userEmail: userData?.user?.email || "",
+          moderator: sessionType === "tutor",
+          userId: userData?.user?.id,
+        },
+      });
+      if (error || !data?.token || !data?.appId) {
+        throw new Error(error?.message || data?.error || "JWT generation failed");
+      }
+      appId = data.appId;
+      jwt = data.token;
+      jaasAppId.current = appId;
+      jaasJwt.current = jwt;
+    } catch (e: any) {
+      console.error("[VideoMeeting] JaaS JWT error:", e);
+      setIsLoading(false);
+      setScreen("precall");
+      toast({ title: "Unable to start meeting", description: e?.message || "Could not authenticate with the video service.", variant: "destructive" });
+      return;
+    }
+
+    const scriptSrc = `https://8x8.vc/${appId}/external_api.js`;
 
     if (window.JitsiMeetExternalAPI) {
       initJitsi();
@@ -134,14 +167,17 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
   const initJitsi = () => {
     if (!jitsiContainer.current || jitsiApi.current) return;
-    // Unique, hard-to-guess room name per booking
-    const roomName = `StudySync-${booking?.id || "demo"}-${(booking?.id || "demo").toString().replace(/-/g, "").slice(0, 12)}`;
-    console.log("[VideoMeeting] Joining public Jitsi room:", roomName);
+    const appId = jaasAppId.current!;
+    const jwt = jaasJwt.current!;
+    const room = `room-${booking?.id || "demo"}`;
+    const fullRoomName = `${appId}/${room}`;
+    console.log("[VideoMeeting] Joining JaaS room:", fullRoomName);
     const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
     try {
-      jitsiApi.current = new window.JitsiMeetExternalAPI("meet.jit.si", {
-        roomName,
+      jitsiApi.current = new window.JitsiMeetExternalAPI("8x8.vc", {
+        roomName: fullRoomName,
+        jwt,
         width: "100%",
         height: "100%",
         parentNode: jitsiContainer.current,
