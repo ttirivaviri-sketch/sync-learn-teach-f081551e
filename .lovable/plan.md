@@ -1,58 +1,42 @@
 
-Goal: switch the app from authenticated 8x8 JaaS back to public Jitsi so users can join reliably without JWT/account credential issues.
+The screenshot confirms public Jitsi works but `meet.jit.si` is demo-only (5-min disconnect). The fix is to use Jitsi as a Service (JaaS) properly. We already have JaaS credentials configured (`JAAS_APP_ID`, `JAAS_PRIVATE_KEY`, `JAAS_API_KEY_ID`) and the `generate-jitsi-jwt` edge function exists — we just need to wire the client back to it and fix the JWT signing issues that blocked us before.
 
-Plan
+The earlier JaaS attempts failed for two reasons:
+1. ASN.1 DER tag error → private key wasn't being parsed correctly (PKCS#8 PEM handling in Deno).
+2. "kid does not match sub" error → header `kid` format was wrong.
 
-1. Remove the JaaS dependency from the meeting startup flow
-- Update `src/components/VideoMeeting.tsx` so `initSession()` no longer calls the `generate-jitsi-jwt` edge function.
-- Load the public Jitsi script from `https://meet.jit.si/external_api.js` instead of `https://8x8.vc/{appId}/external_api.js`.
-- Initialize the API with domain `meet.jit.si` and a plain `roomName` only, with no `jwt` and no `appId` prefix.
+Both are fixable in the edge function. The correct JaaS JWT spec is well documented.
 
-2. Keep the current meeting UI, overlays, and controls intact
-- Preserve the existing precall screen, connecting screen, fullscreen meeting shell, notes panel, top bar, and bottom control bar.
-- Keep the pointer-event fix already added so the embedded Jitsi UI remains clickable during startup.
-- Reuse the same event listeners (`videoConferenceJoined`, `participantJoined`, `participantLeft`, mute/screen-share status, `readyToClose`) so the rest of the UX behaves the same.
+## Plan
 
-3. Make room naming safe enough for public Jitsi
-- Continue isolating each booking in its own room, but use a stronger room name format than a human-readable static value.
-- Example approach: build a unique room from the booking id plus a random/session-specific suffix when needed, while still keeping both parties on the same booking in the same room.
-- Avoid exposing JaaS-style `appId/roomName` formatting.
+### 1. Fix `supabase/functions/generate-jitsi-jwt/index.ts`
+Rewrite JWT generation to match JaaS spec exactly:
+- **Header**: `{ alg: "RS256", typ: "JWT", kid: "<APP_ID>/<API_KEY_ID>" }` (kid is appID/keyID, NOT linked to sub).
+- **Payload**:
+  - `aud: "jitsi"`
+  - `iss: "chat"`
+  - `sub: <JAAS_APP_ID>` (the vpaas-magic-cookie-... value)
+  - `room: "*"` (or specific room)
+  - `iat`, `exp` (1 hour)
+  - `context.user`: `{ id, name, email, moderator: "true"/"false" }`
+  - `context.features`: `{ livestreaming: "false", recording: "false", transcription: "false", "outbound-call": "false" }`
+- **Key parsing**: Strip PEM headers/footers and whitespace, base64-decode, import as `pkcs8` with `RSASSA-PKCS1-v1_5` + `SHA-256`. Use `crypto.subtle.importKey` directly — the ASN.1 error came from leftover PEM text in the base64 payload.
+- Validate that `JAAS_PRIVATE_KEY` secret contains the full PEM including BEGIN/END lines.
 
-4. Add a clean fallback/error path for public mode
-- Replace “Auth Failed” style errors with generic “Unable to start meeting” messaging since JWT auth will no longer be involved.
-- Keep camera/mic permission handling as-is.
-- If the Jitsi script fails to load, show a public-Jitsi-specific connection error and return the user safely to the precall state.
+### 2. Update `src/components/VideoMeeting.tsx`
+- Call `supabase.functions.invoke("generate-jitsi-jwt", { body: { room, displayName, email, moderator } })` before init.
+- Load script from `https://8x8.vc/<APP_ID>/external_api.js` (APP_ID returned by edge function).
+- Init `new JitsiMeetExternalAPI("8x8.vc", { roomName: "<APP_ID>/<room>", jwt, ...rest })`.
+- Tutor = moderator true, learner = false.
+- On JWT failure, show clear error and stay on precall (no fallback to public meet.jit.si — avoids demo banner returning).
 
-5. Leave the edge function in place but decouple it from the client
-- Do not block the switch on deleting backend code.
-- After the client is confirmed working with public Jitsi, optionally retire or disable `supabase/functions/generate-jitsi-jwt/index.ts` later.
-- This minimizes risk and lets the video feature recover quickly.
+### 3. Files
+- `supabase/functions/generate-jitsi-jwt/index.ts` — rewrite signing
+- `src/components/VideoMeeting.tsx` — switch back to JaaS init
+- No DB or config changes needed (secrets already set)
 
-Files to update
-- `src/components/VideoMeeting.tsx` — main change
-- Optional later cleanup: `supabase/functions/generate-jitsi-jwt/index.ts`
-
-Technical details
-- Change script source:
-  - from: `https://8x8.vc/${appId}/external_api.js`
-  - to: `https://meet.jit.si/external_api.js`
-- Change API init:
-  - from: `new JitsiMeetExternalAPI("8x8.vc", { roomName: fullRoomName, jwt, ... })`
-  - to: `new JitsiMeetExternalAPI("meet.jit.si", { roomName, ... })`
-- Remove:
-  - `supabase.functions.invoke("generate-jitsi-jwt", ...)`
-  - `appId`, `jwt`, `fullRoomName`
-- Keep:
-  - `prejoinPageEnabled: false`
-  - waiting/joined state handling
-  - current app chrome and control commands
-
-Tradeoff to accept
-- Public Jitsi is simpler and should unblock joining, but it removes the JaaS authentication layer.
-- Room privacy will depend mainly on room-name unpredictability instead of token-based access control.
-
-Validation after implementation
-- Open a learner booking and a tutor booking and verify both land in the same room.
-- Confirm the join flow works on mobile viewport without a blocked button.
-- Verify mute, camera, screen share, hand raise, end call, summary screen, and waiting banner still work.
-- Confirm there is no edge-function error involved in starting meetings anymore.
+### 4. Validation
+- Confirm no "demo / 5-minute" banner appears.
+- Confirm both learner and tutor join the same JaaS room.
+- Confirm tutor has moderator controls.
+- Verify mobile join still works (pointer-events fix preserved).
