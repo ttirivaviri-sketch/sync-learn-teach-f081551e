@@ -1,38 +1,58 @@
 
+Goal: switch the app from authenticated 8x8 JaaS back to public Jitsi so users can join reliably without JWT/account credential issues.
 
-## Plan: Proper 8x8 JaaS Setup for Auto-Join Video Meetings
+Plan
 
-### Why it's broken now
-The screenshot shows the 8x8.vc **prejoin page** appearing with a manual "Join meeting" button. This happens because `8x8.vc` is the JaaS (Jitsi-as-a-Service) platform, and without a valid **AppID** and **JWT token**, it ignores `prejoinPageEnabled: false` and forces the prejoin screen. Both users get stuck there.
+1. Remove the JaaS dependency from the meeting startup flow
+- Update `src/components/VideoMeeting.tsx` so `initSession()` no longer calls the `generate-jitsi-jwt` edge function.
+- Load the public Jitsi script from `https://meet.jit.si/external_api.js` instead of `https://8x8.vc/{appId}/external_api.js`.
+- Initialize the API with domain `meet.jit.si` and a plain `roomName` only, with no `jwt` and no `appId` prefix.
 
-### What's needed
+2. Keep the current meeting UI, overlays, and controls intact
+- Preserve the existing precall screen, connecting screen, fullscreen meeting shell, notes panel, top bar, and bottom control bar.
+- Keep the pointer-event fix already added so the embedded Jitsi UI remains clickable during startup.
+- Reuse the same event listeners (`videoConferenceJoined`, `participantJoined`, `participantLeft`, mute/screen-share status, `readyToClose`) so the rest of the UX behaves the same.
 
-**Step 1: You create a free JaaS account**
-1. Go to [https://jaas.8x8.vc](https://jaas.8x8.vc) and sign up (free tier: 25 users/month)
-2. In the JaaS dashboard, copy your **AppID** (looks like `vpaas-magic-cookie-abc123...`)
-3. Generate an **API Key** — download the **Private Key** file (.pk) and note the **Key ID** (kid)
+3. Make room naming safe enough for public Jitsi
+- Continue isolating each booking in its own room, but use a stronger room name format than a human-readable static value.
+- Example approach: build a unique room from the booking id plus a random/session-specific suffix when needed, while still keeping both parties on the same booking in the same room.
+- Avoid exposing JaaS-style `appId/roomName` formatting.
 
-**Step 2: Store secrets in Supabase**
-- `JAAS_APP_ID` — your AppID string
-- `JAAS_API_KEY_ID` — the kid from your API key
-- `JAAS_PRIVATE_KEY` — the RSA private key contents
+4. Add a clean fallback/error path for public mode
+- Replace “Auth Failed” style errors with generic “Unable to start meeting” messaging since JWT auth will no longer be involved.
+- Keep camera/mic permission handling as-is.
+- If the Jitsi script fails to load, show a public-Jitsi-specific connection error and return the user safely to the precall state.
 
-**Step 3: Create a `generate-jitsi-jwt` Edge Function**
-- Accepts: `roomName`, `userName`, `userEmail`, `isModerator`
-- Signs a JWT with RS256 using the private key
-- Returns a short-lived JWT (1 hour expiry) with proper JaaS claims (`aud: "jitsi"`, `sub: AppID`, `room: "*"`, `context.user`)
+5. Leave the edge function in place but decouple it from the client
+- Do not block the switch on deleting backend code.
+- After the client is confirmed working with public Jitsi, optionally retire or disable `supabase/functions/generate-jitsi-jwt/index.ts` later.
+- This minimizes risk and lets the video feature recover quickly.
 
-**Step 4: Update `VideoMeeting.tsx`**
-- Before initializing Jitsi, call the edge function to get a JWT
-- Pass `roomName` in format `<AppID>/<room>` (e.g., `vpaas-magic-cookie-abc123/StudySync-booking-id`)
-- Pass the JWT in the `jwt` option
-- Load the script from `https://8x8.vc/<AppID>/external_api.js`
-- Keep `prejoinPageEnabled: false` — with a valid JWT, 8x8 will respect it and auto-join
+Files to update
+- `src/components/VideoMeeting.tsx` — main change
+- Optional later cleanup: `supabase/functions/generate-jitsi-jwt/index.ts`
 
-### Files changed
-1. `supabase/functions/generate-jitsi-jwt/index.ts` — new Edge Function for JWT generation
-2. `src/components/VideoMeeting.tsx` — call edge function for JWT, update domain/roomName format
+Technical details
+- Change script source:
+  - from: `https://8x8.vc/${appId}/external_api.js`
+  - to: `https://meet.jit.si/external_api.js`
+- Change API init:
+  - from: `new JitsiMeetExternalAPI("8x8.vc", { roomName: fullRoomName, jwt, ... })`
+  - to: `new JitsiMeetExternalAPI("meet.jit.si", { roomName, ... })`
+- Remove:
+  - `supabase.functions.invoke("generate-jitsi-jwt", ...)`
+  - `appId`, `jwt`, `fullRoomName`
+- Keep:
+  - `prejoinPageEnabled: false`
+  - waiting/joined state handling
+  - current app chrome and control commands
 
-### Result
-Both tutor and learner will auto-join the same room without seeing the prejoin screen. The JWT authenticates both participants and 8x8 respects the `prejoinPageEnabled: false` config.
+Tradeoff to accept
+- Public Jitsi is simpler and should unblock joining, but it removes the JaaS authentication layer.
+- Room privacy will depend mainly on room-name unpredictability instead of token-based access control.
 
+Validation after implementation
+- Open a learner booking and a tutor booking and verify both land in the same room.
+- Confirm the join flow works on mobile viewport without a blocked button.
+- Verify mute, camera, screen share, hand raise, end call, summary screen, and waiting banner still work.
+- Confirm there is no edge-function error involved in starting meetings anymore.
