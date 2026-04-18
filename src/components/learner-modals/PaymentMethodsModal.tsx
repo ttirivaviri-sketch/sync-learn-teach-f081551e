@@ -70,15 +70,17 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
       const returnUrl = `${window.location.origin}/payment-success?setup=1`;
       const cancelUrl = `${window.location.origin}/payment-cancelled?setup=1`;
 
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) throw new Error("Please log in");
-
+      // Let supabase SDK auto-attach auth header; edge function validates JWT itself
       const response = await supabase.functions.invoke(
         "payfast-add-payment-method",
         { body: { returnUrl, cancelUrl } }
       );
 
-      if (response.error) throw new Error(response.error.message);
+      if (response.error) {
+        // Surface real error from edge function (e.g. auth, secrets, payfast)
+        const msg = response.error.message || "Could not start card setup";
+        throw new Error(msg);
+      }
       const data = response.data;
       if (!data?.success) throw new Error(data?.error || "Setup failed");
 
@@ -111,11 +113,10 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
 
   const handleSetDefault = async (id: string) => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) return;
-      const userId = sessionData.session.user.id;
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) throw new Error("Not signed in");
 
-      // Clear existing defaults, set this one
       await supabase
         .from("saved_payment_methods")
         .update({ is_default: false })
@@ -127,8 +128,12 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
 
       toast({ title: "Default card updated" });
       fetchMethods();
-    } catch {
-      toast({ title: "Error", variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Could not update default",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
     }
   };
 
