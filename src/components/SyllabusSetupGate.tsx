@@ -156,18 +156,15 @@ export function SyllabusSetupGate({
     }
     setSaving(true);
     try {
-      const { data: existing } = await supabase
-        .from("subjects")
-        .select("id")
-        .eq("user_id", userId)
-        .ilike("name", subject)
-        .maybeSingle();
+      // Match by canonical name (strips "(IGCSE)" etc.) so we update instead of duplicating
+      const { findExistingSubjectId } = await import("@/lib/subjectName");
+      const existingId = await findExistingSubjectId(supabase, userId, subject);
 
-      if (existing?.id) {
+      if (existingId) {
         await supabase.from("subjects").update({
           syllabus_code: syllabusCode || null,
           updated_at: new Date().toISOString(),
-        }).eq("id", existing.id);
+        }).eq("id", existingId);
       } else {
         const topicsWithCodes = newPaperCodes.map((code, idx) => ({
           id: `paper-${idx + 1}`, name: `Paper ${code}`, paper_code: code,

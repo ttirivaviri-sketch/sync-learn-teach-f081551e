@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AcademicProfile, SubjectExamDate } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
+import { findExistingSubjectId } from "@/lib/subjectName";
 
 interface UseAcademicProfileReturn {
   profile: AcademicProfile | null;
@@ -199,14 +200,9 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
               )
               .then(() => {});
 
-            const { data: existing } = await supabase
-              .from("subjects")
-              .select("id")
-              .eq("user_id", userId)
-              .ilike("name", subjectName)
-              .maybeSingle();
+            const existingId = await findExistingSubjectId(supabase, userId, subjectName);
 
-            if (!existing?.id) {
+            if (!existingId) {
               await supabase.from("subjects").insert({
                 user_id: userId,
                 name: subjectName,
