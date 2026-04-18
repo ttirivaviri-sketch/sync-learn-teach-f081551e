@@ -14,6 +14,7 @@ interface SavedMethod {
   card_brand: string | null;
   is_default: boolean | null;
   created_at: string | null;
+  provider: string | null;
 }
 
 interface PaymentMethodsModalProps {
@@ -41,6 +42,7 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
   const [methods, setMethods] = useState<SavedMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [addingPaystack, setAddingPaystack] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
     try {
       const { data, error } = await supabase
         .from("saved_payment_methods")
-        .select("id, card_last4, card_brand, is_default, created_at")
+        .select("id, card_last4, card_brand, is_default, created_at, provider")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -108,6 +110,30 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
         variant: "destructive",
       });
       setAdding(false);
+    }
+  };
+
+  const handleAddPaystack = async () => {
+    setAddingPaystack(true);
+    try {
+      const callbackUrl = `${window.location.origin}/payment-success?provider=paystack&setup=1`;
+      const response = await supabase.functions.invoke("paystack-initialize", {
+        body: { mode: "setup", callbackUrl, currency: "ZAR" },
+      });
+      if (response.error) {
+        throw new Error(response.error.message || "Could not start Paystack setup");
+      }
+      const url = response.data?.authorization_url;
+      if (!url) throw new Error("No authorization URL returned");
+      window.location.href = url;
+    } catch (error) {
+      logger.error("Paystack add error:", error);
+      toast({
+        title: "Could not start Paystack",
+        description: error instanceof Error ? error.message : "Try again",
+        variant: "destructive",
+      });
+      setAddingPaystack(false);
     }
   };
 
@@ -220,6 +246,9 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {m.card_brand || "Card"}
+                      <span className="ml-1.5 opacity-70">
+                        · {m.provider === "paystack" ? "Paystack" : "PayFast"}
+                      </span>
                     </p>
                   </div>
                   {!m.is_default && (
@@ -262,6 +291,29 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
               </p>
               <p className="text-xs text-muted-foreground">
                 Card, EFT or Instant EFT — R1 verification (auto-reversed)
+              </p>
+            </div>
+          </button>
+
+          {/* Add via Paystack */}
+          <button
+            onClick={handleAddPaystack}
+            disabled={addingPaystack}
+            className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-dashed border-accent/40 hover:border-accent hover:bg-accent/5 transition-all disabled:opacity-50"
+          >
+            <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+              {addingPaystack ? (
+                <Loader2 className="h-5 w-5 text-accent-foreground animate-spin" />
+              ) : (
+                <CreditCard className="h-5 w-5 text-accent-foreground" />
+              )}
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium text-sm">
+                {addingPaystack ? "Redirecting to Paystack…" : "Add card via Paystack"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Test mode · One-tap pay on next booking
               </p>
             </div>
           </button>
