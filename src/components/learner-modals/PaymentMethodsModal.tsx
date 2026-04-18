@@ -113,11 +113,10 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
 
   const handleSetDefault = async (id: string) => {
     try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData?.session) return;
-      const userId = sessionData.session.user.id;
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData?.user?.id;
+      if (!userId) throw new Error("Not signed in");
 
-      // Clear existing defaults, set this one
       await supabase
         .from("saved_payment_methods")
         .update({ is_default: false })
@@ -129,8 +128,12 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
 
       toast({ title: "Default card updated" });
       fetchMethods();
-    } catch {
-      toast({ title: "Error", variant: "destructive" });
+    } catch (err) {
+      toast({
+        title: "Could not update default",
+        description: err instanceof Error ? err.message : undefined,
+        variant: "destructive",
+      });
     }
   };
 
