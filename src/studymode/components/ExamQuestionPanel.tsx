@@ -62,6 +62,8 @@ export function ExamQuestionPanel({
   const [userId, setUserId] = useState<string | null>(null);
   const [markResult, setMarkResult] = useState<MarkResult | null>(null);
   const [isAIMarking, setIsAIMarking] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [mcqResult, setMcqResult] = useState<{ correct: boolean; correctOption: string } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
