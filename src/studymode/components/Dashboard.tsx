@@ -307,6 +307,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                   )}
                 </>
               )}
+              {hasSubjects && <div className="mb-4"><ExamReadinessWidget /></div>}
               {hasSubjects ? (
                 <>
                   <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
