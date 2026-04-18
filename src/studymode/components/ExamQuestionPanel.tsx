@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
+import { QuestionVisual } from './QuestionVisual';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { useConceptMastery } from '../hooks/useConceptMastery';
@@ -377,6 +378,9 @@ export function ExamQuestionPanel({
         <div className="text-foreground font-medium leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <MathMarkdown>{activeQuestion.text}</MathMarkdown>
         </div>
+        {quizGenerator?.question?.visual && (
+          <QuestionVisual visual={quizGenerator.question.visual} />
+        )}
         {quizGenerator?.question?.commandWord && (
           <p className="text-xs text-muted-foreground mt-2">
             Command word: <span className="font-medium text-accent">{quizGenerator.question.commandWord}</span>

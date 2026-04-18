@@ -105,6 +105,30 @@ QUESTION TYPES TO MIX:
 • short_answer — 1–3 sentence response expected
 • structured — multi-part question with sub-questions (a), (b), (c), mark allocations per part
 
+VISUALS — INCLUDE WHEN THE CURRICULUM REQUIRES THEM:
+If the topic typically includes a diagram, graph, or chart in past papers (Maths function graphs, Physics circuits/forces/ray diagrams, Biology cell/anatomy/process diagrams, Chemistry apparatus, Geography climate/contour/sketch maps), populate a "visual" field on the question. Otherwise OMIT the field entirely.
+
+Pick exactly ONE "type":
+1. "function-graph" — for plotting mathematical functions y = f(x). Provide:
+     "functions": [{"expression":"x^2 - 4*x + 3","color":"#3b82f6"}]   (mathjs syntax: use *, /, ^, sin(x), cos(x), sqrt(x), log(x))
+     "xRange": [-2, 6], "yRange": [-5, 10] (optional), "gridlines": true,
+     "points": [{"x":1,"y":0,"label":"root"}] (optional)
+2. "data-chart" — for data interpretation (climate graphs, V-I curves, population data). Provide:
+     "chartKind": "bar" | "line" | "scatter",
+     "data": [{"x":"Jan","y":12},{"x":"Feb","y":15}, ...],
+     "xLabel": "Month", "yLabel": "Rainfall (mm)"
+3. "svg-diagram" — for SIMPLE labeled schematics you can author directly (circuits, force diagrams, ray diagrams, simple apparatus). Provide:
+     "svg": "<svg viewBox='0 0 400 300' xmlns='http://www.w3.org/2000/svg'>...</svg>"
+     Use only basic SVG: <line>, <rect>, <circle>, <path>, <text>, <polygon>, <g>. No <script>, no event handlers, no external images.
+     Use stroke='currentColor' and fill='currentColor' or 'none' so the diagram inherits theme color.
+     Keep viewBox around 400x300, label all components with <text>.
+4. "ai-image" — for COMPLEX biological / anatomical / geographical illustrations that can't be cleanly authored as data or simple SVG (heart cross-section, plant cell, kidney nephron, river meander, contour map). Provide:
+     "imagePrompt": "Detailed description in past-paper style. Example: 'Black-and-white labeled cross-section of the human heart, A-Level Biology past paper style, four chambers labeled A, B, C, D with leader lines, line art on white background, no shading.'"
+     The client renders this via an image generation pipeline.
+
+Always include "required": true if the student MUST see the visual to answer; false if the visual just aids understanding.
+Optional "caption": e.g. "Figure 1: Series circuit with two resistors".
+
 RULES:
 1. Anchor every question to the syllabus outline and topic scope.
 2. Mimic past-paper patterns: command words, mark allocations, structure.
@@ -132,13 +156,15 @@ Return ONLY valid JSON matching this exact schema:
       "commandWord": "explain",
       "conceptsTested": ["concept1", "concept2"],
       "syllabusLinks": ["specific syllabus objective"],
-      "explanation": "why this answer is correct and common mistakes"
+      "explanation": "why this answer is correct and common mistakes",
+      "visual": { "type": "function-graph", "required": true, "caption": "...", "functions": [...] }
     }
   ],
   "weak_area_focus": ["weak area addressed 1", "weak area addressed 2"]
 }
 
-For non-multiple-choice questions, omit "options" and "correctOption".`;
+For non-multiple-choice questions, omit "options" and "correctOption".
+OMIT "visual" entirely for pure-text questions (English essays, history accounts, etc.).`;
 
     // ── User prompt ─────────────────────────────────────────────────────────
     let userPrompt = `Generate ${questionCount} exam-style question(s).\n\n${context}`;
@@ -234,6 +260,7 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
       conceptsTested: normalizeArray(item.conceptsTested),
       syllabusLinks: normalizeArray(item.syllabusLinks),
       explanation: String(item.explanation || "").trim(),
+      visual: normalizeVisual(item.visual),
     }));
 
     // Validate
@@ -269,3 +296,41 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
     return errorResponse(e);
   }
 });
+
+// ─── Visual normaliser ──────────────────────────────────────────────────────
+function normalizeVisual(v: any): any | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const allowed = ["function-graph", "data-chart", "svg-diagram", "ai-image"];
+  if (!allowed.includes(v.type)) return undefined;
+  const out: any = { type: v.type, required: !!v.required };
+  if (typeof v.caption === "string") out.caption = v.caption.trim();
+
+  if (v.type === "function-graph") {
+    if (Array.isArray(v.functions)) {
+      out.functions = v.functions
+        .filter((f: any) => f && typeof f.expression === "string")
+        .map((f: any) => ({
+          expression: f.expression,
+          color: typeof f.color === "string" ? f.color : undefined,
+          domain: Array.isArray(f.domain) && f.domain.length === 2 ? f.domain : undefined,
+        }));
+    }
+    if (Array.isArray(v.xRange) && v.xRange.length === 2) out.xRange = v.xRange;
+    if (Array.isArray(v.yRange) && v.yRange.length === 2) out.yRange = v.yRange;
+    if (typeof v.gridlines === "boolean") out.gridlines = v.gridlines;
+    if (Array.isArray(v.points)) out.points = v.points;
+  } else if (v.type === "data-chart") {
+    if (["bar", "line", "scatter"].includes(v.chartKind)) out.chartKind = v.chartKind;
+    if (Array.isArray(v.data)) out.data = v.data;
+    if (typeof v.xLabel === "string") out.xLabel = v.xLabel;
+    if (typeof v.yLabel === "string") out.yLabel = v.yLabel;
+  } else if (v.type === "svg-diagram") {
+    if (typeof v.svg === "string" && v.svg.includes("<svg")) out.svg = v.svg;
+    else return undefined;
+  } else if (v.type === "ai-image") {
+    if (typeof v.imagePrompt === "string" && v.imagePrompt.length > 10) {
+      out.imagePrompt = v.imagePrompt;
+    } else return undefined;
+  }
+  return out;
+}
