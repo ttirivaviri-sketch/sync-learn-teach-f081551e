@@ -203,6 +203,15 @@ export function safeJsonParse<T = unknown>(raw: string): T {
     attempts.push(raw.substring(arrStart, arrEnd + 1));
   }
 
+  // 5. Truncation recovery: try to repair an unfinished object/array
+  //    by truncating to the last complete element and balancing brackets.
+  if (objStart !== -1) {
+    attempts.push(repairTruncatedJson(raw.substring(objStart)));
+  }
+  if (arrStart !== -1) {
+    attempts.push(repairTruncatedJson(raw.substring(arrStart)));
+  }
+
   for (const candidate of attempts) {
     // Try direct parse
     try {
@@ -241,6 +250,43 @@ export function normalizeArray(value: unknown): string[] {
 }
 
 // ─── Utility ─────────────────────────────────────────────────────────────────
+
+/**
+ * Repairs truncated JSON by trimming back to the last complete element
+ * and rebalancing braces/brackets. Best-effort — used as a last resort.
+ */
+function repairTruncatedJson(s: string): string {
+  let str = s.trim();
+  // Strip trailing partial token (after last , } ] " )
+  const lastComplete = Math.max(
+    str.lastIndexOf("}"),
+    str.lastIndexOf("]"),
+  );
+  if (lastComplete === -1) return str;
+  str = str.substring(0, lastComplete + 1);
+
+  // Walk and count unclosed brackets, ignoring those inside strings
+  let depthObj = 0;
+  let depthArr = 0;
+  let inStr = false;
+  let escape = false;
+  for (let i = 0; i < str.length; i++) {
+    const c = str[i];
+    if (escape) { escape = false; continue; }
+    if (c === "\\") { escape = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === "{") depthObj++;
+    else if (c === "}") depthObj--;
+    else if (c === "[") depthArr++;
+    else if (c === "]") depthArr--;
+  }
+  // Remove trailing comma before appending closers
+  str = str.replace(/,(\s*)$/, "$1");
+  while (depthArr-- > 0) str += "]";
+  while (depthObj-- > 0) str += "}";
+  return str;
+}
 
 function truncate(s: string, maxLen: number): string {
   return s.length > maxLen ? s.substring(0, maxLen) + "…" : s;

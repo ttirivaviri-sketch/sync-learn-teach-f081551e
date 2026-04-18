@@ -141,7 +141,7 @@ ${weakAreas ? `- Extra focus on weak areas: ${Array.isArray(weakAreas) ? weakAre
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
-      maxTokens: 4096,
+      maxTokens: 8192,
     });
 
     const parsed = safeJsonParse<{
