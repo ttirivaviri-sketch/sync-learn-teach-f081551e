@@ -14,6 +14,7 @@ import { AIWeakTopicAlerts } from './AIWeakTopicAlerts';
 import { DailySummary } from './DailySummary';
 import { AdaptivePlanBanner } from './AdaptivePlanBanner';
 import { ExamReadinessWidget } from './ExamReadinessWidget';
+import { MockExamSection } from './MockExamSection';
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '@/lib/utils';
@@ -308,6 +309,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 </>
               )}
               {hasSubjects && <div className="mb-4"><ExamReadinessWidget /></div>}
+              {hasSubjects && <div className="mb-4"><MockExamSection /></div>}
               {hasSubjects ? (
                 <>
                   <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
