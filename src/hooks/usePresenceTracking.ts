@@ -19,18 +19,10 @@ export const usePresenceTracking = (session: Session | null) => {
   useEffect(() => {
     if (!session?.user) return;
 
-    // Create a presence channel for online status tracking
-    const channel = supabase.channel('online-users', {
-      config: {
-        presence: {
-          key: session.user.id,
-        },
-      },
-    });
+    let channel: RealtimeChannel | null = null;
+    let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+    let cancelled = false;
 
-    channelRef.current = channel;
-
-    // Track user presence state
     const presenceState: PresenceState = {
       user_id: session.user.id,
       full_name: session.user.user_metadata?.full_name || session.user.email || 'User',
@@ -39,57 +31,59 @@ export const usePresenceTracking = (session: Session | null) => {
       last_seen: new Date().toISOString(),
     };
 
-    // Set up presence tracking
-    channel
-      .on('presence', { event: 'sync' }, () => {
-        const newState = channel.presenceState();
-        const users: PresenceState[] = [];
-        
-        Object.values(newState).forEach((presences: any) => {
-          presences.forEach((presence: PresenceState) => {
-            users.push(presence);
-          });
-        });
-        
-        setOnlineUsers(users);
-        logger.info('Presence sync - online users:', users.length);
-      })
-      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
-        logger.info('User joined:', key, newPresences);
-      })
-      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
-        logger.info('User left:', key, leftPresences);
-      })
-      .subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          logger.info('Presence channel subscribed, tracking user:', presenceState);
-          
-          // Track this user's presence
-          const trackStatus = await channel.track(presenceState);
-          logger.info('Presence track status:', trackStatus);
-
-          // Update database with online status
-          await updateDatabaseOnlineStatus(true);
-        }
+    // Defer presence subscription until the browser is idle so the first paint isn't blocked.
+    const start = () => {
+      if (cancelled) return;
+      channel = supabase.channel('online-users', {
+        config: { presence: { key: session.user.id } },
       });
+      channelRef.current = channel;
 
-    // Update presence every 30 seconds to maintain active status
-    const heartbeatInterval = setInterval(async () => {
-      if (channelRef.current) {
-        const updatedState = {
-          ...presenceState,
-          last_seen: new Date().toISOString(),
-        };
-        await channelRef.current.track(updatedState);
-        logger.info('Presence heartbeat sent');
-      }
-    }, 30000);
+      channel
+        .on('presence', { event: 'sync' }, () => {
+          const newState = channel!.presenceState();
+          const users: PresenceState[] = [];
+          Object.values(newState).forEach((presences: any) => {
+            presences.forEach((presence: PresenceState) => { users.push(presence); });
+          });
+          setOnlineUsers(users);
+        })
+        .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+          logger.info('User joined:', key, newPresences);
+        })
+        .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+          logger.info('User left:', key, leftPresences);
+        })
+        .subscribe(async (status) => {
+          if (status === 'SUBSCRIBED' && channel) {
+            await channel.track(presenceState);
+            await updateDatabaseOnlineStatus(true);
+          }
+        });
 
-    // Cleanup function
+      heartbeatInterval = setInterval(async () => {
+        if (channelRef.current) {
+          await channelRef.current.track({ ...presenceState, last_seen: new Date().toISOString() });
+        }
+      }, 30000);
+    };
+
+    const idle = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout: number }) => number)
+      | undefined;
+    const handle = idle
+      ? idle(start, { timeout: 2000 })
+      : (setTimeout(start, 1500) as unknown as number);
+
     return () => {
-      clearInterval(heartbeatInterval);
+      cancelled = true;
+      if (idle && (window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(handle);
+      } else {
+        clearTimeout(handle as unknown as ReturnType<typeof setTimeout>);
+      }
+      if (heartbeatInterval) clearInterval(heartbeatInterval);
       updateDatabaseOnlineStatus(false);
-      
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
