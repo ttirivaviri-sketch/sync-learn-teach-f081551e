@@ -62,8 +62,16 @@ export function PrerequisiteRemediationFlow({
 
   const analyzePrerequisites = async () => {
     setIsLoading(true);
+    setErrorMessage('');
     try {
-      const data = await aiRequestJSON<{ gaps?: PrerequisiteGap[] }>('analyze-prerequisites', { subject, topic: currentTopic });
+      const data = await aiRequestJSON<{ gaps?: PrerequisiteGap[] }>('analyze-prerequisites', {
+        subject,
+        topic: currentTopic,
+        curriculum,
+        grade,
+        gradeLevel: grade,
+        subjectId,
+      });
 
       if (data.gaps && data.gaps.length > 0) {
         setGaps(data.gaps);
@@ -79,12 +87,8 @@ export function PrerequisiteRemediationFlow({
       }
     } catch (error) {
       logger.error('Prerequisite analysis error:', error);
-      toast({
-        title: 'Analysis Error',
-        description: 'Failed to analyze prerequisites. Continuing anyway.',
-        variant: 'destructive',
-      });
-      onComplete();
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to analyze prerequisites.');
+      setPhase('error');
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +102,9 @@ export function PrerequisiteRemediationFlow({
         subject,
         prerequisiteTopic: gap.topic,
         missingConcepts: gap.missingConcepts,
+        curriculum,
+        grade,
+        parentTopic: currentTopic,
       });
       setTheoryContent(data.theory ?? '');
     } catch (error) {
@@ -121,6 +128,8 @@ export function PrerequisiteRemediationFlow({
       const data = await aiRequestJSON<{ questions?: any[] }>('generate-prerequisite-quiz', {
         subject,
         topic: currentGap.topic,
+        curriculum,
+        grade,
         difficulty: 'basic',
         questionCount: 3,
       });
