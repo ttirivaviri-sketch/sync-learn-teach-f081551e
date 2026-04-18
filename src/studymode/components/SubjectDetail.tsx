@@ -158,6 +158,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
     return (
       <PrerequisiteRemediationFlow
         subject={subject.name}
+        subjectId={subject.id}
         currentTopic={subject.currentTopic.name}
         onComplete={() => setShowPrerequisiteCheck(false)}
         onBack={() => setShowPrerequisiteCheck(false)}
