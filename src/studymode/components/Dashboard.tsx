@@ -109,15 +109,15 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const hasSubjects = subjects.length > 0;
   
   // Task persistence — enhanced with AI context
-  const { getTasksForSubject, completeTask, ensureTasks, addBonusTask, yesterdayIncomplete, todayIncomplete } = useDailyTasks(subjects, aiContextPayload);
+  const { getTasksForSubject, completeTask, ensureTasks, addBonusTask, yesterdayIncomplete, todayIncomplete, isLoading: tasksLoading, tasksCount } = useDailyTasks(subjects, aiContextPayload);
 
-  // Seed today's tasks on mount
+  // Seed today's tasks — only after the query has settled and no tasks exist
   useEffect(() => {
-    if (subjects.length > 0) {
+    if (subjects.length > 0 && !tasksLoading && tasksCount === 0) {
       ensureTasks.mutate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subjects.length]);
+  }, [subjects.length, tasksLoading, tasksCount]);
 
   // Streak reminder state
   const [reminderDismissed, setReminderDismissed] = useState(false);

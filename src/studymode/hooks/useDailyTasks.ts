@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../../integrations/supabase/client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { DailyTask, Subject } from '../types/study';
 import type { AIContextPayload } from './useAIStudyIntelligence';
 import { logger } from "@/utils/logger";
@@ -154,38 +154,48 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
     ];
   };
 
+  // In-flight guard to prevent concurrent seeding (StrictMode double-mount, re-renders)
+  const seedingRef = useRef(false);
+
   // Ensure today's tasks exist — create if missing
   const ensureTasks = useMutation({
     mutationFn: async () => {
       if (!userId || subjects.length === 0) return;
-
-      // Check if tasks already exist for today
+      // Wait for query to settle and only seed when truly empty
+      if (isLoading) return;
       if (dbTasks && dbTasks.length > 0) return;
-
-      const tasksToInsert = subjects.flatMap(subject => {
-        const generated = generateTasksForSubject(subject);
-        return generated.map(task => ({
-          user_id: userId,
-          subject_id: subject.id,
-          task_type: task.type,
-          title: task.title,
-          description: task.description,
-          is_completed: false,
-          is_locked: task.isLocked,
-          task_date: today,
-        }));
-      });
+      if (seedingRef.current) return;
+      seedingRef.current = true;
 
       try {
+        const tasksToInsert = subjects.flatMap(subject => {
+          const generated = generateTasksForSubject(subject);
+          return generated.map(task => ({
+            user_id: userId,
+            subject_id: subject.id,
+            task_type: task.type,
+            title: task.title,
+            description: task.description,
+            is_completed: false,
+            is_locked: task.isLocked,
+            task_date: today,
+          }));
+        });
+
         const { error } = await supabase
           .from('daily_tasks')
-          .insert(tasksToInsert);
+          .upsert(tasksToInsert, {
+            onConflict: 'user_id,subject_id,task_date,task_type,title',
+            ignoreDuplicates: true,
+          });
 
         if (error) {
           logger.warn('Could not persist tasks:', error.message);
         }
-      } catch {
-        // Table doesn't exist yet
+      } catch (e) {
+        logger.warn('ensureTasks failed', e);
+      } finally {
+        seedingRef.current = false;
       }
     },
     onSuccess: () => {
