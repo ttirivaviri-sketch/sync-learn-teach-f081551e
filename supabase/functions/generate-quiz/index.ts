@@ -153,6 +153,39 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
       userPrompt += `\nAvoid these recent question types: ${avoidQuestionTypes.join(", ")}`;
     }
 
+    if (paperBlueprint && typeof paperBlueprint === "object") {
+      userPrompt += `\n\n=== TARGET PAPER BLUEPRINT ===\n`;
+      if (paperBlueprint.paper_code) userPrompt += `Paper: ${paperBlueprint.paper_code}\n`;
+      if (paperBlueprint.total_marks) userPrompt += `Total marks: ${paperBlueprint.total_marks}\n`;
+      if (paperBlueprint.duration_minutes)
+        userPrompt += `Duration: ${paperBlueprint.duration_minutes} min\n`;
+      if (paperBlueprint.question_type_distribution) {
+        userPrompt += `Question type mix: ${JSON.stringify(paperBlueprint.question_type_distribution)}\n`;
+      }
+      if (paperBlueprint.command_word_frequency) {
+        userPrompt += `Common command words: ${Object.keys(paperBlueprint.command_word_frequency).slice(0, 8).join(", ")}\n`;
+      }
+      userPrompt += `Match this paper's style: question length, mark allocation, command-word distribution.\n`;
+    }
+
+    if (Array.isArray(pastPaperExemplars) && pastPaperExemplars.length > 0) {
+      userPrompt += `\n\n=== PAST-PAPER EXEMPLARS (real Q + official mark scheme — DO NOT COPY VERBATIM, mirror the style) ===\n`;
+      pastPaperExemplars.slice(0, 2).forEach((ex: any, i: number) => {
+        userPrompt += `\n--- Exemplar ${i + 1} ---\n`;
+        if (ex.question_number) userPrompt += `Q${ex.question_number} `;
+        if (ex.marks) userPrompt += `[${ex.marks} marks] `;
+        if (ex.command_word || ex.official_command_word)
+          userPrompt += `(${ex.command_word || ex.official_command_word}) `;
+        userPrompt += `\n`;
+        if (ex.question) userPrompt += `Question: ${ex.question}\n`;
+        if (ex.model_answer) userPrompt += `Model answer: ${ex.model_answer}\n`;
+        if (Array.isArray(ex.marking_points) && ex.marking_points.length > 0) {
+          userPrompt += `Marking points:\n${ex.marking_points.map((m: string) => `  • ${m}`).join("\n")}\n`;
+        }
+      });
+      userPrompt += `\nGenerate a NEW question in this same style, of similar mark value, with an examiner-grade marking scheme.\n`;
+    }
+
     // ── Call AI ──────────────────────────────────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
