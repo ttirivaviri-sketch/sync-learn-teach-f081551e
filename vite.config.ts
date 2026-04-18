@@ -32,5 +32,11 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: false,
     chunkSizeWarningLimit: 2000,
+    target: 'esnext',
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      target: 'esnext',
+    },
   },
 }));
