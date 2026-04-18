@@ -103,7 +103,7 @@ export function MockExamRunner({ paper, onSubmit, isGrading, gradeProgress }: Pr
             </div>
 
             <div className="prose prose-sm max-w-none dark:prose-invert">
-              <MathMarkdown content={q.question} />
+              <MathMarkdown>{q.question}</MathMarkdown>
             </div>
 
             {q.question_type === "mcq" && q.options ? (
@@ -123,7 +123,7 @@ export function MockExamRunner({ paper, onSubmit, isGrading, gradeProgress }: Pr
                       )}
                     >
                       <span className="font-bold mr-2">{letter}.</span>
-                      <MathMarkdown content={opt.replace(/^[A-D]\)\s*/, "")} />
+                      <MathMarkdown>{opt.replace(/^[A-D]\)\s*/, "")}</MathMarkdown>
                     </button>
                   );
                 })}

@@ -174,7 +174,7 @@ export function MockExamResults({ paper, result, onClose }: Props) {
                   </div>
 
                   <div className="text-xs text-muted-foreground line-clamp-2">
-                    <MathMarkdown content={q.question} />
+                    <MathMarkdown>{q.question}</MathMarkdown>
                   </div>
 
                   {g.overall_feedback && (
