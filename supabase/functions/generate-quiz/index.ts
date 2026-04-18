@@ -101,9 +101,12 @@ MATHEMATICAL NOTATION (CRITICAL):
 - Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$
 
 QUESTION TYPES TO MIX:
-• multiple_choice — 4 options (A–D), one correct, with explanation for each distractor
+• multiple_choice — REQUIRED format: exactly 4 options as a string array WITHOUT "A)" / "B)" prefixes (the UI adds the letters). "correctOption" MUST be one of "A","B","C","D" indexed by position (A=options[0], B=options[1], C=options[2], D=options[3]). Always include "explanation" describing why the correct option is right and why distractors are wrong. Marks are usually 1.
 • short_answer — 1–3 sentence response expected
 • structured — multi-part question with sub-questions (a), (b), (c), mark allocations per part
+
+QUESTION TYPE SELECTION RULE:
+If a TARGET PAPER BLUEPRINT is provided with a "question_type_distribution" (e.g. {"multiple_choice": 40, "structured": 60}), pick "questionType" so that across many generations the mix matches that distribution. For a single-question request, weight your random pick by those percentages — if multiple_choice is ≥30%, often produce multiple_choice. Subjects/papers with high MCQ share (Biology Paper 1, IGCSE Maths Paper 1 MCQ, Physics Paper 1) MUST receive multiple_choice questions accordingly. Never default to "structured" when the blueprint says otherwise.
 
 VISUALS — INCLUDE WHEN THE CURRICULUM REQUIRES THEM:
 If the topic typically includes a diagram, graph, or chart in past papers (Maths function graphs, Physics circuits/forces/ray diagrams, Biology cell/anatomy/process diagrams, Chemistry apparatus, Geography climate/contour/sketch maps), populate a "visual" field on the question. Otherwise OMIT the field entirely.
@@ -146,7 +149,7 @@ Return ONLY valid JSON matching this exact schema:
       "question": "full question text with LaTeX math notation",
       "questionType": "multiple_choice|short_answer|structured",
       "marks": 6,
-      "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+      "options": ["first option text", "second option text", "third option text", "fourth option text"],
       "correctOption": "B",
       "modelAnswer": "complete model answer with LaTeX math",
       "stepByStepSolution": "step 1: …\\nstep 2: …\\nstep 3: …",
@@ -247,8 +250,14 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
         ? item.questionType
         : "structured",
       marks: Number(item.marks || 0),
-      options: item.options || undefined,
-      correctOption: item.correctOption || undefined,
+      options: Array.isArray(item.options)
+        ? item.options
+            .slice(0, 4)
+            .map((o: any) => String(o).replace(/^\s*[A-Da-d][\)\.\:]\s*/, "").trim())
+        : undefined,
+      correctOption: typeof item.correctOption === "string"
+        ? item.correctOption.trim().toUpperCase().charAt(0)
+        : undefined,
       modelAnswer: String(item.modelAnswer || "").trim(),
       stepByStepSolution: String(item.stepByStepSolution || "").trim(),
       markingScheme: normalizeArray(item.markingScheme),
