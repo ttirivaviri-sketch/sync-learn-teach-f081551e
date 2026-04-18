@@ -1,72 +1,61 @@
 
+Looking at the screenshot: tasks 1 & 5 are both "Quick Review" (same description, same subject), and "Flashcard Review" appears twice. Let me check the task generation logic.
+<lov-tool-use id="toolu_vrtx_01TYXMBKQpw1sDmtANpBeadb" name="code--view" integration-id="code" data="{\"file_path\": \"src/studymode/hooks/useDailyTasks.ts\"}">
+</lov-tool-use>
 
-## Goal
-Make the AI fully comprehend uploaded **past papers + their mark schemes together** (per subject, per curriculum), map every Q→answer→topic, learn structural patterns per paper, and use that to (a) generate study-mode tasks modelled on real exam style, and (b) score the student's **Exam Readiness** per paper.
+<lov-tool-use id="toolu_vrtx_019k2TEWxmxQgyTkXbzsLMQt" name="code--view" integration-id="code" data="{\"file_path\": \"src/studymode/hooks/useDailyTasks.ts\"}">
+</lov-tool-use>
+The screenshot shows "Quick Review" appearing twice (#1 and #5), and "Flashcard Review" appearing twice (#4 and a locked one below). Looking at the code, `generateTasksForSubject` only returns 5 unique tasks per subject. So duplicates would only occur if `ensureTasks` ran multiple times, OR multiple subjects exist, OR `addBonusTask` was called.
 
-Today the system already parses syllabi, past papers, and mark schemes individually — but **mark schemes are stored as loose "key points"** with no link back to the matching past paper. The AI never sees a question paired with its correct answer, so it can't truly model exam reasoning or score readiness per paper.
+Let me check Dashboard / where ensureTasks is called.
+<lov-tool-use id="toolu_vrtx_014F35C3y9ZjKS3CY3hQfXw9" name="code--search_files" integration-id="code" data="{\"query\": \"ensureTasks\", \"include_patterns\": \"*.tsx,*.ts\"}">
+</lov-tool-use>
 
-## What's missing today
-1. **No Q↔Answer pairing.** `mark_scheme` extraction returns topics + key points only; never linked to a `past_paper` row.
-2. **No per-paper readiness score.** Mastery is per topic, but a CIE Bio Paper 2 (MCQ) and Paper 4 (structured) test the same topics very differently — readiness must be paper-aware.
-3. **Quiz generator** uses exam-pattern *frequency* but not the actual Q+answer pairs as templates.
+<lov-tool-use id="toolu_vrtx_01PGGbjFnbfhkmc54tcZQgSa" name="code--view" integration-id="code" data="{\"file_path\": \"src/studymode/components/Dashboard.tsx\", \"lines\": \"100-180\"}">
+</lov-tool-use>
+Looking at the screenshot: tasks numbered #1-#6 with "Quick Review" at #1 and #5, and two "Flashcard Review" entries. The 5-task template in `generateTasksForSubject` produces only one of each type. So duplicates indicate either:
 
-## Plan
+1. **Multiple subjects** are showing tasks combined into a single list (each subject generates its own Quick Review + Flashcard Review etc.) — this would be expected.
+2. OR `ensureTasks` ran multiple times due to a race condition (no unique constraint preventing duplicate inserts).
 
-### 1. Upgrade mark-scheme extraction (parse-document)
-Replace the thin `MARK_SCHEME_TOOL` with a richer schema:
-- `paper_year`, `paper_variant`, `paper_code` (to match the past_paper)
-- `answers[]` per `question_number` with: model_answer, marking_points (mark-by-mark), accept/reject notes, command_word, marks, topic.
+Looking at the image more carefully — tasks all reference "Cells as the Units of Life" (same topic). If they were from different subjects, the topic names would differ. So they're duplicates from the SAME subject — that's a bug.
 
-After extraction, **auto-link** the mark scheme to its past paper by matching `(subject, paper_year, paper_variant, paper_code)` and merge `answers[]` into the past paper's `parsed_content.questions[]` so each question carries its official answer + marking scheme.
+Cause: `ensureTasks.mutate()` fires on mount before `dbTasks` query has finished loading (or before insert completes), so the dedup check `if (dbTasks && dbTasks.length > 0) return;` fails. Multiple renders/StrictMode double-invoke cause double inserts. No DB unique constraint.
 
-### 2. New table: `paper_blueprints`
-One row per (subject_id, paper_code) capturing the learned **structure** of a paper:
-- `paper_code` (e.g. "Paper 2", "Paper 4"), `total_marks`, `duration_minutes`
-- `question_type_distribution` (e.g. `{mcq: 40}` or `{structured: 8, free_response: 2}`)
-- `topic_coverage` (jsonb: per-topic % of marks across analysed papers)
-- `command_word_frequency` (jsonb)
-- `difficulty_distribution`
-- `years_analysed` (text[])
+<lov-plan>
+## Diagnosis: Bug, not intentional
 
-Populated/updated every time a past_paper is parsed — gives the AI a true blueprint of *each* paper, not just aggregated patterns.
+The screenshot shows two **Quick Review** and two **Flashcard Review** tasks for the same subject + same topic ("Cells as the Units of Life"). The template in `useDailyTasks.generateTasksForSubject` only produces ONE of each type per subject, so these are true duplicates from a single subject — not multi-subject overlap.
 
-### 3. New RPC: `get_exam_readiness(subject_id, paper_code)`
-Returns per-paper readiness:
-- For each topic in the paper's `topic_coverage`, multiply `topic_mastery.mastery_percentage` by topic weight.
-- Weight by `question_type_distribution` vs the student's accuracy on those question types (from `task_attempts`/quiz history).
-- Output: `{ readiness_percent, weakest_topics[], weakest_question_types[], confidence_band }`.
+### Root cause
+`ensureTasks` in `useDailyTasks.ts` guards against re-inserting with:
+```ts
+if (dbTasks && dbTasks.length > 0) return;
+```
+But `dbTasks` is from a React Query that may still be loading (or stale) when `ensureTasks.mutate()` fires from `Dashboard.tsx`'s mount effect. Combined with React StrictMode double-invoke and re-renders triggered by `subjects.length` changing, the insert runs twice and there is **no DB-level uniqueness** to stop it.
 
-### 4. Wire it into Study Mode
-- `useSyllabusContext` extended with `paperBlueprints` and `linkedPastPapers` (Q+answer pairs).
-- `generate-quiz` edge function: when generating, sample 1–2 real past Q+answer pairs as **few-shot exemplars** for the model, so output mirrors authentic style/marking scheme.
-- `useDailyTasks`: when student is within X days of an exam (from `exam_dates`), shift task mix toward that paper's blueprint (more MCQ practice for Paper 2, more structured response for Paper 4).
-- New widget **"Exam Readiness"** in `Dashboard.tsx`: per-paper bar with %, "ready"/"more practice" label, and weakest-topics list. Powered by `get_exam_readiness`.
+Secondary contributor: each daily-task row gets a fresh `gen_random_uuid()`, so even identical (user, subject, date, task_type, title) rows coexist.
 
-### 5. Curriculum-agnostic
-All of the above keys off `subject`, `paper_code`, and the syllabus's `paper_structure` (already extracted). Works the same for IGCSE / ZIMSEC / NSC / IEB / CAMB without per-curriculum branching.
+### Fix (2 small changes)
 
-## Files
+1. **DB migration** — add a partial unique index so duplicates can never persist:
+   ```sql
+   CREATE UNIQUE INDEX IF NOT EXISTS daily_tasks_unique_per_day
+     ON public.daily_tasks (user_id, subject_id, task_date, task_type, title);
+   ```
+   Plus a one-time cleanup deleting older duplicate rows (keep earliest `created_at`).
 
-**New**
-- migration: create `paper_blueprints` table + RLS, create `get_exam_readiness` RPC
-- `src/studymode/components/ExamReadinessWidget.tsx`
-- `src/studymode/hooks/useExamReadiness.ts`
+2. **Hook hardening** in `src/studymode/hooks/useDailyTasks.ts`:
+   - Wait for the query to settle before seeding: only run `ensureTasks` when `isLoading === false` AND `dbTasks?.length === 0`.
+   - Add an in-flight guard (`useRef`) so concurrent mounts can't double-fire.
+   - Use `.upsert(..., { onConflict: 'user_id,subject_id,task_date,task_type,title', ignoreDuplicates: true })` instead of plain `insert`.
 
-**Edited**
-- `supabase/functions/parse-document/index.ts` — new MARK_SCHEME_TOOL schema + auto-link to past paper + populate `paper_blueprints`
-- `supabase/functions/generate-quiz/index.ts` — accept `pastPaperExemplars[]` and inject as few-shot
-- `src/studymode/hooks/useSyllabusContext.ts` — return `paperBlueprints` + `linkedPastPapers`
-- `src/studymode/hooks/useQuizGenerator.ts` — pass exemplars (real Q+A) into payload
-- `src/studymode/hooks/useDailyTasks.ts` — paper-aware task mix near exam
-- `src/studymode/components/Dashboard.tsx` — mount `ExamReadinessWidget`
+3. **Dashboard.tsx** mount effect — gate it on `!isLoading` so the guard above is meaningful.
 
-## What you'll see after build
-1. Upload Bio Paper 2 + its mark scheme + Paper 4 + its mark scheme. The system links each Q to its official answer.
-2. Dashboard shows: **Paper 2 readiness 62% — weakest: Genetics, Coordination & Response. Paper 4 readiness 48% — weakest: Inheritance, Practical skills.**
-3. Generated quiz tasks pull authentic past Q styles (verbatim command words, real mark allocations) and the marking scheme is the actual examiner one.
-4. Same flow auto-applies to any subject/curriculum the student adds.
+### Files
+- new migration (unique index + dedupe cleanup)
+- `src/studymode/hooks/useDailyTasks.ts`
+- `src/studymode/components/Dashboard.tsx`
 
-## Out of scope (next round)
-- Auto-grading student's free-text answer against mark scheme (would need a separate `grade-answer` function).
-- Generating a full mock-paper PDF.
-
+### Result
+Today's Tasks shows exactly one of each task type per subject. Existing duplicates are removed on migration.
