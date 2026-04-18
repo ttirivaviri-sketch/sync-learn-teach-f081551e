@@ -1,56 +1,72 @@
 
-The user wants to integrate **Paystack** (test mode) for online payments. Currently the project uses **PayFast** for tokenization, charging, and ITN webhooks.
 
-## Approach
+## Goal
+Make the AI fully comprehend uploaded **past papers + their mark schemes together** (per subject, per curriculum), map every Q→answer→topic, learn structural patterns per paper, and use that to (a) generate study-mode tasks modelled on real exam style, and (b) score the student's **Exam Readiness** per paper.
 
-Add Paystack alongside PayFast (don't rip out PayFast yet — bookings, tokens, and refunds depend on it). Wire Paystack as a **new payment option** for card add + checkout, in test mode using a `PAYSTACK_SECRET_KEY` (sk_test_…).
+Today the system already parses syllabi, past papers, and mark schemes individually — but **mark schemes are stored as loose "key points"** with no link back to the matching past paper. The AI never sees a question paired with its correct answer, so it can't truly model exam reasoning or score readiness per paper.
 
-### Why Paystack fits
-- Native card tokenization via `authorization_code` returned on first charge — no separate "verify R1" dance like PayFast.
-- Hosted "Initialize Transaction" flow → redirect to Paystack → callback to our app.
-- Server-side `charge_authorization` for one-tap re-bookings (mirrors `payfast-charge-token`).
-- Webhooks signed with HMAC-SHA512 of the secret key.
+## What's missing today
+1. **No Q↔Answer pairing.** `mark_scheme` extraction returns topics + key points only; never linked to a `past_paper` row.
+2. **No per-paper readiness score.** Mastery is per topic, but a CIE Bio Paper 2 (MCQ) and Paper 4 (structured) test the same topics very differently — readiness must be paper-aware.
+3. **Quiz generator** uses exam-pattern *frequency* but not the actual Q+answer pairs as templates.
 
-## What gets built
+## Plan
 
-**1. Secret**
-- `PAYSTACK_SECRET_KEY` (test: `sk_test_...`) — request via add_secret tool after plan approval.
+### 1. Upgrade mark-scheme extraction (parse-document)
+Replace the thin `MARK_SCHEME_TOOL` with a richer schema:
+- `paper_year`, `paper_variant`, `paper_code` (to match the past_paper)
+- `answers[]` per `question_number` with: model_answer, marking_points (mark-by-mark), accept/reject notes, command_word, marks, topic.
 
-**2. Edge functions** (3 new, in `supabase/functions/`)
-- `paystack-initialize/index.ts` — POST to `https://api.paystack.co/transaction/initialize` with email + amount (kobo/cents) + callback_url + metadata `{ user_id, booking_id?, mode: "setup" | "charge" }`. Returns `authorization_url`.
-- `paystack-charge-token/index.ts` — calls `/transaction/charge_authorization` using a saved `authorization_code` for one-tap booking pay.
-- `paystack-webhook/index.ts` — verifies `x-paystack-signature` (HMAC-SHA512), handles `charge.success`: saves authorization to `saved_payment_methods` (last4, brand, bank, `authorization_code`, `signature`), and marks booking paid if `booking_id` in metadata.
+After extraction, **auto-link** the mark scheme to its past paper by matching `(subject, paper_year, paper_variant, paper_code)` and merge `answers[]` into the past paper's `parsed_content.questions[]` so each question carries its official answer + marking scheme.
 
-**3. DB migration** — extend `saved_payment_methods` (additive, nullable):
-- `provider text default 'payfast'` (existing rows unaffected)
-- `paystack_authorization_code text`
-- `paystack_signature text` (Paystack's reusable card fingerprint)
-- `card_bank text`, `card_exp_month text`, `card_exp_year text`
+### 2. New table: `paper_blueprints`
+One row per (subject_id, paper_code) capturing the learned **structure** of a paper:
+- `paper_code` (e.g. "Paper 2", "Paper 4"), `total_marks`, `duration_minutes`
+- `question_type_distribution` (e.g. `{mcq: 40}` or `{structured: 8, free_response: 2}`)
+- `topic_coverage` (jsonb: per-topic % of marks across analysed papers)
+- `command_word_frequency` (jsonb)
+- `difficulty_distribution`
+- `years_analysed` (text[])
 
-**4. Frontend**
-- `PaymentMethodsModal.tsx` — add a "Pay with Paystack" option in the "Add payment method" section (PayFast stays as-is). On click → invoke `paystack-initialize` with `mode: "setup"`, redirect to `authorization_url`.
-- `PaymentSuccess.tsx` — handle Paystack callback param `?reference=...&provider=paystack` (verify via existing webhook flow; show success toast).
-- Card list renders both providers; provider badge ("Paystack" / "PayFast") shown subtly under the card brand.
+Populated/updated every time a past_paper is parsed — gives the AI a true blueprint of *each* paper, not just aggregated patterns.
 
-**5. Currency note**
-PayFast = ZAR. Paystack supports ZAR for South African merchants but defaults to NGN/GHS/KES/USD. Will use the same `amount` as bookings (ZAR) and let the user's Paystack dashboard determine accepted currencies in test mode.
+### 3. New RPC: `get_exam_readiness(subject_id, paper_code)`
+Returns per-paper readiness:
+- For each topic in the paper's `topic_coverage`, multiply `topic_mastery.mastery_percentage` by topic weight.
+- Weight by `question_type_distribution` vs the student's accuracy on those question types (from `task_attempts`/quiz history).
+- Output: `{ readiness_percent, weakest_topics[], weakest_question_types[], confidence_band }`.
+
+### 4. Wire it into Study Mode
+- `useSyllabusContext` extended with `paperBlueprints` and `linkedPastPapers` (Q+answer pairs).
+- `generate-quiz` edge function: when generating, sample 1–2 real past Q+answer pairs as **few-shot exemplars** for the model, so output mirrors authentic style/marking scheme.
+- `useDailyTasks`: when student is within X days of an exam (from `exam_dates`), shift task mix toward that paper's blueprint (more MCQ practice for Paper 2, more structured response for Paper 4).
+- New widget **"Exam Readiness"** in `Dashboard.tsx`: per-paper bar with %, "ready"/"more practice" label, and weakest-topics list. Powered by `get_exam_readiness`.
+
+### 5. Curriculum-agnostic
+All of the above keys off `subject`, `paper_code`, and the syllabus's `paper_structure` (already extracted). Works the same for IGCSE / ZIMSEC / NSC / IEB / CAMB without per-curriculum branching.
 
 ## Files
 
-- NEW `supabase/functions/paystack-initialize/index.ts`
-- NEW `supabase/functions/paystack-charge-token/index.ts`
-- NEW `supabase/functions/paystack-webhook/index.ts`
-- MIGRATION add provider + authorization columns to `saved_payment_methods`
-- EDIT `src/components/learner-modals/PaymentMethodsModal.tsx` — add Paystack button
-- EDIT `src/pages/PaymentSuccess.tsx` — handle Paystack `reference` callback
-- EDIT `src/hooks/useBookingPayments.ts` — route to `paystack-charge-token` when saved method's `provider === 'paystack'`
+**New**
+- migration: create `paper_blueprints` table + RLS, create `get_exam_readiness` RPC
+- `src/studymode/components/ExamReadinessWidget.tsx`
+- `src/studymode/hooks/useExamReadiness.ts`
 
-## Out of scope (this round)
-- Removing PayFast — keep both providers live so existing tokens/bookings keep working.
-- Paystack subscriptions / split payments / refunds UI — can be added next.
+**Edited**
+- `supabase/functions/parse-document/index.ts` — new MARK_SCHEME_TOOL schema + auto-link to past paper + populate `paper_blueprints`
+- `supabase/functions/generate-quiz/index.ts` — accept `pastPaperExemplars[]` and inject as few-shot
+- `src/studymode/hooks/useSyllabusContext.ts` — return `paperBlueprints` + `linkedPastPapers`
+- `src/studymode/hooks/useQuizGenerator.ts` — pass exemplars (real Q+A) into payload
+- `src/studymode/hooks/useDailyTasks.ts` — paper-aware task mix near exam
+- `src/studymode/components/Dashboard.tsx` — mount `ExamReadinessWidget`
 
-## After approval, I will
-1. Request `PAYSTACK_SECRET_KEY` via add_secret.
-2. Run the migration.
-3. Create the 3 edge functions + frontend edits.
-4. Give you the webhook URL to paste into Paystack Dashboard → Settings → API Keys & Webhooks.
+## What you'll see after build
+1. Upload Bio Paper 2 + its mark scheme + Paper 4 + its mark scheme. The system links each Q to its official answer.
+2. Dashboard shows: **Paper 2 readiness 62% — weakest: Genetics, Coordination & Response. Paper 4 readiness 48% — weakest: Inheritance, Practical skills.**
+3. Generated quiz tasks pull authentic past Q styles (verbatim command words, real mark allocations) and the marking scheme is the actual examiner one.
+4. Same flow auto-applies to any subject/curriculum the student adds.
+
+## Out of scope (next round)
+- Auto-grading student's free-text answer against mark scheme (would need a separate `grade-answer` function).
+- Generating a full mock-paper PDF.
+
