@@ -185,6 +185,8 @@ async function fetchSubjectDataDirect(
     syllabusProgress: 0,
     curriculumContext: '',
     isLoaded: true,
+    paperBlueprints: [],
+    linkedPastPapers: [],
   };
 
   try {
