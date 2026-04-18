@@ -113,6 +113,30 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
     }
   };
 
+  const handleAddPaystack = async () => {
+    setAddingPaystack(true);
+    try {
+      const callbackUrl = `${window.location.origin}/payment-success?provider=paystack&setup=1`;
+      const response = await supabase.functions.invoke("paystack-initialize", {
+        body: { mode: "setup", callbackUrl, currency: "ZAR" },
+      });
+      if (response.error) {
+        throw new Error(response.error.message || "Could not start Paystack setup");
+      }
+      const url = response.data?.authorization_url;
+      if (!url) throw new Error("No authorization URL returned");
+      window.location.href = url;
+    } catch (error) {
+      logger.error("Paystack add error:", error);
+      toast({
+        title: "Could not start Paystack",
+        description: error instanceof Error ? error.message : "Try again",
+        variant: "destructive",
+      });
+      setAddingPaystack(false);
+    }
+  };
+
   const handleSetDefault = async (id: string) => {
     try {
       const { data: userData } = await supabase.auth.getUser();
@@ -222,6 +246,9 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {m.card_brand || "Card"}
+                      <span className="ml-1.5 opacity-70">
+                        · {m.provider === "paystack" ? "Paystack" : "PayFast"}
+                      </span>
                     </p>
                   </div>
                   {!m.is_default && (
