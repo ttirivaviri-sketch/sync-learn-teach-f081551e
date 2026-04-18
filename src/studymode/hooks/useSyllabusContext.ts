@@ -284,6 +284,8 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
     syllabusProgress: 0,
     curriculumContext: '',
     isLoaded: false,
+    paperBlueprints: [],
+    linkedPastPapers: [],
   });
 
   const refresh = useCallback(async () => {
