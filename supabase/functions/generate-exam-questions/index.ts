@@ -116,6 +116,17 @@ FOR EACH QUESTION PROVIDE:
 - Marking scheme (exactly how marks are allocated, point by point)
 - Examiner notes (common mistakes students make, what examiners look for)
 
+VISUALS — INCLUDE WHEN THE CURRICULUM REQUIRES THEM:
+If a real past-paper question on this topic would include a diagram, graph, or chart, populate a "visual" field on the question. Otherwise OMIT the field.
+Pick exactly ONE "type":
+1. "function-graph" (Maths) — { "functions":[{"expression":"x^2-4*x+3"}], "xRange":[-2,6], "gridlines":true, "points":[{"x":1,"y":0,"label":"root"}] }  (mathjs syntax)
+2. "data-chart" (data interpretation) — { "chartKind":"bar"|"line"|"scatter", "data":[{"x":"Jan","y":12}], "xLabel":"...", "yLabel":"..." }
+3. "svg-diagram" (simple physics circuits / forces / ray diagrams / apparatus) — { "svg":"<svg viewBox='0 0 400 300' xmlns='http://www.w3.org/2000/svg'>...</svg>" }. Only basic SVG tags (line, rect, circle, path, text, polygon, g). Use stroke='currentColor'. NO <script>, NO event handlers.
+4. "ai-image" (Biology / anatomy / complex Geography illustrations) — { "imagePrompt":"Black-and-white labeled cross-section of the human heart, A-Level Biology past paper style, four chambers labeled A, B, C, D, line art on white background, no shading." }
+
+Always include "required": true if the student MUST see the visual to answer.
+Optional "caption": e.g. "Figure 1: Cross-section of a leaf".
+
 Return ONLY valid JSON:
 {
   "exam_questions": [
@@ -142,7 +153,8 @@ Return ONLY valid JSON:
       "syllabusLinks": ["2.3 Transport in cells"],
       "explanation": "This tests understanding of... Common mistakes include...",
       "timeAllocation": "8 minutes",
-      "examinerNotes": "Look for: precise terminology, clear reasoning chain"
+      "examinerNotes": "Look for: precise terminology, clear reasoning chain",
+      "visual": { "type":"svg-diagram", "required":true, "caption":"Figure 1", "svg":"<svg ...>...</svg>" }
     }
   ],
   "weak_area_focus": ["areas addressed"],
@@ -198,6 +210,7 @@ IMPORTANT:
       explanation: String(q.explanation || "").trim(),
       timeAllocation: q.timeAllocation || null,
       examinerNotes: q.examinerNotes || null,
+      visual: normalizeVisual(q.visual),
     }));
 
     // Build solutions & explanations lookup
@@ -227,3 +240,41 @@ IMPORTANT:
     return errorResponse(e);
   }
 });
+
+// ─── Visual normaliser ──────────────────────────────────────────────────────
+function normalizeVisual(v: any): any | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const allowed = ["function-graph", "data-chart", "svg-diagram", "ai-image"];
+  if (!allowed.includes(v.type)) return undefined;
+  const out: any = { type: v.type, required: !!v.required };
+  if (typeof v.caption === "string") out.caption = v.caption.trim();
+
+  if (v.type === "function-graph") {
+    if (Array.isArray(v.functions)) {
+      out.functions = v.functions
+        .filter((f: any) => f && typeof f.expression === "string")
+        .map((f: any) => ({
+          expression: f.expression,
+          color: typeof f.color === "string" ? f.color : undefined,
+          domain: Array.isArray(f.domain) && f.domain.length === 2 ? f.domain : undefined,
+        }));
+    }
+    if (Array.isArray(v.xRange) && v.xRange.length === 2) out.xRange = v.xRange;
+    if (Array.isArray(v.yRange) && v.yRange.length === 2) out.yRange = v.yRange;
+    if (typeof v.gridlines === "boolean") out.gridlines = v.gridlines;
+    if (Array.isArray(v.points)) out.points = v.points;
+  } else if (v.type === "data-chart") {
+    if (["bar", "line", "scatter"].includes(v.chartKind)) out.chartKind = v.chartKind;
+    if (Array.isArray(v.data)) out.data = v.data;
+    if (typeof v.xLabel === "string") out.xLabel = v.xLabel;
+    if (typeof v.yLabel === "string") out.yLabel = v.yLabel;
+  } else if (v.type === "svg-diagram") {
+    if (typeof v.svg === "string" && v.svg.includes("<svg")) out.svg = v.svg;
+    else return undefined;
+  } else if (v.type === "ai-image") {
+    if (typeof v.imagePrompt === "string" && v.imagePrompt.length > 10) {
+      out.imagePrompt = v.imagePrompt;
+    } else return undefined;
+  }
+  return out;
+}

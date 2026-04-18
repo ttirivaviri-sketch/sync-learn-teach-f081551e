@@ -53,3 +53,6 @@ verify_jwt = true
 
 [functions.paystack-webhook]
 verify_jwt = false
+
+[functions.render-question-visual]
+verify_jwt = false

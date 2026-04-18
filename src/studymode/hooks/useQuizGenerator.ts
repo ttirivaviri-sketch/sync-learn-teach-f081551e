@@ -17,6 +17,7 @@ import { useSyllabusContext } from './useSyllabusContext';
 import { useTopicPerformance } from './useTopicPerformance';
 import { aiRequestJSON } from '../lib/aiClient';
 import { logger } from "@/utils/logger";
+import type { QuestionVisualSpec } from '../components/QuestionVisual';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +47,8 @@ export interface QuizQuestion {
   syllabusLinks?: string[];
   /** Why this answer is correct */
   explanation?: string;
+  /** Optional past-paper-style visual (graph, chart, diagram, AI image) */
+  visual?: QuestionVisualSpec | null;
 }
 
 interface UseQuizGeneratorOptions {
@@ -198,6 +201,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         conceptsTested: questionData.conceptsTested,
         syllabusLinks: questionData.syllabusLinks,
         explanation: questionData.explanation,
+        visual: questionData.visual ?? null,
       });
     } catch (err) {
       logger.error('Quiz generation error:', err);
