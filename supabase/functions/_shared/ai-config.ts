@@ -175,11 +175,15 @@ export function buildStudyModeContext(input: StudyModeContextInput): string {
  * Handles: raw JSON, markdown-fenced JSON, and partial extraction.
  */
 export function safeJsonParse<T = unknown>(raw: string): T {
+  if (!raw || typeof raw !== "string" || !raw.trim()) {
+    throw new Error("AI response was empty");
+  }
+
   const attempts: string[] = [];
 
   // Collect candidate strings to try parsing
-  // 1. Raw input
-  attempts.push(raw);
+  // 1. Raw input (trimmed)
+  attempts.push(raw.trim());
 
   // 2. Extract from markdown fences
   const fenceMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
