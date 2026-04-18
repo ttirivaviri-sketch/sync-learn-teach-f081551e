@@ -1,42 +1,56 @@
 
-The error "Could not add card — Please log in" comes from the catch block in `handleAddMethod`. Looking at the code:
+The user wants to integrate **Paystack** (test mode) for online payments. Currently the project uses **PayFast** for tokenization, charging, and ITN webhooks.
 
-```ts
-const { data: sessionData } = await supabase.auth.getSession();
-if (!sessionData?.session) throw new Error("Please log in");
+## Approach
 
-const response = await supabase.functions.invoke(
-  "payfast-add-payment-method",
-  { body: { returnUrl, cancelUrl } }
-);
-```
+Add Paystack alongside PayFast (don't rip out PayFast yet — bookings, tokens, and refunds depend on it). Wire Paystack as a **new payment option** for card add + checkout, in test mode using a `PAYSTACK_SECRET_KEY` (sk_test_…).
 
-The user clearly IS logged in (they see their profile "Ashlie", avatar, "8 upcoming"). So the "Please log in" message isn't from the session check — it's from the edge function returning an error that gets surfaced as the toast description... wait, no. The toast says "Please log in" which exactly matches the local throw.
+### Why Paystack fits
+- Native card tokenization via `authorization_code` returned on first charge — no separate "verify R1" dance like PayFast.
+- Hosted "Initialize Transaction" flow → redirect to Paystack → callback to our app.
+- Server-side `charge_authorization` for one-tap re-bookings (mirrors `payfast-charge-token`).
+- Webhooks signed with HMAC-SHA512 of the secret key.
 
-Actually two possibilities:
-1. `supabase.auth.getSession()` returns null session momentarily (token refresh race) even though user is authenticated.
-2. The edge function throws "Authorization header required" or "Invalid authentication token" and that bubbles up — but the message would differ.
+## What gets built
 
-Most likely: **the edge function `payfast-add-payment-method` hasn't been deployed yet, or PayFast secrets aren't configured**, causing `response.error` → but our catch shows the error message. The exact "Please log in" string only appears in the local `throw new Error("Please log in")`.
+**1. Secret**
+- `PAYSTACK_SECRET_KEY` (test: `sk_test_...`) — request via add_secret tool after plan approval.
 
-Wait — re-reading: that throw only fires if `!sessionData?.session`. So `getSession()` is returning no session. This is a known issue when `supabase.functions.invoke` or modal mount races with auth hydration, OR when the modal is rendered outside an auth-wrapped context.
+**2. Edge functions** (3 new, in `supabase/functions/`)
+- `paystack-initialize/index.ts` — POST to `https://api.paystack.co/transaction/initialize` with email + amount (kobo/cents) + callback_url + metadata `{ user_id, booking_id?, mode: "setup" | "charge" }`. Returns `authorization_url`.
+- `paystack-charge-token/index.ts` — calls `/transaction/charge_authorization` using a saved `authorization_code` for one-tap booking pay.
+- `paystack-webhook/index.ts` — verifies `x-paystack-signature` (HMAC-SHA512), handles `charge.success`: saves authorization to `saved_payment_methods` (last4, brand, bank, `authorization_code`, `signature`), and marks booking paid if `booking_id` in metadata.
 
-But the simpler explanation: I added the session check **redundantly** — `supabase.functions.invoke` automatically attaches the auth header from the SDK's stored session. The explicit `getSession()` call may return `null` during a brief refresh window even though `invoke` would succeed.
+**3. DB migration** — extend `saved_payment_methods` (additive, nullable):
+- `provider text default 'payfast'` (existing rows unaffected)
+- `paystack_authorization_code text`
+- `paystack_signature text` (Paystack's reusable card fingerprint)
+- `card_bank text`, `card_exp_month text`, `card_exp_year text`
 
-## Root cause
-Redundant client-side `getSession()` precheck failing during a token refresh race, blocking the call before it reaches the (working) edge function which has its own auth validation.
+**4. Frontend**
+- `PaymentMethodsModal.tsx` — add a "Pay with Paystack" option in the "Add payment method" section (PayFast stays as-is). On click → invoke `paystack-initialize` with `mode: "setup"`, redirect to `authorization_url`.
+- `PaymentSuccess.tsx` — handle Paystack callback param `?reference=...&provider=paystack` (verify via existing webhook flow; show success toast).
+- Card list renders both providers; provider badge ("Paystack" / "PayFast") shown subtly under the card brand.
 
-## Fix
-Remove the redundant precheck in `handleAddMethod`. Let `supabase.functions.invoke` handle auth attachment, and let the edge function's own auth validation return a proper error if truly unauthenticated. Same cleanup in `handleSetDefault` (use `useAuth` hook or rely on RLS).
+**5. Currency note**
+PayFast = ZAR. Paystack supports ZAR for South African merchants but defaults to NGN/GHS/KES/USD. Will use the same `amount` as bookings (ZAR) and let the user's Paystack dashboard determine accepted currencies in test mode.
 
-Also worth verifying:
-- Confirm the edge function `payfast-add-payment-method` is actually deployed (it should auto-deploy after creation).
-- Confirm `PAYFAST_MERCHANT_ID`, `PAYFAST_MERCHANT_KEY` secrets exist (they already do per existing PayFast functions).
+## Files
 
-## Changes
-**`src/components/learner-modals/PaymentMethodsModal.tsx`**
-- Remove `getSession()` precheck in `handleAddMethod` — invoke directly and surface real error from response.
-- In `handleSetDefault`, get user via `supabase.auth.getUser()` once or rely on RLS (`is_default` updates scoped by RLS).
-- Improve error toast to show the actual edge function error message instead of swallowing it.
+- NEW `supabase/functions/paystack-initialize/index.ts`
+- NEW `supabase/functions/paystack-charge-token/index.ts`
+- NEW `supabase/functions/paystack-webhook/index.ts`
+- MIGRATION add provider + authorization columns to `saved_payment_methods`
+- EDIT `src/components/learner-modals/PaymentMethodsModal.tsx` — add Paystack button
+- EDIT `src/pages/PaymentSuccess.tsx` — handle Paystack `reference` callback
+- EDIT `src/hooks/useBookingPayments.ts` — route to `paystack-charge-token` when saved method's `provider === 'paystack'`
 
-That's it — one file, ~10 lines changed.
+## Out of scope (this round)
+- Removing PayFast — keep both providers live so existing tokens/bookings keep working.
+- Paystack subscriptions / split payments / refunds UI — can be added next.
+
+## After approval, I will
+1. Request `PAYSTACK_SECRET_KEY` via add_secret.
+2. Run the migration.
+3. Create the 3 edge functions + frontend edits.
+4. Give you the webhook URL to paste into Paystack Dashboard → Settings → API Keys & Webhooks.
