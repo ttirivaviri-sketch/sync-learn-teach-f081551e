@@ -108,10 +108,46 @@ export const useBookingPayments = (bookingIds: string[]) => {
     return paymentStatuses[bookingId]?.status === 'succeeded';
   };
 
+  /**
+   * Charge a booking using a saved payment method.
+   * Routes to paystack-charge-token or payfast-charge-token based on the
+   * saved method's provider.
+   */
+  const chargeWithSavedMethod = async (
+    bookingId: string,
+    paymentMethodId: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const { data: method, error } = await supabase
+        .from('saved_payment_methods')
+        .select('provider')
+        .eq('id', paymentMethodId)
+        .single();
+      if (error || !method) throw new Error('Card not found');
+
+      const fnName = method.provider === 'paystack'
+        ? 'paystack-charge-token'
+        : 'payfast-charge-token';
+
+      const res = await supabase.functions.invoke(fnName, {
+        body: { bookingId, paymentMethodId },
+      });
+      if (res.error) throw new Error(res.error.message);
+      return { success: !!res.data?.success, message: res.data?.message };
+    } catch (err) {
+      logger.error('chargeWithSavedMethod failed:', err);
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Charge failed',
+      };
+    }
+  };
+
   return {
     paymentStatuses,
     loading,
     needsPayment,
     isPaid,
+    chargeWithSavedMethod,
   };
 };
