@@ -48,26 +48,43 @@ export interface PastPaperQuestion {
   concepts_tested: string[];
 }
 
+export interface PaperBlueprint {
+  paper_code: string;
+  total_marks: number | null;
+  duration_minutes: number | null;
+  question_type_distribution: Record<string, number>;
+  topic_coverage: Record<string, number>;
+  command_word_frequency: Record<string, number>;
+  difficulty_distribution: Record<string, number>;
+  years_analysed: string[];
+}
+
+export interface LinkedPastQuestion {
+  paper_code?: string;
+  paper_year?: string;
+  question_number: string;
+  topic: string;
+  marks: number;
+  question_type: string;
+  command_word?: string | null;
+  question?: string;
+  model_answer?: string;
+  marking_points?: string[];
+}
+
 export interface SyllabusContextData {
-  /** Full topic data from subjects.topics */
   topic: DbTopic | null;
-  /** All topics in this subject (for mastery checking) */
   allTopics: DbTopic[];
-  /** Exam pattern rows for this topic from exam_patterns table */
   examPatterns: ExamPatternRow[];
-  /** Past paper question samples for this topic */
   pastPaperQuestions: PastPaperQuestion[];
-  /** Aggregated exam weight from past papers (%) */
   examWeightFromPapers: number;
-  /** How many topics are mastered vs total (for mock exam gating) */
   masteredTopicCount: number;
   totalTopicCount: number;
-  /** Percentage of syllabus covered */
   syllabusProgress: number;
-  /** Rich context string ready to inject into AI prompts */
   curriculumContext: string;
-  /** True once data has been fetched */
   isLoaded: boolean;
+  paperBlueprints: PaperBlueprint[];
+  linkedPastPapers: LinkedPastQuestion[];
 }
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
