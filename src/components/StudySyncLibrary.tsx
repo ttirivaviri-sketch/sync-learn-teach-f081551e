@@ -301,7 +301,7 @@ const StudySyncLibrary = ({
       ) : (
         <>
           {/* ── Library Tabs ── */}
-          <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+          <Tabs value={activeCategory} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-5 text-xs">
               {categories.map((category) => (
                 <TabsTrigger key={category.id} value={category.id} className="text-xs">
@@ -336,78 +336,87 @@ const StudySyncLibrary = ({
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
             </TabsContent>
 
-            {/* Tutorials Tab */}
-            <TabsContent value="tutorials" className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Study Clips</h3>
-                <div className="flex items-center gap-2">
-                  {recommendedTutorials.length > 0 && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      onClick={() => { setReelsStartIndex(0); setReelsFeedOpen(true); }}
-                    >
-                      <Play className="h-3.5 w-3.5" />
-                      Study Clips
-                    </Button>
-                  )}
-                  <Badge variant="secondary">{recommendedTutorials.length} available</Badge>
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {recommendedTutorials.map((r) => (
-                  <ResourceCard
-                    key={String(r.id)}
-                    resource={r}
-                    isInLibrary={myLibraryItems.includes(String(r.id))}
-                    {...cardActions}
-                  />
-                ))}
-              </div>
-              {recommendedTutorials.length === 0 && (
+            {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel) */}
+            <TabsContent value="tutorials" className="mt-4" />
+
+            {/* Books Tab — Netflix-style poster racks */}
+            <TabsContent value="books" className="space-y-5 mt-4">
+              {(() => {
+                const books = allResources.filter(
+                  (r) => r.type === "book" || r.type === "guide"
+                );
+                if (books.length === 0) {
+                  return (
+                    <Card className="bg-muted/30">
+                      <CardContent className="p-6 text-center">
+                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Textbooks &amp; study guides will appear here.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
+                // Group by subject for Netflix-style racks
+                const bySubject = books.reduce<Record<string, LibraryResource[]>>(
+                  (acc, b) => {
+                    const k = b.category || "General";
+                    (acc[k] ||= []).push(b);
+                    return acc;
+                  },
+                  {}
+                );
+                return Object.entries(bySubject).map(([subject, items]) => (
+                  <div key={subject} className="space-y-2">
+                    <h3 className="font-semibold text-sm">{subject}</h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                      {items.map((r) => (
+                        <PosterCard
+                          key={String(r.id)}
+                          resource={r}
+                          variant="portrait"
+                          onOpen={openResource}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </TabsContent>
+
+            {/* Past Papers Tab — Netflix-style poster racks */}
+            <TabsContent value="papers" className="space-y-5 mt-4">
+              {pastPapers.length === 0 ? (
                 <Card className="bg-muted/30">
                   <CardContent className="p-6 text-center">
-                    <Video className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No tutorials yet. Tutors can upload videos from their dashboard.
-                    </p>
+                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Past papers will appear here.</p>
                   </CardContent>
                 </Card>
+              ) : (
+                Object.entries(
+                  pastPapers.reduce<Record<string, LibraryResource[]>>((acc, p) => {
+                    const k = p.category || "General";
+                    (acc[k] ||= []).push(p);
+                    return acc;
+                  }, {})
+                ).map(([subject, items]) => (
+                  <div key={subject} className="space-y-2">
+                    <h3 className="font-semibold text-sm">{subject}</h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                      {items.map((r) => (
+                        <PosterCard
+                          key={String(r.id)}
+                          resource={r}
+                          variant="landscape"
+                          onOpen={openResource}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
               )}
-              <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
             </TabsContent>
-
-            {/* Books Tab */}
-            <TabsContent value="books" className="space-y-4 mt-4">
-              <h3 className="font-semibold">Books &amp; Study Guides</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {allResources
-                  .filter((r) => r.type === "book" || r.type === "guide")
-                  .map((r) => (
-                    <ResourceCard
-                      key={String(r.id)}
-                      resource={r}
-                      isInLibrary={myLibraryItems.includes(String(r.id))}
-                      {...cardActions}
-                    />
-                  ))}
-              </div>
-            </TabsContent>
-
-            {/* Past Papers Tab */}
-            <TabsContent value="papers" className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Past Exam Papers</h3>
-                <Badge variant="secondary">{pastPapers.length} papers</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {pastPapers.map((r) => (
-                  <ResourceCard
-                    key={String(r.id)}
-                    resource={r}
-                    isInLibrary={myLibraryItems.includes(String(r.id))}
-                    {...cardActions}
                   />
                 ))}
               </div>
