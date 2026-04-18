@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Brain, BookOpen, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Brain, BookOpen, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MathMarkdown } from './MathMarkdown';
 import { aiRequestJSON } from '../lib/aiClient';
+import { useAuth } from '@/hooks/useAuth';
+import { useAcademicProfile } from '@/hooks/useAcademicProfile';
 import { logger } from "@/utils/logger";
 
 interface PrerequisiteGap {
@@ -17,10 +19,12 @@ interface PrerequisiteGap {
   description: string;
   exampleQuestions: string[];
   missingConcepts: string[];
+  tiedToQuestionType?: string;
 }
 
 interface PrerequisiteRemediationFlowProps {
   subject: string;
+  subjectId?: string;
   currentTopic: string;
   onComplete: () => void;
   onBack: () => void;
@@ -28,11 +32,13 @@ interface PrerequisiteRemediationFlowProps {
 
 export function PrerequisiteRemediationFlow({
   subject,
+  subjectId,
   currentTopic,
   onComplete,
   onBack,
 }: PrerequisiteRemediationFlowProps) {
-  const [phase, setPhase] = useState<'analysis' | 'theory' | 'quiz' | 'complete'>('analysis');
+  const [phase, setPhase] = useState<'analysis' | 'theory' | 'quiz' | 'complete' | 'error'>('analysis');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [gaps, setGaps] = useState<PrerequisiteGap[]>([]);
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
   const [theoryContent, setTheoryContent] = useState('');
@@ -42,6 +48,10 @@ export function PrerequisiteRemediationFlow({
   const [answers, setAnswers] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { profile } = useAcademicProfile(user?.id);
+  const curriculum = profile?.curriculum || 'ZIMSEC';
+  const grade = profile?.grade || undefined;
 
   // Phase 1: Analyze prerequisites
   useEffect(() => {
