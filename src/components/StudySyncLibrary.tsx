@@ -21,6 +21,7 @@ import { SearchResultsView } from "@/components/library/SearchResultsView";
 import { VideoPlayerOverlay } from "@/components/library/VideoPlayerOverlay";
 import { StuckPrompt } from "@/components/library/StuckPrompt";
 import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
+import { PosterCard } from "@/components/library/PosterCard";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
@@ -42,9 +43,24 @@ const StudySyncLibrary = ({
   const [myLibraryItems, setMyLibraryItems] = useState<string[]>([]);
   const [studyModeActive, setStudyModeActive] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
   const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
+
+  // Tabs handler: when user picks "tutorials", drop them straight into the carousel
+  const handleTabChange = (next: string) => {
+    if (next === "tutorials") {
+      if (recommendedTutorials.length > 0) {
+        setReelsStartIndex(0);
+        setReelsFeedOpen(true);
+      }
+      // Don't actually switch the visible tab — keep where they were
+      return;
+    }
+    setPreviousCategory(activeCategory);
+    setActiveCategory(next);
+  };
 
   const {
     allResources,
