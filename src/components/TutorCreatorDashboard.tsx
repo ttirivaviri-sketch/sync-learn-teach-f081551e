@@ -24,6 +24,9 @@ const EMPTY_FORM: TutorialForm = {
   curriculum: "ZIMSEC",
   videoUrl: "",
   durationLabel: "",
+  contentType: "video",
+  pdfUrl: "",
+  resourceCategory: "textbook",
 };
 
 interface TutorCreatorDashboardProps {
@@ -40,6 +43,20 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
+  const [isOfficial, setIsOfficial] = useState(false);
+
+  // Detect official account
+  useEffect(() => {
+    if (!tutorId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_official")
+        .eq("id", tutorId)
+        .maybeSingle();
+      setIsOfficial((data as any)?.is_official === true);
+    })();
+  }, [tutorId]);
 
   const handleUploadClick = () => {
     resetForm();
@@ -131,6 +148,9 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
       curriculum: tutorial.curriculum as Curriculum,
       videoUrl: "",
       durationLabel: "",
+      contentType: "video",
+      pdfUrl: "",
+      resourceCategory: "textbook",
     });
     setEditingId(tutorial.id);
     setShowForm(true);
@@ -141,10 +161,14 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
     if (!form.title.trim()) { setFormError("Title is required"); return; }
     if (!form.subject) { setFormError("Please select a subject"); return; }
     if (!form.topic.trim()) { setFormError("Topic is required"); return; }
+    if (form.contentType === "pdf" && !form.pdfUrl) {
+      setFormError("Please upload a PDF file");
+      return;
+    }
 
     setSaving(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         tutor_id: tutorId,
         title: form.title.trim(),
         description: form.description.trim() || null,
@@ -153,9 +177,12 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         subtopic: form.subtopic.trim() || null,
         grade: form.grade || null,
         curriculum: form.curriculum,
-        video_url: form.videoUrl.trim() || null,
+        video_url: form.contentType === "video" ? (form.videoUrl.trim() || null) : null,
         duration_label: form.durationLabel.trim() || null,
         status: publishNow ? "published" : "draft",
+        content_type: form.contentType,
+        pdf_url: form.contentType === "pdf" ? form.pdfUrl : null,
+        resource_category: form.contentType === "pdf" ? form.resourceCategory : null,
         updated_at: new Date().toISOString(),
       };
 
