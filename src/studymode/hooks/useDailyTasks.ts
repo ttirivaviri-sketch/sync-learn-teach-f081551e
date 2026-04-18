@@ -24,6 +24,11 @@ const TASK_TYPES: DailyTask['type'][] = [
   'micro-revision', 'concept-learning', 'flashcards', 'active-recall', 'exam-question'
 ];
 
+// Canonical render order for daily tasks (stable across completion/upserts)
+const TASK_ORDER: DailyTask['type'][] = [
+  'micro-revision', 'concept-learning', 'flashcards', 'active-recall', 'exam-question'
+];
+
 export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload | null) {
   const [userId, setUserId] = useState<string | null>(null);
   const queryClient = useQueryClient();
