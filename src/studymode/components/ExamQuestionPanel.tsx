@@ -964,6 +964,8 @@ export function ExamQuestionPanel({
                 setAiExplanation('');
                 setShowModelAnswer(false);
                 setMarkResult(null);
+                setSelectedOption(null);
+                setMcqResult(null);
                 quizGenerator.clearQuestion();
                 quizGenerator.generateQuestion();
               }}
