@@ -190,12 +190,9 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
             // For syllabi: also upsert into subjects table so StudyMode can use topics
             if (documentType === 'syllabus' && parsedPayload.topics?.length) {
               const subjectName = parsedPayload.subject_name || subject.trim();
-              const { data: existingSubject } = await supabase
-                .from('subjects')
-                .select('id')
-                .eq('user_id', user.id)
-                .ilike('name', subjectName)
-                .maybeSingle();
+              // Match by canonical name (strips "(IGCSE)" etc.) so we don't create duplicates.
+              const { findExistingSubjectId } = await import('@/lib/subjectName');
+              const existingSubjectId = await findExistingSubjectId(supabase, user.id, subjectName);
 
               const topicsJson = (parsedPayload.topics as any[]).map((t: any, idx: number) => ({
                 id: String(t.id || `topic-${idx + 1}`),
@@ -207,11 +204,11 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
                 prerequisites: Array.isArray(t.prerequisites) ? t.prerequisites.map(String) : [],
               })) as any;
 
-              if (existingSubject?.id) {
+              if (existingSubjectId) {
                 await supabase
                   .from('subjects')
                   .update({ topics: topicsJson as any, syllabus_code: parsedPayload.syllabus_code || null })
-                  .eq('id', existingSubject.id);
+                  .eq('id', existingSubjectId);
               } else {
                 await supabase.from('subjects').insert({
                   user_id: user.id,
