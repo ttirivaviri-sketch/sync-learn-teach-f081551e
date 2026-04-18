@@ -52,6 +52,7 @@ export function SyllabusSetupGate({
   const [entries, setEntries] = useState<SyllabusEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [reparsingId, setReparsingId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -255,6 +256,79 @@ export function SyllabusSetupGate({
     }
   };
 
+  // Re-parse the most recent uploaded syllabus PDF for this subject using the
+  // improved extraction pipeline (real PDF text + exam-board metadata).
+  const handleReparse = async (entry: SyllabusEntry) => {
+    setReparsingId(entry.id);
+    try {
+      // Find the most recent syllabus document for this subject
+      const { data: docs, error: docsErr } = await supabase
+        .from("documents")
+        .select("id, file_path, name")
+        .eq("user_id", userId)
+        .eq("type", "syllabus")
+        .ilike("subject", entry.subject_name)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
+      if (docsErr) throw docsErr;
+      if (!docs || docs.length === 0) {
+        toast({
+          title: "No syllabus PDF found",
+          description: `Upload a syllabus PDF for ${entry.subject_name} first.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const doc = docs[0];
+
+      // Download the original file
+      const { data: fileBlob, error: dlErr } = await supabase.storage
+        .from("documents")
+        .download(doc.file_path);
+      if (dlErr || !fileBlob) throw dlErr || new Error("Could not download PDF");
+
+      // Re-extract text using the improved PDF extractor
+      const { extractTextFromFile, chunkText } = await import("@/studymode/lib/pdfExtractor");
+      const file = new File([fileBlob], doc.name, { type: "application/pdf" });
+      const fullText = await extractTextFromFile(file);
+      const chunks = chunkText(fullText, 80_000);
+
+      toast({ title: "Re-parsing…", description: `Reading ${chunks.length} section(s) of ${doc.name}.` });
+
+      const result = await supabase.functions.invoke("parse-document", {
+        body: {
+          documentId: doc.id,
+          content: fullText,
+          chunks,
+          totalChunks: chunks.length,
+          documentType: "syllabus",
+          subject: entry.subject_name,
+        },
+      });
+
+      if (result.error) throw result.error;
+
+      const topicCount = result.data?.parsed?.topics?.length || 0;
+      toast({
+        title: "Syllabus re-parsed",
+        description: `${topicCount} topics extracted with full exam-board metadata.`,
+      });
+      await loadEntries();
+    } catch (err) {
+      logger.error("Re-parse error:", err);
+      toast({
+        title: "Re-parse failed",
+        description: err instanceof Error ? err.message : "Could not re-parse the syllabus.",
+        variant: "destructive",
+      });
+    } finally {
+      setReparsingId(null);
+    }
+  };
+
+
   const autoPopulateFromProfile = async () => {
     if (!academicProfile?.subjects || academicProfile.subjects.length === 0) {
       toast({ title: "No subjects in profile", description: "Set your academic profile first.", variant: "destructive" });
@@ -332,6 +406,7 @@ export function SyllabusSetupGate({
               entry={entry}
               isEditing={editingId === entry.id}
               saving={saving}
+              reparsing={reparsingId === entry.id}
               editSyllabusCode={editSyllabusCode}
               editPaperCode={editPaperCode}
               editPaperCodes={editPaperCodes}
@@ -339,6 +414,7 @@ export function SyllabusSetupGate({
               onCancelEdit={() => setEditingId(null)}
               onSaveEdit={handleSaveEdit}
               onDelete={handleDelete}
+              onReparse={handleReparse}
               onEditSyllabusCodeChange={setEditSyllabusCode}
               onEditPaperCodeChange={setEditPaperCode}
               onAddEditPaperCode={addEditPaperCode}

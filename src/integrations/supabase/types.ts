@@ -1517,6 +1517,7 @@ export type Database = {
       subjects: {
         Row: {
           created_at: string
+          exam_board_meta: Json
           exam_patterns: Json | null
           icon_emoji: string | null
           icon_gradient: string | null
@@ -1529,6 +1530,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          exam_board_meta?: Json
           exam_patterns?: Json | null
           icon_emoji?: string | null
           icon_gradient?: string | null
@@ -1541,6 +1543,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          exam_board_meta?: Json
           exam_patterns?: Json | null
           icon_emoji?: string | null
           icon_gradient?: string | null
