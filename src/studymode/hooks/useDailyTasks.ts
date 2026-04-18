@@ -295,9 +295,18 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
   // Get tasks for a specific subject — prefer DB, fallback to generated
   const getTasksForSubject = (subject: Subject): DailyTask[] => {
     const subjectDbTasks = dbTasks?.filter(t => t.subject_id === subject.id) || [];
-    
+
     if (subjectDbTasks.length > 0) {
-      return subjectDbTasks.map(t => ({
+      const sorted = [...subjectDbTasks].sort((a, b) => {
+        const ai = TASK_ORDER.indexOf(a.task_type as DailyTask['type']);
+        const bi = TASK_ORDER.indexOf(b.task_type as DailyTask['type']);
+        const aIdx = ai === -1 ? TASK_ORDER.length : ai;
+        const bIdx = bi === -1 ? TASK_ORDER.length : bi;
+        if (aIdx !== bIdx) return aIdx - bIdx;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+
+      return sorted.map(t => ({
         id: t.id,
         type: t.task_type as DailyTask['type'],
         title: t.title,
@@ -307,9 +316,12 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
         subjectId: t.subject_id || subject.id,
       }));
     }
-    
+
     return generateTasksForSubject(subject);
   };
+
+  // Canonical task ordering for stable rendering
+  // (declared here so it's hoisted via const above usage at module scope below)
 
   return {
     getTasksForSubject,
