@@ -269,26 +269,45 @@ const NOTES_TOOL = {
 const MARK_SCHEME_TOOL = {
   type: "function",
   function: {
-    name: "extract_document_info",
-    description: "Extract key information from a mark scheme or study document",
+    name: "extract_mark_scheme",
+    description:
+      "Extract a structured mark scheme: paper identifiers + per-question model answers, marking points, command words and topics. This will be linked back to its matching past paper so each question carries its official answer.",
     parameters: {
       type: "object",
       properties: {
+        paper_year: { type: "string", description: "e.g. '2025'" },
+        paper_variant: { type: "string", description: "e.g. '22', '42'" },
+        paper_code: {
+          type: "string",
+          description: "e.g. 'Paper 2', 'Paper 4', 'P2', 'P4'",
+        },
         topics_covered: { type: "array", items: { type: "string" } },
-        key_points: {
+        answers: {
           type: "array",
+          description:
+            "One entry per question. Include sub-parts (e.g. 1(a), 1(b)(i)) as separate entries.",
           items: {
             type: "object",
             properties: {
+              question_number: { type: "string" },
               topic: { type: "string" },
-              points: { type: "array", items: { type: "string" } },
-              common_mistakes: { type: "array", items: { type: "string" } },
+              command_word: { type: "string" },
+              marks: { type: "number" },
+              model_answer: { type: "string" },
+              marking_points: {
+                type: "array",
+                items: { type: "string" },
+                description: "Mark-by-mark scheme points (e.g. '1 mark for ...').",
+              },
+              accept: { type: "array", items: { type: "string" } },
+              reject: { type: "array", items: { type: "string" } },
             },
-            required: ["topic", "points"],
+            required: ["question_number", "model_answer", "marks"],
           },
         },
+        common_mistakes: { type: "array", items: { type: "string" } },
       },
-      required: ["topics_covered", "key_points"],
+      required: ["answers"],
     },
   },
 };
