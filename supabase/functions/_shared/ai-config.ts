@@ -226,6 +226,7 @@ export function safeJsonParse<T = unknown>(raw: string): T {
     }
   }
 
+  console.error("[safeJsonParse] Failed. Raw snippet:", raw.substring(0, 500));
   throw new Error("Could not parse AI response as JSON");
 }
 
