@@ -685,8 +685,81 @@ export function ExamQuestionPanel({
       {/* Phase: Feedback */}
       {phase === 'feedback' && (
         <div className="space-y-4">
-          {/* AI Mark Result */}
-          {markResult ? (
+          {/* MCQ result card with option highlighting */}
+          {isMCQ && mcqResult && (
+            <>
+              <div className={cn(
+                'p-4 rounded-xl border text-center',
+                mcqResult.correct
+                  ? 'bg-success/10 border-success/30'
+                  : 'bg-destructive/10 border-destructive/30'
+              )}>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  {mcqResult.correct ? (
+                    <CheckCircle className="h-5 w-5 text-success" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-destructive" />
+                  )}
+                  <p className="text-sm font-semibold">
+                    {mcqResult.correct ? 'Correct!' : 'Incorrect'}
+                  </p>
+                </div>
+                <p className={cn(
+                  'text-3xl font-bold',
+                  mcqResult.correct ? 'text-success' : 'text-destructive',
+                )}>
+                  {mcqResult.correct ? activeQuestion.marks : 0}/{activeQuestion.marks}
+                </p>
+                <p className="text-xs text-accent mt-2">
+                  +{mcqResult.correct ? 15 : 5} XP earned
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {mcqOptions.map((opt, i) => {
+                  const letter = letters[i];
+                  const isCorrect = letter === mcqResult.correctOption;
+                  const isChosen = letter === selectedOption;
+                  return (
+                    <div
+                      key={letter}
+                      className={cn(
+                        'flex items-start gap-3 p-3 rounded-xl border text-sm',
+                        isCorrect && 'bg-success/10 border-success/40',
+                        !isCorrect && isChosen && 'bg-destructive/10 border-destructive/40',
+                        !isCorrect && !isChosen && 'bg-muted/40 border-border opacity-70',
+                      )}
+                    >
+                      <span className={cn(
+                        'font-bold w-5',
+                        isCorrect ? 'text-success' : isChosen ? 'text-destructive' : 'text-muted-foreground',
+                      )}>{letter}.</span>
+                      <span className="flex-1 text-foreground">
+                        <MathMarkdown>{String(opt)}</MathMarkdown>
+                      </span>
+                      {isCorrect && <CheckCircle className="h-4 w-4 text-success shrink-0 mt-0.5" />}
+                      {!isCorrect && isChosen && <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {quizGenerator?.question?.explanation && (
+                <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-accent" />
+                    Explanation
+                  </h4>
+                  <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+                    <MathMarkdown>{quizGenerator.question.explanation}</MathMarkdown>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* AI Mark Result (non-MCQ) */}
+          {!isMCQ && markResult ? (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {markResult.percentage >= 70 ? 'Excellent!' : markResult.percentage >= 50 ? 'Good effort!' : 'Keep practicing!'}
