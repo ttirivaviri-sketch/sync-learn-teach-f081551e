@@ -769,6 +769,57 @@ export type Database = {
           },
         ]
       }
+      paper_blueprints: {
+        Row: {
+          command_word_frequency: Json
+          created_at: string
+          difficulty_distribution: Json
+          duration_minutes: number | null
+          id: string
+          paper_code: string
+          question_type_distribution: Json
+          subject_id: string
+          subject_name: string
+          topic_coverage: Json
+          total_marks: number | null
+          updated_at: string
+          user_id: string
+          years_analysed: string[]
+        }
+        Insert: {
+          command_word_frequency?: Json
+          created_at?: string
+          difficulty_distribution?: Json
+          duration_minutes?: number | null
+          id?: string
+          paper_code: string
+          question_type_distribution?: Json
+          subject_id: string
+          subject_name: string
+          topic_coverage?: Json
+          total_marks?: number | null
+          updated_at?: string
+          user_id: string
+          years_analysed?: string[]
+        }
+        Update: {
+          command_word_frequency?: Json
+          created_at?: string
+          difficulty_distribution?: Json
+          duration_minutes?: number | null
+          id?: string
+          paper_code?: string
+          question_type_distribution?: Json
+          subject_id?: string
+          subject_name?: string
+          topic_coverage?: Json
+          total_marks?: number | null
+          updated_at?: string
+          user_id?: string
+          years_analysed?: string[]
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -2167,6 +2218,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_exam_readiness: {
+        Args: { p_paper_code: string; p_subject_id: string }
+        Returns: Json
+      }
       get_published_tutorials: {
         Args: { p_curriculum?: string; p_subject?: string }
         Returns: {
