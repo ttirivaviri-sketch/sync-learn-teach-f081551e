@@ -1,5 +1,5 @@
 import {
-  Star, Download, Book, FileText, Video, Bookmark, Eye, Play, X,
+  Star, Download, Book, FileText, Video, Bookmark, Eye, Play, X, BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -33,6 +33,10 @@ export function ResourceCard({
       : resource.type === "pastpaper"
       ? FileText
       : Book;
+
+  const isOfficial =
+    (resource.tutor?.name === "studysyncofficial") ||
+    resource.author === "studysyncofficial";
 
   return (
     <Card className="shadow-sm cursor-pointer hover:shadow-md transition-shadow overflow-hidden">
@@ -92,9 +96,17 @@ export function ResourceCard({
               <span className="text-xs text-muted-foreground truncate">
                 {resource.tutor.name}
               </span>
+              {isOfficial && (
+                <BadgeCheck className="h-3.5 w-3.5 text-blue-500 fill-blue-500/20 shrink-0" />
+              )}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">{resource.author}</p>
+            <div className="flex items-center gap-1">
+              <p className="text-xs text-muted-foreground">{resource.author}</p>
+              {isOfficial && (
+                <BadgeCheck className="h-3.5 w-3.5 text-blue-500 fill-blue-500/20 shrink-0" />
+              )}
+            </div>
           )}
 
           {/* Grade */}

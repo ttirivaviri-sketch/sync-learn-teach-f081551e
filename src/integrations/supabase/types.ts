@@ -948,6 +948,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          is_official: boolean
           last_seen: string | null
           location_lat: number | null
           location_lng: number | null
@@ -964,6 +965,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          is_official?: boolean
           last_seen?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -980,6 +982,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          is_official?: boolean
           last_seen?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1991,6 +1994,7 @@ export type Database = {
       tutor_tutorials: {
         Row: {
           completion_rate: number | null
+          content_type: string
           created_at: string | null
           curriculum: string | null
           description: string | null
@@ -1998,8 +2002,10 @@ export type Database = {
           duration_seconds: number | null
           grade: string | null
           id: string
+          pdf_url: string | null
           price: number | null
           rating: number | null
+          resource_category: string | null
           review_count: number | null
           status: string | null
           subject: string | null
@@ -2014,6 +2020,7 @@ export type Database = {
         }
         Insert: {
           completion_rate?: number | null
+          content_type?: string
           created_at?: string | null
           curriculum?: string | null
           description?: string | null
@@ -2021,8 +2028,10 @@ export type Database = {
           duration_seconds?: number | null
           grade?: string | null
           id?: string
+          pdf_url?: string | null
           price?: number | null
           rating?: number | null
+          resource_category?: string | null
           review_count?: number | null
           status?: string | null
           subject?: string | null
@@ -2037,6 +2046,7 @@ export type Database = {
         }
         Update: {
           completion_rate?: number | null
+          content_type?: string
           created_at?: string | null
           curriculum?: string | null
           description?: string | null
@@ -2044,8 +2054,10 @@ export type Database = {
           duration_seconds?: number | null
           grade?: string | null
           id?: string
+          pdf_url?: string | null
           price?: number | null
           rating?: number | null
+          resource_category?: string | null
           review_count?: number | null
           status?: string | null
           subject?: string | null

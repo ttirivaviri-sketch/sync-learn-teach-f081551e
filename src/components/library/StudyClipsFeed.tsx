@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
   X, Heart, Bookmark, GraduationCap, Share2, Play, Pause,
-  ChevronUp, ChevronDown,
+  ChevronUp, ChevronDown, BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -167,6 +167,9 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
             </AvatarFallback>
           </Avatar>
           <span className="text-white text-sm font-medium">{tutorName}</span>
+          {tutorName === "studysyncofficial" && (
+            <BadgeCheck className="h-4 w-4 text-blue-400 fill-blue-400/30" />
+          )}
         </div>
         <h3 className="text-white font-semibold text-sm leading-tight mb-2 line-clamp-2">
           {resource.title}

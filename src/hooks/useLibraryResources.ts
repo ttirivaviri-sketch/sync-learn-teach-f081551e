@@ -223,76 +223,19 @@ export function useLibraryResources(
     ? dbResources
     : SEED_TUTORIALS;
 
-  // Fetch tutor-uploaded tutorials from Supabase
+  // Fetch tutor-uploaded tutorials AND PDFs from Supabase
   useEffect(() => {
     const fetchTutorials = async () => {
       setLoading(true);
       try {
-        // ── Primary path: RPC that returns flat fields ──────────────────────
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          "get_published_tutorials",
-          {
-            p_curriculum: academicProfile?.curriculum ?? null,
-            p_subject: null,
-          }
-        );
-
-        if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
-          const mapped: LibraryResource[] = (rpcData as any[]).map((row: any) => ({
-            id: row.id,
-            title: row.title,
-            // RPC returns flat columns, not a nested object
-            author: row.tutor_full_name || row.tutor_profile?.full_name || "Unknown",
-            type: "video" as const,
-            category: row.subject,
-            gradeLevel: row.grade || "All Grades",
-            summary: row.description || "",
-            rating: row.rating || 0,
-            reviews: row.review_count || 0,
-            thumbnail: row.thumbnail_url || "/placeholder.svg",
-            isOffline: false,
-            duration: row.duration_label || "Video",
-            isTutorial: true,
-            watchCount: row.watch_count || 0,
-            completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || extractVideoUrl(row.description) || extractVideoUrl(row.title) || undefined,
-            tags: {
-              subject: row.subject,
-              topic: row.topic,
-              subtopic: row.subtopic,
-              grade: row.grade,
-              curriculum: row.curriculum,
-            },
-            tutor: {
-              id: row.tutor_id,
-              name: row.tutor_full_name || row.tutor_profile?.full_name || "Unknown",
-              avatar_url: row.tutor_avatar_url || row.tutor_profile?.avatar_url,
-              rating: row.rating || 0,
-              reviews: row.review_count || 0,
-            },
-          }));
-
-          logger.info("[useLibraryResources] RPC tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
-          setDbResources(mapped);
-          setDbFetched(true);
-          return;
-        }
-
-        // ── Fallback: direct query to tutor_tutorials ───────────────────────
-        if (rpcError) {
-          logger.warn(
-            "get_published_tutorials RPC unavailable, falling back to direct query:",
-            rpcError.message
-          );
-        }
-
+        // Direct query: include content_type, pdf_url, resource_category for PDFs
         const { data: directData, error: directError } = await supabase
           .from("tutor_tutorials")
           .select(
             `id, title, subject, topic, subtopic, grade, curriculum,
              description, rating, review_count, thumbnail_url,
              duration_label, video_url, watch_count, completion_rate,
-             tutor_id`
+             tutor_id, content_type, pdf_url, resource_category`
           )
           .eq("status", "published")
           .order("created_at", { ascending: false });
@@ -303,12 +246,45 @@ export function useLibraryResources(
           return;
         }
 
-        const mapped: LibraryResource[] = ((directData as any[]) || []).map(
-          (row) => ({
+        // Fetch all tutor profiles in one query for author display
+        const tutorIds = Array.from(
+          new Set((directData as any[] | null)?.map((r) => r.tutor_id).filter(Boolean) ?? [])
+        );
+        let profilesById: Record<string, { full_name: string | null; avatar_url: string | null; is_official: boolean }> = {};
+        if (tutorIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url, is_official")
+            .in("id", tutorIds);
+          (profilesData as any[] | null)?.forEach((p) => {
+            profilesById[p.id] = {
+              full_name: p.full_name,
+              avatar_url: p.avatar_url,
+              is_official: p.is_official === true,
+            };
+          });
+        }
+
+        const mapped: LibraryResource[] = ((directData as any[]) || []).map((row) => {
+          const profile = profilesById[row.tutor_id];
+          const isOfficial = profile?.is_official === true;
+          const displayName = isOfficial
+            ? "studysyncofficial"
+            : profile?.full_name || "Unknown";
+          const isPdf = row.content_type === "pdf";
+          const resourceType: LibraryResource["type"] = isPdf
+            ? row.resource_category === "past_paper"
+              ? "pastpaper"
+              : row.resource_category === "notes"
+              ? "guide"
+              : "book"
+            : "video";
+
+          return {
             id: row.id,
             title: row.title,
-            author: row.tutor_full_name || "Unknown",
-            type: "video" as const,
+            author: displayName,
+            type: resourceType,
             category: row.subject || "General",
             gradeLevel: row.grade || "All Grades",
             summary: row.description || "",
@@ -316,11 +292,16 @@ export function useLibraryResources(
             reviews: row.review_count || 0,
             thumbnail: row.thumbnail_url || "/placeholder.svg",
             isOffline: false,
-            duration: row.duration_label || "Video",
-            isTutorial: true,
+            duration: row.duration_label || (isPdf ? "PDF" : "Video"),
+            isTutorial: !isPdf,
             watchCount: row.watch_count || 0,
             completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || extractVideoUrl(row.description) || extractVideoUrl(row.title) || undefined,
+            videoUrl: isPdf
+              ? row.pdf_url || undefined
+              : row.video_url ||
+                extractVideoUrl(row.description) ||
+                extractVideoUrl(row.title) ||
+                undefined,
             tags: {
               subject: row.subject,
               topic: row.topic,
@@ -328,21 +309,31 @@ export function useLibraryResources(
               grade: row.grade,
               curriculum: row.curriculum,
             },
-            tutor: {
-              id: row.tutor_id,
-              name: row.tutor_full_name || "Unknown",
-              rating: row.rating || 0,
-              reviews: row.review_count || 0,
-            },
-          })
-        );
+            tutor: isPdf
+              ? undefined
+              : {
+                  id: row.tutor_id,
+                  name: displayName,
+                  avatar_url: profile?.avatar_url || undefined,
+                  rating: row.rating || 0,
+                  reviews: row.review_count || 0,
+                },
+          };
+        });
 
-        logger.info("[useLibraryResources] Direct query tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
+        logger.info(
+          "[useLibraryResources] Tutorials/PDFs:",
+          mapped.length,
+          "videos:",
+          mapped.filter((r) => r.type === "video").length,
+          "pdfs:",
+          mapped.filter((r) => r.type !== "video").length
+        );
         setDbResources(mapped);
         setDbFetched(true);
       } catch (err) {
         logger.warn("Tutorial fetch error (non-critical):", err);
-        setDbFetched(true); // Mark as fetched so we show empty state, not seed data
+        setDbFetched(true);
       } finally {
         setLoading(false);
       }
