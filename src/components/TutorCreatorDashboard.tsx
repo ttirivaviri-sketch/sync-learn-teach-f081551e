@@ -331,6 +331,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         saving={saving}
         formError={formError}
         tutorId={tutorId}
+        isOfficial={isOfficial}
         onOpenChange={setShowForm}
         onUpdateForm={updateForm}
         onSubmit={handleSubmit}
