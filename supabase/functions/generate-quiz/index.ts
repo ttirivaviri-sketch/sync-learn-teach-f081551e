@@ -59,6 +59,8 @@ serve(async (req) => {
       curriculum,
       examLevel,
       notesOrDocuments,
+      pastPaperExemplars,
+      paperBlueprint,
       count = 1,
     } = body;
 
