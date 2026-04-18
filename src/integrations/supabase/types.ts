@@ -2351,6 +2351,7 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      subject_canonical_name: { Args: { p_name: string }; Returns: string }
       upsert_academic_profile:
         | {
             Args: {
