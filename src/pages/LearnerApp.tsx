@@ -373,71 +373,87 @@ const LearnerApp = () => {
       {/* ── Main Content ── */}
       <div className="pt-16 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsContent value="home">
-            <LearnerHomeTab
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              allSubjects={allSubjects}
-              selectedSubject={selectedSubject}
-              onSelectSubject={setSelectedSubject}
-              userGeoLocation={userGeoLocation ? { lat: userGeoLocation.latitude, lng: userGeoLocation.longitude } : null}
-              locationLoading={locationLoading}
-              onUpdateLocation={getCurrentLocation}
-              tutors={tutors}
-              tutorsLoading={tutorsLoading}
-              onRefreshTutors={refreshTutors}
-              onBookTutor={handleBookTutor}
-              onStartChat={handleStartChat}
-              isUserOnline={isUserOnline}
-              upcomingBookings={bookings.filter((b) => (b.status === "confirmed" || b.status === "requested") && (new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000) > Date.now())}
-              needsPayment={needsPayment}
-              onJoinVideoSession={handleJoinVideoSession}
-              onPayNow={handlePayNow}
-              onStartCheckout={handleStartCheckout}
-            />
+          <TabsContent value="home" forceMount={activeTab === "home" ? true : undefined} hidden={activeTab !== "home"}>
+            {activeTab === "home" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerHomeTab
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  allSubjects={allSubjects}
+                  selectedSubject={selectedSubject}
+                  onSelectSubject={setSelectedSubject}
+                  userGeoLocation={userGeoLocation ? { lat: userGeoLocation.latitude, lng: userGeoLocation.longitude } : null}
+                  locationLoading={locationLoading}
+                  onUpdateLocation={getCurrentLocation}
+                  tutors={tutors}
+                  tutorsLoading={tutorsLoading}
+                  onRefreshTutors={refreshTutors}
+                  onBookTutor={handleBookTutor}
+                  onStartChat={handleStartChat}
+                  isUserOnline={isUserOnline}
+                  upcomingBookings={bookings.filter((b) => (b.status === "confirmed" || b.status === "requested") && (new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000) > Date.now())}
+                  needsPayment={needsPayment}
+                  onJoinVideoSession={handleJoinVideoSession}
+                  onPayNow={handlePayNow}
+                  onStartCheckout={handleStartCheckout}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
-          <TabsContent value="library">
-            <LearnerLibraryTab
-              academicProfile={academicProfile}
-              onShowAcademicSetup={() => setShowAcademicSetup(true)}
-              onBookTutor={handleLibraryBookTutor}
-              onNeedHelp={() => setActiveTab("home")}
-            />
+          <TabsContent value="library" hidden={activeTab !== "library"}>
+            {activeTab === "library" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerLibraryTab
+                  academicProfile={academicProfile}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+                  onBookTutor={handleLibraryBookTutor}
+                  onNeedHelp={() => setActiveTab("home")}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
-          <TabsContent value="activity">
-            <LearnerActivityTab
-              bookings={bookings}
-              bookingsLoading={bookingsLoading}
-              bookingsNeedingPayment={bookingsNeedingPayment}
-              needsPayment={needsPayment}
-              onJoinVideoSession={handleJoinVideoSession}
-              onPayNow={handlePayNow}
-              onStartCheckout={handleStartCheckout}
-              onStartChat={(booking) => {
-                setChatWithUserId(booking.tutor_id);
-                setChatWithUserName("Tutor");
-                setShowChat(true);
-              }}
-              onReview={(data) => { setReviewData(data); setShowReviewModal(true); }}
-            />
+          <TabsContent value="activity" hidden={activeTab !== "activity"}>
+            {activeTab === "activity" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerActivityTab
+                  bookings={bookings}
+                  bookingsLoading={bookingsLoading}
+                  bookingsNeedingPayment={bookingsNeedingPayment}
+                  needsPayment={needsPayment}
+                  onJoinVideoSession={handleJoinVideoSession}
+                  onPayNow={handlePayNow}
+                  onStartCheckout={handleStartCheckout}
+                  onStartChat={(booking) => {
+                    setChatWithUserId(booking.tutor_id);
+                    setChatWithUserName("Tutor");
+                    setShowChat(true);
+                  }}
+                  onReview={(data) => { setReviewData(data); setShowReviewModal(true); }}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
-          <TabsContent value="profile">
-            <LearnerProfileTab
-              session={session}
-              profile={profile}
-              academicProfile={academicProfile}
-              bookings={bookings}
-              onRefreshProfile={loadUserProfile}
-              onShowAcademicSetup={() => setShowAcademicSetup(true)}
-              onShowPaymentMethods={() => setShowPaymentMethods(true)}
-              onShowAllPayments={() => setShowAllPayments(true)}
-              onNavigateTab={setActiveTab}
-              onSignOut={handleSignOut}
-              onNavigate={navigate}
-            />
+          <TabsContent value="profile" hidden={activeTab !== "profile"}>
+            {activeTab === "profile" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerProfileTab
+                  session={session}
+                  profile={profile}
+                  academicProfile={academicProfile}
+                  bookings={bookings}
+                  onRefreshProfile={loadUserProfile}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+                  onShowPaymentMethods={() => setShowPaymentMethods(true)}
+                  onShowAllPayments={() => setShowAllPayments(true)}
+                  onNavigateTab={setActiveTab}
+                  onSignOut={handleSignOut}
+                  onNavigate={navigate}
+                />
+              </Suspense>
+            )}
           </TabsContent>
         </Tabs>
 
