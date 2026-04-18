@@ -269,26 +269,45 @@ const NOTES_TOOL = {
 const MARK_SCHEME_TOOL = {
   type: "function",
   function: {
-    name: "extract_document_info",
-    description: "Extract key information from a mark scheme or study document",
+    name: "extract_mark_scheme",
+    description:
+      "Extract a structured mark scheme: paper identifiers + per-question model answers, marking points, command words and topics. This will be linked back to its matching past paper so each question carries its official answer.",
     parameters: {
       type: "object",
       properties: {
+        paper_year: { type: "string", description: "e.g. '2025'" },
+        paper_variant: { type: "string", description: "e.g. '22', '42'" },
+        paper_code: {
+          type: "string",
+          description: "e.g. 'Paper 2', 'Paper 4', 'P2', 'P4'",
+        },
         topics_covered: { type: "array", items: { type: "string" } },
-        key_points: {
+        answers: {
           type: "array",
+          description:
+            "One entry per question. Include sub-parts (e.g. 1(a), 1(b)(i)) as separate entries.",
           items: {
             type: "object",
             properties: {
+              question_number: { type: "string" },
               topic: { type: "string" },
-              points: { type: "array", items: { type: "string" } },
-              common_mistakes: { type: "array", items: { type: "string" } },
+              command_word: { type: "string" },
+              marks: { type: "number" },
+              model_answer: { type: "string" },
+              marking_points: {
+                type: "array",
+                items: { type: "string" },
+                description: "Mark-by-mark scheme points (e.g. '1 mark for ...').",
+              },
+              accept: { type: "array", items: { type: "string" } },
+              reject: { type: "array", items: { type: "string" } },
             },
-            required: ["topic", "points"],
+            required: ["question_number", "model_answer", "marks"],
           },
         },
+        common_mistakes: { type: "array", items: { type: "string" } },
       },
-      required: ["topics_covered", "key_points"],
+      required: ["answers"],
     },
   },
 };
@@ -462,7 +481,22 @@ Be thorough — extract every testable concept.`;
       default: // mark_scheme and others
         systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-You are an expert exam analyst. Extract key information from this mark scheme or study document. Identify topics, key points, marking criteria, and common mistakes.`;
+You are an expert exam mark-scheme analyst. Extract a STRUCTURED mark scheme from this document.
+
+YOUR JOB:
+1. Identify paper identifiers from headers/footers: paper_year (e.g. "2025"), paper_variant (e.g. "22", "42"), paper_code (e.g. "Paper 2", "Paper 4").
+2. For EVERY question (and sub-part like 1(a), 1(b)(i)), extract:
+   - question_number (verbatim, e.g. "1", "1(a)", "2(b)(ii)")
+   - topic (the syllabus topic the question tests)
+   - command_word (state, describe, explain, calculate, suggest, evaluate, etc.)
+   - marks (integer)
+   - model_answer (the official correct answer, concise)
+   - marking_points (array — one entry per mark, e.g. "1 mark for identifying X", "1 mark for explaining Y")
+   - accept (alternative acceptable phrasings, if listed)
+   - reject (explicitly disallowed answers, if listed)
+3. List common_mistakes if examiner notes mention them.
+
+Be exhaustive — every question must appear. Preserve the examiner's exact marking logic.`;
         toolDef = MARK_SCHEME_TOOL;
         break;
     }
@@ -677,7 +711,7 @@ You are an expert exam analyst. Extract key information from this mark scheme or
 
             const { data: subjectData } = await supabase
               .from("subjects")
-              .select("topics")
+              .select("topics, name, exam_board_meta")
               .eq("id", matchingSubject.id)
               .single();
 
@@ -693,8 +727,185 @@ You are an expert exam analyst. Extract key information from this mark scheme or
                 .update({ topics: updatedTopics })
                 .eq("id", matchingSubject.id);
             }
+
+            // ── Build / update paper_blueprint ─────────────────────
+            try {
+              const paperCode =
+                parsedContent.paper_code ||
+                (parsedContent.paper_variant
+                  ? `Paper ${String(parsedContent.paper_variant).charAt(0)}`
+                  : "Paper");
+              const year = String(parsedContent.paper_year || "").trim();
+
+              // question type distribution (% of marks)
+              const qtypeMarks: Record<string, number> = {};
+              const cmdFreq: Record<string, number> = {};
+              const diffMarks: Record<string, number> = {};
+              let totalMarks = 0;
+              for (const q of parsedContent.questions || []) {
+                const m = Number(q.marks || 0);
+                totalMarks += m;
+                const qt = (q.question_type || "structured").toLowerCase();
+                qtypeMarks[qt] = (qtypeMarks[qt] || 0) + m;
+                const diff = (q.difficulty || "medium").toLowerCase();
+                diffMarks[diff] = (diffMarks[diff] || 0) + m;
+                for (const cw of q.command_words || []) {
+                  const k = String(cw).toLowerCase();
+                  cmdFreq[k] = (cmdFreq[k] || 0) + 1;
+                }
+              }
+              const pctOf = (rec: Record<string, number>) => {
+                const sum = Object.values(rec).reduce((a, b) => a + b, 0) || 1;
+                const out: Record<string, number> = {};
+                for (const [k, v] of Object.entries(rec)) {
+                  out[k] = Math.round((v / sum) * 100);
+                }
+                return out;
+              };
+
+              const topicCoverage: Record<string, number> = {};
+              for (const tf of parsedContent.topic_frequency || []) {
+                topicCoverage[tf.topic] = Number(tf.percentage_of_paper || 0);
+              }
+
+              // duration from syllabus paper_structure if available
+              let durationMinutes: number | null = null;
+              const meta: any = subjectData?.exam_board_meta || {};
+              for (const ps of meta.paper_structure || []) {
+                if (
+                  String(ps.paper || "").toLowerCase().includes(
+                    paperCode.toLowerCase().replace(/\s+/g, "")
+                  ) ||
+                  String(ps.paper || "")
+                    .toLowerCase()
+                    .includes(paperCode.toLowerCase())
+                ) {
+                  durationMinutes = ps.duration_minutes || null;
+                  break;
+                }
+              }
+
+              const { data: existingBp } = await supabase
+                .from("paper_blueprints")
+                .select("id, years_analysed")
+                .eq("user_id", doc.user_id)
+                .eq("subject_id", matchingSubject.id)
+                .eq("paper_code", paperCode)
+                .maybeSingle();
+
+              const yearsAnalysed = Array.from(
+                new Set(
+                  [...((existingBp?.years_analysed as string[]) || []), year].filter(Boolean)
+                )
+              );
+
+              const blueprintRow = {
+                user_id: doc.user_id,
+                subject_id: matchingSubject.id,
+                subject_name: subjectData?.name || subject || "",
+                paper_code: paperCode,
+                total_marks: totalMarks || parsedContent.total_marks || null,
+                duration_minutes: durationMinutes,
+                question_type_distribution: pctOf(qtypeMarks),
+                topic_coverage: topicCoverage,
+                command_word_frequency: cmdFreq,
+                difficulty_distribution: pctOf(diffMarks),
+                years_analysed: yearsAnalysed,
+              };
+
+              if (existingBp) {
+                await supabase
+                  .from("paper_blueprints")
+                  .update(blueprintRow)
+                  .eq("id", existingBp.id);
+              } else {
+                await supabase.from("paper_blueprints").insert(blueprintRow);
+              }
+            } catch (bpErr) {
+              console.warn("paper_blueprint upsert failed:", bpErr);
+            }
           }
         }
+      }
+    }
+
+    // ── Handle mark_scheme: link answers back to matching past_paper ───
+    if (documentType === "mark_scheme" && Array.isArray(parsedContent?.answers)) {
+      try {
+        const { data: doc } = await supabase
+          .from("documents")
+          .select("user_id")
+          .eq("id", documentId)
+          .single();
+
+        if (doc) {
+          // Find candidate past_paper documents for this subject
+          const { data: papers } = await supabase
+            .from("documents")
+            .select("id, parsed_content, name")
+            .eq("user_id", doc.user_id)
+            .eq("type", "past_paper")
+            .ilike("subject", `%${subject || ""}%`);
+
+          const targetYear = String(parsedContent.paper_year || "").trim();
+          const targetVariant = String(parsedContent.paper_variant || "").trim();
+
+          let bestPaper: any = null;
+          let bestScore = 0;
+          for (const p of papers || []) {
+            const pc: any = p.parsed_content || {};
+            let score = 0;
+            if (targetYear && String(pc.paper_year || "") === targetYear) score += 2;
+            if (targetVariant && String(pc.paper_variant || "") === targetVariant) score += 2;
+            // Fallback: name match
+            if (
+              targetVariant &&
+              p.name &&
+              p.name.toLowerCase().includes(targetVariant.toLowerCase())
+            )
+              score += 1;
+            if (score > bestScore) {
+              bestScore = score;
+              bestPaper = p;
+            }
+          }
+
+          if (bestPaper && bestScore >= 2) {
+            const pc: any = bestPaper.parsed_content || {};
+            const questions = Array.isArray(pc.questions) ? pc.questions : [];
+            const answerMap = new Map<string, any>();
+            for (const a of parsedContent.answers) {
+              answerMap.set(String(a.question_number || "").trim().toLowerCase(), a);
+            }
+            const merged = questions.map((q: any) => {
+              const key = String(q.question_number || "").trim().toLowerCase();
+              const a = answerMap.get(key);
+              if (!a) return q;
+              return {
+                ...q,
+                model_answer: a.model_answer,
+                marking_points: a.marking_points || [],
+                accept: a.accept || [],
+                reject: a.reject || [],
+                official_command_word: a.command_word || q.command_words?.[0] || null,
+              };
+            });
+
+            await supabase
+              .from("documents")
+              .update({
+                parsed_content: {
+                  ...pc,
+                  questions: merged,
+                  mark_scheme_linked: true,
+                  mark_scheme_doc_id: documentId,
+                },
+              })
+              .eq("id", bestPaper.id);
+          }
+        }
+      } catch (linkErr) {
+        console.warn("mark_scheme linking failed:", linkErr);
       }
     }
 
