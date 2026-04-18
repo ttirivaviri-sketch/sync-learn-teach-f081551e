@@ -1,35 +1,47 @@
 
 
-## Current state
-
-- `useQuizGenerator` already supports `questionType: 'multiple_choice' | 'short_answer' | 'structured'` with `options[]` and `correctOption` fields.
-- `generate-quiz` edge function authors questions but always asks for "structured" style — MCQ is rarely produced even for subjects whose papers are multiple-choice (e.g. ZIMSEC Bio Paper 1, IGCSE Maths P1 MCQ, Physics P1).
-- `ExamQuestionPanel` only renders a free-text answer box (`Textarea`) — no A/B/C/D selector exists, so even when AI returns MCQ data, learners can't click an option.
-- `ExamModeSession` runs through `useQuizGenerator` → same gap.
-- Mastery + readiness pipeline already keys off `quiz_attempts.was_correct` + `marks_awarded`, so MCQ submissions just need to write to the same table for everything (topic_mastery, get_exam_readiness, paper_blueprints) to update automatically.
-- `paper_blueprints.question_type_distribution` already stores the per-paper MCQ vs structured ratio — perfect signal for telling the AI when to mix MCQs.
+## Updated rule
+- **All tutors** can upload **tutorials** (videos) — current behavior, no gating change.
+- **Only the `studysyncofficial` account** can upload **study materials** (PDFs: textbooks, past papers, notes).
+- Library author label for the official account stays as `studysyncofficial` with verified badge.
 
 ## Plan
 
-### 1. Tell the AI to mix MCQ + structured based on the paper blueprint
-**`supabase/functions/generate-quiz/index.ts`**
-- Server-side: load the user's `paper_blueprints` for this subject. Extract `question_type_distribution` (e.g. `{ multiple_choice: 40, structured: 60 }`).
-- Pass to prompt: "This subject's papers are X% multiple-choice and Y% structured. Pick `questionType` to roughly match that distribution across attempts. If multiple-choice, return 4 options labeled A–D and `correctOption` as 'A'|'B'|'C'|'D'."
-- Strengthen MCQ schema in the response contract: `options: string[4]`, `correctOption: 'A'|'B'|'C'|'D'`, `explanation` mandatory.
-- Same change to **`supabase/functions/generate-exam-questions/index.ts`** for Exam Mode parity.
+### 1. Schema (migration)
+- `profiles.is_official BOOLEAN DEFAULT false` — flag the official account.
+- `tutor_tutorials.content_type TEXT DEFAULT 'video'` — `'video' | 'pdf'`.
+- `tutor_tutorials.pdf_url TEXT` (nullable).
+- `tutor_tutorials.resource_category TEXT` (nullable) — `'textbook' | 'past_paper' | 'notes'` (only used for PDFs).
+- New public storage bucket `library-pdfs` with public-read + insert policy: `bucket_id='library-pdfs' AND EXISTS(SELECT 1 FROM profiles WHERE id=auth.uid() AND is_official=true)`.
+- DB trigger on `tutor_tutorials` BEFORE INSERT/UPDATE: if `content_type='pdf'`, require uploader's `profiles.is_official=true`. Video inserts are unrestricted (any tutor).
 
-### 2. Render an A/B/C/D selector in the question panel
-**`src/studymode/components/ExamQuestionPanel.tsx`**
-- When `question.questionType === 'multiple_choice'`: render a `RadioGroup` with the 4 options as tappable cards (A/B/C/D letter + option text), styled like past-paper MCQ cells.
-- "Submit Answer" stays the same button; on submit, set `userAnswer` to the chosen letter.
-- Skip the existing free-text grading path for MCQ — grade locally: `wasCorrect = chosen === correctOption`. Award full marks if correct, 0 if wrong. Show `explanation` + `modelAnswer` in the result view.
-- Keep free-text/structured flow unchanged.
+### 2. Library UI — `src/components/StudySyncLibrary.tsx`
+- **Clips/Tutorials tab**: when selected, immediately open `StudyClipsFeed` (vertical carousel) — no card grid, no Watch buttons. Closing the feed returns to the previous tab.
+- **Books tab + Past Papers tab**: replace current grid with Netflix-style horizontal poster racks (new `PosterCard.tsx`). Tap a card → open/download PDF directly.
+- Source PDFs from `tutor_tutorials` where `content_type='pdf'` filtered by `resource_category`.
 
-### 3. Persist MCQ attempts so mastery + readiness update
-**`src/studymode/components/ExamQuestionPanel.tsx`** (existing `quiz_attempts` insert path)
-- For MCQ: insert `{ user_answer: letter, model_answer: correctOption, was_correct, marks_awarded: was_correct ? marks : 0, marks_possible: marks, command_word: 'multiple_choice', concepts_tested, topic_name, subject_id }` into `quiz_attempts`.
-- Existing `useTopicMastery` / `useTopicPerformance` / `get_exam_readiness` already aggregate from `quiz_attempts.was_correct` — no schema change needed.
+### 3. Tutor dashboard — `src/components/TutorCreatorDashboard.tsx` + `tutor-creator/TutorialFormDialog.tsx`
+- Keep the existing **Upload Tutorial** flow available to all tutors (video only).
+- For users where `profiles.is_official = true`, expose an additional **Upload Study Material** path in the dialog: content-type selector (Tutorial Video / Textbook PDF / Past Paper PDF / Notes PDF) + PDF file picker (max 50MB → `library-pdfs` bucket).
+- Non-official tutors only see the Tutorial Video form (current UX preserved).
 
-### 4. Daily tasks and exam mode parity
-- Daily task `exam-question` already uses `ExamQuestionPanel` → fix flows there automatically.
-- **`src/studymode/components/ExamModeSession.t
+### 4. Author display — `useLibraryResources.ts` + cards
+- Map authors with `is_official=true` to display name `studysyncofficial` + small verified check badge in `ResourceCard`, `PosterCard`, and `StudyClipsFeed` slide footer.
+- Other tutors keep their real names (existing behavior — Study Clips memory respected).
+
+### Files
+- New migration (schema + bucket + trigger + RLS)
+- `src/components/library/PosterCard.tsx` (new)
+- `src/components/StudySyncLibrary.tsx` (auto-open carousel for Clips; poster racks for Books/Papers)
+- `src/components/library/ResourceCard.tsx` (verified badge)
+- `src/components/library/StudyClipsFeed.tsx` (verified badge)
+- `src/hooks/useLibraryResources.ts` (fetch `is_official`, map official label, include PDFs)
+- `src/components/TutorCreatorDashboard.tsx` (gate "Upload Study Material" to official)
+- `src/components/tutor-creator/TutorialFormDialog.tsx` (PDF + category fields, official-only)
+
+### Result
+- Any tutor can keep uploading video tutorials as today.
+- Only `studysyncofficial` can publish textbooks and past papers; those appear in Books/Past Papers tabs as Netflix-style poster racks.
+- Tapping the Clips tab drops the learner straight into the swipeable carousel — no intermediate card list.
+- Official content is attributed to `studysyncofficial` with a verified badge.
+
