@@ -48,20 +48,6 @@ const StudySyncLibrary = ({
   const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
-  // Tabs handler: when user picks "tutorials", drop them straight into the carousel
-  const handleTabChange = (next: string) => {
-    if (next === "tutorials") {
-      if (recommendedTutorials.length > 0) {
-        setReelsStartIndex(0);
-        setReelsFeedOpen(true);
-      }
-      // Don't actually switch the visible tab — keep where they were
-      return;
-    }
-    setPreviousCategory(activeCategory);
-    setActiveCategory(next);
-  };
-
   const {
     allResources,
     personalizedResources,
@@ -72,6 +58,20 @@ const StudySyncLibrary = ({
     loading,
     search,
   } = useLibraryResources(academicProfile);
+
+  // Tabs handler: when user picks "tutorials", drop them straight into the carousel
+  const handleTabChange = (next: string) => {
+    if (next === "tutorials") {
+      if (recommendedTutorials.length > 0) {
+        setReelsStartIndex(0);
+        setReelsFeedOpen(true);
+      }
+      // Don't actually switch the visible tab — stay where they were
+      return;
+    }
+    setPreviousCategory(activeCategory);
+    setActiveCategory(next);
+  };
 
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
