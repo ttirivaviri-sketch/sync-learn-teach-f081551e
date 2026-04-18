@@ -1,42 +1,28 @@
 
-The screenshot confirms public Jitsi works but `meet.jit.si` is demo-only (5-min disconnect). The fix is to use Jitsi as a Service (JaaS) properly. We already have JaaS credentials configured (`JAAS_APP_ID`, `JAAS_PRIVATE_KEY`, `JAAS_API_KEY_ID`) and the `generate-jitsi-jwt` edge function exists — we just need to wire the client back to it and fix the JWT signing issues that blocked us before.
+User provided the missing API Key ID. Now I have all 3 values:
+- AppID: `vpaas-magic-cookie-59ba8b3500454351b203767fb676f0c3`
+- API Key ID: `6d7cc9`
+- Private key: provided
 
-The earlier JaaS attempts failed for two reasons:
-1. ASN.1 DER tag error → private key wasn't being parsed correctly (PKCS#8 PEM handling in Deno).
-2. "kid does not match sub" error → header `kid` format was wrong.
-
-Both are fixable in the edge function. The correct JaaS JWT spec is well documented.
+The full kid is `vpaas-magic-cookie-.../6d7cc9` — confirms the format the edge function builds (`${APP_ID}/${API_KEY_ID}`) is correct. Just need to update the 3 secrets and redeploy.
 
 ## Plan
 
-### 1. Fix `supabase/functions/generate-jitsi-jwt/index.ts`
-Rewrite JWT generation to match JaaS spec exactly:
-- **Header**: `{ alg: "RS256", typ: "JWT", kid: "<APP_ID>/<API_KEY_ID>" }` (kid is appID/keyID, NOT linked to sub).
-- **Payload**:
-  - `aud: "jitsi"`
-  - `iss: "chat"`
-  - `sub: <JAAS_APP_ID>` (the vpaas-magic-cookie-... value)
-  - `room: "*"` (or specific room)
-  - `iat`, `exp` (1 hour)
-  - `context.user`: `{ id, name, email, moderator: "true"/"false" }`
-  - `context.features`: `{ livestreaming: "false", recording: "false", transcription: "false", "outbound-call": "false" }`
-- **Key parsing**: Strip PEM headers/footers and whitespace, base64-decode, import as `pkcs8` with `RSASSA-PKCS1-v1_5` + `SHA-256`. Use `crypto.subtle.importKey` directly — the ASN.1 error came from leftover PEM text in the base64 payload.
-- Validate that `JAAS_PRIVATE_KEY` secret contains the full PEM including BEGIN/END lines.
+### 1. Update Supabase secrets (3 values)
+- `JAAS_APP_ID` → `vpaas-magic-cookie-59ba8b3500454351b203767fb676f0c3`
+- `JAAS_API_KEY_ID` → `6d7cc9`
+- `JAAS_PRIVATE_KEY` → full PEM the user provided (including `-----BEGIN PRIVATE KEY-----` / `-----END PRIVATE KEY-----` lines and newlines preserved)
 
-### 2. Update `src/components/VideoMeeting.tsx`
-- Call `supabase.functions.invoke("generate-jitsi-jwt", { body: { room, displayName, email, moderator } })` before init.
-- Load script from `https://8x8.vc/<APP_ID>/external_api.js` (APP_ID returned by edge function).
-- Init `new JitsiMeetExternalAPI("8x8.vc", { roomName: "<APP_ID>/<room>", jwt, ...rest })`.
-- Tutor = moderator true, learner = false.
-- On JWT failure, show clear error and stay on precall (no fallback to public meet.jit.si — avoids demo banner returning).
+### 2. Redeploy `generate-jitsi-jwt`
+Force redeploy so the function picks up the new secrets. No code change needed — current signing logic already matches JaaS spec.
 
-### 3. Files
-- `supabase/functions/generate-jitsi-jwt/index.ts` — rewrite signing
-- `src/components/VideoMeeting.tsx` — switch back to JaaS init
-- No DB or config changes needed (secrets already set)
+### 3. Test the JWT endpoint
+Curl the function and confirm it returns `{ token, appId }` and that the token decodes with the expected header (`kid: vpaas-magic-cookie-.../6d7cc9`) and payload (`sub: vpaas-magic-cookie-...`, `aud: jitsi`, `iss: chat`).
 
-### 4. Validation
-- Confirm no "demo / 5-minute" banner appears.
-- Confirm both learner and tutor join the same JaaS room.
-- Confirm tutor has moderator controls.
-- Verify mobile join still works (pointer-events fix preserved).
+### 4. Validate end-to-end
+- Open a booking as tutor → join → no "Authentication failed" dialog, no demo banner.
+- Open same booking as learner → both land in same JaaS room.
+- Tutor has moderator controls.
+
+### Files
+- No code changes required — only secret updates + redeploy.
