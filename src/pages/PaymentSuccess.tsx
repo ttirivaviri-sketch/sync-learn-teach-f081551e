@@ -24,6 +24,9 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get("booking");
+  const provider = searchParams.get("provider"); // "paystack" | null (PayFast default)
+  const paystackRef = searchParams.get("reference") || searchParams.get("trxref");
+  const isSetup = searchParams.get("setup") === "1";
   const [status, setStatus] = useState<VerificationStatus>("verifying");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string>("pending");
@@ -32,15 +35,25 @@ const PaymentSuccess = () => {
     document.title = "Payment Successful | StudySync";
   }, []);
 
+  // Paystack setup-mode: no booking, just confirm card was saved
+  useEffect(() => {
+    if (provider === "paystack" && isSetup && !bookingId) {
+      // Webhook persists the card; show confirmed immediately
+      setStatus("confirmed");
+      setPaymentStatus("succeeded");
+    }
+  }, [provider, isSetup, bookingId]);
+
   // Poll for payment verification
   useEffect(() => {
     if (!bookingId) {
+      if (provider === "paystack" && isSetup) return; // handled above
       setStatus("failed");
       return;
     }
 
     let attempts = 0;
-    const maxAttempts = 20; // 20 attempts x 3s = 60s max
+    const maxAttempts = 20;
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const checkPayment = async () => {

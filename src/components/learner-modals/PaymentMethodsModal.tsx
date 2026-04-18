@@ -295,6 +295,29 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
             </div>
           </button>
 
+          {/* Add via Paystack */}
+          <button
+            onClick={handleAddPaystack}
+            disabled={addingPaystack}
+            className="w-full flex items-center gap-3 p-3.5 rounded-xl border-2 border-dashed border-accent/40 hover:border-accent hover:bg-accent/5 transition-all disabled:opacity-50"
+          >
+            <div className="h-10 w-10 rounded-lg bg-accent/10 flex items-center justify-center">
+              {addingPaystack ? (
+                <Loader2 className="h-5 w-5 text-accent-foreground animate-spin" />
+              ) : (
+                <CreditCard className="h-5 w-5 text-accent-foreground" />
+              )}
+            </div>
+            <div className="flex-1 text-left">
+              <p className="font-medium text-sm">
+                {addingPaystack ? "Redirecting to Paystack…" : "Add card via Paystack"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Test mode · One-tap pay on next booking
+              </p>
+            </div>
+          </button>
+
           {/* Test card info */}
           <div className="rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-3 flex gap-3">
             <FlaskConical className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
