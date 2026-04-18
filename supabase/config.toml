@@ -44,3 +44,12 @@ verify_jwt = false
 
 [functions.generate-jitsi-jwt]
 verify_jwt = false
+
+[functions.paystack-initialize]
+verify_jwt = true
+
+[functions.paystack-charge-token]
+verify_jwt = true
+
+[functions.paystack-webhook]
+verify_jwt = false

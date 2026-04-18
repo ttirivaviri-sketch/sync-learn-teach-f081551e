@@ -14,6 +14,7 @@ interface SavedMethod {
   card_brand: string | null;
   is_default: boolean | null;
   created_at: string | null;
+  provider: string | null;
 }
 
 interface PaymentMethodsModalProps {
@@ -41,6 +42,7 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
   const [methods, setMethods] = useState<SavedMethod[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
+  const [addingPaystack, setAddingPaystack] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -52,7 +54,7 @@ export function PaymentMethodsModal({ open, onClose }: PaymentMethodsModalProps)
     try {
       const { data, error } = await supabase
         .from("saved_payment_methods")
-        .select("id, card_last4, card_brand, is_default, created_at")
+        .select("id, card_last4, card_brand, is_default, created_at, provider")
         .order("is_default", { ascending: false })
         .order("created_at", { ascending: false });
       if (error) throw error;
