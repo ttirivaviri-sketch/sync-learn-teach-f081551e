@@ -759,7 +759,7 @@ export function ExamQuestionPanel({
           )}
 
           {/* AI Mark Result (non-MCQ) */}
-          {!isMCQ && markResult ? (
+          {!isMCQ && markResult && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {markResult.percentage >= 70 ? 'Excellent!' : markResult.percentage >= 50 ? 'Good effort!' : 'Keep practicing!'}
@@ -775,7 +775,8 @@ export function ExamQuestionPanel({
                 +{Math.max(5, Math.round(markResult.percentage * 0.3))} XP earned
               </p>
             </div>
-          ) : (
+          )}
+          {!isMCQ && !markResult && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {selfAssessment === 'correct' ? 'Great work!' : 'Keep building!'}
