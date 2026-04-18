@@ -48,8 +48,8 @@ export function PrerequisiteRemediationFlow({
   const [answers, setAnswers] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { user } = useAuth();
-  const { profile } = useAcademicProfile(user?.id);
+  const { session } = useAuth();
+  const { profile } = useAcademicProfile(session?.user?.id);
   const curriculum = profile?.curriculum || 'ZIMSEC';
   const grade = profile?.grade || undefined;
 
