@@ -6,11 +6,12 @@
  * sensibly). Falls back to `file.text()` for plain-text uploads.
  */
 
-import * as pdfjsLib from "pdfjs-dist";
-// Use the bundled worker via Vite's ?url import so it loads from the same origin.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore — legacy build avoids top-level await (esbuild can't inline TLA)
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore — Vite worker URL
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
