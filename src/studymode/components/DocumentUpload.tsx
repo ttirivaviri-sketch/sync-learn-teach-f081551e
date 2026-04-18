@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { logger } from "@/utils/logger";
+import { extractTextFromFile, chunkText } from '../lib/pdfExtractor';
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -139,14 +140,17 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
           idx === i ? { ...f, status: 'processing' } : f
         ));
 
-        // Read file content for parsing
-        const fileContent = await uploadedFile.file.text();
+        // Extract real text from PDF (or read plain text for other files)
+        const fullText = await extractTextFromFile(uploadedFile.file);
+        const chunks = chunkText(fullText, 80_000);
 
         // Parse using backend edge function first, then local proxy fallback
         try {
           const parsePayload = {
             documentId: docData.id,
-            content: fileContent.substring(0, 50000), // Limit content size
+            content: fullText,         // full extracted text (no truncation)
+            chunks,                    // pre-split chunks for the edge function
+            totalChunks: chunks.length,
             documentType,
             subject: subject.trim(),
           };

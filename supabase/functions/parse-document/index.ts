@@ -1,17 +1,24 @@
 /**
- * parse-document Edge Function (v2)
+ * parse-document Edge Function (v3)
  *
  * Parses uploaded documents (syllabus, past papers, notes) and extracts
  * structured concepts for use in AI content generation.
  *
- * Now also handles:
- *   - "notes" type: extracts key concepts and creates aligned questions
- *   - Better error handling and structured output
+ * v3 changes:
+ *   - Accepts pre-extracted text and optional chunks[] from the client
+ *     (PDFs are now extracted with pdfjs in the browser, not raw bytes)
+ *   - Multi-pass extraction with deep-merge for large syllabi
+ *   - Captures exam-board metadata: command words, assessment objectives,
+ *     paper structure, practical skills, mathematical requirements
+ *   - Persists exam_board_meta on the subjects row so the AI tutor can
+ *     teach with proper exam strategy
  *
  * POST body:
  * {
  *   documentId: string,
- *   content: string,
+ *   content: string,                       // full extracted text
+ *   chunks?: string[],                     // optional pre-split chunks
+ *   totalChunks?: number,
  *   documentType: "syllabus" | "past_paper" | "notes" | "mark_scheme",
  *   subject?: string
  * }
@@ -74,18 +81,20 @@ const SYLLABUS_TOOL = {
   type: "function",
   function: {
     name: "extract_syllabus",
-    description: "Extract structured syllabus data from a document",
+    description:
+      "Extract the COMPLETE structured syllabus, including all topics AND exam-board metadata (command words, assessment objectives, paper structure, practical skills, mathematical requirements).",
     parameters: {
       type: "object",
       properties: {
         subject_name: { type: "string" },
         syllabus_code: { type: "string" },
+        exam_board: { type: "string", description: "e.g. Cambridge, AQA, ZIMSEC, Edexcel" },
         topics: {
           type: "array",
           items: {
             type: "object",
             properties: {
-              id: { type: "string" },
+              id: { type: "string", description: "syllabus section number, e.g. '1', '2.3'" },
               name: { type: "string" },
               subtopics: { type: "array", items: { type: "string" } },
               learningObjectives: { type: "array", items: { type: "string" } },
@@ -95,6 +104,59 @@ const SYLLABUS_TOOL = {
             },
             required: ["id", "name", "subtopics", "learningObjectives"],
           },
+        },
+        command_words: {
+          type: "array",
+          description:
+            "Every command word defined in the syllabus (state, describe, explain, suggest, calculate, compare, etc.) with its examiner-defined meaning.",
+          items: {
+            type: "object",
+            properties: {
+              word: { type: "string" },
+              definition: { type: "string" },
+            },
+            required: ["word", "definition"],
+          },
+        },
+        assessment_objectives: {
+          type: "array",
+          description: "AO1, AO2, AO3 etc. with description and percentage weight if given.",
+          items: {
+            type: "object",
+            properties: {
+              code: { type: "string", description: "e.g. AO1" },
+              name: { type: "string" },
+              description: { type: "string" },
+              weight_percent: { type: "number" },
+            },
+            required: ["code", "description"],
+          },
+        },
+        paper_structure: {
+          type: "array",
+          description: "Each paper in the assessment: name, duration, marks, type, weight.",
+          items: {
+            type: "object",
+            properties: {
+              paper: { type: "string", description: "e.g. Paper 1, Paper 2" },
+              name: { type: "string" },
+              duration_minutes: { type: "number" },
+              total_marks: { type: "number" },
+              question_types: { type: "array", items: { type: "string" } },
+              weight_percent: { type: "number" },
+            },
+            required: ["paper"],
+          },
+        },
+        practical_skills: {
+          type: "array",
+          items: { type: "string" },
+          description: "Practical/lab skills assessed (if any).",
+        },
+        mathematical_requirements: {
+          type: "array",
+          items: { type: "string" },
+          description: "Maths skills students must use (if listed).",
         },
       },
       required: ["subject_name", "topics"],
@@ -231,6 +293,75 @@ const MARK_SCHEME_TOOL = {
   },
 };
 
+// ─── Syllabus chunk merging ─────────────────────────────────────────────────
+
+function mergeSyllabus(into: any, from: any): any {
+  if (!into || Object.keys(into).length === 0) return from;
+  if (!from) return into;
+
+  const out: any = { ...into };
+
+  // Scalars: prefer non-empty values from `into`, fall back to `from`
+  for (const k of ["subject_name", "syllabus_code", "exam_board"]) {
+    if (!out[k] && from[k]) out[k] = from[k];
+  }
+
+  // Topics: union by id (or by lowercase name as fallback)
+  const topicMap = new Map<string, any>();
+  for (const t of (out.topics || [])) {
+    const key = String(t.id || t.name || "").toLowerCase();
+    if (key) topicMap.set(key, t);
+  }
+  for (const t of (from.topics || [])) {
+    const key = String(t.id || t.name || "").toLowerCase();
+    if (!key) continue;
+    const existing = topicMap.get(key);
+    if (!existing) {
+      topicMap.set(key, t);
+    } else {
+      topicMap.set(key, {
+        ...existing,
+        subtopics: Array.from(new Set([...(existing.subtopics || []), ...(t.subtopics || [])])),
+        learningObjectives: Array.from(
+          new Set([...(existing.learningObjectives || []), ...(t.learningObjectives || [])])
+        ),
+        concepts: Array.from(new Set([...(existing.concepts || []), ...(t.concepts || [])])),
+        prerequisites: Array.from(
+          new Set([...(existing.prerequisites || []), ...(t.prerequisites || [])])
+        ),
+        examWeight: existing.examWeight || t.examWeight || 0,
+      });
+    }
+  }
+  out.topics = Array.from(topicMap.values());
+
+  // Arrays of objects keyed by a primary field — union
+  const unionBy = (a: any[], b: any[], keyField: string) => {
+    const m = new Map<string, any>();
+    for (const x of [...(a || []), ...(b || [])]) {
+      const k = String(x?.[keyField] || "").toLowerCase();
+      if (!k) continue;
+      if (!m.has(k)) m.set(k, x);
+    }
+    return Array.from(m.values());
+  };
+
+  out.command_words = unionBy(out.command_words, from.command_words, "word");
+  out.assessment_objectives = unionBy(out.assessment_objectives, from.assessment_objectives, "code");
+  out.paper_structure = unionBy(out.paper_structure, from.paper_structure, "paper");
+
+  // Plain string arrays — union
+  const unionStr = (a: string[], b: string[]) =>
+    Array.from(new Set([...(a || []), ...(b || [])]));
+  out.practical_skills = unionStr(out.practical_skills, from.practical_skills);
+  out.mathematical_requirements = unionStr(
+    out.mathematical_requirements,
+    from.mathematical_requirements
+  );
+
+  return out;
+}
+
 // ─── Handler ─────────────────────────────────────────────────────────────────
 
 serve(async (req) => {
@@ -243,7 +374,13 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    const { documentId, content, documentType, subject } = await req.json();
+    const {
+      documentId,
+      content,
+      chunks: clientChunks,
+      documentType,
+      subject,
+    } = await req.json();
 
     if (!documentId || !content) {
       return jsonResponse(
@@ -260,14 +397,35 @@ serve(async (req) => {
       case "syllabus":
         systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-You are an expert curriculum analyst. Extract the COMPLETE syllabus structure from the provided document.
+You are an expert exam-board curriculum analyst. You are given the FULL TEXT of an official syllabus PDF (e.g. Cambridge IGCSE / O-Level / A-Level / ZIMSEC / AQA / Edexcel).
 
-Rules:
-- Extract ALL topics, subtopics, learning objectives, and curriculum structure.
-- Create a hierarchical map: Subject → Topic → Subtopic → Concepts → Learning outcomes.
-- Identify exam weight hints if mentioned.
-- Identify prerequisites between topics.
-- Be thorough — every topic in the syllabus must be captured.`;
+Your job is to extract a COMPLETE, EXAM-BOARD-AWARE structured syllabus. Walk through the document section by section. Do not skip anything.
+
+EXTRACTION CHECKLIST — you MUST fill every applicable field:
+
+1. SUBJECT CONTENT (topics)
+   - Find the section commonly titled "Subject content", "Syllabus content", "Course content" or similar.
+   - Extract EVERY numbered topic (e.g. "1 Characteristics and classification of living organisms", "2 Cells", … "21 Human influences on ecosystems"). Missing topics is the #1 failure mode — re-check the document for any numbered section you may have skipped.
+   - For each topic capture: id (the section number as a string), name, subtopics (the numbered sub-sections like 1.1, 1.2), learningObjectives (the bullet-pointed "candidates should be able to…" statements — verbatim if possible), key concepts, prerequisites if cross-referenced.
+
+2. ASSESSMENT OVERVIEW (paper_structure)
+   - Find the "Assessment overview" or "Scheme of assessment" table.
+   - For each paper extract: paper code/number, name, duration in minutes, total marks, question types (multiple choice, structured, free response, practical, etc.), and weight percent of the qualification.
+
+3. ASSESSMENT OBJECTIVES (assessment_objectives)
+   - Extract AO1, AO2, AO3 (etc.) with their official descriptions and percentage weights.
+
+4. COMMAND WORDS (command_words)
+   - Find the "Command words" appendix (usually near the end).
+   - Extract EVERY command word with the examiner-defined meaning. These are the words students must respond to correctly to earn marks.
+
+5. PRACTICAL SKILLS & MATHEMATICAL REQUIREMENTS
+   - If the syllabus lists practical skills assessed (e.g. ATPs) or mathematical requirements, extract them as plain strings.
+
+6. METADATA
+   - subject_name (e.g. "Biology"), syllabus_code (e.g. "0610"), exam_board (e.g. "Cambridge").
+
+Do NOT invent content. If a section is not present, return an empty array for it. Do NOT summarise or paraphrase learning objectives — keep them faithful to the syllabus.`;
         toolDef = SYLLABUS_TOOL;
         break;
 
@@ -309,21 +467,58 @@ You are an expert exam analyst. Extract key information from this mark scheme or
         break;
     }
 
-    // ── Call AI ──────────────────────────────────────────────────────────────
-    const rawResult = await callAI(
-      ai,
-      systemPrompt,
-      `Subject: ${subject || "Unknown"}\n\nDocument content:\n${content}`,
-      {
-        tools: [toolDef],
-        toolChoice: {
-          type: "function",
-          function: { name: toolDef.function.name },
-        },
+    // ── Determine chunks to process ───────────────────────────────────────
+    // For syllabus: multi-pass merge across chunks for completeness.
+    // For other types: single pass on the full content (capped) is enough.
+    let chunks: string[];
+    if (documentType === "syllabus") {
+      if (Array.isArray(clientChunks) && clientChunks.length > 0) {
+        chunks = clientChunks.slice(0, 4);
+      } else {
+        // server-side fallback chunking
+        const txt = String(content);
+        if (txt.length <= 80_000) chunks = [txt];
+        else {
+          chunks = [];
+          for (let i = 0; i < Math.min(txt.length, 320_000); i += 80_000) {
+            chunks.push(txt.slice(i, i + 80_000));
+          }
+        }
       }
-    );
+    } else {
+      chunks = [String(content).slice(0, 120_000)];
+    }
 
-    const parsedContent = safeJsonParse<any>(rawResult);
+    // ── Call AI per chunk and merge ───────────────────────────────────────
+    let parsedContent: any = null;
+
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      const chunkLabel =
+        chunks.length > 1
+          ? `(Chunk ${i + 1} of ${chunks.length} — extract everything you can find in THIS portion. Other chunks are processed separately and will be merged.)\n\n`
+          : "";
+      const userMsg = `Subject: ${subject || "Unknown"}\n\n${chunkLabel}Document content:\n${chunk}`;
+
+      try {
+        const rawResult = await callAI(ai, systemPrompt, userMsg, {
+          tools: [toolDef],
+          toolChoice: { type: "function", function: { name: toolDef.function.name } },
+        });
+        const parsed = safeJsonParse<any>(rawResult);
+        if (documentType === "syllabus") {
+          parsedContent = mergeSyllabus(parsedContent, parsed);
+        } else {
+          parsedContent = parsed;
+        }
+      } catch (chunkErr) {
+        console.warn(`parse-document chunk ${i + 1} failed:`, chunkErr);
+      }
+    }
+
+    if (!parsedContent) {
+      return errorResponse("Failed to parse document content");
+    }
 
     // ── Update document as processed ────────────────────────────────────
     await supabase
@@ -339,6 +534,15 @@ You are an expert exam analyst. Extract key information from this mark scheme or
     if (documentType === "syllabus") {
       const subjectName = parsedContent.subject_name || subject;
       const visuals = getSubjectVisuals(subjectName);
+
+      const examBoardMeta = {
+        exam_board: parsedContent.exam_board || null,
+        command_words: parsedContent.command_words || [],
+        assessment_objectives: parsedContent.assessment_objectives || [],
+        paper_structure: parsedContent.paper_structure || [],
+        practical_skills: parsedContent.practical_skills || [],
+        mathematical_requirements: parsedContent.mathematical_requirements || [],
+      };
 
       const { data: docOwner } = await supabase
         .from("documents")
@@ -364,6 +568,7 @@ You are an expert exam analyst. Extract key information from this mark scheme or
               syllabus_code: parsedContent.syllabus_code || null,
               icon_emoji: visuals.icon_emoji,
               icon_gradient: visuals.icon_gradient,
+              exam_board_meta: examBoardMeta,
               updated_at: new Date().toISOString(),
             })
             .eq("id", existingSub.id);
@@ -377,7 +582,7 @@ You are an expert exam analyst. Extract key information from this mark scheme or
                   subject_id: existingSub.id,
                   topic_name: topic.name,
                   mastery_percentage: 0,
-                  is_locked: topic.id !== "topic-1",
+                  is_locked: topic.id !== "topic-1" && topic.id !== "1",
                 },
                 { onConflict: "user_id,subject_id,topic_name" }
               );
@@ -392,6 +597,7 @@ You are an expert exam analyst. Extract key information from this mark scheme or
               topics: parsedContent.topics,
               icon_emoji: visuals.icon_emoji,
               icon_gradient: visuals.icon_gradient,
+              exam_board_meta: examBoardMeta,
             })
             .select("id")
             .single();
@@ -403,7 +609,7 @@ You are an expert exam analyst. Extract key information from this mark scheme or
                 subject_id: newSubject.id,
                 topic_name: topic.name,
                 mastery_percentage: 0,
-                is_locked: topic.id !== "topic-1",
+                is_locked: topic.id !== "topic-1" && topic.id !== "1",
               });
             }
           }
