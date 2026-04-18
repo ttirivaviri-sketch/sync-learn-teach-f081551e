@@ -441,8 +441,53 @@ export function ExamQuestionPanel({
         )}
       </div>
 
-      {/* Phase: Read */}
-      {phase === 'read' && (
+      {/* MCQ flow — bypass analyze/answer/marking phases entirely */}
+      {isMCQ && phase !== 'feedback' && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Choose one answer
+          </p>
+          <RadioGroup
+            value={selectedOption ?? ''}
+            onValueChange={(v) => setSelectedOption(v)}
+            className="gap-2"
+          >
+            {mcqOptions.map((opt, i) => {
+              const letter = letters[i];
+              const selected = selectedOption === letter;
+              return (
+                <label
+                  key={letter}
+                  htmlFor={`mcq-${letter}`}
+                  className={cn(
+                    'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all',
+                    selected
+                      ? 'bg-accent/15 border-accent ring-2 ring-accent/30'
+                      : 'bg-card border-border hover:border-accent/50'
+                  )}
+                >
+                  <RadioGroupItem value={letter} id={`mcq-${letter}`} className="mt-1" />
+                  <span className="flex-1 text-sm text-foreground">
+                    <span className="font-bold mr-2">{letter}.</span>
+                    <MathMarkdown>{String(opt)}</MathMarkdown>
+                  </span>
+                </label>
+              );
+            })}
+          </RadioGroup>
+          <Button
+            onClick={handleSubmitMCQ}
+            disabled={!selectedOption}
+            className="w-full gradient-primary"
+          >
+            Submit Answer
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Phase: Read (non-MCQ) */}
+      {!isMCQ && phase === 'read' && (
         <div className="p-4 rounded-xl bg-warning/10 border border-warning/30">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
