@@ -203,6 +203,15 @@ export function safeJsonParse<T = unknown>(raw: string): T {
     attempts.push(raw.substring(arrStart, arrEnd + 1));
   }
 
+  // 5. Truncation recovery: try to repair an unfinished object/array
+  //    by truncating to the last complete element and balancing brackets.
+  if (objStart !== -1) {
+    attempts.push(repairTruncatedJson(raw.substring(objStart)));
+  }
+  if (arrStart !== -1) {
+    attempts.push(repairTruncatedJson(raw.substring(arrStart)));
+  }
+
   for (const candidate of attempts) {
     // Try direct parse
     try {
