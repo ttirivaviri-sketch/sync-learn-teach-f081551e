@@ -13,6 +13,7 @@ import { AIProgressInsights } from './AIProgressInsights';
 import { AIWeakTopicAlerts } from './AIWeakTopicAlerts';
 import { DailySummary } from './DailySummary';
 import { AdaptivePlanBanner } from './AdaptivePlanBanner';
+import { ExamReadinessWidget } from './ExamReadinessWidget';
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '@/lib/utils';

@@ -65,7 +65,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
 
   // ── Fetch curriculum context ───────────────────────────────────────────────
   const activeTopic = topic || subject.currentTopic;
-  const { curriculumContext, examPatterns, examWeightFromPapers, isLoaded: contextLoaded } =
+  const { curriculumContext, examPatterns, examWeightFromPapers, paperBlueprints, linkedPastPapers, isLoaded: contextLoaded } =
     useSyllabusContext(subject.id, activeTopic?.name);
 
   // ── Fetch topic performance for adaptive difficulty ────────────────────────
@@ -132,6 +132,18 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
       // Build weak areas list
       const weakAreas = performance?.weakConcepts || [];
 
+      // Pick a paper blueprint that covers this topic the most
+      const blueprintForTopic = (paperBlueprints || []).find((bp) => {
+        const cov = bp.topic_coverage || {};
+        return Object.keys(cov).some(
+          (k) => k.toLowerCase().includes(topicData.name.toLowerCase()) ||
+                 topicData.name.toLowerCase().includes(k.toLowerCase())
+        );
+      }) || (paperBlueprints || [])[0];
+
+      // Up to 2 real Q+A exemplars from linked mark schemes
+      const exemplars = (linkedPastPapers || []).slice(0, 2);
+
       const payload = {
         subject: subject.name,
         topic: topicData.name,
@@ -144,6 +156,8 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         pastPaperStyleNotes,
         avoidQuestionTypes: recentQuestionTypes.current.slice(-2),
         weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+        pastPaperExemplars: exemplars.length > 0 ? exemplars : undefined,
+        paperBlueprint: blueprintForTopic || undefined,
         count: 1,
       };
 
@@ -191,7 +205,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
     } finally {
       setIsLoading(false);
     }
-  }, [subject, topic, curriculumContext, examPatterns, examWeightFromPapers, performance]);
+  }, [subject, topic, curriculumContext, examPatterns, examWeightFromPapers, performance, paperBlueprints, linkedPastPapers]);
 
   const clearQuestion = useCallback(() => {
     setQuestion(null);
