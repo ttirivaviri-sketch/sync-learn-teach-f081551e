@@ -333,10 +333,12 @@ export function SyllabusSetupGate({
     }
     setSaving(true);
     try {
-      const existingNames = new Set(entries.map((e) => e.subject_name.toLowerCase()));
+      const { findExistingSubjectId } = await import("@/lib/subjectName");
       for (const subjectName of academicProfile.subjects) {
-        if (existingNames.has(subjectName.toLowerCase())) continue;
-        await supabase.from("subjects").insert({ user_id: userId, name: subjectName, syllabus_code: null, topics: [] });
+        const existingId = await findExistingSubjectId(supabase, userId, subjectName);
+        if (!existingId) {
+          await supabase.from("subjects").insert({ user_id: userId, name: subjectName, syllabus_code: null, topics: [] });
+        }
         await supabase.from("learner_subjects")
           .upsert({ user_id: userId, subject: subjectName }, { onConflict: "user_id,subject" })
           .then(() => {});

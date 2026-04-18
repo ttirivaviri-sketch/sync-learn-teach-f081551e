@@ -29,8 +29,11 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
         <img
           src={resource.thumbnail}
           alt={resource.title}
+          width={variant === "portrait" ? 144 : 256}
+          height={variant === "portrait" ? 208 : 144}
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
+          decoding="async"
         />
       ) : (
         <div
