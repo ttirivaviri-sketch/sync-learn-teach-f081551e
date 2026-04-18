@@ -281,7 +281,54 @@ export function ExamQuestionPanel({
     setPhase('feedback');
   };
 
-  // ── Loading / error / empty states ────────────────────────────────────────
+  // ── MCQ flow ──────────────────────────────────────────────────────────────
+  const isMCQ =
+    quizGenerator?.question?.questionType === 'multiple_choice' &&
+    Array.isArray(quizGenerator.question.options) &&
+    quizGenerator.question.options.length >= 2 &&
+    !!quizGenerator.question.correctOption;
+
+  const mcqOptions = isMCQ ? quizGenerator!.question!.options! : [];
+  const mcqCorrect = isMCQ
+    ? (quizGenerator!.question!.correctOption || '').toUpperCase().charAt(0)
+    : '';
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  const handleSubmitMCQ = async () => {
+    if (!selectedOption || !activeQuestion || !isMCQ) return;
+    const chosen = selectedOption.toUpperCase();
+    const correct = chosen === mcqCorrect;
+    const marks = activeQuestion.marks || 1;
+
+    setMcqResult({ correct, correctOption: mcqCorrect });
+    setSelfAssessment(correct ? 'correct' : 'incorrect');
+
+    const concepts = quizGenerator?.question?.conceptsTested || [];
+    if (userId) {
+      await recordAttempt(
+        activeQuestion.topic,
+        activeQuestion.text,
+        correct,
+        subject?.id,
+        marks,
+        {
+          conceptsTested: concepts,
+          userAnswer: chosen,
+          modelAnswer: mcqCorrect,
+          commandWord: 'multiple_choice',
+          marksAwarded: correct ? marks : 0,
+          marksPossible: marks,
+        }
+      );
+      if (subject?.id && concepts.length > 0) {
+        checkAndUpdateMastery(userId, subject.id, activeQuestion.topic, concepts);
+      }
+    }
+
+    addXp.mutate(correct ? 15 : 5);
+    updateStreak.mutate();
+    setPhase('feedback');
+  };
   if (quizGenerator?.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 animate-fade-in gap-3">
