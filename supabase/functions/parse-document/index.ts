@@ -481,7 +481,22 @@ Be thorough — extract every testable concept.`;
       default: // mark_scheme and others
         systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-You are an expert exam analyst. Extract key information from this mark scheme or study document. Identify topics, key points, marking criteria, and common mistakes.`;
+You are an expert exam mark-scheme analyst. Extract a STRUCTURED mark scheme from this document.
+
+YOUR JOB:
+1. Identify paper identifiers from headers/footers: paper_year (e.g. "2025"), paper_variant (e.g. "22", "42"), paper_code (e.g. "Paper 2", "Paper 4").
+2. For EVERY question (and sub-part like 1(a), 1(b)(i)), extract:
+   - question_number (verbatim, e.g. "1", "1(a)", "2(b)(ii)")
+   - topic (the syllabus topic the question tests)
+   - command_word (state, describe, explain, calculate, suggest, evaluate, etc.)
+   - marks (integer)
+   - model_answer (the official correct answer, concise)
+   - marking_points (array — one entry per mark, e.g. "1 mark for identifying X", "1 mark for explaining Y")
+   - accept (alternative acceptable phrasings, if listed)
+   - reject (explicitly disallowed answers, if listed)
+3. List common_mistakes if examiner notes mention them.
+
+Be exhaustive — every question must appear. Preserve the examiner's exact marking logic.`;
         toolDef = MARK_SCHEME_TOOL;
         break;
     }
