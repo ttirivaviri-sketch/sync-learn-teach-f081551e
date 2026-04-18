@@ -1310,33 +1310,48 @@ export type Database = {
       }
       saved_payment_methods: {
         Row: {
+          card_bank: string | null
           card_brand: string | null
+          card_exp_month: string | null
+          card_exp_year: string | null
           card_last4: string | null
           created_at: string | null
           id: string
           is_default: boolean | null
+          paystack_authorization_code: string | null
+          paystack_signature: string | null
           provider: string
           token: string
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          card_bank?: string | null
           card_brand?: string | null
+          card_exp_month?: string | null
+          card_exp_year?: string | null
           card_last4?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
+          paystack_authorization_code?: string | null
+          paystack_signature?: string | null
           provider?: string
           token: string
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          card_bank?: string | null
           card_brand?: string | null
+          card_exp_month?: string | null
+          card_exp_year?: string | null
           card_last4?: string | null
           created_at?: string | null
           id?: string
           is_default?: boolean | null
+          paystack_authorization_code?: string | null
+          paystack_signature?: string | null
           provider?: string
           token?: string
           updated_at?: string | null
