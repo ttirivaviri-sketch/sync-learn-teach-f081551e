@@ -38,10 +38,12 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 30,   // 30 minutes
+      refetchOnWindowFocus: false,
       retry: (failureCount, error: unknown) => {
         const e = error as { status?: number };
         if (e?.status === 401 || e?.status === 403) return false;
-        return failureCount < 3;
+        return failureCount < 1; // single retry — stop retry storms
       },
     },
   },

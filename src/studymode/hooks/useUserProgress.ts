@@ -65,7 +65,7 @@ export function useUserProgress() {
               .from('user_progress')
               .insert({ user_id: userId, xp: 0, streak: 0, badges: [] })
               .select()
-              .single();
+              .maybeSingle();
 
             if (insertError) {
               logger.warn('[useUserProgress] Could not create progress record:', insertError.message);
