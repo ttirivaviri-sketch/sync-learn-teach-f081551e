@@ -102,7 +102,13 @@ MATHEMATICAL NOTATION (CRITICAL):
 
 PAPER FORMAT: ${paperFormat === "section_a" ? "Section A (short structured, 2-6 marks each)" : paperFormat === "section_b" ? "Section B (extended response, 8-25 marks each)" : "Mixed (include both short and extended questions)"}
 
-QUESTION STRUCTURE RULES:
+QUESTION TYPE MIX (CRITICAL):
+For each question set "questionType" to one of: "multiple_choice", "short_answer", or "structured".
+If the user's paper blueprint or syllabus indicates this paper is multiple-choice (e.g. ZIMSEC Bio Paper 1, IGCSE Maths Paper 1 MCQ, Physics Paper 1), produce mostly multiple_choice questions worth 1 mark each.
+For multiple_choice: provide "options" as an array of EXACTLY 4 plain strings WITHOUT "A)" / "B)" prefixes (the UI adds the letters). "correctOption" MUST be one of "A","B","C","D" indexed by position (A=options[0], B=options[1], C=options[2], D=options[3]). Always include "explanation" for why the answer is correct and why distractors are wrong. Marks = 1, no parts.
+For structured / short_answer questions, follow the existing rules below.
+
+QUESTION STRUCTURE RULES (for structured / short_answer):
 1. Every question MUST have clear mark allocation in brackets: (a) Explain why... [3]
 2. Multi-part questions should have sub-parts: (a), (b), (c) with marks for each.
 3. Use appropriate exam command words: State, Define, Explain, Describe, Compare, Evaluate, Discuss, Calculate, Justify, Analyse.
@@ -138,6 +144,9 @@ Return ONLY valid JSON:
         { "part": "a", "text": "State two...", "marks": 2 },
         { "part": "b", "text": "Explain why...", "marks": 4 }
       ],
+      "questionType": "structured",
+      "options": null,
+      "correctOption": null,
       "marks": 6,
       "modelAnswer": "Complete model answer for full marks",
       "stepByStepSolution": "Step 1: ...\\nStep 2: ...\\nStep 3: ...",
@@ -196,8 +205,17 @@ IMPORTANT:
       id: q.id || `eq${i + 1}`,
       questionNumber: q.questionNumber || String(i + 1),
       question: String(q.question || "").trim(),
+      questionType: ["multiple_choice", "short_answer", "structured"].includes(q.questionType)
+        ? q.questionType
+        : "structured",
       parts: Array.isArray(q.parts) ? q.parts : undefined,
       marks: Number(q.marks || q.totalMarks || 0),
+      options: Array.isArray(q.options)
+        ? q.options.slice(0, 4).map((o: any) => String(o).replace(/^\s*[A-Da-d][\)\.\:]\s*/, "").trim())
+        : undefined,
+      correctOption: typeof q.correctOption === "string"
+        ? q.correctOption.trim().toUpperCase().charAt(0)
+        : undefined,
       modelAnswer: String(q.modelAnswer || "").trim(),
       stepByStepSolution: String(q.stepByStepSolution || "").trim(),
       markingScheme: normalizeArray(q.markingScheme),
