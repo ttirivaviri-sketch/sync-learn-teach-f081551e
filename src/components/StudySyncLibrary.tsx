@@ -417,18 +417,6 @@ const StudySyncLibrary = ({
                 ))
               )}
             </TabsContent>
-                  />
-                ))}
-              </div>
-              {pastPapers.length === 0 && (
-                <Card className="bg-muted/30">
-                  <CardContent className="p-6 text-center">
-                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Past papers will appear here.</p>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
 
             {/* My Library Tab */}
             <TabsContent value="mylibrary" className="space-y-4 mt-4">
