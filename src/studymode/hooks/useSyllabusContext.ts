@@ -303,6 +303,7 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
 
       // Try the RPC first
       let rpcSuccess = false;
+      let nextData: SyllabusContextData | null = null;
       try {
         const { data: contextData, error } = await supabase.rpc('get_subject_context', {
           p_subject_id: subjectId,
@@ -312,7 +313,7 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
         if (!error && contextData && !(contextData as any).error) {
           const payload = contextData as Record<string, unknown>;
 
-          setData({
+          nextData = {
             topic: (payload.topic as DbTopic | null) || null,
             allTopics: Array.isArray(payload.allTopics) ? (payload.allTopics as DbTopic[]) : [],
             examPatterns: Array.isArray(payload.examPatterns) ? (payload.examPatterns as ExamPatternRow[]) : [],
@@ -325,18 +326,65 @@ export function useSyllabusContext(subjectId: string | undefined, topicName: str
             syllabusProgress: Number(payload.syllabusProgress || 0),
             curriculumContext: String(payload.curriculumContext || ''),
             isLoaded: true,
-          });
+            paperBlueprints: [],
+            linkedPastPapers: [],
+          };
           rpcSuccess = true;
         }
       } catch (rpcErr) {
         logger.warn('[useSyllabusContext] RPC unavailable, using direct fallback:', rpcErr);
       }
 
-      // Fallback: fetch data directly from tables
       if (!rpcSuccess) {
-        const directData = await fetchSubjectDataDirect(subjectId, topicName, user.id);
-        setData(directData);
+        nextData = await fetchSubjectDataDirect(subjectId, topicName, user.id);
       }
+
+      // Fetch paper blueprints + linked past Q+A pairs (best-effort)
+      try {
+        const { data: bps } = await supabase
+          .from('paper_blueprints' as any)
+          .select('paper_code, total_marks, duration_minutes, question_type_distribution, topic_coverage, command_word_frequency, difficulty_distribution, years_analysed')
+          .eq('user_id', user.id)
+          .eq('subject_id', subjectId);
+        if (nextData && Array.isArray(bps)) {
+          nextData.paperBlueprints = bps as unknown as PaperBlueprint[];
+        }
+      } catch { /* table may be missing */ }
+
+      try {
+        const { data: pastDocs } = await supabase
+          .from('documents')
+          .select('parsed_content')
+          .eq('user_id', user.id)
+          .eq('type', 'past_paper');
+
+        const linked: LinkedPastQuestion[] = [];
+        const tn = topicName.toLowerCase();
+        for (const d of pastDocs || []) {
+          const pc: any = d.parsed_content || {};
+          for (const q of pc.questions || []) {
+            if (!q.model_answer) continue;
+            const qt = String(q.topic || '').toLowerCase();
+            if (qt && (qt.includes(tn) || tn.includes(qt))) {
+              linked.push({
+                paper_code: pc.paper_code,
+                paper_year: pc.paper_year,
+                question_number: q.question_number,
+                topic: q.topic,
+                marks: Number(q.marks || 0),
+                question_type: q.question_type || 'structured',
+                command_word: q.official_command_word || q.command_words?.[0] || null,
+                question: q.question,
+                model_answer: q.model_answer,
+                marking_points: q.marking_points || [],
+              });
+            }
+          }
+        }
+        if (nextData) nextData.linkedPastPapers = linked.slice(0, 8);
+      } catch { /* ignore */ }
+
+      if (nextData) setData(nextData);
     } catch (err) {
       logger.error('[useSyllabusContext]', err);
       setData(prev => ({ ...prev, isLoaded: true }));
