@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   AlertTriangle, CheckCircle, ArrowRight, Eye, Lightbulb,
   ThumbsUp, ThumbsDown, MessageCircle, Loader2 as LoaderIcon,
-  BookOpen, Zap, Trophy, Target,
+  BookOpen, Zap, Trophy, Target, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
