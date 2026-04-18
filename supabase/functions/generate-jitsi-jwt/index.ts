@@ -3,8 +3,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const JAAS_APP_ID = Deno.env.get("JAAS_APP_ID") || "";
-const JAAS_API_KEY_ID = Deno.env.get("JAAS_API_KEY_ID") || "";
+const JAAS_APP_ID = (Deno.env.get("JAAS_APP_ID") || "").trim();
+const RAW_JAAS_API_KEY_ID = (Deno.env.get("JAAS_API_KEY_ID") || "").trim();
+// Accept either the bare key id ("6d7cc9") or the full kid ("appId/6d7cc9")
+const JAAS_API_KEY_ID = RAW_JAAS_API_KEY_ID.includes("/")
+  ? RAW_JAAS_API_KEY_ID.split("/").pop()!.trim()
+  : RAW_JAAS_API_KEY_ID;
 const JAAS_PRIVATE_KEY = Deno.env.get("JAAS_PRIVATE_KEY") || "";
 
 function base64urlFromBytes(bytes: Uint8Array): string {
