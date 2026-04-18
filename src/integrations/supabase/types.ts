@@ -639,6 +639,72 @@ export type Database = {
           },
         ]
       }
+      mock_exam_attempts: {
+        Row: {
+          answers_json: Json
+          created_at: string
+          duration_minutes: number | null
+          grade_band: string | null
+          grading_json: Json
+          id: string
+          marks_awarded: number
+          paper_code: string
+          paper_json: Json
+          percent: number
+          started_at: string
+          status: string
+          subject_id: string
+          subject_name: string
+          submitted_at: string | null
+          time_taken_seconds: number | null
+          total_marks: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          answers_json?: Json
+          created_at?: string
+          duration_minutes?: number | null
+          grade_band?: string | null
+          grading_json?: Json
+          id?: string
+          marks_awarded?: number
+          paper_code: string
+          paper_json?: Json
+          percent?: number
+          started_at?: string
+          status?: string
+          subject_id: string
+          subject_name: string
+          submitted_at?: string | null
+          time_taken_seconds?: number | null
+          total_marks?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          answers_json?: Json
+          created_at?: string
+          duration_minutes?: number | null
+          grade_band?: string | null
+          grading_json?: Json
+          id?: string
+          marks_awarded?: number
+          paper_code?: string
+          paper_json?: Json
+          percent?: number
+          started_at?: string
+          status?: string
+          subject_id?: string
+          subject_name?: string
+          submitted_at?: string | null
+          time_taken_seconds?: number | null
+          total_marks?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           created_at: string
@@ -2218,6 +2284,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_mock_exam_unlock: {
+        Args: { p_paper_code: string; p_subject_id: string }
+        Returns: Json
+      }
       get_exam_readiness: {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
