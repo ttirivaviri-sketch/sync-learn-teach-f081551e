@@ -188,6 +188,41 @@ export function PrerequisiteRemediationFlow({
 
   const currentGap = gaps[currentGapIndex];
 
+  // Error Phase
+  if (phase === 'error') {
+    return (
+      <Card className="p-8 max-w-2xl mx-auto animate-fade-in text-center">
+        <div className="flex justify-center mb-4">
+          <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+            <XCircle className="h-8 w-8 text-destructive" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Couldn't Check Prerequisites</h2>
+        <p className="text-muted-foreground mb-2">
+          {errorMessage || 'Something went wrong while analyzing the foundations for this topic.'}
+        </p>
+        <p className="text-sm text-muted-foreground mb-6">
+          You can retry, skip and continue, or go back.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" onClick={onBack} className="flex-1">
+            Back
+          </Button>
+          <Button variant="outline" onClick={onComplete} className="flex-1">
+            Skip & Continue
+          </Button>
+          <Button
+            onClick={() => { setPhase('analysis'); analyzePrerequisites(); }}
+            className="flex-1 gradient-primary"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
   // Analysis Phase
   if (phase === 'analysis') {
     return (
