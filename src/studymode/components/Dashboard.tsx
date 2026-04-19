@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
 import { StudyCalendar } from './StudyCalendar';
@@ -50,9 +51,10 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress' | 'profile'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'setup'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [showQuizHistory, setShowQuizHistory] = useState(false);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
   
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
@@ -253,18 +255,18 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             <Calendar className="mr-1 h-4 w-4" />
             <span className="hidden sm:inline text-xs">Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="review" className="relative">
-            <Brain className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Review</span>
+          <TabsTrigger value="exams" className="relative">
+            <Trophy className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Exams</span>
             {(topicsDueToday.length > 0 || strugglingTopics.length > 0) && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-bold">
                 {topicsDueToday.length + strugglingTopics.length}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="profile">
-            <GraduationCap className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Profile</span>
+          <TabsTrigger value="setup">
+            <Settings className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Setup</span>
           </TabsTrigger>
         </TabsList>
 
