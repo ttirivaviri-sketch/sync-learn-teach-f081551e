@@ -1562,8 +1562,10 @@ export type Database = {
           notes: string | null
           scheduled_date: string | null
           subject: string | null
+          subject_id: string | null
           task: string | null
           task_type: string | null
+          topic_name: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -1577,8 +1579,10 @@ export type Database = {
           notes?: string | null
           scheduled_date?: string | null
           subject?: string | null
+          subject_id?: string | null
           task?: string | null
           task_type?: string | null
+          topic_name?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -1592,12 +1596,22 @@ export type Database = {
           notes?: string | null
           scheduled_date?: string | null
           subject?: string | null
+          subject_id?: string | null
           task?: string | null
           task_type?: string | null
+          topic_name?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "study_schedule_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subject_exams: {
         Row: {

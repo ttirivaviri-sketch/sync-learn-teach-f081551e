@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Check, Trash2, Calendar as CalendarIcon } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, isSameDay, addMonths, subMonths } from 'date-fns';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useStudySchedule, StudyScheduleItem } from '../hooks/useStudySchedule';
@@ -46,7 +48,8 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTask, setNewTask] = useState({ topic: '', subjectId: '', taskType: 'revision' });
-  
+  const queryClient = useQueryClient();
+
   const { schedule, isLoading, toggleComplete, addScheduleItem, deleteScheduleItem, generateSchedule } = useStudySchedule(currentMonth);
 
   const monthStart = startOfMonth(currentMonth);
@@ -92,24 +95,37 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
         }, null as Date | null)
       : null;
 
-    await generateSchedule.mutateAsync({
-      subjects: subjects.map(s => {
-        // Find subject-specific exam to weight topics by urgency
-        const subjectExam = subjectExams?.find(e => e.subject_id === s.id);
-        return {
-          id: s.id,
-          name: s.name,
-          topics: s.topics.map(t => ({ 
-            name: t.name, 
-            examWeight: t.examWeight * (subjectExam ? Math.max(1, 30 / Math.max(1, subjectExam.daysRemaining)) : 1)
-          })),
-        };
-      }),
-      examDate: nearestExam || targetExamDate,
-      daysPerWeek: 5,
-    });
+    try {
+      const result: any = await generateSchedule.mutateAsync({
+        subjects: subjects.map(s => {
+          const subjectExam = subjectExams?.find(e => e.subject_id === s.id);
+          return {
+            id: s.id,
+            name: s.name,
+            topics: s.topics.map(t => ({
+              name: t.name,
+              examWeight: t.examWeight * (subjectExam ? Math.max(1, 30 / Math.max(1, subjectExam.daysRemaining)) : 1)
+            })),
+          };
+        }),
+        examDate: nearestExam || targetExamDate,
+        daysPerWeek: 5,
+      });
 
-    onGenerateSchedule?.();
+      queryClient.invalidateQueries({ queryKey: ['study-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['daily-tasks'] });
+
+      const savedCount = result?.saved ?? result?.plan?.length ?? 0;
+      toast.success(
+        savedCount > 0
+          ? `Schedule saved · ${savedCount} task${savedCount === 1 ? '' : 's'} added`
+          : 'Study schedule generated'
+      );
+      onGenerateSchedule?.();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Couldn't generate schedule: ${msg}`);
+    }
   };
 
   const selectedDateSchedule = selectedDate ? getScheduleForDate(selectedDate) : [];

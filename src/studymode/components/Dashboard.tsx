@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
 import { StudyCalendar } from './StudyCalendar';
@@ -50,9 +51,10 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress' | 'profile'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'setup'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [showQuizHistory, setShowQuizHistory] = useState(false);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
   
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
@@ -253,18 +255,18 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             <Calendar className="mr-1 h-4 w-4" />
             <span className="hidden sm:inline text-xs">Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="review" className="relative">
-            <Brain className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Review</span>
+          <TabsTrigger value="exams" className="relative">
+            <Trophy className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Exams</span>
             {(topicsDueToday.length > 0 || strugglingTopics.length > 0) && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-bold">
                 {topicsDueToday.length + strugglingTopics.length}
               </span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="profile">
-            <GraduationCap className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Profile</span>
+          <TabsTrigger value="setup">
+            <Settings className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Setup</span>
           </TabsTrigger>
         </TabsList>
 
@@ -308,8 +310,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                   )}
                 </>
               )}
-              {hasSubjects && <div className="mb-4"><ExamReadinessWidget /></div>}
-              {hasSubjects && <div className="mb-4"><MockExamSection /></div>}
+              {/* Exam Readiness moved to Progress tab; Mock Exams moved to Exams tab */}
               {hasSubjects ? (
                 <>
                   <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
@@ -658,51 +659,11 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             </Card>
           )}
 
-          {/* Quick Actions */}
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={onUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Documents
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')} disabled={hasDocuments === false}>
-              <BookOpen className="mr-2 h-4 w-4" />
-              Past Papers
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowSummary(true)} disabled={hasDocuments === false}>
-              <Trophy className="mr-2 h-4 w-4" />
-              Daily Summary
-            </Button>
-          </div>
-
-          {/* Daily Progress Summary */}
-          <div className="p-5 rounded-2xl bg-card border border-border">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-foreground">Today's Progress</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowSummary(true)} className="text-accent">
-                View Summary
-              </Button>
-            </div>
-            <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-accent">
-                  {dailyStats.tasksCompletedToday}/{dailyStats.totalTasksToday || subjects.length * 4}
-                </p>
-                <p className="text-xs text-muted-foreground">Tasks Done</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-success">{dailyStats.examQuestionsToday}</p>
-                <p className="text-xs text-muted-foreground">Exam Qs</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-warning">+{dailyStats.xpToday}</p>
-                <p className="text-xs text-muted-foreground">XP Today</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-primary">🔥 {progress?.streak || 0}</p>
-                <p className="text-xs text-muted-foreground">Day Streak</p>
-              </div>
-            </div>
-          </div>
+          {/* Compact summary trigger only — full daily stats live on Home tab */}
+          <Button variant="outline" size="sm" onClick={() => setShowSummary(true)} className="w-full">
+            <Trophy className="mr-2 h-4 w-4" />
+            View Today's Summary
+          </Button>
 
           {/* Exam date prompt if no exams set */}
           {hasSubjects && subjectExams.length === 0 && (
