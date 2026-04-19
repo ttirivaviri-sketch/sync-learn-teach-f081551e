@@ -207,12 +207,15 @@ Generate ${planDays * 2} tasks (roughly 2 per day). Prioritise high-weight topic
 
     if (insertError) {
       console.error("[generate-study-plan] Insert error:", insertError.message);
-      return jsonResponse({
-        plan,
-        saved: 0,
-        weak_area_focus: normalizeArray(parsed.weak_area_focus),
-        insertError: insertError.message,
-      });
+      return jsonResponse(
+        {
+          error: `Failed to save study plan: ${insertError.message}`,
+          plan,
+          saved: 0,
+          weak_area_focus: normalizeArray(parsed.weak_area_focus),
+        },
+        500
+      );
     }
 
     return jsonResponse({
