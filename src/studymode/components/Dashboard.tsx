@@ -659,51 +659,11 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             </Card>
           )}
 
-          {/* Quick Actions */}
-          <div className="flex gap-2 flex-wrap">
-            <Button variant="outline" size="sm" onClick={onUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Documents
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')} disabled={hasDocuments === false}>
-              <BookOpen className="mr-2 h-4 w-4" />
-              Past Papers
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setShowSummary(true)} disabled={hasDocuments === false}>
-              <Trophy className="mr-2 h-4 w-4" />
-              Daily Summary
-            </Button>
-          </div>
-
-          {/* Daily Progress Summary */}
-          <div className="p-5 rounded-2xl bg-card border border-border">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-foreground">Today's Progress</h3>
-              <Button variant="ghost" size="sm" onClick={() => setShowSummary(true)} className="text-accent">
-                View Summary
-              </Button>
-            </div>
-            <div className="grid grid-cols-4 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold text-accent">
-                  {dailyStats.tasksCompletedToday}/{dailyStats.totalTasksToday || subjects.length * 4}
-                </p>
-                <p className="text-xs text-muted-foreground">Tasks Done</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-success">{dailyStats.examQuestionsToday}</p>
-                <p className="text-xs text-muted-foreground">Exam Qs</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-warning">+{dailyStats.xpToday}</p>
-                <p className="text-xs text-muted-foreground">XP Today</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-primary">🔥 {progress?.streak || 0}</p>
-                <p className="text-xs text-muted-foreground">Day Streak</p>
-              </div>
-            </div>
-          </div>
+          {/* Compact summary trigger only — full daily stats live on Home tab */}
+          <Button variant="outline" size="sm" onClick={() => setShowSummary(true)} className="w-full">
+            <Trophy className="mr-2 h-4 w-4" />
+            View Today's Summary
+          </Button>
 
           {/* Exam date prompt if no exams set */}
           {hasSubjects && subjectExams.length === 0 && (
