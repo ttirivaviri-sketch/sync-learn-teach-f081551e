@@ -538,6 +538,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               </div>
             )}
           </div>
+         </Suspense>
         </TabsContent>
 
         {/* ===== TAB 5: PROFILE (academic profile, syllabus, documents, daily progress) ===== */}
