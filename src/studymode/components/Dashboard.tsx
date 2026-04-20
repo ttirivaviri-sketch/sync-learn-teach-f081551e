@@ -442,9 +442,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           />
         </TabsContent>
 
-        {/* ===== TAB 4: REVIEW (unchanged) ===== */}
-        <TabsContent value="review" className="mt-4">
+        {/* ===== TAB 4: EXAMS (Spaced Repetition + Mock Exams) ===== */}
+        <TabsContent value="exams" className="mt-4">
           <div className="space-y-4">
+            <MockExamSection />
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-foreground">Spaced Repetition</h2>
               <span className="text-xs text-muted-foreground">
@@ -532,7 +533,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </TabsContent>
 
         {/* ===== TAB 5: PROFILE (academic profile, syllabus, documents, daily progress) ===== */}
-        <TabsContent value="profile" className="mt-4 space-y-4">
+        <TabsContent value="setup" className="mt-4 space-y-4">
           {/* Academic Profile Card */}
           {academicProfile ? (
             <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
