@@ -442,9 +442,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           />
         </TabsContent>
 
-        {/* ===== TAB 4: REVIEW (unchanged) ===== */}
-        <TabsContent value="review" className="mt-4">
+        {/* ===== TAB 4: EXAMS (Spaced Repetition + Mock Exams) ===== */}
+        <TabsContent value="exams" className="mt-4">
           <div className="space-y-4">
+            <MockExamSection subjects={subjects} />
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-foreground">Spaced Repetition</h2>
               <span className="text-xs text-muted-foreground">
