@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
 import { SyllabusSetupGate } from "@/components/SyllabusSetupGate";
 import { PaymentHistory } from "@/components/PaymentHistory";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface UserProfile {
@@ -180,6 +181,7 @@ export const LearnerProfileTab = ({
 
       {/* ── Menu Rows ── */}
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
+        <ThemeToggle />
         <MenuRow
           icon={<Clock className="h-4 w-4" />}
           label="Payment History"
