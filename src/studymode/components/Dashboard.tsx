@@ -229,7 +229,11 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
       {/* Daily Summary Modal */}
-      {showSummary && <DailySummary onClose={() => setShowSummary(false)} />}
+      {showSummary && (
+        <Suspense fallback={null}>
+          <DailySummary onClose={() => setShowSummary(false)} />
+        </Suspense>
+      )}
 
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
@@ -386,63 +390,68 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           )}
         </TabsContent>
 
-        {/* ===== TAB 2: PROGRESS (unchanged) ===== */}
+        {/* ===== TAB 2: PROGRESS ===== */}
         <TabsContent value="progress" className="mt-4 space-y-6">
-          <AIProgressInsights
-            subjects={subjects.map(s => ({
-              name: s.name,
-              currentTopic: s.currentTopic.name,
-              mastery: s.currentTopic.mastery,
-            }))}
-            dailyStats={dailyStats}
-            streak={progress?.streak || 0}
-            xp={progress?.xp || 0}
-            quizHistory={topicStats.map(s => ({
-              topic_name: s.topic_name,
-              accuracy: s.accuracy,
-              total_attempts: s.total_attempts,
-              due_for_review: s.due_for_review,
-            }))}
-            masteryData={[]}
-          />
-          <ProgressCharts />
+          <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
+            <AIProgressInsights
+              subjects={subjects.map(s => ({
+                name: s.name,
+                currentTopic: s.currentTopic.name,
+                mastery: s.currentTopic.mastery,
+              }))}
+              dailyStats={dailyStats}
+              streak={progress?.streak || 0}
+              xp={progress?.xp || 0}
+              quizHistory={topicStats.map(s => ({
+                topic_name: s.topic_name,
+                accuracy: s.accuracy,
+                total_attempts: s.total_attempts,
+                due_for_review: s.due_for_review,
+              }))}
+              masteryData={[]}
+            />
+            <ProgressCharts />
+          </Suspense>
         </TabsContent>
 
-        {/* ===== TAB 3: CALENDAR (unchanged) ===== */}
+        {/* ===== TAB 3: CALENDAR ===== */}
         <TabsContent value="calendar" className="mt-4 space-y-4">
-          {hasSubjects && (
-            <MultiExamCountdown
-              exams={subjectExams}
+          <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
+            {hasSubjects && (
+              <MultiExamCountdown
+                exams={subjectExams}
+                subjects={subjects}
+                onAddExam={(exam) => addExam.mutate(exam)}
+                onDeleteExam={(id) => deleteExam.mutate(id)}
+                isAdding={addExam.isPending}
+              />
+            )}
+
+            {!hasSubjects && (
+              <ExamSetupCard
+                currentExamName={examSettings?.exam_name}
+                currentExamDate={examSettings?.exam_date ? new Date(examSettings.exam_date) : undefined}
+                onSave={async (name, date) => {
+                  const success = await saveSettings(name, date);
+                  return !!success;
+                }}
+                isSaving={examSettingsSaving}
+              />
+            )}
+
+            <AdaptivePlanBanner />
+
+            <StudyCalendar
               subjects={subjects}
-              onAddExam={(exam) => addExam.mutate(exam)}
-              onDeleteExam={(id) => deleteExam.mutate(id)}
-              isAdding={addExam.isPending}
+              examDate={getNextExam()?.exam_date ? new Date(getNextExam()!.exam_date) : examDate}
+              subjectExams={subjectExams}
             />
-          )}
-
-          {!hasSubjects && (
-            <ExamSetupCard
-              currentExamName={examSettings?.exam_name}
-              currentExamDate={examSettings?.exam_date ? new Date(examSettings.exam_date) : undefined}
-              onSave={async (name, date) => {
-                const success = await saveSettings(name, date);
-                return !!success;
-              }}
-              isSaving={examSettingsSaving}
-            />
-          )}
-
-          <AdaptivePlanBanner />
-
-          <StudyCalendar 
-            subjects={subjects} 
-            examDate={getNextExam()?.exam_date ? new Date(getNextExam()!.exam_date) : examDate}
-            subjectExams={subjectExams}
-          />
+          </Suspense>
         </TabsContent>
 
         {/* ===== TAB 4: EXAMS (Spaced Repetition + Mock Exams) ===== */}
         <TabsContent value="exams" className="mt-4">
+         <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
           <div className="space-y-4">
             <MockExamSection />
             <div className="flex items-center justify-between">
