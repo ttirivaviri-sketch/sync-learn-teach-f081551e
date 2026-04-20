@@ -13,6 +13,7 @@ import TutorEarningsChart from "@/components/TutorEarningsChart";
 import TutorProfile from "@/components/TutorProfile";
 import { TutorSubjectManager } from "@/components/TutorSubjectManager";
 import { TutorWalletPanel } from "@/components/TutorWalletPanel";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface FormattedStats {
   weekEarnings: string;
@@ -222,6 +223,7 @@ export const TutorProfileTab = ({
 
       {/* ── Menu Rows ── */}
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
+        <ThemeToggle />
         <MenuRow
           icon={<DollarSign className="h-4 w-4" />}
           label="Recent Earnings"
