@@ -17,6 +17,8 @@ const AppShowcase = () => {
             <img
               src="/images/girl-phone.png"
               alt="Student using StudySync on phone"
+              loading="lazy"
+              decoding="async"
               className="w-full max-w-md rounded-3xl object-cover shadow-lg"
             />
           </div>
