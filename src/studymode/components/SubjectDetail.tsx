@@ -25,17 +25,20 @@ interface SubjectDetailProps {
   onOpenChat?: (subject: string, topic: string) => void;
   onCompleteTask?: (taskId: string) => void;
   onAddBonusTask?: () => void;
+  curriculum?: string | null;
 }
 
-export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTask, onAddBonusTask }: SubjectDetailProps) {
+export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTask, onAddBonusTask, curriculum }: SubjectDetailProps) {
   const [selectedTask, setSelectedTask] = useState<DailyTask | null>(null);
   const [currentTasks, setCurrentTasks] = useState(tasks);
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
   const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery'>('tasks');
   const [recallTopic, setRecallTopic] = useState<string | null>(null);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
+  const { awardXP } = useSubjectXP();
 
   const getMasteryColor = (mastery: number) => {
     if (mastery >= 95) return 'text-success';
@@ -73,6 +76,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
     const xpAmount = 10;
     addXp.mutate(xpAmount);
     updateStreak.mutate();
+    awardXP.mutate({ subject: subject.name, curriculum, amount: xpAmount });
     
     // Show XP popup
     setXpPopup({ amount: xpAmount, key: Date.now() });
@@ -259,23 +263,39 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
         </div>
       )}
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-md",
+            "flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-md shrink-0",
             `bg-gradient-to-br ${subject.color}`
           )}>
             {subject.icon}
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">{subject.name}</h2>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-foreground truncate">{subject.name}</h2>
             <p className="text-sm text-muted-foreground">Today's Study Pack</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowLeaderboard(true)}
+          className="shrink-0 gap-1.5 border-accent/40 hover:bg-accent/10"
+        >
+          <Trophy className="h-4 w-4 text-accent" />
+          <span className="hidden sm:inline">Leaderboard</span>
+        </Button>
       </div>
+
+      <Leaderboard
+        open={showLeaderboard}
+        onOpenChange={setShowLeaderboard}
+        curriculum={curriculum}
+        subject={subject.name}
+      />
 
       {/* Current Topic Card */}
       <div className="p-5 rounded-2xl bg-card border border-border">
