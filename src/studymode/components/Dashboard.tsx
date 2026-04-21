@@ -4,6 +4,7 @@ import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../typ
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
+import { Leaderboard } from './Leaderboard';
 // Heavy tab contents — lazy so the default Subjects tab paints first.
 const StudyCalendar = lazy(() => import('./StudyCalendar').then(m => ({ default: m.StudyCalendar })));
 const ExamSetupCard = lazy(() => import('./ExamSetupCard').then(m => ({ default: m.ExamSetupCard })));
@@ -37,6 +38,7 @@ import { RiskLevelSummary, buildSubjectRisks } from '@/components/RiskLevelIndic
 import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { useStudyActivity } from '@/hooks/useStudyActivity';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { logger } from "@/utils/logger";
 
 interface DashboardProps {
@@ -54,7 +56,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [showQuizHistory, setShowQuizHistory] = useState(false);
+  const [showGlobalLeaderboard, setShowGlobalLeaderboard] = useState(false);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
+  const { awardXP } = useSubjectXP();
+  const curriculum = academicProfile?.curriculum || 'ZIMSEC';
   
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
   const { exams: subjectExams, addExam, deleteExam, getNextExam } = useSubjectExams();
@@ -219,7 +224,11 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           tasks={dynamicTasks}
           onBack={() => setSelectedSubject(null)}
           onOpenChat={onOpenChat}
-          onCompleteTask={(taskId) => completeTask.mutate(taskId)}
+          curriculum={curriculum}
+          onCompleteTask={(taskId) => {
+            completeTask.mutate(taskId);
+            awardXP.mutate({ subject: selectedSubject.name, curriculum, amount: 10 });
+          }}
           onAddBonusTask={() => addBonusTask.mutate(selectedSubject.id)}
         />
       </div>
