@@ -85,15 +85,6 @@ export function SubjectCard({ subject, tasksCount, onClick }: SubjectCardProps) 
         )}
       </div>
 
-      {/* Locked Indicator */}
-      {subject.currentTopic.isLocked && (
-        <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center">
-          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-            <Lock className="h-8 w-8" />
-            <span className="text-sm font-medium">Topic Locked</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
