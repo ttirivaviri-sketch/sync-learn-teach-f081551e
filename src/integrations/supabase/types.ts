@@ -1663,6 +1663,42 @@ export type Database = {
           },
         ]
       }
+      subject_xp: {
+        Row: {
+          created_at: string
+          curriculum: string
+          id: string
+          last_activity_date: string | null
+          streak: number
+          subject: string
+          updated_at: string
+          user_id: string
+          xp: number
+        }
+        Insert: {
+          created_at?: string
+          curriculum?: string
+          id?: string
+          last_activity_date?: string | null
+          streak?: number
+          subject: string
+          updated_at?: string
+          user_id: string
+          xp?: number
+        }
+        Update: {
+          created_at?: string
+          curriculum?: string
+          id?: string
+          last_activity_date?: string | null
+          streak?: number
+          subject?: string
+          updated_at?: string
+          user_id?: string
+          xp?: number
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           created_at: string
@@ -2318,6 +2354,10 @@ export type Database = {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
+      get_overall_leaderboard: {
+        Args: { p_curriculum: string; p_limit?: number }
+        Returns: Json
+      }
       get_published_tutorials: {
         Args: { p_curriculum?: string; p_subject?: string }
         Returns: {
@@ -2344,6 +2384,10 @@ export type Database = {
       }
       get_subject_context: {
         Args: { p_subject_id: string; p_topic_name: string }
+        Returns: Json
+      }
+      get_subject_leaderboard: {
+        Args: { p_curriculum: string; p_limit?: number; p_subject: string }
         Returns: Json
       }
       has_role: {
