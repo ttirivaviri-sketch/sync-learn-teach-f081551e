@@ -52,7 +52,7 @@ function Row({ row, highlight }: { row: { rank: number; full_name: string; avata
         <p className="text-sm font-semibold text-foreground truncate">{row.full_name}</p>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-0.5">
-            <Flame className="h-3 w-3 text-orange-500" />
+            <Flame className="h-3 w-3 text-warning" />
             {row.streak}
           </span>
         </div>
