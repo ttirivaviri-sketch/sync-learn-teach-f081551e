@@ -244,6 +244,13 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </Suspense>
       )}
 
+      <Leaderboard
+        open={showGlobalLeaderboard}
+        onOpenChange={setShowGlobalLeaderboard}
+        curriculum={curriculum}
+        title="Global Leaderboard"
+      />
+
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
         <p className="text-sm text-foreground">
@@ -325,7 +332,18 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               {/* Exam Readiness moved to Progress tab; Mock Exams moved to Exams tab */}
               {hasSubjects ? (
                 <>
-                  <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-xl font-bold text-foreground">Your Subjects</h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowGlobalLeaderboard(true)}
+                      className="gap-1.5 border-accent/40 hover:bg-accent/10"
+                    >
+                      <Trophy className="h-4 w-4 text-accent" />
+                      <span className="hidden sm:inline">Global</span>
+                    </Button>
+                  </div>
                   {profileExamDates.length > 0 && (
                     <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
                   )}
