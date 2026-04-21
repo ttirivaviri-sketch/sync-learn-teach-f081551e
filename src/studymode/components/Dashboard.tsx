@@ -4,6 +4,7 @@ import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../typ
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
+import { Leaderboard } from './Leaderboard';
 // Heavy tab contents — lazy so the default Subjects tab paints first.
 const StudyCalendar = lazy(() => import('./StudyCalendar').then(m => ({ default: m.StudyCalendar })));
 const ExamSetupCard = lazy(() => import('./ExamSetupCard').then(m => ({ default: m.ExamSetupCard })));
@@ -37,6 +38,7 @@ import { RiskLevelSummary, buildSubjectRisks } from '@/components/RiskLevelIndic
 import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { useStudyActivity } from '@/hooks/useStudyActivity';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { logger } from "@/utils/logger";
 
 interface DashboardProps {
@@ -54,7 +56,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [showQuizHistory, setShowQuizHistory] = useState(false);
+  const [showGlobalLeaderboard, setShowGlobalLeaderboard] = useState(false);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
+  const { awardXP } = useSubjectXP();
+  const curriculum = academicProfile?.curriculum || 'ZIMSEC';
   
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
   const { exams: subjectExams, addExam, deleteExam, getNextExam } = useSubjectExams();
@@ -219,7 +224,11 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           tasks={dynamicTasks}
           onBack={() => setSelectedSubject(null)}
           onOpenChat={onOpenChat}
-          onCompleteTask={(taskId) => completeTask.mutate(taskId)}
+          curriculum={curriculum}
+          onCompleteTask={(taskId) => {
+            completeTask.mutate(taskId);
+            awardXP.mutate({ subject: selectedSubject.name, curriculum, amount: 10 });
+          }}
           onAddBonusTask={() => addBonusTask.mutate(selectedSubject.id)}
         />
       </div>
@@ -234,6 +243,13 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           <DailySummary onClose={() => setShowSummary(false)} />
         </Suspense>
       )}
+
+      <Leaderboard
+        open={showGlobalLeaderboard}
+        onOpenChange={setShowGlobalLeaderboard}
+        curriculum={curriculum}
+        title="Global Leaderboard"
+      />
 
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
@@ -316,7 +332,18 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               {/* Exam Readiness moved to Progress tab; Mock Exams moved to Exams tab */}
               {hasSubjects ? (
                 <>
-                  <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
+                  <div className="flex items-center justify-between mb-1">
+                    <h2 className="text-xl font-bold text-foreground">Your Subjects</h2>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowGlobalLeaderboard(true)}
+                      className="gap-1.5 border-accent/40 hover:bg-accent/10"
+                    >
+                      <Trophy className="h-4 w-4 text-accent" />
+                      <span className="hidden sm:inline">Global</span>
+                    </Button>
+                  </div>
                   {profileExamDates.length > 0 && (
                     <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
                   )}
