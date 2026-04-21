@@ -59,6 +59,7 @@
     "framer-motion": "^12.23.12",
     "input-otp": "^1.2.4",
     "js-yaml": "^4.1.1",
+    "katex": "^0.16.11",
     "lucide-react": "^0.462.0",
     "mapbox-gl": "^3.14.0",
     "mathjs": "^15.2.0",
