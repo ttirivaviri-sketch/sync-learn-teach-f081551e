@@ -9,6 +9,7 @@ import { useState, useCallback } from "react";
 import { supabase } from "../../integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { useToast } from "@/hooks/use-toast";
+import { useSubjectXP } from "./useSubjectXP";
 
 export interface MockQuestion {
   id: string;
@@ -57,6 +58,7 @@ function gradeBand(percent: number): string {
 
 export function useMockExam() {
   const { toast } = useToast();
+  const { awardXP } = useSubjectXP();
   const [paper, setPaper] = useState<MockPaper | null>(null);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [isGenerating, setGenerating] = useState(false);
@@ -222,6 +224,24 @@ export function useMockExam() {
             submitted_at: new Date().toISOString(),
           })
           .eq("id", attemptId);
+
+        // Award subject XP for completing a mock exam (Duolingo-style)
+        try {
+          // Curriculum is not directly known here — best-effort: read from academic_profiles
+          const { data: { user } } = await supabase.auth.getUser();
+          let curriculum: string | null = null;
+          if (user) {
+            const { data: ap } = await supabase
+              .from("academic_profiles")
+              .select("curriculum")
+              .eq("user_id", user.id)
+              .maybeSingle();
+            curriculum = (ap as any)?.curriculum ?? null;
+          }
+          awardXP.mutate({ subject: paper.subject, curriculum, amount: 50 });
+        } catch (xpErr) {
+          logger.warn("[useMockExam] XP award failed", xpErr);
+        }
 
         return { graded, marksAwarded, percent, band };
       } catch (e: any) {
