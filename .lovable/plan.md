@@ -1,168 +1,115 @@
 
 
-# Plan: Flexible Topic Mode + AI Knowledge Mapping + Exam-Ready Evaluation
+# Plan: Syllabus-Grounded Daily Task Generator
 
-A non-linear "Start by Topic" learning system that runs alongside StudyMode without disturbing its linear syllabus progression. Built on a knowledge-mapping backbone so every question, review, and grade is grounded in the same structured concept layer.
+Replace the per-block markdown generation with a single **structured JSON task** that follows your exact spec — one bundle per generation that hits every selected concept across 4 mandatory blocks, with server-side coverage validation before it ever reaches the UI.
 
----
-
-## 1. Database (one migration)
-
-**`topic_sessions`** — a flexible session opened when a student picks a topic.
-- `id`, `user_id`, `subject_id`, `topic_id` (nullable, free-text `topic_name` fallback for ad-hoc topics), `subtopic`, `curriculum`
-- `mode` text default `'flexible'`
-- `status` text default `'active'` (`active` | `completed` | `expired`)
-- `questions_attempted` int default 0, `questions_correct` int default 0, `mastery_score` numeric default 0
-- `concept_review_count` int default 0 (for review-farming guard)
-- `last_activity_at` timestamptz, `created_at`, `completed_at`
-- RLS: user owns their sessions.
-
-**`topic_session_questions`** — every question + grade inside a session (audit + mastery + flashcard linking).
-- `id`, `session_id`, `question_text`, `expected_answer`, `student_answer`
-- `concept_map jsonb` (output of mapping engine — topic / subtopic / concepts / difficulty / exam_expectation)
-- `accuracy bool`, `coverage_score numeric`, `expression_score numeric`
-- `missing_points jsonb`, `level text` (`exam_ready` | `close` | `developing` | `weak`)
-- `xp_delta int`, `created_at`
-- RLS: user owns rows via session.
-
-**`weak_concepts`** — personalisation memory (Q3 in your spec).
-- `id`, `user_id`, `subject`, `curriculum`, `concept text`, `topic text`, `weakness_score numeric` (rolling), `last_seen_at`
-- Unique on `(user_id, subject, curriculum, concept)`
-- Used later to bias question generation toward gaps.
-
-**Auto-expire**: `topic_sessions` with `last_activity_at < now() - interval '24h'` and `status='active'` are closed by a lightweight RPC `expire_stale_topic_sessions()` invoked on Topic Mode entry (no cron needed).
-
-**Caps**: enforce max **3 active sessions per user** in the `start_topic_session` RPC (auto-expire oldest if exceeded). Max **20 questions per session** enforced client + server.
+This runs alongside (not replacing) the existing `generate-task-content` markdown flow, so today's UI continues to work while the new pipeline powers the upgraded daily task experience.
 
 ---
 
-## 2. Edge functions (4 new, all on Lovable AI Gateway, default `google/gemini-3-flash-preview`)
+## 1. New edge function: `generate-daily-task`
 
-All return **strict JSON via tool-calling** (no free-text JSON) — this is the consistency lock.
+**Inputs** (from client):
+- `subject`, `curriculum`, `topic`, `subtopics[]` (from parsed syllabus)
+- `concept_mastery` map (`{concept: 0–100}`) — from `topic_mastery` + `weak_concepts`
+- `completed_concepts[]` — concepts already covered in prior daily tasks
+- `past_paper_patterns` — pulled from existing `exam_patterns` table
 
-**`map-question-concepts`** — Knowledge Mapping Engine.
-Input: `{ question, subject, curriculum, topic? }`
-Output: `{ topic, subtopic, concepts[], difficulty, exam_expectation }`
-**Rule**: every question generated for a topic session is piped through this before it's shown.
+**Pipeline (server-side, in order):**
 
-**`generate-topic-session`** — Session initialiser.
-Input: `{ subject, curriculum, topic, subtopic?, weak_concepts[] }`
-Output: `{ concept_learning, quick_review, questions[5–10], flashcards[] }` — each question pre-tagged with its concept_map. Biased toward `weak_concepts`.
+1. **Target selection** — implements your exact rule:
+   ```
+   IF uncovered concepts exist → pick those
+   ELSE IF weak concepts exist → pick lowest mastery
+   ELSE → next subtopic in syllabus order
+   ```
+2. **Scope lock** — max 1–2 subtopics, max 5 concepts.
+3. **AI generation** via Lovable Gateway (`google/gemini-3-flash-preview`) with **strict tool-calling** so the model returns exactly:
+   ```json
+   {
+     "topic": "...",
+     "subtopic": "...",
+     "concepts": [...],
+     "blocks": {
+       "concept_learning": "...",
+       "quick_review": "...",
+       "practice_questions": [
+         { "question", "concept", "difficulty", "type", "answer", "marks" }
+       ],
+       "exam_question": { "question", "concepts", "marks", "expected_steps" }
+     }
+   }
+   ```
+4. **Coverage validator (server)** — before returning:
+   - Every selected concept must appear in ≥1 `practice_questions[i].concept`. If missing → ask AI to fill the gap (1 retry).
+   - Difficulty must include at least 2 distinct levels across practice questions. If all same → request `medium` + `hard` top-up.
+   - `exam_question.concepts` must contain ≥2 of the selected concepts.
+   - On retry failure, return a `coverage_warnings[]` field so the UI can show a "regenerate" prompt instead of silently failing.
+5. **Response**: the validated JSON, plus `selection_reason` (`"uncovered" | "weak" | "syllabus-order"`) for analytics.
 
-**`generate-concept-review`** — Pre-answer guidance ("Review this concept first").
-Input: `{ question, concept_map, depth: 'quick' | 'full' }`
-Output: `{ quick_review: { bullets[], formulas[], definitions[] }, full_explanation, examples[], common_mistakes[], testing_focus[] }` — **specific to the question**, never generic.
-
-**`evaluate-topic-answer`** — Multi-layer grader.
-Input: `{ question, expected_answer, student_answer, concept_map, require_keywords: true, require_structure: true }`
-Output: exact schema from your spec:
-```
-{ accuracy, coverage_score, expression_score, missing_points[], improvement_needed, level }
-```
-**Exam-ready rule**: `accuracy === true && coverage ≥ 0.9 && expression ≥ 0.8 && missing_points.length === 0`.
-
----
-
-## 3. XP & mastery rules (server-side in `evaluate-topic-answer`)
-
-| Outcome | XP |
-|---|---|
-| Correct | +5 |
-| Exam-ready | +8 to +10 (scaled by difficulty) |
-| Flashcard correct | +2 |
-| Minor mistake | −2 |
-| Moderate mistake | −3 |
-| Major mistake | −5 |
-
-- **Floor**: session XP cannot drop below 0 (clamped per session, total leaderboard XP unaffected by session floor).
-- **Difficulty scaling guard against farming**: easy topic XP × 0.6, medium × 1.0, hard × 1.4. Difficulty comes from `concept_map.difficulty`.
-- **Review-farming guard**: if `concept_review_count > questions_attempted` and ratio > 2, "Review" button disables for next question (forced attempt).
-- **Flashcard mastery boost**: when answer is `exam_ready`, find flashcards matching `concept_map.concepts[]` and bump `mastery_score += 25`, push next review interval out (spaced repetition acceleration). After 3 consecutive exam-ready hits on the same concept → mark flashcard `mastered=true`.
-
----
-
-## 4. Hooks (new)
-
-- `useTopicSession(sessionId)` — session state + progress, auto-saves `last_activity_at` on every action.
-- `useTopicSessionRunner()` — `startSession`, `requestReview(question, depth)`, `submitAnswer(question, answer)`, `nextQuestion`, `endSession`. Wraps the four edge functions and writes to `topic_session_questions`.
-- `useWeakConcepts(subject, curriculum)` — read + update rolling weakness scores; injected into `generate-topic-session`.
-- Existing `useSubjectXP` reused for XP awards (already supports arbitrary amounts post-XP-differentiation work).
+System prompt enforces every "DO NOT" rule from your spec (no inventing topics, no skipping, no merging, no over-explaining, exam wording only).
 
 ---
 
-## 5. UI (new + minimal touches)
+## 2. Database (1 migration)
 
-**New entry: "Start by Topic" button** on the Subjects tab in `Dashboard.tsx`, sitting next to the existing "🏆 Global" leaderboard button.
+**New table `daily_task_concepts`** — tracks which concepts have been covered per user/subject so target selection can find "uncovered" reliably.
+- `id`, `user_id`, `subject_id`, `topic`, `subtopic`, `concept`, `last_covered_at`, `coverage_count`
+- Unique on `(user_id, subject_id, concept)`
+- RLS: user owns rows
+- Written by the edge function on every successful generation
 
-**New: `TopicPicker.tsx`** (sheet) — progressive disclosure:
-```
-Subject ▸ Unit (collapsible) ▸ Topic ▸ Subtopic
-```
-Pulls from existing `subjects.topics` jsonb. Free-text "Custom topic" input at the bottom for ad-hoc entries (creates session with `topic_id=null`, `topic_name=<input>`).
+**Extend `daily_tasks`** — add columns:
+- `task_payload jsonb` — stores the full structured task bundle returned by the new function
+- `selection_reason text`
+- `concepts_covered text[]`
 
-**New: `TopicSessionRunner.tsx`** — full-screen session view:
-- Header: topic name, progress (3/10), session XP, "End session" button.
-- Question card with **"📖 Review this concept first"** button above the answer input.
-- Review opens a side-sheet with `quick_review` first, "Show full explanation" expands to `full_explanation + examples + common_mistakes`. A **"This question is testing: X, Y, Z"** highlight chip is always visible (pulled from `concept_map.concepts`).
-- Submit → `evaluate-topic-answer` → result card:
-  - If `exam_ready`: green badge "Exam Ready ✨ +8 XP", no feedback shown, mastery pulse animation, auto-advance after 2s.
-  - Else: red/amber card with `missing_points[]` and `improvement_needed` guidance, "Try again" or "Next question".
-
-**New: `TopicSessionSummary.tsx`** — end-of-session screen with XP earned, mastery delta, weakest concepts identified, "Mark as learned in StudyMode" optional sync button (writes to `topic_mastery` only on explicit click — never auto).
+(Existing rows continue to work — new columns nullable.)
 
 ---
 
-## 6. State isolation (the non-negotiable rule)
+## 3. Client integration
 
-`mode='flexible'` sessions:
-- Do NOT touch `topic_mastery`, `daily_tasks`, `quiz_attempts`, or any StudyMode progression table.
-- Do NOT contribute to streak from StudyMode side; instead, Topic Mode XP feeds `subject_xp` (so leaderboards still update).
-- Optional one-way sync via the explicit "Mark as learned" button on the summary screen.
+**New hook `useStructuredDailyTask(subjectId, topic)`**:
+- Fetches concept mastery + completed concepts.
+- Calls `generate-daily-task`.
+- Returns `{ task, isLoading, error, regenerate, coverageWarnings }`.
 
----
+**New component `StructuredDailyTaskRunner.tsx`** — renders the 4 blocks in order:
+1. **Concept Learning** card (markdown, KaTeX-rendered).
+2. **Quick Review** bullets.
+3. **Practice Questions** — one at a time, supports `mcq`/`short`/`structured`, shows answer + marks after submission, awards XP per correct answer (reuses the +5 / +8 / +3 scale already in place).
+4. **Exam Question** — multi-step question with `expected_steps[]` checklist for self-marking.
 
-## 7. Edge case handling (built in)
+Wired into the existing daily-tasks UI: when a task with `task_payload` exists, the runner opens that JSON; otherwise it falls back to the current markdown flow. Zero disruption to existing tasks.
 
-| Case | Solution |
-|---|---|
-| Rapid topic switching | Cap of 3 active sessions; oldest auto-expired |
-| XP farming on easy topics | Difficulty multiplier (0.6 / 1.0 / 1.4) |
-| Inconsistent AI grading | Strict tool-calling JSON schema on `evaluate-topic-answer` |
-| Review-button abuse | Forced-attempt cooldown after 2× review:attempt ratio |
-| AI returns generic content | `generate-concept-review` always receives `concept_map` + question; system prompt forbids generic textbook answers |
-| Student abandons session | 24h inactivity auto-expire on next Topic Mode open |
+**Updated `useDailyTasks.ensureTasks`** — when seeding today's tasks, if `aiContext` indicates the student has a parsed syllabus, queue ONE structured task per subject (calls `generate-daily-task` lazily on first open, not at seed time, to avoid burning credits).
 
 ---
 
-## 8. Files
+## 4. Files
 
-**DB**: 1 migration (3 tables, RLS, RPCs `start_topic_session`, `expire_stale_topic_sessions`).
+**Edge function (new)**: `supabase/functions/generate-daily-task/index.ts`
 
-**Edge functions (new)**:
-- `supabase/functions/map-question-concepts/index.ts`
-- `supabase/functions/generate-topic-session/index.ts`
-- `supabase/functions/generate-concept-review/index.ts`
-- `supabase/functions/evaluate-topic-answer/index.ts`
+**Migration (new)**: `daily_task_concepts` table + 3 columns on `daily_tasks` + RLS.
 
-**Hooks (new)**:
-- `src/studymode/hooks/useTopicSession.ts`
-- `src/studymode/hooks/useTopicSessionRunner.ts`
-- `src/studymode/hooks/useWeakConcepts.ts`
+**Hook (new)**: `src/studymode/hooks/useStructuredDailyTask.ts`
 
-**Components (new)**:
-- `src/studymode/components/TopicPicker.tsx`
-- `src/studymode/components/TopicSessionRunner.tsx`
-- `src/studymode/components/TopicSessionSummary.tsx`
+**Component (new)**: `src/studymode/components/StructuredDailyTaskRunner.tsx`
 
 **Modified**:
-- `src/studymode/components/Dashboard.tsx` — add "Start by Topic" button on Subjects tab.
-- `src/studymode/lib/aiClient.ts` — register 4 new edge function names in `EDGE_FUNCTION_MAP`.
+- `src/studymode/hooks/useDailyTasks.ts` — seed structured task slot
+- `src/studymode/components/TaskContentPanel.tsx` — branch to `StructuredDailyTaskRunner` when `task_payload` exists
+- `src/studymode/lib/aiClient.ts` — register `generate-daily-task`
 
 ---
 
 ## Result
 
-- A second, non-linear learning surface ("Start by Topic") that students open whenever they want to drill a specific concept — without polluting their linear StudyMode progression.
-- Every question is concept-mapped, every review is question-specific, every grade returns a strict 4-field schema, and every exam-ready answer compounds into the flashcard mastery + leaderboard XP systems.
-- Personalisation memory (`weak_concepts`) starts populating from session one, ready to feed adaptive question selection in future iterations.
+- A **single AI call per task** returns a fully-structured, syllabus-locked, coverage-validated bundle — no more multiple round-trips per block.
+- **Concept tracking** means every concept gets covered before any concept gets repeated, exactly per your selection logic.
+- **Server-side validation** enforces the coverage + difficulty diversity rules before the JSON ever reaches the client; the UI never sees an unbalanced task.
+- **Strict tool-calling JSON schema** means the AI cannot return free-text or skip blocks — the response either matches the spec or the function retries.
+- Existing markdown task flow stays untouched as a fallback for subjects without parsed syllabus data.
 
