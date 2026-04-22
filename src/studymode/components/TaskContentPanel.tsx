@@ -10,6 +10,7 @@ import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
 
 interface TaskContentPanelProps {
   task: DailyTask;
@@ -17,6 +18,9 @@ interface TaskContentPanelProps {
   onComplete: () => void;
   onBack: () => void;
 }
+
+// Task types that should use the new syllabus-grounded structured runner
+const STRUCTURED_TASK_TYPES: DailyTask['type'][] = ['concept-learning'];
 
 const taskLabels: Record<string, string> = {
   'micro-revision': 'Micro Revision',
