@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
 import { Leaderboard } from './Leaderboard';
+import { TopicPicker } from './TopicPicker';
+import { TopicSessionRunner } from './TopicSessionRunner';
 // Heavy tab contents — lazy so the default Subjects tab paints first.
 const StudyCalendar = lazy(() => import('./StudyCalendar').then(m => ({ default: m.StudyCalendar })));
 const ExamSetupCard = lazy(() => import('./ExamSetupCard').then(m => ({ default: m.ExamSetupCard })));
@@ -57,6 +59,8 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const [showSummary, setShowSummary] = useState(false);
   const [showQuizHistory, setShowQuizHistory] = useState(false);
   const [showGlobalLeaderboard, setShowGlobalLeaderboard] = useState(false);
+  const [showTopicPicker, setShowTopicPicker] = useState(false);
+  const [topicStart, setTopicStart] = useState<{ subject: string; topic: string; subtopic?: string; subjectId?: string; curriculum: string } | null>(null);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
   const { awardXP } = useSubjectXP();
   const curriculum = academicProfile?.curriculum || 'ZIMSEC';
@@ -251,6 +255,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         title="Global Leaderboard"
       />
 
+      <TopicPicker
+        open={showTopicPicker}
+        onOpenChange={setShowTopicPicker}
+        curriculum={curriculum}
+        onPick={(args) => setTopicStart({ ...args, curriculum })}
+      />
+
+      <TopicSessionRunner
+        open={!!topicStart}
+        onOpenChange={(o) => { if (!o) setTopicStart(null); }}
+        start={topicStart}
+      />
+
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
         <p className="text-sm text-foreground">
@@ -332,17 +349,29 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               {/* Exam Readiness moved to Progress tab; Mock Exams moved to Exams tab */}
               {hasSubjects ? (
                 <>
-                  <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center justify-between mb-1 gap-2">
                     <h2 className="text-xl font-bold text-foreground">Your Subjects</h2>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowGlobalLeaderboard(true)}
-                      className="gap-1.5 border-accent/40 hover:bg-accent/10"
-                    >
-                      <Trophy className="h-4 w-4 text-accent" />
-                      <span className="hidden sm:inline">Global</span>
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTopicPicker(true)}
+                        className="gap-1.5 border-primary/40 hover:bg-primary/10"
+                      >
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="hidden sm:inline">Start by Topic</span>
+                        <span className="sm:hidden">Topic</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowGlobalLeaderboard(true)}
+                        className="gap-1.5 border-accent/40 hover:bg-accent/10"
+                      >
+                        <Trophy className="h-4 w-4 text-accent" />
+                        <span className="hidden sm:inline">Global</span>
+                      </Button>
+                    </div>
                   </div>
                   {profileExamDates.length > 0 && (
                     <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
