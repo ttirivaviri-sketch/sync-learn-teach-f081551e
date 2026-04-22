@@ -45,7 +45,15 @@ const taskIcons: Record<string, string> = {
 // Active recall tasks need an attempt-first answering panel
 const ATTEMPT_FIRST_TYPES = ['active-recall'];
 
-export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
+export function TaskContentPanel(props: TaskContentPanelProps) {
+  // Syllabus-grounded structured runner for applicable task types
+  if (STRUCTURED_TASK_TYPES.includes(props.task.type)) {
+    return <StructuredDailyTaskRunner {...props} />;
+  }
+  return <LegacyTaskContentPanel {...props} />;
+}
+
+function LegacyTaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
   const { content, isLoading, error, generateContent, reset } = useTaskContent();
   const { addXp, updateStreak } = useUserProgress();
 
