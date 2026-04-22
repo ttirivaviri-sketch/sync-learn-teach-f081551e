@@ -198,16 +198,61 @@ export type Database = {
         }
         Relationships: []
       }
+      daily_task_concepts: {
+        Row: {
+          concept: string
+          coverage_count: number
+          created_at: string
+          id: string
+          last_covered_at: string
+          subject_id: string | null
+          subject_name: string
+          subtopic: string | null
+          topic: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          concept: string
+          coverage_count?: number
+          created_at?: string
+          id?: string
+          last_covered_at?: string
+          subject_id?: string | null
+          subject_name: string
+          subtopic?: string | null
+          topic: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          concept?: string
+          coverage_count?: number
+          created_at?: string
+          id?: string
+          last_covered_at?: string
+          subject_id?: string | null
+          subject_name?: string
+          subtopic?: string | null
+          topic?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       daily_tasks: {
         Row: {
           completed_at: string | null
+          concepts_covered: string[] | null
           created_at: string
           description: string | null
           id: string
           is_completed: boolean
           is_locked: boolean
+          selection_reason: string | null
           subject_id: string | null
           task_date: string
+          task_payload: Json | null
           task_type: string
           title: string
           updated_at: string
@@ -215,13 +260,16 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          concepts_covered?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
           is_completed?: boolean
           is_locked?: boolean
+          selection_reason?: string | null
           subject_id?: string | null
           task_date?: string
+          task_payload?: Json | null
           task_type: string
           title: string
           updated_at?: string
@@ -229,13 +277,16 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          concepts_covered?: string[] | null
           created_at?: string
           description?: string | null
           id?: string
           is_completed?: boolean
           is_locked?: boolean
+          selection_reason?: string | null
           subject_id?: string | null
           task_date?: string
+          task_payload?: Json | null
           task_type?: string
           title?: string
           updated_at?: string

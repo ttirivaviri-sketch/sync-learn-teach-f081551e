@@ -64,6 +64,8 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   'generate-topic-session':      'generate-topic-session',
   'generate-concept-review':     'generate-concept-review',
   'evaluate-topic-answer':       'evaluate-topic-answer',
+  // Syllabus-grounded structured daily task
+  'generate-daily-task':         'generate-daily-task',
 };
 
 /**

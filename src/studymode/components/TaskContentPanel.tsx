@@ -10,6 +10,7 @@ import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
 
 interface TaskContentPanelProps {
   task: DailyTask;
@@ -17,6 +18,9 @@ interface TaskContentPanelProps {
   onComplete: () => void;
   onBack: () => void;
 }
+
+// Task types that should use the new syllabus-grounded structured runner
+const STRUCTURED_TASK_TYPES: DailyTask['type'][] = ['concept-learning'];
 
 const taskLabels: Record<string, string> = {
   'micro-revision': 'Micro Revision',
@@ -41,7 +45,15 @@ const taskIcons: Record<string, string> = {
 // Active recall tasks need an attempt-first answering panel
 const ATTEMPT_FIRST_TYPES = ['active-recall'];
 
-export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
+export function TaskContentPanel(props: TaskContentPanelProps) {
+  // Syllabus-grounded structured runner for applicable task types
+  if (STRUCTURED_TASK_TYPES.includes(props.task.type)) {
+    return <StructuredDailyTaskRunner {...props} />;
+  }
+  return <LegacyTaskContentPanel {...props} />;
+}
+
+function LegacyTaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
   const { content, isLoading, error, generateContent, reset } = useTaskContent();
   const { addXp, updateStreak } = useUserProgress();
 
