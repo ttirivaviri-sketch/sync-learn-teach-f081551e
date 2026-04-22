@@ -1893,6 +1893,131 @@ export type Database = {
           },
         ]
       }
+      topic_session_questions: {
+        Row: {
+          accuracy: boolean | null
+          concept_map: Json
+          coverage_score: number | null
+          created_at: string
+          expected_answer: string | null
+          expression_score: number | null
+          id: string
+          improvement_needed: boolean | null
+          level: string | null
+          missing_points: Json | null
+          question_text: string
+          session_id: string
+          student_answer: string | null
+          user_id: string
+          xp_delta: number
+        }
+        Insert: {
+          accuracy?: boolean | null
+          concept_map?: Json
+          coverage_score?: number | null
+          created_at?: string
+          expected_answer?: string | null
+          expression_score?: number | null
+          id?: string
+          improvement_needed?: boolean | null
+          level?: string | null
+          missing_points?: Json | null
+          question_text: string
+          session_id: string
+          student_answer?: string | null
+          user_id: string
+          xp_delta?: number
+        }
+        Update: {
+          accuracy?: boolean | null
+          concept_map?: Json
+          coverage_score?: number | null
+          created_at?: string
+          expected_answer?: string | null
+          expression_score?: number | null
+          id?: string
+          improvement_needed?: boolean | null
+          level?: string | null
+          missing_points?: Json | null
+          question_text?: string
+          session_id?: string
+          student_answer?: string | null
+          user_id?: string
+          xp_delta?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_session_questions_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "topic_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_sessions: {
+        Row: {
+          completed_at: string | null
+          concept_review_count: number
+          created_at: string
+          curriculum: string
+          id: string
+          last_activity_at: string
+          mastery_score: number
+          mode: string
+          questions_attempted: number
+          questions_correct: number
+          session_xp: number
+          status: string
+          subject_id: string | null
+          subject_name: string
+          subtopic: string | null
+          topic_id: string | null
+          topic_name: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          concept_review_count?: number
+          created_at?: string
+          curriculum?: string
+          id?: string
+          last_activity_at?: string
+          mastery_score?: number
+          mode?: string
+          questions_attempted?: number
+          questions_correct?: number
+          session_xp?: number
+          status?: string
+          subject_id?: string | null
+          subject_name: string
+          subtopic?: string | null
+          topic_id?: string | null
+          topic_name: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          concept_review_count?: number
+          created_at?: string
+          curriculum?: string
+          id?: string
+          last_activity_at?: string
+          mastery_score?: number
+          mode?: string
+          questions_attempted?: number
+          questions_correct?: number
+          session_xp?: number
+          status?: string
+          subject_id?: string | null
+          subject_name?: string
+          subtopic?: string | null
+          topic_id?: string | null
+          topic_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       topic_tutor_rankings: {
         Row: {
           completion_rate: number | null
@@ -2341,6 +2466,42 @@ export type Database = {
           },
         ]
       }
+      weak_concepts: {
+        Row: {
+          concept: string
+          created_at: string
+          curriculum: string
+          id: string
+          last_seen_at: string
+          subject: string
+          topic: string | null
+          user_id: string
+          weakness_score: number
+        }
+        Insert: {
+          concept: string
+          created_at?: string
+          curriculum?: string
+          id?: string
+          last_seen_at?: string
+          subject: string
+          topic?: string | null
+          user_id: string
+          weakness_score?: number
+        }
+        Update: {
+          concept?: string
+          created_at?: string
+          curriculum?: string
+          id?: string
+          last_seen_at?: string
+          subject?: string
+          topic?: string | null
+          user_id?: string
+          weakness_score?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -2350,6 +2511,7 @@ export type Database = {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
+      expire_stale_topic_sessions: { Args: never; Returns: number }
       get_exam_readiness: {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
@@ -2409,6 +2571,17 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      start_topic_session: {
+        Args: {
+          p_curriculum?: string
+          p_subject_id?: string
+          p_subject_name: string
+          p_subtopic?: string
+          p_topic_id?: string
+          p_topic_name: string
+        }
+        Returns: string
+      }
       subject_canonical_name: { Args: { p_name: string }; Returns: string }
       upsert_academic_profile:
         | {
