@@ -135,7 +135,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                   {/* Question */}
                   <Card className="border-primary/20">
                     <CardContent className="p-4">
-                      <MathMarkdown content={q.question} />
+                      <MathMarkdown>{q.question}</MathMarkdown>
                     </CardContent>
                   </Card>
 
@@ -280,7 +280,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">Key points</p>
                     <ul className="space-y-1 list-disc list-inside">
                       {runner.lastReview.quick_review.bullets.map((b, i) => (
-                        <li key={i}><MathMarkdown content={b} inline /></li>
+                        <li key={i}><MathMarkdown>{b}</MathMarkdown></li>
                       ))}
                     </ul>
                   </div>
@@ -291,7 +291,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">Formulas</p>
                     <div className="space-y-1.5">
                       {runner.lastReview.quick_review.formulas.map((f, i) => (
-                        <div key={i} className="p-2 rounded bg-muted/40"><MathMarkdown content={f} /></div>
+                        <div key={i} className="p-2 rounded bg-muted/40"><MathMarkdown>{f}</MathMarkdown></div>
                       ))}
                     </div>
                   </div>
@@ -302,7 +302,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">Definitions</p>
                     <ul className="space-y-1">
                       {runner.lastReview.quick_review.definitions.map((d, i) => (
-                        <li key={i} className="text-foreground/85"><MathMarkdown content={d} inline /></li>
+                        <li key={i} className="text-foreground/85"><MathMarkdown>{d}</MathMarkdown></li>
                       ))}
                     </ul>
                   </div>
@@ -311,7 +311,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                 {reviewDepth === 'full' && runner.lastReview.full_explanation && (
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">Explanation</p>
-                    <MathMarkdown content={runner.lastReview.full_explanation} />
+                    <MathMarkdown>{runner.lastReview.full_explanation}</MathMarkdown>
                   </div>
                 )}
 
@@ -319,7 +319,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                   <div>
                     <p className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">Examples</p>
                     {runner.lastReview.examples.map((ex, i) => (
-                      <div key={i} className="mb-2 p-3 rounded-lg bg-muted/40"><MathMarkdown content={ex} /></div>
+                      <div key={i} className="mb-2 p-3 rounded-lg bg-muted/40"><MathMarkdown>{ex}</MathMarkdown></div>
                     ))}
                   </div>
                 )}
