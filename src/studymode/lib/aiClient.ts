@@ -59,6 +59,11 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   // Guardian & tutor insight functions
   'send-guardian-report':        'send-guardian-report',
   'generate-tutor-booking-insights': 'generate-tutor-booking-insights',
+  // Topic Mode (flexible non-linear learning)
+  'map-question-concepts':       'map-question-concepts',
+  'generate-topic-session':      'generate-topic-session',
+  'generate-concept-review':     'generate-concept-review',
+  'evaluate-topic-answer':       'evaluate-topic-answer',
 };
 
 /**
