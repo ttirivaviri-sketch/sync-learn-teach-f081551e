@@ -255,6 +255,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         title="Global Leaderboard"
       />
 
+      <TopicPicker
+        open={showTopicPicker}
+        onOpenChange={setShowTopicPicker}
+        curriculum={curriculum}
+        onPick={(args) => setTopicStart({ ...args, curriculum })}
+      />
+
+      <TopicSessionRunner
+        open={!!topicStart}
+        onOpenChange={(o) => { if (!o) setTopicStart(null); }}
+        start={topicStart}
+      />
+
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
         <p className="text-sm text-foreground">
