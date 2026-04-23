@@ -1,115 +1,47 @@
 
 
-# Plan: Syllabus-Grounded Daily Task Generator
+# Plan: Persist Completion + Keep Tasks Replayable Until Midnight
 
-Replace the per-block markdown generation with a single **structured JSON task** that follows your exact spec — one bundle per generation that hits every selected concept across 4 mandatory blocks, with server-side coverage validation before it ever reaches the UI.
+## Problem
+Today, when a learner completes a daily task, it gets marked **Done** in the DB (good — that already persists until midnight via `task_date = CURRENT_DATE`), **but** the UI then makes the completed task tile non-clickable. Same for locked tiles after the chain breaks. So learners can't re-enter Active Recall, Flashcards, Concept Learning, or AI Exam Question for the rest of the day even though they want to keep practising.
 
-This runs alongside (not replacing) the existing `generate-task-content` markdown flow, so today's UI continues to work while the new pipeline powers the upgraded daily task experience.
+The DB-side memory already works (tasks for today are loaded on every session). The fix is purely about **letting completed tasks be re-opened** and **unlocking everything once the daily set is finished**.
 
----
+## Changes
 
-## 1. New edge function: `generate-daily-task`
+### 1. `src/studymode/components/TaskList.tsx`
+- Allow clicks on **completed** tasks (not just incomplete unlocked ones). Keep the green "Done" styling and check icon, but make the row `cursor-pointer` and fire `onTaskClick`. Show a subtle "Replay" hint instead of hiding the chevron.
+- When `allCompleted` is true, also force-unlock any task still flagged `isLocked` in the rendered list so the learner can freely jump between all 5 components.
+- Keep the existing "Practice More — Add Another Task" button as-is.
 
-**Inputs** (from client):
-- `subject`, `curriculum`, `topic`, `subtopics[]` (from parsed syllabus)
-- `concept_mastery` map (`{concept: 0–100}`) — from `topic_mastery` + `weak_concepts`
-- `completed_concepts[]` — concepts already covered in prior daily tasks
-- `past_paper_patterns` — pulled from existing `exam_patterns` table
+### 2. `src/studymode/components/SubjectDetail.tsx`
+- `handleTaskComplete`: stop awarding XP / updating streak / writing `study_activity` if `selectedTask.isCompleted` was already true at open time (i.e. this is a replay). Replays should still let the learner *do* the activity but must NOT re-award XP or inflate streak — otherwise the leaderboard becomes farmable.
+- Remove the auto-`setSelectedTask(null)` close behaviour for replays so the learner can keep iterating inside (e.g. Flashcards, Active Recall) without being kicked back to the task list. The completion card only shows on first completion.
+- After a task finishes loading, if `currentTasks.every(t => t.isCompleted)`, mark all `isLocked = false` in local state so the chain is fully open.
 
-**Pipeline (server-side, in order):**
+### 3. `src/studymode/hooks/useDailyTasks.ts`
+- `completeTask` mutation: if the task being completed is already `is_completed`, short-circuit (no DB write, no unlock-next). This protects against double-XP from replays.
+- Add a derived helper `allSubjectTasksDone(subjectId)` returning `true` once every task for that subject today has `is_completed = true`. Export it so `SubjectDetail` can rely on it instead of recomputing.
+- In `getTasksForSubject`: when all of a subject's tasks for today are completed, return them with `isLocked = false` across the board (defensive — covers any task that was seeded locked but never reached because the learner replayed earlier ones).
 
-1. **Target selection** — implements your exact rule:
-   ```
-   IF uncovered concepts exist → pick those
-   ELSE IF weak concepts exist → pick lowest mastery
-   ELSE → next subtopic in syllabus order
-   ```
-2. **Scope lock** — max 1–2 subtopics, max 5 concepts.
-3. **AI generation** via Lovable Gateway (`google/gemini-3-flash-preview`) with **strict tool-calling** so the model returns exactly:
-   ```json
-   {
-     "topic": "...",
-     "subtopic": "...",
-     "concepts": [...],
-     "blocks": {
-       "concept_learning": "...",
-       "quick_review": "...",
-       "practice_questions": [
-         { "question", "concept", "difficulty", "type", "answer", "marks" }
-       ],
-       "exam_question": { "question", "concepts", "marks", "expected_steps" }
-     }
-   }
-   ```
-4. **Coverage validator (server)** — before returning:
-   - Every selected concept must appear in ≥1 `practice_questions[i].concept`. If missing → ask AI to fill the gap (1 retry).
-   - Difficulty must include at least 2 distinct levels across practice questions. If all same → request `medium` + `hard` top-up.
-   - `exam_question.concepts` must contain ≥2 of the selected concepts.
-   - On retry failure, return a `coverage_warnings[]` field so the UI can show a "regenerate" prompt instead of silently failing.
-5. **Response**: the validated JSON, plus `selection_reason` (`"uncovered" | "weak" | "syllabus-order"`) for analytics.
+### 4. Replay XP guard (server-side belt-and-braces)
+- No DB schema change needed — `daily_tasks.completed_at` already records the original completion timestamp. The `completeTask` short-circuit above ensures replays don't bump XP/streak/activity rows.
+- `ActiveRecallSession`, `FlashcardPanel`, `ExamQuestionPanel`, `TaskContentPanel` already write their own per-attempt rows (`quiz_attempts`, flashcard SR data, etc.) — those SHOULD continue to fire on replays so spaced-repetition and mastery keep updating from real practice. Only the **task-completion XP** is suppressed.
 
-System prompt enforces every "DO NOT" rule from your spec (no inventing topics, no skipping, no merging, no over-explaining, exam wording only).
+## What stays the same
+- Tasks still reset at midnight via `task_date = CURRENT_DATE` filter — already correct.
+- Quick Launch tiles (Active Recall, Exam Mode, Mastery, Insights) are already freely accessible at any time.
+- Bonus task button still appears when all are done.
+- "Continue to Next Task" auto-advance still works on first completion.
 
----
-
-## 2. Database (1 migration)
-
-**New table `daily_task_concepts`** — tracks which concepts have been covered per user/subject so target selection can find "uncovered" reliably.
-- `id`, `user_id`, `subject_id`, `topic`, `subtopic`, `concept`, `last_covered_at`, `coverage_count`
-- Unique on `(user_id, subject_id, concept)`
-- RLS: user owns rows
-- Written by the edge function on every successful generation
-
-**Extend `daily_tasks`** — add columns:
-- `task_payload jsonb` — stores the full structured task bundle returned by the new function
-- `selection_reason text`
-- `concepts_covered text[]`
-
-(Existing rows continue to work — new columns nullable.)
-
----
-
-## 3. Client integration
-
-**New hook `useStructuredDailyTask(subjectId, topic)`**:
-- Fetches concept mastery + completed concepts.
-- Calls `generate-daily-task`.
-- Returns `{ task, isLoading, error, regenerate, coverageWarnings }`.
-
-**New component `StructuredDailyTaskRunner.tsx`** — renders the 4 blocks in order:
-1. **Concept Learning** card (markdown, KaTeX-rendered).
-2. **Quick Review** bullets.
-3. **Practice Questions** — one at a time, supports `mcq`/`short`/`structured`, shows answer + marks after submission, awards XP per correct answer (reuses the +5 / +8 / +3 scale already in place).
-4. **Exam Question** — multi-step question with `expected_steps[]` checklist for self-marking.
-
-Wired into the existing daily-tasks UI: when a task with `task_payload` exists, the runner opens that JSON; otherwise it falls back to the current markdown flow. Zero disruption to existing tasks.
-
-**Updated `useDailyTasks.ensureTasks`** — when seeding today's tasks, if `aiContext` indicates the student has a parsed syllabus, queue ONE structured task per subject (calls `generate-daily-task` lazily on first open, not at seed time, to avoid burning credits).
-
----
-
-## 4. Files
-
-**Edge function (new)**: `supabase/functions/generate-daily-task/index.ts`
-
-**Migration (new)**: `daily_task_concepts` table + 3 columns on `daily_tasks` + RLS.
-
-**Hook (new)**: `src/studymode/hooks/useStructuredDailyTask.ts`
-
-**Component (new)**: `src/studymode/components/StructuredDailyTaskRunner.tsx`
-
-**Modified**:
-- `src/studymode/hooks/useDailyTasks.ts` — seed structured task slot
-- `src/studymode/components/TaskContentPanel.tsx` — branch to `StructuredDailyTaskRunner` when `task_payload` exists
-- `src/studymode/lib/aiClient.ts` — register `generate-daily-task`
-
----
+## Files touched
+- `src/studymode/components/TaskList.tsx` — allow replay clicks, unlock all when complete
+- `src/studymode/components/SubjectDetail.tsx` — suppress XP on replay, keep panel open during replay, force-unlock when all done
+- `src/studymode/hooks/useDailyTasks.ts` — short-circuit `completeTask` for already-done tasks, expose `allSubjectTasksDone`, defensive unlock in `getTasksForSubject`
 
 ## Result
-
-- A **single AI call per task** returns a fully-structured, syllabus-locked, coverage-validated bundle — no more multiple round-trips per block.
-- **Concept tracking** means every concept gets covered before any concept gets repeated, exactly per your selection logic.
-- **Server-side validation** enforces the coverage + difficulty diversity rules before the JSON ever reaches the client; the UI never sees an unbalanced task.
-- **Strict tool-calling JSON schema** means the AI cannot return free-text or skip blocks — the response either matches the spec or the function retries.
-- Existing markdown task flow stays untouched as a fallback for subjects without parsed syllabus data.
+- Completed tasks visibly stay "Done ✓" but are tappable, opening the same Active Recall / Flashcards / Exam Question / Concept panels for unlimited replays until midnight.
+- Once all tasks for a subject are complete, every component is unlocked — learner has full freedom.
+- XP and streak award **once per task per day**, no farming.
+- Underlying practice data (quiz attempts, flashcard reviews, mastery) keeps updating on every replay so the AI engine still benefits.
 
