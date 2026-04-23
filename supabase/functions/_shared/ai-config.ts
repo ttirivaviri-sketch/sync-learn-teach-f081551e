@@ -233,6 +233,22 @@ export function safeJsonParse<T = unknown>(raw: string): T {
     } catch {
       // continue
     }
+
+    // Try after escaping invalid backslash sequences (e.g. LaTeX like \mu, \frac)
+    // JSON only allows \" \\ \/ \b \f \n \r \t \uXXXX — anything else is invalid.
+    try {
+      const fixed = fixInvalidJsonEscapes(
+        candidate
+          .replace(/,\s*}/g, "}")
+          .replace(/,\s*]/g, "]")
+          .replace(/[\x00-\x1F\x7F]/g, (ch) =>
+            ch === "\n" || ch === "\r" || ch === "\t" ? ch : ""
+          )
+      );
+      return JSON.parse(fixed) as T;
+    } catch {
+      // continue
+    }
   }
 
   console.error("[safeJsonParse] Failed. Raw snippet:", raw.substring(0, 500));
@@ -290,6 +306,39 @@ function repairTruncatedJson(s: string): string {
 
 function truncate(s: string, maxLen: number): string {
   return s.length > maxLen ? s.substring(0, maxLen) + "…" : s;
+}
+
+/**
+ * Walks a JSON-ish string and escapes backslashes that are not part of a
+ * valid JSON escape sequence. This rescues AI responses that include LaTeX
+ * (e.g. "$\mu$", "\frac{a}{b}") inside string values without doubling the
+ * backslash, which would otherwise make JSON.parse throw.
+ */
+function fixInvalidJsonEscapes(input: string): string {
+  let out = "";
+  let inStr = false;
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (c === '"' && (i === 0 || input[i - 1] !== "\\")) {
+      inStr = !inStr;
+      out += c;
+      continue;
+    }
+    if (inStr && c === "\\") {
+      const next = input[i + 1];
+      // Valid JSON escapes: " \ / b f n r t u
+      if (next && /["\\\/bfnrtu]/.test(next)) {
+        out += c + next;
+        i++;
+      } else {
+        // Invalid escape — double the backslash so JSON.parse accepts it.
+        out += "\\\\";
+      }
+      continue;
+    }
+    out += c;
+  }
+  return out;
 }
 
 /**
