@@ -221,6 +221,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
       <TaskContentPanel
         task={selectedTask}
         subject={subject}
+        curriculum={curriculum}
         onComplete={handleTaskComplete}
         onBack={() => setSelectedTask(null)}
       />
