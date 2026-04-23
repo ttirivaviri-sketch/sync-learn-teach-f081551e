@@ -80,9 +80,10 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
     setPracticeRevealed((p) => ({ ...p, [practiceIdx]: true }));
     setPracticeCorrect((p) => ({ ...p, [practiceIdx]: correct }));
     if (correct) {
-      const xp = DIFFICULTY_XP[currentQ.difficulty] ?? 5;
+      const xp = xpMap[currentQ.difficulty] ?? (isReplay ? 3 : 5);
       addXp.mutate(xp);
-      updateStreak.mutate();
+      awardXP.mutate({ subject: subject.name, curriculum, amount: xp });
+      if (!isReplay) updateStreak.mutate();
     }
   };
 
@@ -98,8 +99,9 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
 
   const submitExam = () => {
     setExamRevealed(true);
-    addXp.mutate(10);
-    updateStreak.mutate();
+    addXp.mutate(examXp);
+    awardXP.mutate({ subject: subject.name, curriculum, amount: examXp });
+    if (!isReplay) updateStreak.mutate();
   };
 
   const allExamStepsChecked =
