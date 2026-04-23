@@ -309,6 +309,39 @@ function truncate(s: string, maxLen: number): string {
 }
 
 /**
+ * Walks a JSON-ish string and escapes backslashes that are not part of a
+ * valid JSON escape sequence. This rescues AI responses that include LaTeX
+ * (e.g. "$\mu$", "\frac{a}{b}") inside string values without doubling the
+ * backslash, which would otherwise make JSON.parse throw.
+ */
+function fixInvalidJsonEscapes(input: string): string {
+  let out = "";
+  let inStr = false;
+  for (let i = 0; i < input.length; i++) {
+    const c = input[i];
+    if (c === '"' && (i === 0 || input[i - 1] !== "\\")) {
+      inStr = !inStr;
+      out += c;
+      continue;
+    }
+    if (inStr && c === "\\") {
+      const next = input[i + 1];
+      // Valid JSON escapes: " \ / b f n r t u
+      if (next && /["\\\/bfnrtu]/.test(next)) {
+        out += c + next;
+        i++;
+      } else {
+        // Invalid escape — double the backslash so JSON.parse accepts it.
+        out += "\\\\";
+      }
+      continue;
+    }
+    out += c;
+  }
+  return out;
+}
+
+/**
  * Detects if AI output contains HTML/code instead of study content.
  * Returns true if the response looks like HTML/JSX/code output.
  */
