@@ -233,6 +233,22 @@ export function safeJsonParse<T = unknown>(raw: string): T {
     } catch {
       // continue
     }
+
+    // Try after escaping invalid backslash sequences (e.g. LaTeX like \mu, \frac)
+    // JSON only allows \" \\ \/ \b \f \n \r \t \uXXXX — anything else is invalid.
+    try {
+      const fixed = fixInvalidJsonEscapes(
+        candidate
+          .replace(/,\s*}/g, "}")
+          .replace(/,\s*]/g, "]")
+          .replace(/[\x00-\x1F\x7F]/g, (ch) =>
+            ch === "\n" || ch === "\r" || ch === "\t" ? ch : ""
+          )
+      );
+      return JSON.parse(fixed) as T;
+    } catch {
+      // continue
+    }
   }
 
   console.error("[safeJsonParse] Failed. Raw snippet:", raw.substring(0, 500));
