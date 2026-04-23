@@ -6,20 +6,29 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MathMarkdown } from './MathMarkdown';
 import { useStructuredDailyTask, PracticeQuestion } from '../hooks/useStructuredDailyTask';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { DailyTask, Subject } from '../types/study';
 import { cn } from '@/lib/utils';
 
 interface Props {
   task: DailyTask;
   subject: Subject;
+  curriculum?: string | null;
   onComplete: () => void;
   onBack: () => void;
 }
 
 const DIFFICULTY_XP = { easy: 3, medium: 5, hard: 8 } as const;
+const DIFFICULTY_XP_REPLAY = { easy: 2, medium: 3, hard: 5 } as const;
+const EXAM_XP = 10;
+const EXAM_XP_REPLAY = 5;
 
-export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete, onBack }: Props) {
+export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum, onComplete, onBack }: Props) {
   const { addXp, updateStreak } = useUserProgress();
+  const { awardXP } = useSubjectXP();
+  const isReplay = !!dailyTask.isCompleted;
+  const xpMap = isReplay ? DIFFICULTY_XP_REPLAY : DIFFICULTY_XP;
+  const examXp = isReplay ? EXAM_XP_REPLAY : EXAM_XP;
 
   const { task, isLoading, error, coverageWarnings, regenerate } = useStructuredDailyTask({
     subjectId: subject.id,
