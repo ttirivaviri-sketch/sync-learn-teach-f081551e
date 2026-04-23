@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,12 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
   const { addXp, updateStreak } = useUserProgress();
   const { awardXP } = useSubjectXP();
 
+  // Keep local task state in sync with parent (also force-unlock all when set is complete)
+  useEffect(() => {
+    const allDone = tasks.length > 0 && tasks.every(t => t.isCompleted);
+    setCurrentTasks(allDone ? tasks.map(t => ({ ...t, isLocked: false })) : tasks);
+  }, [tasks]);
+
   const getMasteryColor = (mastery: number) => {
     if (mastery >= 95) return 'text-success';
     if (mastery >= 70) return 'text-accent';
@@ -52,36 +58,48 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
 
   const handleTaskComplete = () => {
     if (!selectedTask) return;
-    
+
+    // Replay path: task already done today — don't re-award XP, don't show completion card,
+    // and don't kick the learner out of the panel. They can keep practising freely.
+    if (selectedTask.isCompleted) {
+      onCompleteTask?.(selectedTask.id); // hook short-circuits the DB write
+      return;
+    }
+
     // Persist to DB
     onCompleteTask?.(selectedTask.id);
-    
+
     let nextUnlocked: DailyTask | null = null;
-    
+
     setCurrentTasks(prev => {
-      const updatedTasks = prev.map(t => 
+      const updatedTasks = prev.map(t =>
         t.id === selectedTask.id ? { ...t, isCompleted: true } : t
       );
-      
+
       const currentIndex = updatedTasks.findIndex(t => t.id === selectedTask.id);
       if (currentIndex < updatedTasks.length - 1) {
         updatedTasks[currentIndex + 1].isLocked = false;
         nextUnlocked = updatedTasks[currentIndex + 1];
       }
-      
+
+      // If this completion finishes the day's set, unlock everything for free replay
+      if (updatedTasks.every(t => t.isCompleted)) {
+        return updatedTasks.map(t => ({ ...t, isLocked: false }));
+      }
+
       return updatedTasks;
     });
-    
-    // Award XP and update streak
+
+    // Award XP and update streak (first completion only)
     const xpAmount = 10;
     addXp.mutate(xpAmount);
     updateStreak.mutate();
     awardXP.mutate({ subject: subject.name, curriculum, amount: xpAmount });
-    
+
     // Show XP popup
     setXpPopup({ amount: xpAmount, key: Date.now() });
     setTimeout(() => setXpPopup(null), 1500);
-    
+
     // Show completion card with auto-advance
     setCompletionCard({ task: selectedTask, nextTask: nextUnlocked });
     setSelectedTask(null);

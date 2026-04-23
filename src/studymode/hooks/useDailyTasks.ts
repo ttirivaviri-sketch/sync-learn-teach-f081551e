@@ -213,6 +213,12 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
     mutationFn: async (taskId: string) => {
       if (!userId) throw new Error('Not authenticated');
 
+      // Short-circuit replays — task already completed today, don't re-write or re-award
+      const existing = (dbTasks || []).find(t => t.id === taskId);
+      if (existing?.is_completed) {
+        return { replay: true };
+      }
+
       try {
         const { error } = await supabase
           .from('daily_tasks')
@@ -311,18 +317,28 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
         return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
       });
 
+      // Defensive: if all done, force-unlock so learner can replay any tile freely
+      const allDone = sorted.every(t => t.is_completed);
+
       return sorted.map(t => ({
         id: t.id,
         type: t.task_type as DailyTask['type'],
         title: t.title,
         description: t.description || '',
         isCompleted: t.is_completed,
-        isLocked: t.is_locked,
+        isLocked: allDone ? false : t.is_locked,
         subjectId: t.subject_id || subject.id,
       }));
     }
 
     return generateTasksForSubject(subject);
+  };
+
+  // Helper: are all of today's tasks for a subject complete?
+  const allSubjectTasksDone = (subjectId: string): boolean => {
+    const subjectDbTasks = dbTasks?.filter(t => t.subject_id === subjectId) || [];
+    if (subjectDbTasks.length === 0) return false;
+    return subjectDbTasks.every(t => t.is_completed);
   };
 
   // Canonical task ordering for stable rendering
@@ -333,6 +349,7 @@ export function useDailyTasks(subjects: Subject[], aiContext?: AIContextPayload 
     completeTask,
     ensureTasks,
     addBonusTask,
+    allSubjectTasksDone,
     isLoading,
     tasksCount: dbTasks?.length || 0,
     yesterdayIncomplete,
