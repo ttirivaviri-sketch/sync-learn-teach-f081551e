@@ -120,6 +120,11 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
           <p className="text-sm text-muted-foreground truncate">
             {task.topic}{task.subtopic ? ` · ${task.subtopic}` : ''}
           </p>
+          {isReplay && (
+            <span className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+              Replay practice — reduced XP
+            </span>
+          )}
         </div>
         <Button variant="ghost" size="icon" onClick={regenerate} title="Regenerate">
           <RefreshCw className="h-4 w-4" />
@@ -225,7 +230,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
                   : 'border-destructive/30 bg-destructive/10',
               )}>
                 <p className="font-semibold mb-1">
-                  {practiceCorrect[practiceIdx] ? `✅ Correct (+${DIFFICULTY_XP[currentQ.difficulty]} XP)` : '📖 Model Answer'}
+                  {practiceCorrect[practiceIdx] ? `✅ Correct (+${xpMap[currentQ.difficulty]} XP)` : '📖 Model Answer'}
                 </p>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <MathMarkdown>{currentQ.answer}</MathMarkdown>
@@ -298,7 +303,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
 
           {!examRevealed ? (
             <Button onClick={submitExam} disabled={!examAnswer.trim()} className="w-full">
-              <Send className="mr-2 h-4 w-4" />Submit & Reveal Mark Scheme (+10 XP)
+              <Send className="mr-2 h-4 w-4" />Submit & Reveal Mark Scheme (+{examXp} XP)
             </Button>
           ) : (
             <Button
