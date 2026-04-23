@@ -6,20 +6,29 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { MathMarkdown } from './MathMarkdown';
 import { useStructuredDailyTask, PracticeQuestion } from '../hooks/useStructuredDailyTask';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { DailyTask, Subject } from '../types/study';
 import { cn } from '@/lib/utils';
 
 interface Props {
   task: DailyTask;
   subject: Subject;
+  curriculum?: string | null;
   onComplete: () => void;
   onBack: () => void;
 }
 
 const DIFFICULTY_XP = { easy: 3, medium: 5, hard: 8 } as const;
+const DIFFICULTY_XP_REPLAY = { easy: 2, medium: 3, hard: 5 } as const;
+const EXAM_XP = 10;
+const EXAM_XP_REPLAY = 5;
 
-export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete, onBack }: Props) {
+export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum, onComplete, onBack }: Props) {
   const { addXp, updateStreak } = useUserProgress();
+  const { awardXP } = useSubjectXP();
+  const isReplay = !!dailyTask.isCompleted;
+  const xpMap = isReplay ? DIFFICULTY_XP_REPLAY : DIFFICULTY_XP;
+  const examXp = isReplay ? EXAM_XP_REPLAY : EXAM_XP;
 
   const { task, isLoading, error, coverageWarnings, regenerate } = useStructuredDailyTask({
     subjectId: subject.id,
@@ -71,9 +80,10 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete
     setPracticeRevealed((p) => ({ ...p, [practiceIdx]: true }));
     setPracticeCorrect((p) => ({ ...p, [practiceIdx]: correct }));
     if (correct) {
-      const xp = DIFFICULTY_XP[currentQ.difficulty] ?? 5;
+      const xp = xpMap[currentQ.difficulty] ?? (isReplay ? 3 : 5);
       addXp.mutate(xp);
-      updateStreak.mutate();
+      awardXP.mutate({ subject: subject.name, curriculum, amount: xp });
+      if (!isReplay) updateStreak.mutate();
     }
   };
 
@@ -89,8 +99,9 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete
 
   const submitExam = () => {
     setExamRevealed(true);
-    addXp.mutate(10);
-    updateStreak.mutate();
+    addXp.mutate(examXp);
+    awardXP.mutate({ subject: subject.name, curriculum, amount: examXp });
+    if (!isReplay) updateStreak.mutate();
   };
 
   const allExamStepsChecked =
@@ -109,6 +120,11 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete
           <p className="text-sm text-muted-foreground truncate">
             {task.topic}{task.subtopic ? ` · ${task.subtopic}` : ''}
           </p>
+          {isReplay && (
+            <span className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+              Replay practice — reduced XP
+            </span>
+          )}
         </div>
         <Button variant="ghost" size="icon" onClick={regenerate} title="Regenerate">
           <RefreshCw className="h-4 w-4" />
@@ -214,7 +230,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete
                   : 'border-destructive/30 bg-destructive/10',
               )}>
                 <p className="font-semibold mb-1">
-                  {practiceCorrect[practiceIdx] ? `✅ Correct (+${DIFFICULTY_XP[currentQ.difficulty]} XP)` : '📖 Model Answer'}
+                  {practiceCorrect[practiceIdx] ? `✅ Correct (+${xpMap[currentQ.difficulty]} XP)` : '📖 Model Answer'}
                 </p>
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <MathMarkdown>{currentQ.answer}</MathMarkdown>
@@ -287,7 +303,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, onComplete
 
           {!examRevealed ? (
             <Button onClick={submitExam} disabled={!examAnswer.trim()} className="w-full">
-              <Send className="mr-2 h-4 w-4" />Submit & Reveal Mark Scheme (+10 XP)
+              <Send className="mr-2 h-4 w-4" />Submit & Reveal Mark Scheme (+{examXp} XP)
             </Button>
           ) : (
             <Button

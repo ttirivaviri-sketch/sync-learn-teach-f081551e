@@ -8,6 +8,7 @@ import { useTaskContent } from '../hooks/useTaskContent';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
@@ -15,6 +16,7 @@ import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
 interface TaskContentPanelProps {
   task: DailyTask;
   subject: Subject;
+  curriculum?: string | null;
   onComplete: () => void;
   onBack: () => void;
 }
@@ -53,9 +55,11 @@ export function TaskContentPanel(props: TaskContentPanelProps) {
   return <LegacyTaskContentPanel {...props} />;
 }
 
-function LegacyTaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
+function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack }: TaskContentPanelProps) {
   const { content, isLoading, error, generateContent, reset } = useTaskContent();
   const { addXp, updateStreak } = useUserProgress();
+  const { awardXP } = useSubjectXP();
+  const isReplay = !!task.isCompleted;
 
   // Answer-first state for active-recall
   const [userAnswer, setUserAnswer] = useState('');
@@ -146,18 +150,22 @@ function LegacyTaskContentPanel({ task, subject, onComplete, onBack }: TaskConte
   const handleSubmitAnswer = () => {
     setHasAttempted(true);
     setRevealedEarly(false);
-    // Award XP for attempting
-    addXp.mutate(15);
-    updateStreak.mutate();
-    setXpChange(15);
+    const xp = isReplay ? 4 : 15;
+    addXp.mutate(xp);
+    awardXP.mutate({ subject: subject.name, curriculum, amount: xp });
+    if (!isReplay) updateStreak.mutate();
+    setXpChange(xp);
   };
 
   const handleRevealEarly = () => {
     setHasAttempted(true);
     setRevealedEarly(true);
-    // Negative XP for revealing without attempting
-    addXp.mutate(-5);
-    setXpChange(-5);
+    if (!isReplay) {
+      addXp.mutate(-5);
+      setXpChange(-5);
+    } else {
+      setXpChange(0);
+    }
   };
 
   // For attempt-first types, content is hidden until attempted
@@ -254,15 +262,19 @@ function LegacyTaskContentPanel({ task, subject, onComplete, onBack }: TaskConte
               className="flex-1 gradient-primary"
             >
               <Send className="mr-2 h-4 w-4" />
-              Submit & Reveal Notes (+15 XP)
+              Submit & Reveal Notes (+{isReplay ? 4 : 15} XP)
             </Button>
             <Button
               variant="outline"
               onClick={handleRevealEarly}
-              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              className={cn(
+                isReplay
+                  ? 'border-border'
+                  : 'text-destructive border-destructive/30 hover:bg-destructive/10'
+              )}
             >
               <MinusCircle className="mr-1 h-4 w-4" />
-              Reveal (−5 XP)
+              {isReplay ? 'Reveal' : 'Reveal (−5 XP)'}
             </Button>
           </div>
         </div>
