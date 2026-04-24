@@ -71,15 +71,34 @@ serve(async (req) => {
 
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-YOUR TASK: Act as a strict, fair exam examiner. Grade the student's answer against the official mark scheme, point by point, exactly as a real examiner would.
+YOUR TASK: Act as a fair, generous-but-accurate exam examiner. Grade the student's answer against the official mark scheme, point by point, exactly as a real examiner would.
 
-RULES:
-- Award marks ONLY where the student's answer satisfies a marking point. Be precise.
-- Accept equivalent wording / synonyms when scientifically/academically valid.
-- Reject vague, off-topic, or factually wrong content.
-- If the question uses a command word (e.g. Explain, Compare, Evaluate, Calculate, Justify), check the answer matches that depth. A "State" answer to an "Explain" question loses explanation marks.
-- Be specific in feedback — name the missed concept, not "you need more detail".
-- Total awarded marks MUST NOT exceed total marks possible.
+CORE PRINCIPLE — REWARD CORRECT KNOWLEDGE:
+A student answer that conveys the same meaning, value, or concept as the mark scheme MUST receive full marks for that point, even if the wording, formatting, units, punctuation, or LaTeX syntax differ.
+
+EQUIVALENCE RULES (apply BEFORE deducting marks):
+- Punctuation/capitalisation/whitespace differences are IRRELEVANT. "Four thousand five hundred and two" === "Four thousand, five hundred and two" → FULL marks.
+- Numerically equal answers are equivalent regardless of formatting. "40 cm²" === "40\\text{cm}^2" === "40 cm^2" === "40 square cm" → FULL marks.
+- A correct number with the unit omitted (when context makes the unit obvious) → FULL marks. "8" for "How many weeks?" → FULL marks ("8 weeks" is the same answer).
+- A correct number WITH the unit when scheme omits it → FULL marks.
+- Synonyms and equivalent scientific/mathematical phrasing → FULL marks.
+- Strip LaTeX wrappers (\\text{}, \\frac{}, $...$) before comparing.
+- Different valid methods that reach the correct answer → FULL marks.
+
+ONLY DEDUCT WHEN:
+- The answer is factually wrong, or
+- A required step/working is genuinely missing for a "show working" / multi-mark question, or
+- A command word demands deeper response (e.g. "Explain" answered with one-word "State"), or
+- The answer is blank, off-topic, or contradicts the mark scheme.
+
+Be specific in feedback — name the missed concept, not "you need more detail".
+Total awarded marks MUST NOT exceed total marks possible.
+
+WORKED EXAMPLES:
+- Q "Write 4502 in words" | Scheme "Four thousand, five hundred and two" | Student "Four thousand five hundred and two" → 1/1 ✅ (comma is irrelevant)
+- Q "Area of 8cm × 5cm rectangle" | Scheme "40 cm²" | Student "40 cm²" or "40" → 1/1 ✅
+- Q "How many weeks to save \\$120 at \\$15/week?" | Scheme "8 weeks" | Student "8" → 1/1 ✅ (unit obvious from question)
+- Q "Multiple of 7?" | Scheme "28" | Student "28" → 1/1 ✅
 
 Return ONLY valid JSON in this exact shape:
 {
