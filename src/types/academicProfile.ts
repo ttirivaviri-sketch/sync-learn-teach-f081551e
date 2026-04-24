@@ -129,12 +129,21 @@ export interface TopicTutorRanking {
 export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
   ZIMSEC: [
     "Mathematics",
+    "English",
+    "English Language",
+    "English Literature",
+    "Shona",
+    "Ndebele",
+    "Environmental Science",
+    "Social Studies",
+    "Religious & Moral Education",
+    "ICT",
+    "Physical Education",
+    "Visual & Performing Arts",
     "Physics",
     "Chemistry",
     "Biology",
     "Combined Science",
-    "English Language",
-    "English Literature",
     "History",
     "Geography",
     "Accounts",
@@ -142,8 +151,6 @@ export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
     "Economics",
     "Computer Science",
     "Agriculture",
-    "Shona",
-    "Ndebele",
     "Art & Design",
     "Music",
   ],
@@ -230,6 +237,7 @@ export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
 
 export const GRADE_LEVELS_BY_CURRICULUM: Record<Curriculum, GradeLevel[]> = {
   ZIMSEC: [
+    "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7",
     "Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6",
   ],
   CAMB: [

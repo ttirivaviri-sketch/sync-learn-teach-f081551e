@@ -189,9 +189,10 @@ serve(async (req) => {
                 Authorization: `Bearer ${RESEND_API_KEY}`,
               },
               body: JSON.stringify({
-                from: "StudySync Reports <reports@studysync.co.za>",
+                from: "StudySync Reports <onboarding@resend.dev>",
                 to: [profile.guardian_email],
-                subject: `StudySync Weekly Report - ${profile.curriculum} ${profile.grade}`,
+                reply_to: "supportstudysync@gmail.com",
+                subject: `StudySync Weekly Report - ${profile.curriculum || ""} ${profile.grade || ""}`.trim(),
                 html: emailHtml,
               }),
             });
