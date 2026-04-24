@@ -1,57 +1,85 @@
 
 
-# Plan: Reduce Replay XP to 3–5 by Difficulty
+# Plan: Guarantee Friday Guardian Reports Actually Send
 
-## Behaviour
-When a learner re-opens a task that was already completed today (`task.isCompleted === true`), all XP awarded inside the practice/exam panels gets discounted to a small "practice bonus" instead of full XP. First-time completion XP stays exactly as today.
+## Why emails aren't sending today
+The current `send-guardian-report` calls Resend directly, but **no `RESEND_API_KEY` secret is configured** and **no email domain is set up**. So every send silently logs "no key, report cached only" and exits. There's also no cron, so it never runs anyway.
 
-## XP table (replay mode)
+## Fix — switch to Lovable's queue-backed email pipeline
 
-| Question difficulty | First attempt XP | Replay XP |
-|---|---|---|
-| easy practice | 3 | **2** |
-| medium practice | 5 | **3** |
-| hard practice | 8 | **5** |
-| Exam-question submit | 10 | **5** |
-| Active-recall submit (legacy) | 15 | **4** |
-| Active-recall reveal-early | −5 | **0** (no penalty on replay) |
+### Step 1 — Set up a sender domain (one-time)
+Required before any email infrastructure can be provisioned. Sender will be `reports@notify.studysync.co.za` (or your chosen subdomain).
 
-This sits inside the user's stated "3–5 depending on difficulty" range for practice questions, with the exam question slightly higher (5) and an early-reveal no-op so replays can't farm or be penalised.
+### Step 2 — Provision email infrastructure
+- pgmq queues + retry dispatcher (`process-email-queue` cron every 5s)
+- `email_send_log`, `suppressed_emails`, `email_unsubscribe_tokens` tables
+- Vault secret + service-role auth for the dispatcher
+- Built-in retries (5 attempts), rate-limit handling, dead-letter queue, idempotency
 
-## Changes
+### Step 3 — Scaffold transactional email + create the report template
+- `send-transactional-email` Edge Function (queue-backed, automatic suppression checks)
+- New React Email template `guardian-weekly-report.tsx` rendering the AI-written report:
+  - Header with student name + week ending
+  - **Overall summary** (AI narrative)
+  - Per-subject cards: status pill, what went well, what was missed, struggling topics (bulleted), evidence stats, exam countdown
+  - **Tutor recommendation panel** — yes/no + urgency + exact topics + "Find a tutor" CTA
+  - Encouragement note for the parent
+- Register in `registry.ts`, deploy
 
-### 1. `src/studymode/components/StructuredDailyTaskRunner.tsx`
-- Accept the parent's `dailyTask.isCompleted` as the replay flag (already in props as `task: dailyTask`).
-- Add a second XP map:
-  ```ts
-  const DIFFICULTY_XP        = { easy: 3, medium: 5, hard: 8 };
-  const DIFFICULTY_XP_REPLAY = { easy: 2, medium: 3, hard: 5 };
-  ```
-- In `submitPractice`: pick the replay map when `dailyTask.isCompleted`. Still call `addXp.mutate(xp)` and `awardXP.mutate({...})` so leaderboards stay in sync, just with the smaller value. Skip `updateStreak.mutate()` on replays (streak should not extend from replay practice).
-- In `submitExam`: award **5 XP** on replay instead of 10, skip streak update.
-- Update the inline "+X XP" labels in the success card and the exam submit button so the badge reads the correct number for the current mode (e.g. "Submit & Reveal Mark Scheme (+5 XP)" on replay).
-- Add a small "Replay practice — reduced XP" pill near the header when `dailyTask.isCompleted` so the learner understands why XP is lower.
+### Step 4 — Rewrite `send-guardian-report` to use the new pipeline
+- Pull richer 7-day data: `study_activity`, `quiz_attempts`, `daily_tasks`, `concept_mastery`, `topic_performance`, `exam_dates`
+- Generate AI narrative via Lovable AI Gateway (`google/gemini-2.5-flash`) with `safeJsonParse`. Output: per-subject status, what was missed, struggling topics, evidence, tutor recommendation with urgency + focus topics, parent encouragement
+- For each student with `guardian_email`:
+  - Upsert into `analytics_reports` (cache)
+  - Invoke `send-transactional-email` with `templateName: "guardian-weekly-report"`, `idempotencyKey: guardian-{user_id}-{weekStart}`, `templateData: { aiReport, studentName, weekEnding, ... }`
+  - Queue handles retries/rate limits — sends are guaranteed (or DLQ'd with logs)
+- Remove all Resend code
 
-### 2. `src/studymode/components/TaskContentPanel.tsx` (LegacyTaskContentPanel)
-- Read `task.isCompleted` as `isReplay`.
-- `handleSubmitAnswer`: award **4 XP** instead of 15 on replay; skip `updateStreak.mutate()`.
-- `handleRevealEarly`: award **0 XP** on replay (no penalty — the task is already done, penalising a replay would be punitive). Keep −5 penalty for first attempt.
-- Update the "+15 XP" / "(−5 XP)" button labels dynamically.
+### Step 5 — Friday 18:00 Harare cron (16:00 UTC)
+Insert via data tool (contains project URL/anon key, not a migration):
+```sql
+select cron.schedule(
+  'send-guardian-report-friday',
+  '0 16 * * 5',
+  $$ select net.http_post(
+       url := 'https://uynoykcratwbcdzmsxfw.supabase.co/functions/v1/send-guardian-report',
+       headers := '{"Content-Type":"application/json","Authorization":"Bearer <ANON_KEY>"}'::jsonb,
+       body := '{}'::jsonb
+     ); $$
+);
+```
+Enable `pg_cron` + `pg_net` extensions if not already.
 
-### 3. Subject XP / leaderboard sync
-The existing `useSubjectXP.awardXP` mutation is already called from `StructuredDailyTaskRunner` indirectly via `useUserProgress.addXp` only — it is NOT currently per-question. Add a `useSubjectXP().awardXP.mutate({ subject, curriculum, amount: xp })` call alongside `addXp.mutate(xp)` in the practice + exam handlers so subject leaderboards see the reduced replay XP too. Pass `subject.name` and `curriculum` (already accessible via the subject prop / new `curriculum` prop threaded down — the runner currently doesn't take `curriculum`, so add it as an optional prop forwarded from `SubjectDetail` → `TaskContentPanel` → `StructuredDailyTaskRunner`, defaulting to `'ZIMSEC'`).
+### Step 6 — Add ZIMSEC primary grades (from previous request)
+Extend `GRADE_LEVELS_BY_CURRICULUM.ZIMSEC` in `src/types/academicProfile.ts` to include `Grade 1–7` alongside `Form 1–6`. Add primary subjects (Environmental Science, Social Studies, ICT, Religious & Moral Education, Visual & Performing Arts) to the ZIMSEC subject list.
 
-## What stays the same
-- First-completion XP (10 from `SubjectDetail.handleTaskComplete`, 3/5/8 per question, 10 for exam, 15 for active recall) — unchanged.
-- Streak only advances on first completion or first-attempt practice; replays never bump streak.
-- `completeTask` mutation already short-circuits the DB write for replays — no change needed.
-- Quiz attempts, flashcard SR data, mastery updates continue to fire on every replay.
+### Step 7 — Verify it actually sends
+After deploy, manually invoke `send-guardian-report` once and check:
+- `email_send_log` shows `pending` → `sent` for each guardian
+- Edge Function logs show no errors
+- Confirm Friday cron is scheduled in `cron.job`
+
+## What changes vs. current setup
+| Current | After |
+|---|---|
+| Direct Resend fetch | Queue-backed pipeline with retries + DLQ |
+| No API key configured → silent fail | Lovable Email infra, no key needed |
+| Rule-based thin report | AI-written narrative with specific topics + tutor reco |
+| No schedule | Friday 18:00 Harare cron |
+| No idempotency | `idempotencyKey` per (user, week) — safe re-runs |
+| No suppression | Auto-blocks bounced/unsubscribed addresses |
 
 ## Files touched
-- `src/studymode/components/StructuredDailyTaskRunner.tsx` — add replay XP map, replay pill, dynamic labels, subject-XP sync
-- `src/studymode/components/TaskContentPanel.tsx` — replay-discounted active recall XP, no penalty on replay reveal, dynamic labels, propagate `curriculum` prop
-- `src/studymode/components/SubjectDetail.tsx` — pass `curriculum` down to `TaskContentPanel`
+- `src/types/academicProfile.ts` — ZIMSEC grades + primary subjects
+- `supabase/functions/_shared/transactional-email-templates/guardian-weekly-report.tsx` — new template
+- `supabase/functions/_shared/transactional-email-templates/registry.ts` — register template
+- `supabase/functions/send-guardian-report/index.ts` — rewrite to AI + queue pipeline
+- New cron job inserted via data tool
 
 ## Result
-Replay practice rewards a small 2–5 XP per question (3–5 for medium/hard) and 5 XP for the exam question, never advances streaks, and never penalises. Leaderboards stay accurate with the reduced amounts. First-time completion economics are untouched.
+Every Friday at 6 PM Harare time, every learner with a `guardian_email` gets a detailed AI-written report. Sends go through a durable queue with automatic retries, rate-limit handling, suppression checks, and idempotency — no more silent failures. Grade 7 ZIMSEC learners can now select their grade.
+
+<lov-actions>
+<lov-open-email-setup>Set up email domain</lov-open-email-setup>
+</lov-actions>
 
