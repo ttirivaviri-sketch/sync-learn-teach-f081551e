@@ -194,7 +194,7 @@ Generate now. Return JSON only.`;
       marking_scheme: normalizeArray(q.marking_scheme),
     }));
 
-    const computedTotal = normalised.reduce((s, q) => s + q.marks, 0);
+    const computedTotal = normalised.reduce((s: number, q: any) => s + q.marks, 0);
 
     return jsonResponse({
       paper_code,
