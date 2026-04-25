@@ -16,6 +16,8 @@
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+import type { QuestionVisualSpec } from '../components/QuestionVisual';
+
 export type QuestionType = 'multiple_choice' | 'short_answer' | 'structured' | 'explain' | 'application';
 export type DifficultyLevel = 'foundation' | 'standard' | 'advanced';
 export type MasteryClassification = 'mastered' | 'developing' | 'needs_reinforcement';
