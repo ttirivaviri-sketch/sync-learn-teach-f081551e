@@ -61,6 +61,7 @@ serve(async (req) => {
       notesOrDocuments,
       pastPaperExemplars,
       paperBlueprint,
+      examMode,
       count = 1,
     } = body;
 
