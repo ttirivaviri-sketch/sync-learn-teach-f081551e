@@ -682,9 +682,9 @@ function QuestionResult({
               <p className="text-[11px] font-bold uppercase tracking-wider text-accent mb-1">
                 Examiner's Comment
               </p>
-              <p className="text-foreground text-xs leading-relaxed italic">
-                "{evaluation.examinerComment}"
-              </p>
+              <MathMarkdown className="text-foreground text-xs leading-relaxed italic [&_p]:my-0">
+                {`"${evaluation.examinerComment}"`}
+              </MathMarkdown>
             </div>
           )}
 
@@ -694,16 +694,18 @@ function QuestionResult({
               <p className="text-[11px] font-bold uppercase tracking-wider text-warning mb-1 flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" /> Workings & Presentation
               </p>
-              <p className="text-foreground text-xs leading-relaxed">
+              <MathMarkdown className="text-foreground text-xs leading-relaxed [&_p]:my-0">
                 {evaluation.workingsFeedback}
-              </p>
+              </MathMarkdown>
             </div>
           )}
 
           {userAnswer && (
             <div className="p-2 rounded-lg bg-muted/50 border border-border">
               <p className="text-xs font-semibold text-muted-foreground mb-1">Your Answer:</p>
-              <p className="text-foreground whitespace-pre-wrap text-xs">{userAnswer}</p>
+              <MathMarkdown className="text-foreground text-xs [&_p]:my-0 [&_p]:whitespace-pre-wrap">
+                {userAnswer}
+              </MathMarkdown>
             </div>
           )}
 
@@ -725,23 +727,31 @@ function QuestionResult({
                       {item.marksAwarded}/{item.marksAvailable}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">{item.criterion}</p>
+                      <MathMarkdown className="text-xs font-medium text-foreground [&_p]:my-0">
+                        {item.criterion}
+                      </MathMarkdown>
                       {item.comment && (
-                        <p className="text-[11px] text-muted-foreground mt-0.5">{item.comment}</p>
+                        <MathMarkdown className="text-[11px] text-muted-foreground mt-0.5 [&_p]:my-0">
+                          {item.comment}
+                        </MathMarkdown>
                       )}
                     </div>
                   </div>
                   {item.whyExpected && (
-                    <p className="text-[11px] text-muted-foreground italic pl-1 border-l-2 border-accent/30 ml-1 pl-2">
+                    <div className="text-[11px] text-muted-foreground italic border-l-2 border-accent/30 ml-1 pl-2">
                       <span className="font-semibold not-italic text-accent">Why expected: </span>
-                      {item.whyExpected}
-                    </p>
+                      <MathMarkdown className="inline [&_p]:inline [&_p]:my-0">
+                        {item.whyExpected}
+                      </MathMarkdown>
+                    </div>
                   )}
                   {item.studentQuote && (
-                    <p className="text-[11px] text-muted-foreground pl-1">
+                    <div className="text-[11px] text-muted-foreground pl-1">
                       <span className="font-semibold">You wrote: </span>
-                      <span className="italic">"{item.studentQuote}"</span>
-                    </p>
+                      <MathMarkdown className="inline italic [&_p]:inline [&_p]:my-0">
+                        {`"${item.studentQuote}"`}
+                      </MathMarkdown>
+                    </div>
                   )}
                 </div>
               ))}
@@ -756,7 +766,10 @@ function QuestionResult({
               </p>
               <ul className="text-xs text-foreground space-y-1">
                 {evaluation.feedback.reasoningErrors.map((e, i) => (
-                  <li key={i}>• {e}</li>
+                  <li key={i} className="flex gap-1">
+                    <span>•</span>
+                    <MathMarkdown className="flex-1 [&_p]:my-0">{e}</MathMarkdown>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -770,7 +783,10 @@ function QuestionResult({
               </p>
               <ul className="text-xs text-foreground space-y-1">
                 {evaluation.improvementByCurriculum.map((tip, i) => (
-                  <li key={i}>• {tip}</li>
+                  <li key={i} className="flex gap-1">
+                    <span>•</span>
+                    <MathMarkdown className="flex-1 [&_p]:my-0">{tip}</MathMarkdown>
+                  </li>
                 ))}
               </ul>
             </div>
