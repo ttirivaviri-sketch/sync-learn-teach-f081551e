@@ -16,6 +16,8 @@
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
+import type { QuestionVisualSpec } from '../components/QuestionVisual';
+
 export type QuestionType = 'multiple_choice' | 'short_answer' | 'structured' | 'explain' | 'application';
 export type DifficultyLevel = 'foundation' | 'standard' | 'advanced';
 export type MasteryClassification = 'mastered' | 'developing' | 'needs_reinforcement';
@@ -52,6 +54,8 @@ export interface RecallQuestion {
   conceptsTested: string[];
   /** Source: 'ai-generated' | 'past-paper' | 'spaced-review' */
   source: 'ai-generated' | 'past-paper' | 'spaced-review';
+  /** Optional visual (graph, chart, diagram, ai-generated image) */
+  visual?: QuestionVisualSpec | null;
 }
 
 export interface SemanticEvaluation {
@@ -82,9 +86,19 @@ export interface SemanticEvaluation {
     marksAwarded: number;
     marksAvailable: number;
     comment: string;
+    /** What the examiner expected and WHY (principle / convention) */
+    whyExpected?: string;
+    /** The student's actual phrase that was assessed for this point */
+    studentQuote?: string;
   }[];
   /** Tips for improvement */
   improvementTips: string[];
+  /** 1-2 sentence overall examiner comment, in an examiner's voice */
+  examinerComment?: string;
+  /** Curriculum-grounded next-time suggestions ("ZIMSEC O-Level expects…") */
+  improvementByCurriculum?: string[];
+  /** Flags answers that are correct but missing required workings/units/diagrams */
+  workingsFeedback?: string;
 }
 
 export interface AnswerRecord {

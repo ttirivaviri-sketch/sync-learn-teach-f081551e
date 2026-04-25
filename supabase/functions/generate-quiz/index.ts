@@ -61,6 +61,7 @@ serve(async (req) => {
       notesOrDocuments,
       pastPaperExemplars,
       paperBlueprint,
+      examMode,
       count = 1,
     } = body;
 
@@ -109,7 +110,7 @@ QUESTION TYPE SELECTION RULE:
 If a TARGET PAPER BLUEPRINT is provided with a "question_type_distribution" (e.g. {"multiple_choice": 40, "structured": 60}), pick "questionType" so that across many generations the mix matches that distribution. For a single-question request, weight your random pick by those percentages — if multiple_choice is ≥30%, often produce multiple_choice. Subjects/papers with high MCQ share (Biology Paper 1, IGCSE Maths Paper 1 MCQ, Physics Paper 1) MUST receive multiple_choice questions accordingly. Never default to "structured" when the blueprint says otherwise.
 
 VISUALS — INCLUDE WHEN THE CURRICULUM REQUIRES THEM:
-If the topic typically includes a diagram, graph, or chart in past papers (Maths function graphs, Physics circuits/forces/ray diagrams, Biology cell/anatomy/process diagrams, Chemistry apparatus, Geography climate/contour/sketch maps), populate a "visual" field on the question. Otherwise OMIT the field entirely.
+${examMode ? `EXAM MODE IS ACTIVE. This question will appear in a timed exam simulation. If the topic conventionally appears with a diagram / graph / figure / chart in real past papers for this curriculum (Maths function graphs and geometry, Physics circuits / forces / ray / wave diagrams, Biology labelled diagrams of cells / organs / processes, Chemistry apparatus or reaction schemes, Geography climate graphs / contour or sketch maps, Economics demand-supply curves), you MUST populate the "visual" field. A real exam paper for this topic almost always includes a figure — do not omit it. Pick the most appropriate visual type below.` : `If the topic typically includes a diagram, graph, or chart in past papers (Maths function graphs, Physics circuits/forces/ray diagrams, Biology cell/anatomy/process diagrams, Chemistry apparatus, Geography climate/contour/sketch maps), populate a "visual" field on the question. Otherwise OMIT the field entirely.`}
 
 Pick exactly ONE "type":
 1. "function-graph" — for plotting mathematical functions y = f(x). Provide:
