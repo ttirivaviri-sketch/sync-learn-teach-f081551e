@@ -54,6 +54,8 @@ export interface RecallQuestion {
   conceptsTested: string[];
   /** Source: 'ai-generated' | 'past-paper' | 'spaced-review' */
   source: 'ai-generated' | 'past-paper' | 'spaced-review';
+  /** Optional visual (graph, chart, diagram, ai-generated image) */
+  visual?: QuestionVisualSpec | null;
 }
 
 export interface SemanticEvaluation {
