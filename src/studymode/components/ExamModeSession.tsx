@@ -539,7 +539,74 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
   );
 }
 
+// ── Sub-component: Exam-paper question stem ────────────────────────────────
+//
+// Renders the question text in proper exam-paper formatting:
+//   - Splits multi-part questions on "(a)", "(b)", "(c)..." markers and
+//     renders each part as its own block, indented with a labelled gutter.
+//   - Uses serif-leaning typography to feel like a real paper.
+//   - Falls back to a single block when no parts are detected.
+
+function ExamQuestionStem({ text }: { text: string }) {
+  const parts = splitIntoParts(text);
+
+  if (parts.length <= 1) {
+    return (
+      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed [&_p]:my-2">
+        <MathMarkdown>{text}</MathMarkdown>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      {parts.map((p, i) => (
+        <div key={i} className="flex gap-3">
+          <span className="font-mono text-sm font-semibold text-muted-foreground w-7 shrink-0 pt-0.5">
+            ({p.label})
+          </span>
+          <div className="flex-1 prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed [&_p]:my-1">
+            <MathMarkdown>{p.body}</MathMarkdown>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function splitIntoParts(text: string): { label: string; body: string }[] {
+  // Match (a) (b) (i) (ii) etc at the start of a line or after whitespace.
+  const regex = /(?:^|\n|\s)\(([a-z]{1,3}|[ivx]{1,4})\)\s+/gi;
+  const matches: { idx: number; label: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = regex.exec(text)) !== null) {
+    // Prefer matches that come at the start of a line for cleaner splits
+    matches.push({ idx: m.index + m[0].indexOf("("), label: m[1] });
+  }
+  if (matches.length < 2) return [{ label: "", body: text }];
+
+  const out: { label: string; body: string }[] = [];
+  // Preamble before first part (if any) becomes its own un-labelled block
+  if (matches[0].idx > 0) {
+    const pre = text.slice(0, matches[0].idx).trim();
+    if (pre) out.push({ label: "stem", body: pre });
+  }
+  for (let i = 0; i < matches.length; i++) {
+    const start = matches[i].idx;
+    const end = i < matches.length - 1 ? matches[i + 1].idx : text.length;
+    const segment = text.slice(start, end);
+    const body = segment.replace(/^\([a-z]{1,3}|[ivx]{1,4}\)\s+/i, "").trim();
+    out.push({ label: matches[i].label, body });
+  }
+  // If our preamble fallback created a single "stem" but no real parts followed
+  // (defensive), just return the original.
+  if (out.length === 1) return [{ label: "", body: text }];
+  return out;
+}
+
 // ── Sub-component: Per-question result ─────────────────────────────────────
+
+import type { QuestionVisualSpec } from './QuestionVisual';
 
 function QuestionResult({
   questionNumber,
@@ -549,6 +616,8 @@ function QuestionResult({
   userAnswer,
   modelAnswer,
   answered,
+  visual,
+  commandWord,
 }: {
   questionNumber: number;
   question: string;
@@ -557,6 +626,8 @@ function QuestionResult({
   userAnswer: string;
   modelAnswer: string;
   answered: boolean;
+  visual?: QuestionVisualSpec | null;
+  commandWord?: string;
 }) {
   const [expanded, setExpanded] = useState(false);
 
@@ -572,8 +643,16 @@ function QuestionResult({
         onClick={() => setExpanded(!expanded)}
         className="w-full flex items-center justify-between text-left"
       >
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-sm text-foreground">Q{questionNumber}</span>
+          {commandWord && (
+            <Badge variant="outline" className="text-[10px] uppercase tracking-wider">
+              {commandWord}
+            </Badge>
+          )}
+          <Badge variant="outline" className="text-[10px] font-mono">
+            [{marks} {marks === 1 ? "mark" : "marks"}]
+          </Badge>
           {!answered ? (
             <Badge variant="outline" className="text-xs text-muted-foreground">Unanswered</Badge>
           ) : evaluation ? (
@@ -593,9 +672,33 @@ function QuestionResult({
 
       {expanded && (
         <div className="mt-3 space-y-3 text-sm">
-          <div className="text-muted-foreground">
-            <MathMarkdown>{question.substring(0, 200) + (question.length > 200 ? '...' : '')}</MathMarkdown>
-          </div>
+          <ExamQuestionStem text={question} />
+
+          {visual && <QuestionVisual visual={visual} />}
+
+          {/* Examiner's overall comment */}
+          {evaluation?.examinerComment && (
+            <div className="p-3 rounded-lg bg-accent/10 border border-accent/30">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-accent mb-1">
+                Examiner's Comment
+              </p>
+              <p className="text-foreground text-xs leading-relaxed italic">
+                "{evaluation.examinerComment}"
+              </p>
+            </div>
+          )}
+
+          {/* Workings / presentation warning — even when answer is correct */}
+          {evaluation?.workingsFeedback && (
+            <div className="p-3 rounded-lg bg-warning/10 border border-warning/30">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-warning mb-1 flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" /> Workings & Presentation
+              </p>
+              <p className="text-foreground text-xs leading-relaxed">
+                {evaluation.workingsFeedback}
+              </p>
+            </div>
+          )}
 
           {userAnswer && (
             <div className="p-2 rounded-lg bg-muted/50 border border-border">
@@ -604,30 +707,72 @@ function QuestionResult({
             </div>
           )}
 
+          {/* Per-marking-point breakdown with examiner's reasoning */}
           {evaluation?.markBreakdown && evaluation.markBreakdown.length > 0 && (
-            <div className="space-y-1">
+            <div className="space-y-2">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Mark-by-mark breakdown
+              </p>
               {evaluation.markBreakdown.map((item, i) => (
-                <div key={i} className="flex items-start gap-2 text-xs">
-                  <span className={cn(
-                    "font-mono px-1 py-0.5 rounded",
-                    item.marksAwarded === item.marksAvailable ? "bg-success/15 text-success" :
-                    item.marksAwarded > 0 ? "bg-warning/15 text-warning" :
-                    "bg-destructive/15 text-destructive"
-                  )}>
-                    {item.marksAwarded}/{item.marksAvailable}
-                  </span>
-                  <span className="text-muted-foreground">{item.criterion}</span>
+                <div key={i} className="p-2.5 rounded-lg bg-background/60 border border-border space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <span className={cn(
+                      "font-mono text-xs px-1.5 py-0.5 rounded shrink-0",
+                      item.marksAwarded === item.marksAvailable ? "bg-success/15 text-success" :
+                      item.marksAwarded > 0 ? "bg-warning/15 text-warning" :
+                      "bg-destructive/15 text-destructive"
+                    )}>
+                      {item.marksAwarded}/{item.marksAvailable}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-foreground">{item.criterion}</p>
+                      {item.comment && (
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{item.comment}</p>
+                      )}
+                    </div>
+                  </div>
+                  {item.whyExpected && (
+                    <p className="text-[11px] text-muted-foreground italic pl-1 border-l-2 border-accent/30 ml-1 pl-2">
+                      <span className="font-semibold not-italic text-accent">Why expected: </span>
+                      {item.whyExpected}
+                    </p>
+                  )}
+                  {item.studentQuote && (
+                    <p className="text-[11px] text-muted-foreground pl-1">
+                      <span className="font-semibold">You wrote: </span>
+                      <span className="italic">"{item.studentQuote}"</span>
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
           )}
 
+          {/* Common mistakes */}
           {evaluation?.feedback.reasoningErrors && evaluation.feedback.reasoningErrors.length > 0 && (
-            <div className="text-xs text-destructive">
-              <p className="font-semibold mb-1">Reasoning errors:</p>
-              {evaluation.feedback.reasoningErrors.map((e, i) => (
-                <p key={i}>- {e}</p>
-              ))}
+            <div className="p-2.5 rounded-lg bg-destructive/5 border border-destructive/20">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-destructive mb-1">
+                Examiner would flag
+              </p>
+              <ul className="text-xs text-foreground space-y-1">
+                {evaluation.feedback.reasoningErrors.map((e, i) => (
+                  <li key={i}>• {e}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Curriculum-specific improvement tips */}
+          {evaluation?.improvementByCurriculum && evaluation.improvementByCurriculum.length > 0 && (
+            <div className="p-2.5 rounded-lg bg-primary/5 border border-primary/20">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-primary mb-1">
+                How to improve next time (curriculum standards)
+              </p>
+              <ul className="text-xs text-foreground space-y-1">
+                {evaluation.improvementByCurriculum.map((tip, i) => (
+                  <li key={i}>• {tip}</li>
+                ))}
+              </ul>
             </div>
           )}
 
