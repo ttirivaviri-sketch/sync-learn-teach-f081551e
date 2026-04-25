@@ -422,16 +422,18 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
         </div>
       )}
 
-      {/* Question */}
-      <Card className="border-destructive/20">
+      {/* Question — exam-paper styling */}
+      <Card className="border-destructive/20 bg-card">
         <CardContent className="p-5">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
             <div className="flex items-center gap-2">
-              <span className="text-sm font-bold text-foreground">
-                Q{engine.progress.current}
+              <span className="text-sm font-bold text-foreground tracking-wide">
+                Question {engine.progress.current}
               </span>
               {q.commandWord && (
-                <Badge variant="outline" className="text-xs">{q.commandWord}</Badge>
+                <Badge variant="outline" className="text-xs uppercase tracking-wider">
+                  {q.commandWord}
+                </Badge>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -443,18 +445,24 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
               >
                 <Flag className={cn("h-3.5 w-3.5", isFlagged && "fill-warning")} />
               </Button>
-              <Badge className="bg-destructive/15 text-destructive border-destructive/30">
-                {q.marks} marks
+              <Badge className="bg-destructive/15 text-destructive border-destructive/30 font-mono">
+                [{q.marks} {q.marks === 1 ? "mark" : "marks"}]
               </Badge>
             </div>
           </div>
 
-          <div className="prose prose-sm dark:prose-invert max-w-none text-foreground">
-            <MathMarkdown>{q.question}</MathMarkdown>
-          </div>
+          {/* Question stem rendered as exam-paper parts (a)/(b)/(c) */}
+          <ExamQuestionStem text={q.question} />
+
+          {/* Diagram / graph / figure */}
+          {q.visual && (
+            <div className="mt-4">
+              <QuestionVisual visual={q.visual} />
+            </div>
+          )}
 
           {/* Time per question hint */}
-          <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+          <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1 italic">
             <Clock className="h-3 w-3" />
             Suggested time: {Math.ceil(q.timeAllocationSecs / 60)} min
           </p>
