@@ -319,11 +319,14 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
           whatWasMissing: result.missingConcepts?.join('. ') || result.feedback?.whatWasMissing || '',
           whatWasMisunderstood: result.misconceptions?.join('. ') || result.feedback?.whatWasMisunderstood || '',
           modelAnswer: question.modelAnswer,
-          lostMarksExplanation: result.feedback?.lostMarksExplanation || result.feedback || '',
+          lostMarksExplanation: result.feedback?.lostMarksExplanation || (typeof result.feedback === 'string' ? result.feedback : ''),
           reasoningErrors: result.reasoningErrors || result.mistakes || [],
         },
         markBreakdown: result.markBreakdown || [],
         improvementTips: result.improvementTips || [],
+        examinerComment: result.examinerComment || '',
+        improvementByCurriculum: result.improvementByCurriculum || [],
+        workingsFeedback: result.workingsFeedback || '',
       };
 
       // ── DATA LOOP: Record answer and update all systems ──────────────────
