@@ -291,7 +291,8 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
         conceptsTested: question.conceptsTested,
         commandWord: question.commandWord,
         difficulty: question.difficulty,
-        mode: state.mode === 'exam' ? 'exam-strict' : 'mark',
+        mode: 'mark',
+        examStrict: state.mode === 'exam',
         stream: false,
         // AI logic requirements
         evaluationInstructions: [

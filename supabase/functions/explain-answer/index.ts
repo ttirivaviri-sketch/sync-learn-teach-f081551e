@@ -63,6 +63,7 @@ serve(async (req) => {
       markingScheme,
       totalMarks,
       mode = "explain",
+      examStrict = false,
       curriculum,
       examLevel,
       stream = true,
@@ -83,8 +84,23 @@ serve(async (req) => {
       examLevel,
     });
 
+    // Treat strict-grading aliases as "mark" mode so legacy clients don't break
+    const isMarkMode =
+      mode === "mark" || mode === "exam-strict" || mode === "mark-strict";
+
     // ── MARK MODE: Score the answer ─────────────────────────────────────
-    if (mode === "mark") {
+    if (isMarkMode) {
+      const strictAddendum = examStrict
+        ? `
+
+EXAM-STRICT MODE: This answer was written under timed exam conditions. Apply these stricter rules:
+- Do NOT award method marks for blank or off-topic working.
+- Required units in the marking scheme MUST be present for the unit mark.
+- Vague gestures at a concept (without naming it correctly) score 0 for that point.
+- Command words must be obeyed (Explain ≠ State ≠ Describe).
+- Still reward fully-equivalent paraphrases and numerically equal answers.`
+        : "";
+
       const markSystemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 YOUR TASK: Mark and score the student's answer against the marking criteria.
@@ -98,7 +114,7 @@ You are an experienced examiner. Be fair but rigorous:
 3. Give partial credit where appropriate (method marks, intermediate steps).
 4. Identify specific mistakes, misconceptions, and missing points.
 5. Provide constructive feedback that helps the student improve.
-6. Include the complete model answer for reference.
+6. Include the complete model answer for reference.${strictAddendum}
 
 Return ONLY valid JSON:
 {
