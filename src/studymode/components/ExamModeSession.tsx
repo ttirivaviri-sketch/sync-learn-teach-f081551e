@@ -304,6 +304,8 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
                   userAnswer={answers.get(i) || ''}
                   modelAnswer={q.modelAnswer}
                   answered={answered}
+                  visual={q.visual ?? null}
+                  commandWord={q.commandWord}
                 />
               );
             })}
