@@ -63,6 +63,7 @@ serve(async (req) => {
       markingScheme,
       totalMarks,
       mode = "explain",
+      examStrict = false,
       curriculum,
       examLevel,
       stream = true,
@@ -83,8 +84,12 @@ serve(async (req) => {
       examLevel,
     });
 
+    // Treat strict-grading aliases as "mark" mode so legacy clients don't break
+    const isMarkMode =
+      mode === "mark" || mode === "exam-strict" || mode === "mark-strict";
+
     // ── MARK MODE: Score the answer ─────────────────────────────────────
-    if (mode === "mark") {
+    if (isMarkMode) {
       const markSystemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
 YOUR TASK: Mark and score the student's answer against the marking criteria.
