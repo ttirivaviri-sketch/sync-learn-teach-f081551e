@@ -86,9 +86,19 @@ export interface SemanticEvaluation {
     marksAwarded: number;
     marksAvailable: number;
     comment: string;
+    /** What the examiner expected and WHY (principle / convention) */
+    whyExpected?: string;
+    /** The student's actual phrase that was assessed for this point */
+    studentQuote?: string;
   }[];
   /** Tips for improvement */
   improvementTips: string[];
+  /** 1-2 sentence overall examiner comment, in an examiner's voice */
+  examinerComment?: string;
+  /** Curriculum-grounded next-time suggestions ("ZIMSEC O-Level expects…") */
+  improvementByCurriculum?: string[];
+  /** Flags answers that are correct but missing required workings/units/diagrams */
+  workingsFeedback?: string;
 }
 
 export interface AnswerRecord {
