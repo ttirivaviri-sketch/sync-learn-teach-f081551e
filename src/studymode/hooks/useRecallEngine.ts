@@ -235,6 +235,7 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
           }),
           conceptsTested: q.conceptsTested || [],
           source: isPreviouslyIncorrect ? 'spaced-review' : 'ai-generated',
+          visual: q.visual ?? null,
         };
       });
 
