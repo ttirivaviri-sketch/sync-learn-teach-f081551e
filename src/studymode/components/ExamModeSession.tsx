@@ -489,7 +489,9 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
                 <span className="font-mono text-xs text-muted-foreground mr-2">
                   {String.fromCharCode(65 + i)}.
                 </span>
-                {opt}
+                <MathMarkdown className="inline [&_p]:inline [&_p]:my-0">
+                  {opt}
+                </MathMarkdown>
               </button>
             ))}
           </div>
