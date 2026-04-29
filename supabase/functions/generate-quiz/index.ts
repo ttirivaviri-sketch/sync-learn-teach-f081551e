@@ -46,8 +46,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const ai = getAIConfig("standard");
     const body = await req.json();
+
+    // ── Per-user daily quota (Moderate tier) ────────────────────────────────
+    const quota = await enforceQuota(req, "quiz", { amount: Math.min(Math.max(Number(body.count) || 1, 1), 5) });
+    if (!quota.allowed) {
+      return quotaExceededResponse("quiz", quota.used, quota.limit);
+    }
 
     const {
       subject,
