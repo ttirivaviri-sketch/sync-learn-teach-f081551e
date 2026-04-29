@@ -233,6 +233,7 @@ WHEN A STUDENT ASKS ABOUT A TOPIC:
           ...messages,
         ],
         stream: true,
+        max_tokens: 700,
       }),
     });
 
