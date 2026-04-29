@@ -188,6 +188,7 @@ IMPORTANT:
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
+      maxTokens: 3500,
     });
 
     const parsed = safeJsonParse<{
