@@ -34,6 +34,11 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  quotaExceededResponse,
+  buildCacheKey,
+  getCached,
+  setCached,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
