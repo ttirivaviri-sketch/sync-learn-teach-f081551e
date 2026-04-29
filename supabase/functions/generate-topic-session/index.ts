@@ -31,6 +31,7 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'google/gemini-3-flash-preview',
+        max_tokens: 2500,
         messages: [
           { role: 'system', content: `You are a ${curriculum || 'ZIMSEC'} ${subject} content engine. Generate exam-aligned learning content. Use LaTeX for any math. Be concise, specific, exam-focused. Never generic.` },
           { role: 'user', content: `Topic: ${topic}${subtopic ? `\nSubtopic: ${subtopic}` : ''}${weakHint}\n\nGenerate a focused mini-session: concept overview, quick review bullets, 6 practice questions (mix of difficulty), and 4 flashcards. Each question must include its concept_map (topic, subtopic, concepts, difficulty, exam_expectation).` },
