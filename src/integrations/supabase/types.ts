@@ -74,6 +74,63 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_response_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          fn_name: string
+          hits: number
+          response: Json
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at?: string
+          fn_name: string
+          hits?: number
+          response: Json
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          fn_name?: string
+          hits?: number
+          response?: Json
+        }
+        Relationships: []
+      }
+      ai_usage_daily: {
+        Row: {
+          bucket: string
+          requests: number
+          tokens_in: number
+          tokens_out: number
+          updated_at: string
+          usage_date: string
+          user_id: string
+        }
+        Insert: {
+          bucket: string
+          requests?: number
+          tokens_in?: number
+          tokens_out?: number
+          updated_at?: string
+          usage_date?: string
+          user_id: string
+        }
+        Update: {
+          bucket?: string
+          requests?: number
+          tokens_in?: number
+          tokens_out?: number
+          updated_at?: string
+          usage_date?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       analytics_reports: {
         Row: {
           created_at: string
@@ -2558,11 +2615,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_and_increment_ai_usage: {
+        Args: {
+          _amount?: number
+          _bucket: string
+          _limit: number
+          _user_id: string
+        }
+        Returns: Json
+      }
       check_mock_exam_unlock: {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
       expire_stale_topic_sessions: { Args: never; Returns: number }
+      get_ai_usage_today: { Args: never; Returns: Json }
       get_exam_readiness: {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json

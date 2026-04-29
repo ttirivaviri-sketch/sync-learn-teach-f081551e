@@ -29,7 +29,14 @@ export interface AIConfig {
   model: string;
 }
 
-export function getAIConfig(): AIConfig {
+export type AITier = "cheap" | "standard";
+
+/**
+ * Returns AI gateway config. Pass `tier` to route by task complexity:
+ *   "cheap"    → gemini-2.5-flash-lite (≈80% cheaper, for flashcards / explanations / greetings)
+ *   "standard" → gemini-3-flash-preview (default, for quizzes / exams / tutor)
+ */
+export function getAIConfig(tier: AITier = "standard"): AIConfig {
   const openaiKey = Deno.env.get("OPENAI_API_KEY");
   const openaiBase =
     Deno.env.get("OPENAI_BASE_URL") || "https://api.openai.com/v1";
@@ -39,19 +46,215 @@ export function getAIConfig(): AIConfig {
     return {
       url: `${openaiBase}/chat/completions`,
       key: openaiKey,
-      model: Deno.env.get("AI_MODEL") || "gpt-4o-mini",
+      model:
+        Deno.env.get("AI_MODEL") ||
+        (tier === "cheap" ? "gpt-4o-mini" : "gpt-4o-mini"),
     };
   }
   if (lovableKey) {
     return {
       url: "https://ai.gateway.lovable.dev/v1/chat/completions",
       key: lovableKey,
-      model: "google/gemini-3-flash-preview",
+      model:
+        tier === "cheap"
+          ? "google/gemini-2.5-flash-lite"
+          : "google/gemini-3-flash-preview",
     };
   }
   throw new Error(
     "No AI API key configured. Set OPENAI_API_KEY or LOVABLE_API_KEY in Supabase secrets."
   );
+}
+
+// ─── Per-user daily quota (Moderate tier) ───────────────────────────────────
+
+/**
+ * Daily caps for the Standard ("Moderate") plan. Premium gets 3x.
+ * Bucket names are stored in ai_usage_daily.bucket.
+ */
+export const QUOTA_BUCKETS = {
+  quiz: 25,
+  flashcards: 30,
+  explain: 40,
+  tutor: 30,
+  daily_task: 3,
+  mock_paper: 1,
+  insights: 5,
+  topic_session: 8,
+  concept_review: 10,
+  misc: 50,
+} as const;
+
+export type QuotaBucket = keyof typeof QUOTA_BUCKETS;
+
+const PREMIUM_MULTIPLIER = 3;
+
+/**
+ * Extracts the caller's user id from the request's Authorization JWT (if any).
+ * Returns null for anonymous / service-role calls — those bypass quota.
+ */
+export function getUserIdFromRequest(req: Request): string | null {
+  try {
+    const auth = req.headers.get("Authorization") || "";
+    const token = auth.replace(/^Bearer\s+/i, "");
+    if (!token) return null;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"))
+    );
+    return typeof payload.sub === "string" ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Calls the SECURITY DEFINER function check_and_increment_ai_usage.
+ * Returns { allowed, used, limit }. If the user is anonymous, always allowed.
+ */
+export async function enforceQuota(
+  req: Request,
+  bucket: QuotaBucket,
+  opts: { isPremium?: boolean; amount?: number } = {}
+): Promise<{ allowed: boolean; used: number; limit: number; userId: string | null }> {
+  const userId = getUserIdFromRequest(req);
+  if (!userId) {
+    return { allowed: true, used: 0, limit: QUOTA_BUCKETS[bucket], userId: null };
+  }
+
+  const limit = QUOTA_BUCKETS[bucket] * (opts.isPremium ? PREMIUM_MULTIPLIER : 1);
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) {
+    // Fail open — quota infra missing, do not block users
+    return { allowed: true, used: 0, limit, userId };
+  }
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/check_and_increment_ai_usage`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        _user_id: userId,
+        _bucket: bucket,
+        _limit: limit,
+        _amount: opts.amount ?? 1,
+      }),
+    });
+    if (!resp.ok) {
+      console.warn(`[enforceQuota] RPC failed ${resp.status} — failing open`);
+      return { allowed: true, used: 0, limit, userId };
+    }
+    const data = await resp.json();
+    return {
+      allowed: !!data?.allowed,
+      used: Number(data?.used ?? 0),
+      limit: Number(data?.limit ?? limit),
+      userId,
+    };
+  } catch (e) {
+    console.warn("[enforceQuota] error — failing open:", e);
+    return { allowed: true, used: 0, limit, userId };
+  }
+}
+
+/**
+ * Standard 429 response when the user has hit their daily AI cap.
+ */
+export function quotaExceededResponse(
+  bucket: QuotaBucket,
+  used: number,
+  limit: number
+): Response {
+  return new Response(
+    JSON.stringify({
+      error: "daily_limit_reached",
+      message: `You've used today's free AI for ${bucket} (${used}/${limit}). It resets at midnight, or upgrade to Premium for higher limits.`,
+      bucket,
+      used,
+      limit,
+    }),
+    {
+      status: 429,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    }
+  );
+}
+
+// ─── Shared response cache (per-bucket, content-keyed) ──────────────────────
+
+async function sha256Hex(s: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+/** Build a stable cache key from fn name + canonical JSON of inputs. */
+export async function buildCacheKey(fnName: string, input: unknown): Promise<string> {
+  const canonical = JSON.stringify(input, Object.keys(input as object || {}).sort());
+  const hash = await sha256Hex(`${fnName}::${canonical}`);
+  return `${fnName}:${hash}`;
+}
+
+/** Fetch a cached response (if not expired). Fails open (returns null). */
+export async function getCached<T = unknown>(cacheKey: string): Promise<T | null> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return null;
+  try {
+    const resp = await fetch(
+      `${supabaseUrl}/rest/v1/ai_response_cache?cache_key=eq.${encodeURIComponent(cacheKey)}&select=response,expires_at&limit=1`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+      }
+    );
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    const row = rows?.[0];
+    if (!row) return null;
+    if (row.expires_at && new Date(row.expires_at) < new Date()) return null;
+    return row.response as T;
+  } catch {
+    return null;
+  }
+}
+
+/** Store a response in the shared cache. Fails silently. */
+export async function setCached(
+  cacheKey: string,
+  fnName: string,
+  response: unknown
+): Promise<void> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return;
+  try {
+    await fetch(`${supabaseUrl}/rest/v1/ai_response_cache`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        Prefer: "resolution=merge-duplicates",
+      },
+      body: JSON.stringify({
+        cache_key: cacheKey,
+        fn_name: fnName,
+        response,
+      }),
+    });
+  } catch {
+    /* best-effort */
+  }
 }
 
 // ─── Shared System Identity ──────────────────────────────────────────────────
