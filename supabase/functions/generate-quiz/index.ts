@@ -227,10 +227,11 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       userPrompt += `\nGenerate a NEW question in this same style, of similar mark value, with an examiner-grade marking scheme.\n`;
     }
 
-    // ── Call AI ──────────────────────────────────────────────────────────────
+    // ── Call AI (with capped output tokens) ─────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
+      maxTokens: questionCount === 1 ? 1500 : 3500,
     });
 
     const parsed = safeJsonParse<{
