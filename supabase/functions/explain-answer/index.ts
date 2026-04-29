@@ -283,7 +283,7 @@ Help this student understand exactly what they missed and how to improve.`;
     }
 
     // Non-streaming fallback
-    const content = await callAI(ai, explainSystemPrompt, explainUserPrompt);
+    const content = await callAI(ai, explainSystemPrompt, explainUserPrompt, { maxTokens: 700 });
     return jsonResponse({ explanation: content });
   } catch (e) {
     console.error("explain-answer error:", e);
