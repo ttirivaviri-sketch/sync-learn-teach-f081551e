@@ -598,7 +598,8 @@ export async function callAI(
     };
 
     if (options.temperature !== undefined) body.temperature = options.temperature;
-    if (options.maxTokens) body.max_tokens = options.maxTokens;
+    // Default cap to keep cost predictable. Callers can override per task.
+    body.max_tokens = options.maxTokens ?? 1500;
     if (options.jsonMode) body.response_format = { type: "json_object" };
     if (options.tools) body.tools = options.tools;
     if (options.toolChoice) body.tool_choice = options.toolChoice;
