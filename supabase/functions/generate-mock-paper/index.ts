@@ -26,6 +26,8 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -33,7 +35,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const quota = await enforceQuota(req, "mock_paper");
+    if (!quota.allowed) return quotaExceededResponse("mock_paper", quota.used, quota.limit);
+    const ai = getAIConfig("standard");
     const body = await req.json();
     const { subject_id, paper_code } = body;
 
