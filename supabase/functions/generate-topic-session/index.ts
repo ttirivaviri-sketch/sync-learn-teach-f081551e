@@ -1,3 +1,5 @@
+import { enforceQuota, quotaExceededResponse } from "../_shared/ai-config.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -6,6 +8,8 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const quota = await enforceQuota(req, 'topic_session');
+  if (!quota.allowed) return quotaExceededResponse('topic_session', quota.used, quota.limit);
 
   try {
     const { subject, curriculum, topic, subtopic, weak_concepts } = await req.json();
@@ -27,6 +31,7 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'google/gemini-3-flash-preview',
+        max_tokens: 2500,
         messages: [
           { role: 'system', content: `You are a ${curriculum || 'ZIMSEC'} ${subject} content engine. Generate exam-aligned learning content. Use LaTeX for any math. Be concise, specific, exam-focused. Never generic.` },
           { role: 'user', content: `Topic: ${topic}${subtopic ? `\nSubtopic: ${subtopic}` : ''}${weakHint}\n\nGenerate a focused mini-session: concept overview, quick review bullets, 6 practice questions (mix of difficulty), and 4 flashcards. Each question must include its concept_map (topic, subtopic, concepts, difficulty, exam_expectation).` },

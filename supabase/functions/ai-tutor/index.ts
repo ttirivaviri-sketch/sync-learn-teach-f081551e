@@ -22,6 +22,8 @@ import {
   corsHeaders,
   errorResponse,
   streamResponse,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -29,7 +31,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const quota = await enforceQuota(req, "tutor");
+    if (!quota.allowed) return quotaExceededResponse("tutor", quota.used, quota.limit);
+    const ai = getAIConfig("standard");
     const body = await req.json();
 
     const {
@@ -229,6 +233,7 @@ WHEN A STUDENT ASKS ABOUT A TOPIC:
           ...messages,
         ],
         stream: true,
+        max_tokens: 700,
       }),
     });
 

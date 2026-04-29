@@ -34,6 +34,11 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  quotaExceededResponse,
+  buildCacheKey,
+  getCached,
+  setCached,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -41,8 +46,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const ai = getAIConfig("standard");
     const body = await req.json();
+
+    // ── Per-user daily quota (Moderate tier) ────────────────────────────────
+    const quota = await enforceQuota(req, "quiz", { amount: Math.min(Math.max(Number(body.count) || 1, 1), 5) });
+    if (!quota.allowed) {
+      return quotaExceededResponse("quiz", quota.used, quota.limit);
+    }
 
     const {
       subject,
@@ -216,10 +227,11 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       userPrompt += `\nGenerate a NEW question in this same style, of similar mark value, with an examiner-grade marking scheme.\n`;
     }
 
-    // ── Call AI ──────────────────────────────────────────────────────────────
+    // ── Call AI (with capped output tokens) ─────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
+      maxTokens: questionCount === 1 ? 1500 : 3500,
     });
 
     const parsed = safeJsonParse<{

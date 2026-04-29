@@ -38,6 +38,8 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -45,7 +47,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const quota = await enforceQuota(req, "quiz");
+    if (!quota.allowed) return quotaExceededResponse("quiz", quota.used, quota.limit);
+    const ai = getAIConfig("standard");
     const body = await req.json();
 
     const {
@@ -184,6 +188,7 @@ IMPORTANT:
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
+      maxTokens: 3500,
     });
 
     const parsed = safeJsonParse<{

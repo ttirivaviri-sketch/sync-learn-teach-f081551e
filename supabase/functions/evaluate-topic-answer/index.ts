@@ -1,3 +1,5 @@
+import { enforceQuota, quotaExceededResponse } from "../_shared/ai-config.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -19,6 +21,8 @@ function computeXP(level: string, accuracy: boolean, coverage: number, difficult
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const quota = await enforceQuota(req, 'explain');
+  if (!quota.allowed) return quotaExceededResponse('explain', quota.used, quota.limit);
 
   try {
     const { question, expected_answer, student_answer, concept_map } = await req.json();
@@ -35,7 +39,8 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash-lite',
+        max_tokens: 600,
         messages: [
           { role: 'system', content: `You are a strict exam grader. Evaluate the student's answer on three layers: accuracy (correct/incorrect), coverage (% of key points 0-1), expression (structure/exam-style 0-1). Identify missing points. Set level: exam_ready (accuracy=true, coverage>=0.9, expression>=0.8, no missing points), close (accuracy=true, minor gaps), developing (partially right), weak (mostly wrong/blank). Be fair but exam-strict.` },
           { role: 'user', content: `Question:\n${question}\n\nExpected answer:\n${expected_answer || '(use concept map)'}\n\nConcept map:\n${JSON.stringify(concept_map || {})}\n\nStudent answer:\n${student_answer}` },

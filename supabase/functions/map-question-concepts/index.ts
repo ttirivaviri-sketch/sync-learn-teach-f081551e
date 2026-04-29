@@ -1,3 +1,5 @@
+import { enforceQuota, quotaExceededResponse } from "../_shared/ai-config.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
@@ -6,6 +8,8 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
+  const quota = await enforceQuota(req, 'misc');
+  if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
 
   try {
     const { question, subject, curriculum, topic } = await req.json();
@@ -22,7 +26,8 @@ Deno.serve(async (req) => {
       method: 'POST',
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'google/gemini-3-flash-preview',
+        model: 'google/gemini-2.5-flash-lite',
+        max_tokens: 400,
         messages: [
           { role: 'system', content: `You are a knowledge mapping engine for ${curriculum || 'ZIMSEC'} ${subject}. Map every question to its precise topic, subtopic, key concepts being tested, difficulty (easy/medium/hard), and what kind of exam answer is expected. Be specific and exam-aligned.` },
           { role: 'user', content: `Map this question:\n\n${question}${topic ? `\n\nHint topic: ${topic}` : ''}` },
