@@ -35,6 +35,8 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req: Request) => {
@@ -42,7 +44,9 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const quota = await enforceQuota(req, "flashcards");
+    if (!quota.allowed) return quotaExceededResponse("flashcards", quota.used, quota.limit);
+    const ai = getAIConfig("cheap");
     const body = await req.json();
 
     const {
