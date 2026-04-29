@@ -42,6 +42,8 @@ import {
   errorResponse,
   jsonResponse,
   streamResponse,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -49,7 +51,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const quota = await enforceQuota(req, "explain");
+    if (!quota.allowed) return quotaExceededResponse("explain", quota.used, quota.limit);
+    const ai = getAIConfig("cheap");
     const body = await req.json();
 
     const {
