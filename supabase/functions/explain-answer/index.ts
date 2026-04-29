@@ -203,6 +203,7 @@ Score this answer out of ${totalMarks || "the available marks"}.`;
       const rawContent = await callAI(ai, markSystemPrompt, markUserPrompt, {
         temperature: 0.3,
         jsonMode: true,
+        maxTokens: 900,
       });
 
       const result = safeJsonParse<any>(rawContent);
