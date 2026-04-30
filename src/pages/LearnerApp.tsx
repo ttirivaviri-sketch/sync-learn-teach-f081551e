@@ -27,6 +27,7 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { analytics } from "@/utils/analytics";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useBookingPayments } from "@/hooks/useBookingPayments";
@@ -116,9 +117,10 @@ const LearnerApp = () => {
   } = useRealtimeBookings("learner", userId);
 
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
   const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
     subjectFilter: selectedSubject,
-    searchQuery,
+    searchQuery: debouncedSearchQuery,
     studyLevel: profile?.study_level || undefined,
   });
   const { isUserOnline } = usePresenceTracking(session);

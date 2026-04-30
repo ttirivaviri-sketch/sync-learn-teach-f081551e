@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { analytics } from '@/utils/analytics';
 import { logger } from "@/utils/logger";
 
@@ -38,6 +39,7 @@ export interface TutorProfile {
 
 interface UseTutorDataOptions {
   subjectFilter?: string;
+  /** Should already be debounced by the caller (use useDebouncedValue). */
   searchQuery?: string;
   studyLevel?: string;
   maxActiveBookings?: number;
@@ -54,16 +56,27 @@ export const useTutorData = (
 
   const maxActive = options?.maxActiveBookings ?? 10;
 
-  const fetchTutors = async () => {
+  // Tracks the in-flight fetch so we can abort it if a new one starts or the
+  // component unmounts. Avoids stale `setTutors` calls and racey overlapping fetches.
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  const fetchTutors = useCallback(async () => {
+    // Cancel any in-flight fetch
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       setLoading(true);
 
-      // Fetch tutor profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_type', 'tutor');
+        .eq('user_type', 'tutor')
+        .abortSignal(controller.signal);
 
+      if (controller.signal.aborted) return;
       if (profilesError) {
         logger.error('Error fetching tutors:', profilesError);
         throw profilesError;
@@ -71,29 +84,33 @@ export const useTutorData = (
 
       const tutorsData = profilesData || [];
 
-      // Fetch subjects, reviews, and active booking counts in parallel
       const { data: { session } } = await supabase.auth.getSession();
+      if (controller.signal.aborted) return;
 
       const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult] = await Promise.all([
-        supabase.from('tutor_subjects').select('*'),
-        supabase.from('reviews').select('reviewed_id, rating'),
+        supabase.from('tutor_subjects').select('*').abortSignal(controller.signal),
+        supabase.from('reviews').select('reviewed_id, rating').abortSignal(controller.signal),
         supabase
           .from('bookings')
           .select('tutor_id')
-          .in('status', ['requested', 'confirmed']),
-        supabase.from('qualifications').select('id, user_id, qualification_type, institution, year_obtained'),
+          .in('status', ['requested', 'confirmed'])
+          .abortSignal(controller.signal),
+        supabase
+          .from('qualifications')
+          .select('id, user_id, qualification_type, institution, year_obtained')
+          .abortSignal(controller.signal),
       ]);
+
+      if (controller.signal.aborted) return;
 
       const subjectsData = subjectsResult.data || [];
       const reviewsData = reviewsResult.data || [];
       const activeBookingsData = activeBookingsResult.data || [];
       const qualificationsData = qualificationsResult.data || [];
 
-      // Build unique subjects list
       const uniqueSubjects = [...new Set(subjectsData.map(s => s.subject))].sort();
-      setAllSubjects(uniqueSubjects);
+      if (mountedRef.current) setAllSubjects(uniqueSubjects);
 
-      // Build ratings map: tutor_id -> { total, count }
       const ratingsMap = new Map<string, { total: number; count: number }>();
       for (const review of reviewsData) {
         const existing = ratingsMap.get(review.reviewed_id) || { total: 0, count: 0 };
@@ -102,13 +119,11 @@ export const useTutorData = (
         ratingsMap.set(review.reviewed_id, existing);
       }
 
-      // Build active bookings count map
       const bookingsCountMap = new Map<string, number>();
       for (const booking of activeBookingsData) {
         bookingsCountMap.set(booking.tutor_id, (bookingsCountMap.get(booking.tutor_id) || 0) + 1);
       }
 
-      // Transform tutor data
       const tutorsWithSubjects = tutorsData.map(tutor => {
         const tutorSubjects = subjectsData.filter(s => s.user_id === tutor.id);
         const tutorQualifications = qualificationsData.filter(q => q.user_id === tutor.id);
@@ -141,13 +156,9 @@ export const useTutorData = (
         };
       });
 
-      // Filter: only tutors who have at least one subject
       let filtered = tutorsWithSubjects.filter(t => t.subjects.length > 0);
-
-      // Filter: exclude overbooked tutors
       filtered = filtered.filter(t => t.confirmedBookingsCount < maxActive);
 
-      // Filter by subject if provided
       if (options?.subjectFilter) {
         const subjectLower = options.subjectFilter.toLowerCase();
         filtered = filtered.filter(t =>
@@ -155,7 +166,6 @@ export const useTutorData = (
         );
       }
 
-      // Filter by study level — map learner enum to tutor subject level strings
       if (options?.studyLevel) {
         const levelMap: Record<string, string[]> = {
           junior_primary: ['grade 1-3'],
@@ -172,7 +182,6 @@ export const useTutorData = (
         }
       }
 
-      // Filter by search query (name or subject)
       if (options?.searchQuery) {
         const queryLower = options.searchQuery.toLowerCase();
         filtered = filtered.filter(t =>
@@ -181,11 +190,8 @@ export const useTutorData = (
         );
       }
 
-      // Sort: highest rating first, then by distance
       filtered.sort((a, b) => {
-        // Primary: rating descending
         if (b.rating !== a.rating) return b.rating - a.rating;
-        // Secondary: distance ascending (if available)
         if (userLocation) {
           if (a.distanceValue === null) return 1;
           if (b.distanceValue === null) return -1;
@@ -194,6 +200,7 @@ export const useTutorData = (
         return 0;
       });
 
+      if (controller.signal.aborted || !mountedRef.current) return;
       setTutors(filtered);
 
       analytics.track('tutors_loaded', {
@@ -202,18 +209,30 @@ export const useTutorData = (
         authenticated: !!session?.user,
         subjectFilter: options?.subjectFilter || null,
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Aborts surface as DOMException / "AbortError" — silently ignore.
+      if (controller.signal.aborted || error?.name === 'AbortError') return;
       logger.error('Error fetching tutors:', error);
       analytics.error(error as Error, 'fetch_tutors_failed');
-      toast({
-        title: 'Error',
-        description: 'Failed to load tutors. Please try again.',
-        variant: 'destructive',
-      });
+      if (mountedRef.current) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load tutors. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && mountedRef.current) setLoading(false);
     }
-  };
+  }, [
+    userLocation?.latitude,
+    userLocation?.longitude,
+    maxActive,
+    options?.subjectFilter,
+    options?.searchQuery,
+    options?.studyLevel,
+    toast,
+  ]);
 
   const calculateRealDistance = (
     lat: number, lng: number,
@@ -230,14 +249,11 @@ export const useTutorData = (
     return R * c;
   };
 
-  // Debounced wrapper — collapses multiple rapid realtime events into one fetch
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedFetch = () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => { fetchTutors(); }, 800);
-  };
+  // Shared debounce — always calls the latest fetchTutors (no stale closures).
+  const [debouncedFetch] = useDebouncedCallback(fetchTutors, 800);
 
   useEffect(() => {
+    mountedRef.current = true;
     fetchTutors();
 
     const channel = supabase
@@ -255,10 +271,12 @@ export const useTutorData = (
       .subscribe();
 
     return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      mountedRef.current = false;
+      if (abortRef.current) abortRef.current.abort();
       supabase.removeChannel(channel);
     };
-  }, [options?.subjectFilter, options?.searchQuery, options?.studyLevel]);
+    // fetchTutors and debouncedFetch are stable wrt the right deps via useCallback.
+  }, [fetchTutors, debouncedFetch]);
 
   return {
     tutors,
