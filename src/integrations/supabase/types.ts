@@ -1048,6 +1048,60 @@ export type Database = {
           },
         ]
       }
+      payout_requests: {
+        Row: {
+          admin_note: string | null
+          amount: number
+          bank_account_holder: string
+          bank_account_number: string
+          bank_branch_code: string | null
+          bank_name: string
+          created_at: string
+          currency: string
+          id: string
+          method: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          tutor_id: string
+          updated_at: string
+        }
+        Insert: {
+          admin_note?: string | null
+          amount: number
+          bank_account_holder: string
+          bank_account_number: string
+          bank_branch_code?: string | null
+          bank_name: string
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          tutor_id: string
+          updated_at?: string
+        }
+        Update: {
+          admin_note?: string | null
+          amount?: number
+          bank_account_holder?: string
+          bank_account_number?: string
+          bank_branch_code?: string | null
+          bank_name?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          tutor_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -2686,6 +2740,42 @@ export type Database = {
           _user_id: string
         }
         Returns: string
+      }
+      request_tutor_withdrawal: {
+        Args: {
+          _amount: number
+          _bank_account_holder: string
+          _bank_account_number: string
+          _bank_branch_code?: string
+          _bank_name: string
+        }
+        Returns: string
+      }
+      resolve_payout_request: {
+        Args: { _admin_note?: string; _new_status: string; _request_id: string }
+        Returns: {
+          admin_note: string | null
+          amount: number
+          bank_account_holder: string
+          bank_account_number: string
+          bank_branch_code: string | null
+          bank_name: string
+          created_at: string
+          currency: string
+          id: string
+          method: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          tutor_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "payout_requests"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
