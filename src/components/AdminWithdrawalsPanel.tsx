@@ -63,7 +63,9 @@ export default function AdminWithdrawalsPanel() {
           .select("*")
           .order("created_at", { ascending: false });
         if (e2) throw e2;
-        const ids = Array.from(new Set((rows || []).map((r: any) => r.tutor_id)));
+        const ids = Array.from(
+          new Set((rows || []).map((r: any) => r.tutor_id as string))
+        ) as string[];
         const { data: profs } = await supabase
           .from("profiles")
           .select("id, full_name, email")
