@@ -4,11 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DollarSign, TrendingUp, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
 import type { Database } from "@/integrations/supabase/types";
+import AdminWithdrawalsPanel from "@/components/AdminWithdrawalsPanel";
 
 type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
@@ -156,87 +158,100 @@ const Payments = () => {
         </Card>
       </section>
 
-      <div className="mt-6 flex items-center gap-4">
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as PaymentStatus | "all")}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Payments</SelectItem>
-            <SelectItem value="succeeded">Succeeded</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="failed">Failed</SelectItem>
-            <SelectItem value="refunded">Refunded</SelectItem>
-          </SelectContent>
-        </Select>
-        <Button onClick={loadPayments} variant="outline">Refresh</Button>
-      </div>
+      <Tabs defaultValue="payments" className="mt-6">
+        <TabsList>
+          <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="withdrawals">Withdrawal Requests</TabsTrigger>
+        </TabsList>
 
-      <Card className="mt-4">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="border-b bg-muted/50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Payer</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Amount</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Currency</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Provider</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
-                  <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
-                  </tr>
-                ) : payments.length === 0 ? (
-                  <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No payments found</td>
-                  </tr>
-                ) : (
-                  payments.map((payment) => (
-                    <tr key={payment.id} className="border-b hover:bg-muted/50">
-                      <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
-                        {payment.id.slice(0, 8)}...
-                      </td>
-                      <td className="px-4 py-3 text-sm">{payment.payer?.full_name || 'Unknown'}</td>
-                      <td className="px-4 py-3 text-sm font-semibold">R{Number(payment.amount).toFixed(2)}</td>
-                      <td className="px-4 py-3 text-sm">{payment.currency}</td>
-                      <td className="px-4 py-3 text-sm">{payment.provider || 'N/A'}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <Badge variant={getStatusColor(payment.status)}>{payment.status}</Badge>
-                      </td>
-                      <td className="px-4 py-3 text-sm text-muted-foreground">
-                        {format(new Date(payment.created_at), 'MMM dd, yyyy HH:mm')}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Select
-                          value={payment.status}
-                          onValueChange={(value) => updatePaymentStatus(payment.id, value as PaymentStatus)}
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Pending</SelectItem>
-                            <SelectItem value="succeeded">Succeeded</SelectItem>
-                            <SelectItem value="failed">Failed</SelectItem>
-                            <SelectItem value="refunded">Refunded</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+        <TabsContent value="payments">
+          <div className="mt-4 flex items-center gap-4">
+            <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as PaymentStatus | "all")}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Payments</SelectItem>
+                <SelectItem value="succeeded">Succeeded</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="refunded">Refunded</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={loadPayments} variant="outline">Refresh</Button>
           </div>
-        </CardContent>
-      </Card>
+
+          <Card className="mt-4">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="border-b bg-muted/50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-sm font-medium">ID</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Payer</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Amount</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Currency</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Provider</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Date</th>
+                      <th className="px-4 py-3 text-left text-sm font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loading ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                      </tr>
+                    ) : payments.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-4 py-8 text-center text-muted-foreground">No payments found</td>
+                      </tr>
+                    ) : (
+                      payments.map((payment) => (
+                        <tr key={payment.id} className="border-b hover:bg-muted/50">
+                          <td className="px-4 py-3 text-xs font-mono text-muted-foreground">
+                            {payment.id.slice(0, 8)}...
+                          </td>
+                          <td className="px-4 py-3 text-sm">{payment.payer?.full_name || 'Unknown'}</td>
+                          <td className="px-4 py-3 text-sm font-semibold">R{Number(payment.amount).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-sm">{payment.currency}</td>
+                          <td className="px-4 py-3 text-sm">{payment.provider || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm">
+                            <Badge variant={getStatusColor(payment.status)}>{payment.status}</Badge>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-muted-foreground">
+                            {format(new Date(payment.created_at), 'MMM dd, yyyy HH:mm')}
+                          </td>
+                          <td className="px-4 py-3">
+                            <Select
+                              value={payment.status}
+                              onValueChange={(value) => updatePaymentStatus(payment.id, value as PaymentStatus)}
+                            >
+                              <SelectTrigger className="h-8 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Pending</SelectItem>
+                                <SelectItem value="succeeded">Succeeded</SelectItem>
+                                <SelectItem value="failed">Failed</SelectItem>
+                                <SelectItem value="refunded">Refunded</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="withdrawals">
+          <AdminWithdrawalsPanel />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 };
