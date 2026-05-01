@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { format, formatDistanceToNow, isToday, isTomorrow } from "date-fns";
 import { StudentInsightsPanel } from "@/components/StudentInsightsPanel";
+import { BookingReceiptButton } from "@/components/BookingReceiptButton";
 
 interface AcademicProfileInfo {
   curriculum?: string | null;
@@ -233,6 +234,9 @@ export function BookingCard({
                   <MessageCircle className="h-4 w-4" />
                 </Button>
               </>
+            )}
+            {booking.status === "completed" && (
+              <BookingReceiptButton bookingId={booking.id} label="Download receipt" />
             )}
           </div>
         )}

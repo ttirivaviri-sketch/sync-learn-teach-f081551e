@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CreditCard, CheckCircle, Clock, XCircle, RefreshCw, ChevronRight, ChevronDown } from "lucide-react";
+import { CreditCard, CheckCircle, Clock, XCircle, RefreshCw, ChevronRight, ChevronDown, FileText, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { logger } from "@/utils/logger";
+import { useReceipt } from "@/hooks/useReceipt";
 
 interface Payment {
   id: string;
@@ -144,32 +145,52 @@ export const PaymentHistory = ({
     }
   };
 
-  const PaymentRow = ({ payment }: { payment: Payment }) => (
-    <div
-      className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-    >
-      <div className="flex items-center gap-3">
-        {getStatusIcon(payment.status)}
-        <div>
-          <p className="font-medium text-sm">
-            {payment.booking?.tutor_subjects?.subject || "Tutoring Session"}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {payment.booking?.tutor_profile?.full_name || "Tutor"} •{" "}
-            {format(new Date(payment.created_at), "MMM dd, yyyy")}
-          </p>
+  const { downloadReceipt, downloading } = useReceipt();
+
+  const PaymentRow = ({ payment }: { payment: Payment }) => {
+    const isDownloading = downloading === payment.id;
+    return (
+      <div className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+        <div className="flex items-center gap-3 min-w-0">
+          {getStatusIcon(payment.status)}
+          <div className="min-w-0">
+            <p className="font-medium text-sm truncate">
+              {payment.booking?.tutor_subjects?.subject || "Tutoring Session"}
+            </p>
+            <p className="text-xs text-muted-foreground truncate">
+              {payment.booking?.tutor_profile?.full_name || "Tutor"} •{" "}
+              {format(new Date(payment.created_at), "MMM dd, yyyy")}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="text-right">
+            <p className="font-semibold text-sm">
+              R{Number(payment.amount).toFixed(2)}
+            </p>
+            {getStatusBadge(payment.status)}
+          </div>
+          {payment.status === "succeeded" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              title="Download receipt"
+              onClick={() => downloadReceipt(payment.id)}
+              disabled={isDownloading}
+            >
+              {isDownloading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <FileText className="h-4 w-4" />
+              )}
+            </Button>
+          )}
         </div>
       </div>
-      <div className="flex items-center gap-2">
-        <div className="text-right">
-          <p className="font-semibold text-sm">
-            R{Number(payment.amount).toFixed(2)}
-          </p>
-          {getStatusBadge(payment.status)}
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (loading) {
     return (
