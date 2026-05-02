@@ -195,8 +195,8 @@ export const LearnerProfileTab = ({
               tutors={[
                 ...new Map(
                   upcomingBookings
-                    .filter((b) => b.tutor_id && b.tutor?.full_name)
-                    .map((b) => [b.tutor_id, { id: b.tutor_id!, name: b.tutor!.full_name! }])
+                    .filter((b) => b.tutor_id && b.tutor_profile?.full_name)
+                    .map((b) => [b.tutor_id, { id: b.tutor_id, name: b.tutor_profile!.full_name }])
                 ).values(),
               ]}
             />
