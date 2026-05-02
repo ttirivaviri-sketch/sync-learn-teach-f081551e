@@ -12,6 +12,7 @@ import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
 import { SyllabusSetupGate } from "@/components/SyllabusSetupGate";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ProgressReportButton } from "@/components/ProgressReportButton";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface UserProfile {
@@ -178,6 +179,30 @@ export const LearnerProfileTab = ({
           onClick={() => onNavigateTab("library")}
         />
       </div>
+
+      {/* ── Progress Report ── */}
+      {session?.user?.id && (
+        <div className="rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-4 border border-primary/20">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-sm font-bold text-foreground">Progress Report</h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Full PDF with charts, mock scores & an AI improvement plan.
+              </p>
+            </div>
+            <ProgressReportButton
+              learnerId={session.user.id}
+              tutors={[
+                ...new Map(
+                  upcomingBookings
+                    .filter((b) => b.tutor_id && b.tutor_profile?.full_name)
+                    .map((b) => [b.tutor_id, { id: b.tutor_id, name: b.tutor_profile!.full_name }])
+                ).values(),
+              ]}
+            />
+          </div>
+        </div>
+      )}
 
       {/* ── Menu Rows ── */}
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">

@@ -559,6 +559,36 @@ export type Database = {
           },
         ]
       }
+      landing_events: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          metadata: Json
+          path: string | null
+          referrer: string | null
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          metadata?: Json
+          path?: string | null
+          referrer?: string | null
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          path?: string | null
+          referrer?: string | null
+          session_id?: string
+        }
+        Relationships: []
+      }
       learner_subjects: {
         Row: {
           created_at: string
@@ -1153,6 +1183,42 @@ export type Database = {
           study_level?: Database["public"]["Enums"]["study_level"] | null
           updated_at?: string
           user_type?: string
+        }
+        Relationships: []
+      }
+      progress_reports: {
+        Row: {
+          ai_plan_json: Json
+          audience: string
+          created_at: string
+          expires_at: string
+          generated_at: string
+          id: string
+          learner_id: string
+          summary_json: Json
+          tutor_id: string | null
+        }
+        Insert: {
+          ai_plan_json?: Json
+          audience?: string
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          learner_id: string
+          summary_json?: Json
+          tutor_id?: string | null
+        }
+        Update: {
+          ai_plan_json?: Json
+          audience?: string
+          created_at?: string
+          expires_at?: string
+          generated_at?: string
+          id?: string
+          learner_id?: string
+          summary_json?: Json
+          tutor_id?: string | null
         }
         Relationships: []
       }
