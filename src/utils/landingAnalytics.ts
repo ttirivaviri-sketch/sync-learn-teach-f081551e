@@ -50,13 +50,16 @@ export async function track(
   }
 
   try {
-    await supabase.from("landing_events").insert({
-      session_id: getSessionId(),
-      event,
-      path: typeof window !== "undefined" ? window.location.pathname : null,
-      referrer: typeof document !== "undefined" ? document.referrer || null : null,
-      metadata,
-    });
+    await supabase.from("landing_events").insert([
+      {
+        session_id: getSessionId(),
+        event,
+        path: typeof window !== "undefined" ? window.location.pathname : null,
+        referrer:
+          typeof document !== "undefined" ? document.referrer || null : null,
+        metadata: metadata as any,
+      },
+    ]);
   } catch {
     // Best-effort — never block the UI on analytics
   }
