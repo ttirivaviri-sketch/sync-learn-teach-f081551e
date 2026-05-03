@@ -656,6 +656,57 @@ export type Database = {
           },
         ]
       }
+      library_system_resources: {
+        Row: {
+          created_at: string
+          curriculum: string
+          description: string | null
+          grade_levels: string[]
+          id: string
+          kind: string
+          pages: number | null
+          pdf_url: string
+          subject: string
+          thumbnail_url: string | null
+          title: string
+          topic: string | null
+          updated_at: string
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          curriculum: string
+          description?: string | null
+          grade_levels?: string[]
+          id?: string
+          kind: string
+          pages?: number | null
+          pdf_url: string
+          subject: string
+          thumbnail_url?: string | null
+          title: string
+          topic?: string | null
+          updated_at?: string
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          curriculum?: string
+          description?: string | null
+          grade_levels?: string[]
+          id?: string
+          kind?: string
+          pages?: number | null
+          pdf_url?: string
+          subject?: string
+          thumbnail_url?: string | null
+          title?: string
+          topic?: string | null
+          updated_at?: string
+          view_count?: number
+        }
+        Relationships: []
+      }
       location_codes: {
         Row: {
           active: boolean
