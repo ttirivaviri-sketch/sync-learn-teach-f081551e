@@ -14,6 +14,28 @@ const extractVideoUrl = (text: string | null | undefined): string | undefined =>
   return match ? match[0] : undefined;
 };
 
+const normalizeText = (value: string | null | undefined) => (value || "").trim().toLowerCase();
+
+const hasGradeOverlap = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) => {
+  if (!resourceGrades?.length || !learnerGrade) return true;
+  const target = normalizeText(learnerGrade);
+  return resourceGrades.some((grade) => normalizeText(grade) === target);
+};
+
+const matchesSubject = (resource: LibraryResource, subjects: string[] | null | undefined) => {
+  if (!subjects?.length) return true;
+  const resourceSubject = normalizeText(resource.tags?.subject || resource.category);
+
+  return subjects.some((subject) => {
+    const normalized = normalizeText(subject);
+    return (
+      resourceSubject === normalized ||
+      resourceSubject.includes(normalized) ||
+      normalized.includes(resourceSubject)
+    );
+  });
+};
+
 // ─── Seed data (used when Supabase table doesn't have items yet) ──────────────
 // This mirrors the database structure and allows the UI to work offline/dev mode
 
@@ -225,12 +247,12 @@ export function useLibraryResources(
 
   // Fetch tutor-uploaded tutorials AND PDFs from Supabase
   useEffect(() => {
-    const fetchTutorials = async () => {
+    const fetchLibraryResources = async () => {
       setLoading(true);
       try {
-        // Direct query: include content_type, pdf_url, resource_category for PDFs
-        const { data: directData, error: directError } = await supabase
-          .from("tutor_tutorials")
+        const [tutorialsResult, systemResourcesResult] = await Promise.all([
+          supabase
+            .from("tutor_tutorials")
           .select(
             `id, title, subject, topic, subtopic, grade, curriculum,
              description, rating, review_count, thumbnail_url,
@@ -238,10 +260,22 @@ export function useLibraryResources(
              tutor_id, content_type, pdf_url, resource_category`
           )
           .eq("status", "published")
-          .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("library_system_resources")
+            .select(
+              `id, title, subject, curriculum, grade_levels, topic,
+               kind, description, pages, thumbnail_url, pdf_url, view_count`
+            )
+            .order("created_at", { ascending: false }),
+        ]);
 
-        if (directError) {
+        const { data: directData, error: directError } = tutorialsResult;
+        const { data: systemData, error: systemError } = systemResourcesResult;
+
+        if (directError && systemError) {
           logger.warn("tutor_tutorials direct query failed:", directError.message);
+          logger.warn("library_system_resources query failed:", systemError.message);
           setDbFetched(true);
           return;
         }
@@ -265,7 +299,7 @@ export function useLibraryResources(
           });
         }
 
-        const mapped: LibraryResource[] = ((directData as any[]) || []).map((row) => {
+        const mappedTutorials: LibraryResource[] = ((directData as any[]) || []).map((row) => {
           const profile = profilesById[row.tutor_id];
           const isOfficial = profile?.is_official === true;
           const displayName = isOfficial
@@ -321,12 +355,42 @@ export function useLibraryResources(
           };
         });
 
+        const mappedSystemResources: LibraryResource[] = ((systemData as any[]) || []).map((row) => {
+          const isPastPaper = row.kind === "past_paper";
+          const gradeLevels = Array.isArray(row.grade_levels) ? row.grade_levels : [];
+
+          return {
+            id: row.id,
+            title: row.title,
+            author: row.curriculum,
+            type: isPastPaper ? "pastpaper" : "book",
+            category: row.subject || "General",
+            gradeLevel: gradeLevels.join(" • ") || "All Grades",
+            summary: row.description || "",
+            rating: 0,
+            reviews: row.view_count || 0,
+            thumbnail: row.thumbnail_url || "/placeholder.svg",
+            isOffline: false,
+            duration: row.pages ? `${row.pages} pages` : "PDF",
+            isTutorial: false,
+            videoUrl: row.pdf_url,
+            tags: {
+              subject: row.subject || "General",
+              topic: row.topic || "All Topics",
+              grade: gradeLevels[0] || "All Grades",
+              curriculum: row.curriculum,
+            },
+          };
+        });
+
+        const mapped = [...mappedTutorials, ...mappedSystemResources];
+
         logger.info(
-          "[useLibraryResources] Tutorials/PDFs:",
+          "[useLibraryResources] Library resources:",
           mapped.length,
           "videos:",
           mapped.filter((r) => r.type === "video").length,
-          "pdfs:",
+          "documents:",
           mapped.filter((r) => r.type !== "video").length
         );
         setDbResources(mapped);
@@ -339,7 +403,7 @@ export function useLibraryResources(
       }
     };
 
-    fetchTutorials();
+    fetchLibraryResources();
 
     const channel = supabase
       .channel("library-tutorials-sync")
@@ -347,7 +411,14 @@ export function useLibraryResources(
         "postgres_changes",
         { event: "*", schema: "public", table: "tutor_tutorials" },
         () => {
-          fetchTutorials();
+          fetchLibraryResources();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "library_system_resources" },
+        () => {
+          fetchLibraryResources();
         }
       )
       .subscribe();
@@ -362,13 +433,15 @@ export function useLibraryResources(
   const personalizedResources = academicProfile
     ? allResources.filter((r) => {
         if (!r.tags) return true;
-        const matchSubject = academicProfile.subjects.some((s) =>
-          r.tags!.subject.toLowerCase().includes(s.toLowerCase()) ||
-          s.toLowerCase().includes(r.tags!.subject.toLowerCase())
-        );
         const matchCurriculum =
-          !r.tags.curriculum || r.tags.curriculum === academicProfile.curriculum;
-        return matchSubject || matchCurriculum;
+          !r.tags.curriculum || normalizeText(r.tags.curriculum) === normalizeText(academicProfile.curriculum);
+        const matchGrade = hasGradeOverlap(
+          r.gradeLevel.split("•").map((grade) => grade.trim()).filter(Boolean),
+          academicProfile.grade
+        );
+        const matchSubjects = matchesSubject(r, academicProfile.subjects);
+
+        return matchCurriculum && matchGrade && matchSubjects;
       })
     : allResources;
 
@@ -385,7 +458,7 @@ export function useLibraryResources(
   // ── Search ────────────────────────────────────────────────────────────────
 
   const searchResults = searchQuery.trim()
-    ? allResources.filter((r) => {
+    ? personalizedResources.filter((r) => {
         const q = searchQuery.toLowerCase();
         return (
           r.title.toLowerCase().includes(q) ||
