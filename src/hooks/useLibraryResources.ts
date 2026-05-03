@@ -19,7 +19,10 @@ const normalizeText = (value: string | null | undefined) => (value || "").trim()
 const hasGradeOverlap = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) => {
   if (!resourceGrades?.length || !learnerGrade) return true;
   const target = normalizeText(learnerGrade);
-  return resourceGrades.some((grade) => normalizeText(grade) === target);
+  return resourceGrades.some((grade) => {
+    const normalized = normalizeText(grade);
+    return normalized === target || normalized.includes(target) || target.includes(normalized);
+  });
 };
 
 const matchesSubject = (resource: LibraryResource, subjects: string[] | null | undefined) => {
@@ -436,7 +439,7 @@ export function useLibraryResources(
         const matchCurriculum =
           !r.tags.curriculum || normalizeText(r.tags.curriculum) === normalizeText(academicProfile.curriculum);
         const matchGrade = hasGradeOverlap(
-          r.gradeLevel.split("•").map((grade) => grade.trim()).filter(Boolean),
+          [r.tags?.grade, ...r.gradeLevel.split("•")].filter(Boolean) as string[],
           academicProfile.grade
         );
         const matchSubjects = matchesSubject(r, academicProfile.subjects);
@@ -445,13 +448,15 @@ export function useLibraryResources(
       })
     : allResources;
 
-  const recommendedTutorials = allResources.filter((r) => r.isTutorial);
+  const visibleResources = academicProfile ? personalizedResources : allResources;
 
-  const pastPapers = allResources.filter(
+  const recommendedTutorials = visibleResources.filter((r) => r.isTutorial);
+
+  const pastPapers = visibleResources.filter(
     (r) => r.type === "pastpaper" || r.category.toLowerCase().includes("past paper")
   );
 
-  const topTutors = allResources
+  const topTutors = visibleResources
     .filter((r) => r.isTutorial && r.tutor)
     .sort((a, b) => (b.tutor?.rating || 0) - (a.tutor?.rating || 0));
 
