@@ -1,4 +1,5 @@
 import { Suspense, lazy, useEffect } from "react";
+import { MessageCircle } from "lucide-react";
 import HeroSection from "@/components/HeroSection";
 import { analytics } from "@/utils/analytics";
 
@@ -14,6 +15,7 @@ const TestimonialSection = lazy(() =>
 const StatsSection = lazy(() =>
   import("@/components/StatsSection").then((m) => ({ default: m.StatsSection }))
 );
+const ContactStrip = lazy(() => import("@/components/ContactStrip"));
 const Footer = lazy(() => import("@/components/Footer"));
 const PWAInstallPrompt = lazy(() =>
   import("@/components/PWAInstallPrompt").then((m) => ({ default: m.PWAInstallPrompt }))
@@ -41,12 +43,24 @@ const Index = () => {
         <StatsSection />
         <TestimonialSection />
         <TrustSection />
+        <ContactStrip />
         <Footer />
         <PWAInstallPrompt />
         <CookieConsent />
       </Suspense>
+
+      <a
+        href="https://wa.me/27686523995?text=Hi%20StudySync%2C%20I%27d%20like%20to%20know%20more"
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label="Chat on WhatsApp"
+        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition-all hover:scale-110 hover:bg-emerald-600 hover:shadow-xl"
+      >
+        <MessageCircle className="h-7 w-7" />
+      </a>
     </div>
   );
 };
 
 export default Index;
+

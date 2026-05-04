@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { GraduationCap, Twitter, Github, Linkedin, Instagram, ArrowRight } from "lucide-react";
+import { Twitter, Github, Linkedin, Instagram, ArrowRight, Mail, Phone, MessageCircle } from "lucide-react";
 
 const footerLinks = {
   "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
@@ -10,10 +10,20 @@ const footerLinks = {
 };
 
 const socials = [
-  { icon: Twitter,   label: "Twitter",   href: "#" },
+  { icon: Instagram, label: "Instagram", href: "https://instagram.com/studysyncplatform" },
+  { icon: MessageCircle, label: "WhatsApp", href: "https://wa.me/27686523995" },
+  { icon: Mail, label: "Email", href: "mailto:supportstudysync@gmail.com" },
   { icon: Linkedin,  label: "LinkedIn",  href: "#" },
-  { icon: Instagram, label: "Instagram", href: "#" },
   { icon: Github,    label: "GitHub",    href: "#" },
+  { icon: Twitter,   label: "Twitter",   href: "#" },
+];
+
+const directContacts = [
+  { label: "Instagram", value: "@studysyncplatform", href: "https://instagram.com/studysyncplatform", icon: Instagram },
+  { label: "WhatsApp", value: "+27 68 652 3995", href: "https://wa.me/27686523995", icon: MessageCircle },
+  { label: "Call (SA)", value: "+27 61 548 3423", href: "tel:+27615483423", icon: Phone },
+  { label: "Call (ZW)", value: "+263 78 067 4090", href: "tel:+263780674090", icon: Phone },
+  { label: "Email", value: "supportstudysync@gmail.com", href: "mailto:supportstudysync@gmail.com", icon: Mail },
 ];
 
 const Footer = () => {
@@ -73,11 +83,13 @@ const Footer = () => {
 
             {/* Socials */}
             <div className="flex gap-3">
-              {socials.map(({ icon: Icon, label, href }) => (
+            {socials.map(({ icon: Icon, label, href }) => (
                 <a
                   key={label}
                   href={href}
                   aria-label={label}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
                   className="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary flex items-center justify-center transition-colors"
                 >
                   <Icon className="h-4 w-4 text-background" />
@@ -106,6 +118,30 @@ const Footer = () => {
               </ul>
             </div>
           ))}
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-background/45 mb-4">
+              Contact
+            </p>
+            <ul className="space-y-3">
+              {directContacts.map(({ label, value, href, icon: Icon }) => (
+                <li key={label}>
+                  <a
+                    href={href}
+                    target={href.startsWith("http") ? "_blank" : undefined}
+                    rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                    className="flex items-start gap-2 text-sm text-background/70 hover:text-background transition-colors"
+                  >
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      <span className="block text-background/45 text-xs uppercase tracking-wide">{label}</span>
+                      <span>{value}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <Separator className="bg-white/10" />
