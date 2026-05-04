@@ -83,11 +83,13 @@ const Footer = () => {
 
             {/* Socials */}
             <div className="flex gap-3">
-              {socials.map(({ icon: Icon, label, href }) => (
+            {socials.map(({ icon: Icon, label, href }) => (
                 <a
                   key={label}
                   href={href}
                   aria-label={label}
+                  target={href.startsWith("http") ? "_blank" : undefined}
+                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
                   className="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary flex items-center justify-center transition-colors"
                 >
                   <Icon className="h-4 w-4 text-background" />
@@ -116,6 +118,30 @@ const Footer = () => {
               </ul>
             </div>
           ))}
+
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-background/45 mb-4">
+              Contact
+            </p>
+            <ul className="space-y-3">
+              {directContacts.map(({ label, value, href, icon: Icon }) => (
+                <li key={label}>
+                  <a
+                    href={href}
+                    target={href.startsWith("http") ? "_blank" : undefined}
+                    rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                    className="flex items-start gap-2 text-sm text-background/70 hover:text-background transition-colors"
+                  >
+                    <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      <span className="block text-background/45 text-xs uppercase tracking-wide">{label}</span>
+                      <span>{value}</span>
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
         <Separator className="bg-white/10" />
