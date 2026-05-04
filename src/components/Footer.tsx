@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { GraduationCap, Twitter, Github, Linkedin, Instagram, ArrowRight } from "lucide-react";
+import { Twitter, Github, Linkedin, Instagram, ArrowRight, Mail, Phone, MessageCircle } from "lucide-react";
 
 const footerLinks = {
   "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
@@ -10,10 +10,20 @@ const footerLinks = {
 };
 
 const socials = [
-  { icon: Twitter,   label: "Twitter",   href: "#" },
+  { icon: Instagram, label: "Instagram", href: "https://instagram.com/studysyncplatform" },
+  { icon: MessageCircle, label: "WhatsApp", href: "https://wa.me/27686523995" },
+  { icon: Mail, label: "Email", href: "mailto:supportstudysync@gmail.com" },
   { icon: Linkedin,  label: "LinkedIn",  href: "#" },
-  { icon: Instagram, label: "Instagram", href: "#" },
   { icon: Github,    label: "GitHub",    href: "#" },
+  { icon: Twitter,   label: "Twitter",   href: "#" },
+];
+
+const directContacts = [
+  { label: "Instagram", value: "@studysyncplatform", href: "https://instagram.com/studysyncplatform", icon: Instagram },
+  { label: "WhatsApp", value: "+27 68 652 3995", href: "https://wa.me/27686523995", icon: MessageCircle },
+  { label: "Call (SA)", value: "+27 61 548 3423", href: "tel:+27615483423", icon: Phone },
+  { label: "Call (ZW)", value: "+263 78 067 4090", href: "tel:+263780674090", icon: Phone },
+  { label: "Email", value: "supportstudysync@gmail.com", href: "mailto:supportstudysync@gmail.com", icon: Mail },
 ];
 
 const Footer = () => {
