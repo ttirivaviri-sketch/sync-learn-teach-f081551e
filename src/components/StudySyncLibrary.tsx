@@ -110,11 +110,27 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
+    // Documents (books, guides, past papers): open the PDF in a new tab.
+    // Fall back to pdf_url / url if the mapper didn't populate videoUrl.
+    if (["book", "guide", "pastpaper", "pdf"].includes(resource.type)) {
+      const extra = resource as unknown as Record<string, unknown>;
+      const documentUrl =
+        resource.videoUrl ||
+        (typeof extra.pdf_url === "string" ? (extra.pdf_url as string) : undefined) ||
+        (typeof extra.url === "string" ? (extra.url as string) : undefined);
+      if (documentUrl) {
+        window.open(documentUrl, "_blank", "noopener,noreferrer");
+        dispatchToast("Opening Resource", `Loading ${resource.title}...`);
+      } else {
+        dispatchToast("File not available", "This resource doesn't have an attached file yet.");
+      }
+      return;
+    }
+
     let videoUrl = resource.videoUrl;
     if (!videoUrl && resource.type === "video") {
       const videoUrlRegex =
         /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?[^\s)"']*|shorts\/[^\s)"']*|embed\/[^\s)"']*|live\/[^\s)"']*)|youtu\.be\/[^\s)"']*|(?:www\.)?vimeo\.com\/[^\s)"']*|(?:www\.)?loom\.com\/share\/[^\s)"']*|[^\s)"']*supabase\.co[^\s)"']*\/storage\/[^\s)"']*|[^\s)"']*\.(?:mp4|webm|mov|m4v|ogg)(?:\?[^\s)"']*)?)/i;
-      // Search summary, title, and any extra string-valued fields for video URLs
       const extra = resource as unknown as Record<string, unknown>;
       const textsToSearch = [
         resource.summary,
@@ -128,7 +144,7 @@ const StudySyncLibrary = ({
       }
     }
     if (resource.type === "video" && videoUrl) {
-      // Open in Reels feed at correct index
+      // Open Study Clips feed at correct index — preserves clip playback flow
       const idx = recommendedTutorials.findIndex((r) => String(r.id) === String(resource.id));
       if (idx >= 0 && recommendedTutorials.length > 0) {
         setReelsStartIndex(idx);
@@ -138,11 +154,8 @@ const StudySyncLibrary = ({
       }
       return;
     }
-    if (resource.type === "video") {
-      dispatchToast("No Video URL", "This tutorial doesn't have a playable link yet.");
-    } else {
-      dispatchToast("Opening Resource", `Opening ${resource.title}`);
-    }
+
+    dispatchToast("No Video URL", "This tutorial doesn't have a playable link yet.");
   };
 
   const handleBookTutor = (tutorId: string, tutorName: string) => {
