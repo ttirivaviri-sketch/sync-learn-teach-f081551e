@@ -1,0 +1,1362 @@
+diff --git a/src/components/ContactStrip.tsx b/src/components/ContactStrip.tsx
+new file mode 100644
+index 0000000..0964577
+--- /dev/null
++++ b/src/components/ContactStrip.tsx
+@@ -0,0 +1,79 @@
++import { Instagram, Mail, MessageCircle, Phone } from "lucide-react";
++
++const contactItems = [
++  {
++    title: "WhatsApp",
++    value: "+27 68 652 3995",
++    href: "https://wa.me/27686523995",
++    Icon: MessageCircle,
++    accent: "text-emerald-600 bg-emerald-50 border-emerald-100 hover:border-emerald-300",
++  },
++  {
++    title: "Instagram",
++    value: "@studysyncplatform",
++    href: "https://instagram.com/studysyncplatform",
++    Icon: Instagram,
++    accent: "text-pink-600 bg-pink-50 border-pink-100 hover:border-pink-300",
++  },
++  {
++    title: "Email",
++    value: "supportstudysync@gmail.com",
++    href: "mailto:supportstudysync@gmail.com",
++    Icon: Mail,
++    accent: "text-blue-600 bg-blue-50 border-blue-100 hover:border-blue-300",
++  },
++  {
++    title: "Calls (SA)",
++    value: "+27 61 548 3423",
++    href: "tel:+27615483423",
++    Icon: Phone,
++    accent: "text-violet-600 bg-violet-50 border-violet-100 hover:border-violet-300",
++  },
++  {
++    title: "Calls (ZW)",
++    value: "+263 78 067 4090",
++    href: "tel:+263780674090",
++    Icon: Phone,
++    accent: "text-amber-600 bg-amber-50 border-amber-100 hover:border-amber-300",
++  },
++];
++
++const ContactStrip = () => {
++  return (
++    <section className="bg-gradient-to-b from-white to-slate-50 py-16 px-4 sm:px-6 lg:px-8">
++      <div className="mx-auto max-w-6xl rounded-3xl border border-slate-200 bg-white p-8 shadow-sm sm:p-10">
++        <div className="mx-auto max-w-2xl text-center">
++          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.2em] text-primary">
++            Talk to StudySync
++          </p>
++          <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl">
++            Need help choosing the right study support?
++          </h2>
++          <p className="mt-4 text-base leading-7 text-slate-600">
++            Reach out directly on WhatsApp, Instagram, email or phone. We want visitors to get answers fast instead of leaving the page.
++          </p>
++        </div>
++
++        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
++          {contactItems.map(({ title, value, href, Icon, accent }) => (
++            <a
++              key={title}
++              href={href}
++              target={href.startsWith("http") ? "_blank" : undefined}
++              rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
++              className={`group rounded-2xl border p-4 transition-all hover:-translate-y-1 hover:shadow-md ${accent}`}
++            >
++              <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">
++                <Icon className="h-5 w-5" />
++              </div>
++              <p className="text-sm font-semibold text-slate-900">{title}</p>
++              <p className="mt-1 break-words text-sm text-slate-600">{value}</p>
++            </a>
++          ))}
++        </div>
++      </div>
++    </section>
++  );
++};
++
++export default ContactStrip;
+diff --git a/src/components/Footer.tsx b/src/components/Footer.tsx
+index 378ecc1..c7c3cac 100644
+--- a/src/components/Footer.tsx
++++ b/src/components/Footer.tsx
+@@ -1,6 +1,6 @@
+ import { useState } from "react";
+ import { Separator } from "@/components/ui/separator";
+-import { GraduationCap, Twitter, Github, Linkedin, Instagram, ArrowRight } from "lucide-react";
++import { Twitter, Github, Linkedin, Instagram, ArrowRight, Mail, Phone, MessageCircle } from "lucide-react";
+ 
+ const footerLinks = {
+   "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
+@@ -10,10 +10,20 @@ const footerLinks = {
+ };
+ 
+ const socials = [
+-  { icon: Twitter,   label: "Twitter",   href: "#" },
++  { icon: Instagram, label: "Instagram", href: "https://instagram.com/studysyncplatform" },
++  { icon: MessageCircle, label: "WhatsApp", href: "https://wa.me/27686523995" },
++  { icon: Mail, label: "Email", href: "mailto:supportstudysync@gmail.com" },
+   { icon: Linkedin,  label: "LinkedIn",  href: "#" },
+-  { icon: Instagram, label: "Instagram", href: "#" },
+   { icon: Github,    label: "GitHub",    href: "#" },
++  { icon: Twitter,   label: "Twitter",   href: "#" },
++];
++
++const directContacts = [
++  { label: "Instagram", value: "@studysyncplatform", href: "https://instagram.com/studysyncplatform", icon: Instagram },
++  { label: "WhatsApp", value: "+27 68 652 3995", href: "https://wa.me/27686523995", icon: MessageCircle },
++  { label: "Call (SA)", value: "+27 61 548 3423", href: "tel:+27615483423", icon: Phone },
++  { label: "Call (ZW)", value: "+263 78 067 4090", href: "tel:+263780674090", icon: Phone },
++  { label: "Email", value: "supportstudysync@gmail.com", href: "mailto:supportstudysync@gmail.com", icon: Mail },
+ ];
+ 
+ const Footer = () => {
+@@ -78,6 +88,8 @@ const Footer = () => {
+                   key={label}
+                   href={href}
+                   aria-label={label}
++                  target={href.startsWith("http") ? "_blank" : undefined}
++                  rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+                   className="w-9 h-9 rounded-lg bg-white/10 hover:bg-primary flex items-center justify-center transition-colors"
+                 >
+                   <Icon className="h-4 w-4 text-background" />
+@@ -106,6 +118,25 @@ const Footer = () => {
+               </ul>
+             </div>
+           ))}
++
++          <div>
++            <p className="text-xs font-bold uppercase tracking-widest text-background/45 mb-4">
++              Contact
++            </p>
++            <ul className="space-y-3">
++              {directContacts.map(({ label, value, href, icon: Icon }) => (
++                <li key={label}>
++                  <a href={href} className="flex items-start gap-2 text-sm text-background/70 hover:text-background transition-colors">
++                    <Icon className="mt-0.5 h-4 w-4 shrink-0" />
++                    <span>
++                      <span className="block text-background/45 text-xs uppercase tracking-wide">{label}</span>
++                      <span>{value}</span>
++                    </span>
++                  </a>
++                </li>
++              ))}
++            </ul>
++          </div>
+         </div>
+ 
+         <Separator className="bg-white/10" />
+diff --git a/src/components/StudySyncLibrary.tsx b/src/components/StudySyncLibrary.tsx
+index c2cf1da..3687fa5 100644
+--- a/src/components/StudySyncLibrary.tsx
++++ b/src/components/StudySyncLibrary.tsx
+@@ -32,12 +32,14 @@ interface StudySyncLibraryProps {
+   academicProfile?: AcademicProfile | null;
+   onBookTutor?: (tutorId: string, tutorName: string) => void;
+   onNeedHelp?: () => void;
++  onShowAcademicSetup?: () => void;
+ }
+ 
+ const StudySyncLibrary = ({
+   academicProfile,
+   onBookTutor,
+   onNeedHelp,
++  onShowAcademicSetup,
+ }: StudySyncLibraryProps) => {
+   const [searchQuery, setSearchQuery] = useState("");
+   const [myLibraryItems, setMyLibraryItems] = useState<string[]>([]);
+@@ -65,8 +67,15 @@ const StudySyncLibrary = ({
+       if (recommendedTutorials.length > 0) {
+         setReelsStartIndex(0);
+         setReelsFeedOpen(true);
++      } else {
++        dispatchToast(
++          "No tutorials yet",
++          academicProfile
++            ? "No tutorial clips match your current academic profile yet. Try another subject or update your profile."
++            : "Set your academic profile to unlock tutorial clips matched to your curriculum and grade."
++        );
+       }
+-      // Don't actually switch the visible tab â stay where they were
++      // Keep the current visible tab and use Tutorials as a launcher.
+       return;
+     }
+     setPreviousCategory(activeCategory);
+@@ -110,11 +119,21 @@ const StudySyncLibrary = ({
+   };
+ 
+   const openResource = (resource: LibraryResource) => {
++    if (["book", "guide", "pastpaper", "pdf"].includes(resource.type)) {
++      const documentUrl = resource.videoUrl;
++      if (documentUrl) {
++        window.open(documentUrl, "_blank", "noopener,noreferrer");
++        dispatchToast("Opening Resource", `Loading ${resource.title}...`);
++      } else {
++        dispatchToast("File not available", "This resource doesn't have an attached file yet.");
++      }
++      return;
++    }
++
+     let videoUrl = resource.videoUrl;
+     if (!videoUrl && resource.type === "video") {
+       const videoUrlRegex =
+         /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?[^\s)"']*|shorts\/[^\s)"']*|embed\/[^\s)"']*|live\/[^\s)"']*)|youtu\.be\/[^\s)"']*|(?:www\.)?vimeo\.com\/[^\s)"']*|(?:www\.)?loom\.com\/share\/[^\s)"']*|[^\s)"']*supabase\.co[^\s)"']*\/storage\/[^\s)"']*|[^\s)"']*\.(?:mp4|webm|mov|m4v|ogg)(?:\?[^\s)"']*)?)/i;
+-      // Search summary, title, and any extra string-valued fields for video URLs
+       const extra = resource as unknown as Record<string, unknown>;
+       const textsToSearch = [
+         resource.summary,
+@@ -124,11 +143,14 @@ const StudySyncLibrary = ({
+       ].filter(Boolean) as string[];
+       for (const text of textsToSearch) {
+         const match = text.match(videoUrlRegex);
+-        if (match) { videoUrl = match[0]; break; }
++        if (match) {
++          videoUrl = match[0];
++          break;
++        }
+       }
+     }
++
+     if (resource.type === "video" && videoUrl) {
+-      // Open in Reels feed at correct index
+       const idx = recommendedTutorials.findIndex((r) => String(r.id) === String(resource.id));
+       if (idx >= 0 && recommendedTutorials.length > 0) {
+         setReelsStartIndex(idx);
+@@ -138,11 +160,8 @@ const StudySyncLibrary = ({
+       }
+       return;
+     }
+-    if (resource.type === "video") {
+-      dispatchToast("No Video URL", "This tutorial doesn't have a playable link yet.");
+-    } else {
+-      dispatchToast("Opening Resource", `Opening ${resource.title}`);
+-    }
++
++    dispatchToast("No Video URL", "This tutorial doesn't have a playable link yet.");
+   };
+ 
+   const handleBookTutor = (tutorId: string, tutorName: string) => {
+@@ -349,10 +368,17 @@ const StudySyncLibrary = ({
+                   return (
+                     <Card className="bg-muted/30">
+                       <CardContent className="p-6 text-center">
+-                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+-                        <p className="text-sm text-muted-foreground">
+-                          Textbooks &amp; study guides will appear here.
++                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
++                        <h4 className="font-medium mb-2">No books for this profile yet</h4>
++                        <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
++                          {academicProfile
++                            ? `We couldn't find books or study guides for ${academicProfile.curriculum} ${academicProfile.grade} yet. Try changing your academic profile to see more resources.`
++                            : "Set your curriculum, grade and subjects to unlock books and study guides matched to your academic profile."}
+                         </p>
++                        <Button variant="outline" size="sm" onClick={onShowAcademicSetup}>
++                          <GraduationCap className="h-3.5 w-3.5 mr-1" />
++                          {academicProfile ? "Change academic profile" : "Set academic profile"}
++                        </Button>
+                       </CardContent>
+                     </Card>
+                   );
+@@ -389,8 +415,17 @@ const StudySyncLibrary = ({
+               {pastPapers.length === 0 ? (
+                 <Card className="bg-muted/30">
+                   <CardContent className="p-6 text-center">
+-                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+-                    <p className="text-sm text-muted-foreground">Past papers will appear here.</p>
++                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
++                    <h4 className="font-medium mb-2">No past papers for this profile yet</h4>
++                    <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
++                      {academicProfile
++                        ? `We couldn't find past papers for ${academicProfile.curriculum} ${academicProfile.grade} yet. Update your academic profile to browse papers for another curriculum, grade or subject.`
++                        : "Set your curriculum, grade and subjects to unlock past papers matched to your academic profile."}
++                    </p>
++                    <Button variant="outline" size="sm" onClick={onShowAcademicSetup}>
++                      <GraduationCap className="h-3.5 w-3.5 mr-1" />
++                      {academicProfile ? "Change academic profile" : "Set academic profile"}
++                    </Button>
+                   </CardContent>
+                 </Card>
+               ) : (
+diff --git a/src/components/library/PosterCard.tsx b/src/components/library/PosterCard.tsx
+index 1d1f146..16943b6 100644
+--- a/src/components/library/PosterCard.tsx
++++ b/src/components/library/PosterCard.tsx
+@@ -2,6 +2,20 @@ import { Book, FileText, BadgeCheck } from "lucide-react";
+ import { Badge } from "@/components/ui/badge";
+ import type { LibraryResource } from "@/types/academicProfile";
+ 
++const getFallbackGradient = (subject: string, isPaper: boolean) => {
++  if (isPaper) return "from-orange-500 via-orange-600 to-amber-700";
++  const palettes = [
++    "from-indigo-500 via-purple-600 to-pink-600",
++    "from-emerald-500 via-teal-600 to-cyan-700",
++    "from-rose-500 via-red-600 to-orange-600",
++    "from-blue-500 via-indigo-600 to-violet-700",
++    "from-amber-500 via-yellow-600 to-orange-700",
++    "from-fuchsia-500 via-purple-600 to-indigo-700",
++  ];
++  const hash = (subject || "General").split("").reduce((sum, char) => sum + char.charCodeAt(0), 0);
++  return palettes[hash % palettes.length];
++};
++
+ interface PosterCardProps {
+   resource: LibraryResource;
+   variant?: "portrait" | "landscape";
+@@ -16,6 +30,7 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
+   const isPaper = resource.type === "pastpaper";
+   const Icon = isPaper ? FileText : Book;
+   const isOfficial = resource.author === "studysyncofficial";
++  const hasRealCover = Boolean(resource.thumbnail && resource.thumbnail !== "/placeholder.svg");
+ 
+   return (
+     <button
+@@ -25,7 +40,7 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
+       }`}
+     >
+       {/* Cover */}
+-      {resource.thumbnail && resource.thumbnail !== "/placeholder.svg" ? (
++      {hasRealCover ? (
+         <img
+           src={resource.thumbnail}
+           alt={resource.title}
+@@ -34,16 +49,26 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
+           className="absolute inset-0 w-full h-full object-cover"
+           loading="lazy"
+           decoding="async"
++          onError={(e) => {
++            (e.currentTarget as HTMLImageElement).style.display = "none";
++          }}
+         />
+       ) : (
+-        <div
+-          className={`absolute inset-0 flex items-center justify-center ${
+-            isPaper
+-              ? "bg-gradient-to-br from-orange-500/30 via-orange-700/40 to-orange-900/60"
+-              : "bg-gradient-to-br from-primary/30 via-primary/50 to-primary/80"
+-          }`}
+-        >
+-          <Icon className="h-12 w-12 text-white/80" />
++        <div className={`absolute inset-0 flex flex-col bg-gradient-to-br ${getFallbackGradient(resource.category, isPaper)}`}>
++          <div className="flex-1 flex items-center justify-center p-3">
++            <Icon className="h-10 w-10 text-white/25" />
++          </div>
++          <div className="px-3 pb-3 text-left">
++            <p className="text-[10px] font-bold uppercase tracking-wider text-white/70 mb-1">
++              {resource.category || "General"}
++            </p>
++            <p className="text-white font-bold text-xs leading-tight line-clamp-3">
++              {resource.title}
++            </p>
++            {resource.gradeLevel && (
++              <p className="text-[10px] text-white/80 mt-1 line-clamp-1">{resource.gradeLevel}</p>
++            )}
++          </div>
+         </div>
+       )}
+ 
+@@ -57,17 +82,19 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
+       </Badge>
+ 
+       {/* Bottom overlay */}
+-      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2.5">
+-        <h4 className="text-white font-semibold text-xs leading-tight line-clamp-2 mb-1">
+-          {resource.title}
+-        </h4>
+-        <div className="flex items-center gap-1">
+-          <span className="text-white/70 text-[10px] truncate">{resource.author}</span>
+-          {isOfficial && (
+-            <BadgeCheck className="h-3 w-3 text-blue-400 fill-blue-400/30 shrink-0" />
+-          )}
++      {hasRealCover && (
++        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2.5">
++          <h4 className="text-white font-semibold text-xs leading-tight line-clamp-2 mb-1">
++            {resource.title}
++          </h4>
++          <div className="flex items-center gap-1">
++            <span className="text-white/70 text-[10px] truncate">{resource.author}</span>
++            {isOfficial && (
++              <BadgeCheck className="h-3 w-3 text-blue-400 fill-blue-400/30 shrink-0" />
++            )}
++          </div>
+         </div>
+-      </div>
++      )}
+     </button>
+   );
+ }
+diff --git a/src/components/library/StudyClipsFeed.tsx b/src/components/library/StudyClipsFeed.tsx
+index c9d437e..1cc4e66 100644
+--- a/src/components/library/StudyClipsFeed.tsx
++++ b/src/components/library/StudyClipsFeed.tsx
+@@ -203,15 +203,25 @@ export function StudyClipsFeed({
+   myLibraryItems,
+ }: StudyClipsFeedProps) {
+   const containerRef = useRef<HTMLDivElement>(null);
+-  const [activeIndex, setActiveIndex] = useState(startIndex);
++  const [activeIndex, setActiveIndex] = useState(
++    Math.min(startIndex, Math.max(0, videos.length - 1))
++  );
+ 
+-  // Scroll to start index on mount
++  // Scroll to start index on mount / reopen
+   useEffect(() => {
+     const el = containerRef.current;
+     if (!el) return;
+-    const target = el.children[startIndex] as HTMLElement | undefined;
++    const safeIndex = Math.min(startIndex, Math.max(0, videos.length - 1));
++    setActiveIndex(safeIndex);
++    const target = el.children[safeIndex] as HTMLElement | undefined;
+     target?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
+-  }, [startIndex]);
++  }, [startIndex, videos.length]);
++
++  useEffect(() => {
++    if (activeIndex >= videos.length) {
++      setActiveIndex(Math.max(0, videos.length - 1));
++    }
++  }, [videos.length, activeIndex]);
+ 
+   // IntersectionObserver to track active slide
+   useEffect(() => {
+diff --git a/src/pages/Index.tsx b/src/pages/Index.tsx
+index 770021d..cb3e388 100644
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -1,4 +1,5 @@
+ import { Suspense, lazy, useEffect } from "react";
++import { MessageCircle } from "lucide-react";
+ import HeroSection from "@/components/HeroSection";
+ import { analytics } from "@/utils/analytics";
+ 
+@@ -11,9 +12,7 @@ const HowItWorksSection = lazy(() => import("@/components/HowItWorksSection"));
+ const TestimonialSection = lazy(() =>
+   import("@/components/TestimonialSection").then((m) => ({ default: m.TestimonialSection }))
+ );
+-const StatsSection = lazy(() =>
+-  import("@/components/StatsSection").then((m) => ({ default: m.StatsSection }))
+-);
++const ContactStrip = lazy(() => import("@/components/ContactStrip"));
+ const Footer = lazy(() => import("@/components/Footer"));
+ const PWAInstallPrompt = lazy(() =>
+   import("@/components/PWAInstallPrompt").then((m) => ({ default: m.PWAInstallPrompt }))
+@@ -38,13 +37,23 @@ const Index = () => {
+         <HowItWorksSection />
+         <FeaturesSection />
+         <StudyModeSection />
+-        <StatsSection />
+         <TestimonialSection />
+         <TrustSection />
++        <ContactStrip />
+         <Footer />
+         <PWAInstallPrompt />
+         <CookieConsent />
+       </Suspense>
++
++      <a
++        href="https://wa.me/27686523995?text=Hi%20StudySync%2C%20I%27d%20like%20to%20know%20more"
++        target="_blank"
++        rel="noopener noreferrer"
++        aria-label="Chat on WhatsApp"
++        className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg transition-all hover:scale-110 hover:bg-emerald-600 hover:shadow-xl"
++      >
++        <MessageCircle className="h-7 w-7" />
++      </a>
+     </div>
+   );
+ };
+diff --git a/src/pages/learner/LearnerLibraryTab.tsx b/src/pages/learner/LearnerLibraryTab.tsx
+index d4b910f..c1326e7 100644
+--- a/src/pages/learner/LearnerLibraryTab.tsx
++++ b/src/pages/learner/LearnerLibraryTab.tsx
+@@ -56,6 +56,7 @@ export const LearnerLibraryTab = ({
+       academicProfile={academicProfile as any}
+       onBookTutor={onBookTutor}
+       onNeedHelp={onNeedHelp}
++      onShowAcademicSetup={onShowAcademicSetup}
+     />
+   </div>
+ );
+diff --git a/src/studymode/components/StructuredDailyTaskRunner.tsx b/src/studymode/components/StructuredDailyTaskRunner.tsx
+index 9a4853a..7fccf6e 100644
+--- a/src/studymode/components/StructuredDailyTaskRunner.tsx
++++ b/src/studymode/components/StructuredDailyTaskRunner.tsx
+@@ -1,4 +1,4 @@
+-import { useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RefreshCw, Eye, Send } from 'lucide-react';
+ import { Button } from '@/components/ui/button';
+ import { Textarea } from '@/components/ui/textarea';
+@@ -9,6 +9,8 @@ import { useUserProgress } from '../hooks/useUserProgress';
+ import { useSubjectXP } from '../hooks/useSubjectXP';
+ import { DailyTask, Subject } from '../types/study';
+ import { cn } from '@/lib/utils';
++import { fingerprintQuestionStem, hashText, logGenerationHistory } from '../lib/generationHistory';
++import { supabase } from '@/integrations/supabase/client';
+ 
+ interface Props {
+   task: DailyTask;
+@@ -39,6 +41,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
+   });
+ 
+   const [step, setStep] = useState<'learn' | 'review' | 'practice' | 'exam'>('learn');
++  const lastLoggedHash = useRef<string | null>(null);
+   const [practiceIdx, setPracticeIdx] = useState(0);
+   const [practiceAnswers, setPracticeAnswers] = useState<Record<number, string>>({});
+   const [practiceRevealed, setPracticeRevealed] = useState<Record<number, boolean>>({});
+@@ -69,6 +72,39 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
+     );
+   }
+ 
++  useEffect(() => {
++    const persistGeneration = async () => {
++      if (!task) return;
++      const generationHash = hashText(JSON.stringify(task));
++      if (lastLoggedHash.current === generationHash) return;
++
++      const { data: { user } } = await supabase.auth.getUser();
++      if (!user) return;
++
++      await logGenerationHistory({
++        userId: user.id,
++        subject: subject.name,
++        topic: task.topic || subject.currentTopic.name,
++        activityType: 'structured-daily-task',
++        metadata: {
++          title: dailyTask.title,
++          subtopicFocus: task.subtopic || null,
++          subtopics: task.subtopic ? [task.subtopic] : (subject.currentTopic.subtopics || []),
++          concepts: task.concepts || [],
++          questionFingerprints: [
++            ...task.blocks.practice_questions.map((q) => fingerprintQuestionStem(q.question)),
++            fingerprintQuestionStem(task.blocks.exam_question.question),
++          ],
++          contentHash: generationHash,
++        },
++      });
++
++      lastLoggedHash.current = generationHash;
++    };
++
++    persistGeneration();
++  }, [dailyTask.title, subject.currentTopic.name, subject.currentTopic.subtopics, subject.name, task]);
++
+   const practice = task.blocks.practice_questions;
+   const currentQ: PracticeQuestion | undefined = practice[practiceIdx];
+ 
+diff --git a/src/studymode/components/TaskContentPanel.tsx b/src/studymode/components/TaskContentPanel.tsx
+index 68e77ac..b8bd3d1 100644
+--- a/src/studymode/components/TaskContentPanel.tsx
++++ b/src/studymode/components/TaskContentPanel.tsx
+@@ -1,4 +1,4 @@
+-import { useEffect, useState } from 'react';
++import { useEffect, useRef, useState } from 'react';
+ import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap, Send, Eye, MinusCircle, Brain } from 'lucide-react';
+ import { MathMarkdown } from './MathMarkdown';
+ import { Button } from '@/components/ui/button';
+@@ -12,6 +12,7 @@ import { useSubjectXP } from '../hooks/useSubjectXP';
+ import { supabase } from '../../integrations/supabase/client';
+ import { cn } from '@/lib/utils';
+ import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
++import { extractQuestionFingerprintsFromMarkdown, extractRecentContext, extractSubtopicFocusFromMarkdown, hashText, loadRecentGenerationHistory, logGenerationHistory } from '../lib/generationHistory';
+ 
+ interface TaskContentPanelProps {
+   task: DailyTask;
+@@ -60,6 +61,7 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack
+   const { addXp, updateStreak } = useUserProgress();
+   const { awardXP } = useSubjectXP();
+   const isReplay = !!task.isCompleted;
++  const lastLoggedHash = useRef<string | null>(null);
+ 
+   // Answer-first state for active-recall
+   const [userAnswer, setUserAnswer] = useState('');
+@@ -98,31 +100,34 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack
+         }
+       }
+ 
+-      // Query recently studied subtopics for concept-learning diversification
+       let previouslyStudiedSubtopics: string[] = [];
+-      if (task.type === 'concept-learning') {
+-        try {
+-          const { data: { user } } = await supabase.auth.getUser();
+-          if (user) {
+-            const { data: recentActivity } = await supabase
+-              .from('study_activity')
+-              .select('metadata')
+-              .eq('user_id', user.id)
+-              .eq('subject', subject.name)
+-              .eq('topic', subject.currentTopic.name)
+-              .eq('activity_type', 'concept-learning')
+-              .order('created_at', { ascending: false })
+-              .limit(20);
+-
+-            if (recentActivity) {
+-              previouslyStudiedSubtopics = recentActivity
+-                .map(a => (a.metadata as any)?.subtopicFocus)
+-                .filter(Boolean);
+-            }
+-          }
+-        } catch {
+-          // silent
++      let recentQuestionFingerprints: string[] = [];
++      let recentSubtopics: string[] = [];
++      let recentConcepts: string[] = [];
++      let recentGenerationNotes: string[] = [];
++
++      try {
++        const { data: { user } } = await supabase.auth.getUser();
++        if (user) {
++          const recentEntries = await loadRecentGenerationHistory({
++            userId: user.id,
++            subject: subject.name,
++            topic: subject.currentTopic.name,
++            activityTypes: [task.type, 'structured-daily-task', 'quiz-generated', 'recall-question-batch'],
++            limit: 20,
++          });
++          const recentContext = extractRecentContext(recentEntries);
++          previouslyStudiedSubtopics = recentContext.recentSubtopics;
++          recentQuestionFingerprints = recentContext.recentQuestionFingerprints;
++          recentSubtopics = recentContext.recentSubtopics;
++          recentConcepts = recentContext.recentConcepts;
++          recentGenerationNotes = recentEntries
++            .map((entry) => `${entry.activity_type}: ${((entry.metadata as any)?.title || (entry.metadata as any)?.subtopicFocus || '').toString()}`)
++            .filter(Boolean)
++            .slice(0, 8);
+         }
++      } catch {
++        // silent
+       }
+ 
+       generateContent({
+@@ -137,12 +142,46 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack
+         masteryStatus: performance?.masteryStatus,
+         difficulty: performance?.recommendedDifficulty,
+         previouslyStudiedSubtopics: previouslyStudiedSubtopics.length > 0 ? previouslyStudiedSubtopics : undefined,
++        recentQuestionFingerprints,
++        recentSubtopics,
++        recentConcepts,
++        recentGenerationNotes,
+       });
+     };
+ 
+     loadAndGenerate();
+   }, [task.id, contextLoaded]);
+ 
++  useEffect(() => {
++    const persistGeneration = async () => {
++      if (!content || isLoading) return;
++      const contentHash = hashText(`${task.type}::${content}`);
++      if (lastLoggedHash.current === contentHash) return;
++
++      const { data: { user } } = await supabase.auth.getUser();
++      if (!user) return;
++
++      await logGenerationHistory({
++        userId: user.id,
++        subject: subject.name,
++        topic: subject.currentTopic.name,
++        activityType: task.type,
++        metadata: {
++          title: task.title,
++          subtopicFocus: extractSubtopicFocusFromMarkdown(content),
++          subtopics: subject.currentTopic.subtopics || [],
++          concepts: subject.currentTopic.subtopics || [],
++          questionFingerprints: extractQuestionFingerprintsFromMarkdown(content),
++          contentHash,
++        },
++      });
++
++      lastLoggedHash.current = contentHash;
++    };
++
++    persistGeneration();
++  }, [content, isLoading, subject, task.title, task.type]);
++
+   const hasCurriculumData = !!curriculumContext;
+   const hasPastPapers = pastPaperQuestions.length > 0;
+   const hasExamPatterns = examPatterns.length > 0;
+diff --git a/src/studymode/hooks/useMockExam.ts b/src/studymode/hooks/useMockExam.ts
+index c73ef9a..2a3d1f4 100644
+--- a/src/studymode/hooks/useMockExam.ts
++++ b/src/studymode/hooks/useMockExam.ts
+@@ -10,6 +10,7 @@ import { supabase } from "../../integrations/supabase/client";
+ import { logger } from "@/utils/logger";
+ import { useToast } from "@/hooks/use-toast";
+ import { useSubjectXP } from "./useSubjectXP";
++import { extractRecentContext, fingerprintQuestionStem, loadRecentGenerationHistory, logGenerationHistory } from "../lib/generationHistory";
+ 
+ export interface MockQuestion {
+   id: string;
+@@ -69,18 +70,34 @@ export function useMockExam() {
+     async (subjectId: string, subjectName: string, paperCode: string) => {
+       setGenerating(true);
+       try {
++        const { data: { user } } = await supabase.auth.getUser();
++        if (!user) throw new Error("Not authenticated");
++
++        const recentEntries = await loadRecentGenerationHistory({
++          userId: user.id,
++          subject: subjectName,
++          activityTypes: ['mock-exam-generated', 'exam-question-batch'],
++          limit: 10,
++        });
++        const recentContext = extractRecentContext(recentEntries);
++
+         const { data, error } = await supabase.functions.invoke(
+           "generate-mock-paper",
+-          { body: { subject_id: subjectId, paper_code: paperCode } }
++          {
++            body: {
++              subject_id: subjectId,
++              paper_code: paperCode,
++              recent_question_fingerprints: recentContext.recentQuestionFingerprints,
++              recent_topics: recentContext.recentSubtopics,
++              recent_concepts: recentContext.recentConcepts,
++            },
++          }
+         );
+         if (error) throw error;
+ 
+         const p = data as MockPaper;
+         setPaper(p);
+ 
+-        const { data: { user } } = await supabase.auth.getUser();
+-        if (!user) throw new Error("Not authenticated");
+-
+         const { data: row, error: insErr } = await supabase
+           .from("mock_exam_attempts" as any)
+           .insert({
+@@ -98,6 +115,20 @@ export function useMockExam() {
+         if (insErr) throw insErr;
+ 
+         setAttemptId((row as any).id);
++
++        await logGenerationHistory({
++          userId: user.id,
++          subject: subjectName,
++          activityType: 'mock-exam-generated',
++          metadata: {
++            title: `${paperCode} mock paper`,
++            subtopics: p.questions.map((q) => q.topic).filter(Boolean),
++            concepts: p.questions.map((q) => q.topic).filter(Boolean),
++            questionFingerprints: p.questions.map((q) => fingerprintQuestionStem(q.question)),
++            paperCode,
++          },
++        });
++
+         return p;
+       } catch (e: any) {
+         logger.error("[useMockExam.startExam]", e);
+diff --git a/src/studymode/hooks/useQuizGenerator.ts b/src/studymode/hooks/useQuizGenerator.ts
+index 7bce35a..99baa1b 100644
+--- a/src/studymode/hooks/useQuizGenerator.ts
++++ b/src/studymode/hooks/useQuizGenerator.ts
+@@ -17,6 +17,8 @@ import { useSyllabusContext } from './useSyllabusContext';
+ import { useTopicPerformance } from './useTopicPerformance';
+ import { aiRequestJSON } from '../lib/aiClient';
+ import { logger } from "@/utils/logger";
++import { extractRecentContext, fingerprintQuestionStem, loadRecentGenerationHistory, logGenerationHistory } from '../lib/generationHistory';
++import { supabase } from '@/integrations/supabase/client';
+ import type { QuestionVisualSpec } from '../components/QuestionVisual';
+ 
+ // âââ Types ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+@@ -147,6 +149,18 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
+       // Up to 2 real Q+A exemplars from linked mark schemes
+       const exemplars = (linkedPastPapers || []).slice(0, 2);
+ 
++      const { data: { user } } = await supabase.auth.getUser();
++      const recentEntries = user
++        ? await loadRecentGenerationHistory({
++            userId: user.id,
++            subject: subject.name,
++            topic: topicData.name,
++            activityTypes: ['quiz-generated', 'recall-question-batch', 'exam-question-batch', 'mock-exam-generated'],
++            limit: 12,
++          })
++        : [];
++      const recentContext = extractRecentContext(recentEntries);
++
+       const payload = {
+         subject: subject.name,
+         topic: topicData.name,
+@@ -161,6 +175,9 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
+         weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+         pastPaperExemplars: exemplars.length > 0 ? exemplars : undefined,
+         paperBlueprint: blueprintForTopic || undefined,
++        recentQuestionFingerprints: recentContext.recentQuestionFingerprints,
++        recentConcepts: recentContext.recentConcepts,
++        recentSubtopics: recentContext.recentSubtopics,
+         count: 1,
+       };
+ 
+@@ -183,7 +200,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
+         ];
+       }
+ 
+-      setQuestion({
++      const mappedQuestion = {
+         id: questionData.id || crypto.randomUUID(),
+         question: questionData.question,
+         questionType: questionData.questionType || 'structured',
+@@ -202,7 +219,28 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
+         syllabusLinks: questionData.syllabusLinks,
+         explanation: questionData.explanation,
+         visual: questionData.visual ?? null,
+-      });
++      };
++
++      setQuestion(mappedQuestion);
++
++      if (user) {
++        await logGenerationHistory({
++          userId: user.id,
++          subject: subject.name,
++          topic: topicData.name,
++          activityType: 'quiz-generated',
++          metadata: {
++            title: mappedQuestion.question.slice(0, 120),
++            questionFingerprint: fingerprintQuestionStem(mappedQuestion.question),
++            questionFingerprints: [fingerprintQuestionStem(mappedQuestion.question)],
++            subtopicFocus: topicData.name,
++            subtopics: topicData.subtopics || [],
++            concepts: mappedQuestion.conceptsTested || [],
++            commandWord: mappedQuestion.commandWord || null,
++            difficulty: mappedQuestion.difficulty || null,
++          },
++        });
++      }
+     } catch (err) {
+       logger.error('Quiz generation error:', err);
+       setError(err instanceof Error ? err.message : 'Failed to generate question');
+diff --git a/src/studymode/hooks/useRecallEngine.ts b/src/studymode/hooks/useRecallEngine.ts
+index 7efeee1..a38984b 100644
+--- a/src/studymode/hooks/useRecallEngine.ts
++++ b/src/studymode/hooks/useRecallEngine.ts
+@@ -41,6 +41,7 @@ import {
+   computeSessionStats,
+ } from '../engine/recallEngine';
+ import { logger } from '@/utils/logger';
++import { extractRecentContext, fingerprintQuestionStem, loadRecentGenerationHistory, logGenerationHistory } from '../lib/generationHistory';
+ 
+ // ââ Types ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+ 
+@@ -85,6 +86,10 @@ interface UseRecallEngineOptions {
+ 
+ // ââ Hook âââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+ 
++function dedupeConcepts(values: string[]): string[] {
++  return Array.from(new Set(values.filter(Boolean))).slice(0, 20);
++}
++
+ export function useRecallEngine({ subject, topic, mode = 'active-recall', questionCount = 10 }: UseRecallEngineOptions) {
+   const activeTopic = topic || subject.currentTopic;
+ 
+@@ -157,6 +162,18 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
+       // Get past answers for this session to avoid repetition
+       const recentQuestions = state.answers.map(a => a.question).slice(-5);
+ 
++      const { data: { user } } = await supabase.auth.getUser();
++      const recentEntries = user
++        ? await loadRecentGenerationHistory({
++            userId: user.id,
++            subject: subject.name,
++            topic: activeTopic.name,
++            activityTypes: ['recall-question-batch', 'exam-question-batch', 'quiz-generated', 'mock-exam-generated'],
++            limit: 16,
++          })
++        : [];
++      const recentContext = extractRecentContext(recentEntries);
++
+       const payload = {
+         subject: subject.name,
+         topic: activeTopic.name,
+@@ -169,6 +186,9 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
+         examPatterns: examPatterns?.slice(0, 5) || [],
+         weakConcepts: performance?.weakConcepts || [],
+         recentQuestions: recentQuestions,
++        recentQuestionFingerprints: recentContext.recentQuestionFingerprints,
++        recentConcepts: recentContext.recentConcepts,
++        recentSubtopics: recentContext.recentSubtopics,
+         // For spaced repetition: include previously incorrect topics
+         spacedRepetitionContext: {
+           strugglingTopics: struggling.map(t => t.topic_name).slice(0, 3),
+@@ -255,6 +275,24 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
+         sessionStartTime: prev.questions.length === 0 ? Date.now() : prev.sessionStartTime,
+       }));
+ 
++      if (user && questions.length > 0) {
++        await logGenerationHistory({
++          userId: user.id,
++          subject: subject.name,
++          topic: activeTopic.name,
++          activityType: state.mode === 'exam' ? 'exam-question-batch' : 'recall-question-batch',
++          metadata: {
++            title: `${state.mode === 'exam' ? 'Exam' : 'Recall'} batch for ${activeTopic.name}`,
++            subtopicFocus: activeTopic.name,
++            subtopics: activeTopic.subtopics || [],
++            concepts: dedupeConcepts(questions.flatMap((q) => q.conceptsTested || [])),
++            questionFingerprints: questions.map((q) => fingerprintQuestionStem(q.question)),
++            difficulty: state.difficulty,
++            mode: state.mode,
++          },
++        });
++      }
++
+       return questions;
+     } catch (err) {
+       logger.error('[useRecallEngine] Question generation error:', err);
+diff --git a/src/studymode/hooks/useStructuredDailyTask.ts b/src/studymode/hooks/useStructuredDailyTask.ts
+index 4c363f6..c2cdeb5 100644
+--- a/src/studymode/hooks/useStructuredDailyTask.ts
++++ b/src/studymode/hooks/useStructuredDailyTask.ts
+@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
+ import { supabase } from '../../integrations/supabase/client';
+ import { aiRequestJSON } from '../lib/aiClient';
+ import { logger } from '@/utils/logger';
++import { extractRecentContext, loadRecentGenerationHistory } from '../lib/generationHistory';
+ 
+ export interface PracticeQuestion {
+   question: string;
+@@ -103,6 +104,15 @@ export function useStructuredDailyTask(args: Args) {
+         pastPaperPatterns = patterns ?? [];
+       }
+ 
++      const recentEntries = await loadRecentGenerationHistory({
++        userId: user.id,
++        subject: subjectName,
++        topic,
++        activityTypes: ['structured-daily-task', 'concept-learning', 'quiz-generated', 'recall-question-batch'],
++        limit: 12,
++      });
++      const recentContext = extractRecentContext(recentEntries);
++
+       const result = await aiRequestJSON<GenerateResponse>('generate-daily-task', {
+         subject: subjectName,
+         curriculum: curriculum ?? 'ZIMSEC',
+@@ -115,6 +125,9 @@ export function useStructuredDailyTask(args: Args) {
+         completed_concepts: completedConcepts,
+         weak_concepts: weakConcepts,
+         past_paper_patterns: pastPaperPatterns,
++        recent_questions: recentContext.recentQuestionFingerprints,
++        recent_subtopics: recentContext.recentSubtopics,
++        recent_concepts: recentContext.recentConcepts,
+       });
+ 
+       setTask(result.task);
+diff --git a/src/studymode/hooks/useTaskContent.ts b/src/studymode/hooks/useTaskContent.ts
+index 191157f..c252841 100644
+--- a/src/studymode/hooks/useTaskContent.ts
++++ b/src/studymode/hooks/useTaskContent.ts
+@@ -24,6 +24,14 @@ export interface TaskContentParams {
+   learningObjectives?: string[];
+   concepts?: string[];
+   examWeight?: number;
++  /** Recent generated question fingerprints to avoid repeating */
++  recentQuestionFingerprints?: string[];
++  /** Recent subtopics already covered in generated content */
++  recentSubtopics?: string[];
++  /** Recent concepts already emphasised heavily */
++  recentConcepts?: string[];
++  /** Human-readable short notes about recent generations */
++  recentGenerationNotes?: string[];
+   /** Rich curriculum context string from useSyllabusContext */
+   curriculumContext?: string;
+   /** Student performance context for adaptive content */
+@@ -125,6 +133,12 @@ export function useTaskContent(): UseTaskContentReturn {
+           `Use internet access to enrich this ${params.taskType} task for ${params.subject} > ${params.topic}. ` +
+           'Look up the latest syllabus specifications, exam patterns, and learning resources. ' +
+           'Incorporate real-world examples and up-to-date content relevant to the student\'s curriculum.',
++        recentQuestionFingerprints: params.recentQuestionFingerprints || [],
++        recentSubtopics: params.recentSubtopics || [],
++        recentConcepts: params.recentConcepts || [],
++        recentGenerationNotes: params.recentGenerationNotes || [],
++        variationInstruction:
++          'Generate materially new content each time. Avoid reusing the same question stems, worked examples, subtopic order, and scenario framing from recent generations unless revision is explicitly requested.',
+       };
+       // Remove the nested aiContext to avoid circular reference
+       delete (enrichedParams as any).aiContext;
+diff --git a/src/studymode/lib/generationHistory.ts b/src/studymode/lib/generationHistory.ts
+new file mode 100644
+index 0000000..51ab6c3
+--- /dev/null
++++ b/src/studymode/lib/generationHistory.ts
+@@ -0,0 +1,207 @@
++import { supabase } from '@/integrations/supabase/client';
++import { logger } from '@/utils/logger';
++
++export interface GenerationHistoryEntry {
++  id: string;
++  activity_type: string;
++  subject: string;
++  topic: string | null;
++  metadata: Record<string, any> | null;
++  created_at: string;
++}
++
++interface LoadOptions {
++  userId: string;
++  subject: string;
++  topic?: string | null;
++  activityTypes?: string[];
++  limit?: number;
++}
++
++interface LogOptions {
++  userId: string;
++  subject: string;
++  topic?: string | null;
++  activityType: string;
++  metadata?: Record<string, unknown>;
++  taskCompleted?: boolean;
++  score?: number | null;
++  durationMinutes?: number | null;
++}
++
++function normalizeText(value: string): string {
++  return value
++    .toLowerCase()
++    .replace(/\$[^$]*\$/g, ' ')
++    .replace(/[*_#>`~\[\](){}]/g, ' ')
++    .replace(/\s+/g, ' ')
++    .trim();
++}
++
++export function hashText(value: string): string {
++  const text = normalizeText(value);
++  let hash = 5381;
++  for (let i = 0; i < text.length; i += 1) {
++    hash = ((hash << 5) + hash) + text.charCodeAt(i);
++    hash |= 0;
++  }
++  return `h${Math.abs(hash)}`;
++}
++
++export function fingerprintQuestionStem(value: string): string {
++  const normalized = normalizeText(value)
++    .replace(/^(question\s*\d+[:.)-]?|q\d+[:.)-]?|\d+[:.)-]?)/, '')
++    .split(/[.?!\n]/)[0]
++    .trim();
++  return hashText(normalized.slice(0, 180));
++}
++
++export function dedupeStrings(values: Array<string | null | undefined>, limit = 12): string[] {
++  const seen = new Set<string>();
++  const result: string[] = [];
++  for (const value of values) {
++    const cleaned = (value || '').trim();
++    if (!cleaned || seen.has(cleaned)) continue;
++    seen.add(cleaned);
++    result.push(cleaned);
++    if (result.length >= limit) break;
++  }
++  return result;
++}
++
++export function extractQuestionFingerprintsFromMarkdown(content: string): string[] {
++  const matches = content.match(/(?:^|\n)(?:\*\*)?(?:q(?:uestion)?\s*\d+|\d+)[^\n:]*[:.)-]?\s+([^\n]+)/gi) || [];
++  return dedupeStrings(matches.map((line) => fingerprintQuestionStem(line)), 16);
++}
++
++export function extractSubtopicFocusFromMarkdown(content: string): string | null {
++  const explicit = content.match(/subtopic\s*focus\s*:\s*(.+)/i);
++  if (explicit?.[1]) return explicit[1].trim();
++
++  const heading = content.match(/^##+\s+(.+)$/m);
++  if (!heading?.[1]) return null;
++
++  return heading[1]
++    .replace(/^topic summary:\s*/i, '')
++    .replace(/^active recall:\s*/i, '')
++    .replace(/^flashcards:\s*/i, '')
++    .replace(/^concept deep-dive:\s*/i, '')
++    .trim();
++}
++
++export function extractRecentContext(entries: GenerationHistoryEntry[]) {
++  const recentQuestionFingerprints = dedupeStrings(
++    entries.flatMap((entry) => {
++      const metadata = entry.metadata || {};
++      const fromArray = Array.isArray(metadata.questionFingerprints) ? metadata.questionFingerprints : [];
++      const fromStem = typeof metadata.questionFingerprint === 'string' ? [metadata.questionFingerprint] : [];
++      return [...fromArray, ...fromStem];
++    }),
++    18,
++  );
++
++  const recentSubtopics = dedupeStrings(
++    entries.flatMap((entry) => {
++      const metadata = entry.metadata || {};
++      const direct = typeof metadata.subtopicFocus === 'string' ? [metadata.subtopicFocus] : [];
++      const list = Array.isArray(metadata.subtopics) ? metadata.subtopics : [];
++      return [...direct, ...list];
++    }),
++    12,
++  );
++
++  const recentConcepts = dedupeStrings(
++    entries.flatMap((entry) => {
++      const metadata = entry.metadata || {};
++      return Array.isArray(metadata.concepts) ? metadata.concepts : [];
++    }),
++    20,
++  );
++
++  const recentTitles = dedupeStrings(
++    entries.flatMap((entry) => {
++      const metadata = entry.metadata || {};
++      const title = typeof metadata.title === 'string' ? metadata.title : null;
++      const prompt = typeof metadata.promptTitle === 'string' ? metadata.promptTitle : null;
++      return [title, prompt];
++    }),
++    10,
++  );
++
++  return {
++    recentQuestionFingerprints,
++    recentSubtopics,
++    recentConcepts,
++    recentTitles,
++  };
++}
++
++export async function loadRecentGenerationHistory({
++  userId,
++  subject,
++  topic,
++  activityTypes,
++  limit = 12,
++}: LoadOptions): Promise<GenerationHistoryEntry[]> {
++  try {
++    let query = supabase
++      .from('study_activity')
++      .select('id, activity_type, subject, topic, metadata, created_at')
++      .eq('user_id', userId)
++      .eq('subject', subject)
++      .order('created_at', { ascending: false })
++      .limit(limit);
++
++    if (topic) {
++      query = query.eq('topic', topic);
++    }
++
++    if (activityTypes && activityTypes.length > 0) {
++      query = query.in('activity_type', activityTypes);
++    }
++
++    const { data, error } = await query;
++    if (error) {
++      logger.warn('[generationHistory] Failed to load history:', error.message);
++      return [];
++    }
++
++    return (data || []) as GenerationHistoryEntry[];
++  } catch (error) {
++    logger.warn('[generationHistory] Unexpected load error:', error);
++    return [];
++  }
++}
++
++export async function logGenerationHistory({
++  userId,
++  subject,
++  topic,
++  activityType,
++  metadata = {},
++  taskCompleted = true,
++  score = null,
++  durationMinutes = null,
++}: LogOptions): Promise<void> {
++  try {
++    const { error } = await supabase
++      .from('study_activity')
++      .insert({
++        user_id: userId,
++        subject,
++        topic: topic || null,
++        activity_type: activityType,
++        task_completed: taskCompleted,
++        score,
++        duration_minutes: durationMinutes,
++        metadata: metadata as any,
++        date: new Date().toISOString().split('T')[0],
++      });
++
++    if (error) {
++      logger.warn('[generationHistory] Failed to log history:', error.message);
++    }
++  } catch (error) {
++    logger.warn('[generationHistory] Unexpected log error:', error);
++  }
++}
+diff --git a/supabase/functions/generate-daily-task/index.ts b/supabase/functions/generate-daily-task/index.ts
+index f59a4bf..3bd3d72 100644
+--- a/supabase/functions/generate-daily-task/index.ts
++++ b/supabase/functions/generate-daily-task/index.ts
+@@ -52,6 +52,9 @@ interface RequestBody {
+   completed_concepts?: string[];
+   past_paper_patterns?: Array<Record<string, unknown>>;
+   weak_concepts?: string[];
++  recent_questions?: string[];
++  recent_subtopics?: string[];
++  recent_concepts?: string[];
+ }
+ 
+ const TASK_TOOL = {
+@@ -148,6 +151,8 @@ CORE RULES (NON-NEGOTIABLE):
+ - Do NOT merge unrelated topics.
+ - Do NOT over-explain theory; keep concept_learning focused on the selected concepts only.
+ - Use exam wording, realistic phrasing, and proper command words.
++- Each generation must feel fresh: vary worked examples, scenarios, numbers, contexts, command words, and question stems.
++- Avoid repeating recent subtopic focuses, recent practice-question stems, and recently overused concepts unless spaced revision makes reuse unavoidable.
+ 
+ OUTPUT RULES:
+ - Practice questions MUST cover EVERY selected concept (â¥1 question per concept).
+@@ -178,6 +183,10 @@ Already-covered concepts (avoid repeating focus): ${(body.completed_concepts ??
+ Past-paper patterns to mirror (if any):
+ ${JSON.stringify((body.past_paper_patterns ?? []).slice(0, 5))}
+ 
++Recent practice-question fingerprints to avoid repeating: ${(body.recent_questions ?? []).join(' | ') || 'none'}
++Recent subtopic focuses to avoid repeating: ${(body.recent_subtopics ?? []).join(' | ') || 'none'}
++Recently emphasised concepts to avoid overusing: ${(body.recent_concepts ?? []).join(' | ') || 'none'}
++
+ Lock scope to 1â2 subtopics and the selected concepts only. Emit the bundle via emit_daily_task.`;
+ }
+ 
+diff --git a/supabase/functions/generate-mock-paper/index.ts b/supabase/functions/generate-mock-paper/index.ts
+index 7ab6ecc..7acb951 100644
+--- a/supabase/functions/generate-mock-paper/index.ts
++++ b/supabase/functions/generate-mock-paper/index.ts
+@@ -39,7 +39,7 @@ serve(async (req) => {
+     if (!quota.allowed) return quotaExceededResponse("mock_paper", quota.used, quota.limit);
+     const ai = getAIConfig("standard");
+     const body = await req.json();
+-    const { subject_id, paper_code } = body;
++    const { subject_id, paper_code, recent_question_fingerprints, recent_topics, recent_concepts } = body;
+ 
+     if (!subject_id || !paper_code) {
+       return jsonResponse(
+@@ -131,6 +131,7 @@ RULES:
+ 7. Use LaTeX for any maths ($x^2$, $\\frac{a}{b}$).
+ 8. Difficulty should ramp up across the paper.
+ 9. Include data/stimulus where appropriate (tables, scenarios).
++10. Keep the paper fresh across generations: avoid recycling recent question stems, same data sets, or identical topic framing when recent history is supplied.
+ 
+ Return ONLY valid JSON:
+ {
+@@ -169,6 +170,10 @@ Mark scheme: ${(e.marking_scheme || []).join(" | ")}
+   )
+   .join("\n")}` : ""}
+ 
++${Array.isArray(recent_question_fingerprints) && recent_question_fingerprints.length > 0 ? `\nRecent question fingerprints to avoid repeating: ${recent_question_fingerprints.join(', ')}` : ''}
++${Array.isArray(recent_topics) && recent_topics.length > 0 ? `\nRecent mock-exam topics already emphasised: ${recent_topics.join(', ')}` : ''}
++${Array.isArray(recent_concepts) && recent_concepts.length > 0 ? `\nRecent concepts already emphasised: ${recent_concepts.join(', ')}` : ''}
++
+ Generate now. Return JSON only.`;
+ 
+     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+diff --git a/supabase/functions/generate-quiz/index.ts b/supabase/functions/generate-quiz/index.ts
+index 04a48a6..9bb624c 100644
+--- a/supabase/functions/generate-quiz/index.ts
++++ b/supabase/functions/generate-quiz/index.ts
+@@ -73,6 +73,9 @@ serve(async (req) => {
+       pastPaperExemplars,
+       paperBlueprint,
+       examMode,
++      recentQuestionFingerprints,
++      recentConcepts,
++      recentSubtopics,
+       count = 1,
+     } = body;
+ 
+@@ -152,6 +155,8 @@ RULES:
+ 5. NEVER copy any past-paper question verbatim.
+ 6. Difficulty should increase progressively when generating multiple questions.
+ 7. For each question provide: correct answer, step-by-step solution, marking scheme, and explanation.
++8. Maximise novelty across generations: avoid recently used question stems, overly familiar examples, identical number sets, and repeated scenario framing.
++9. If recent concepts/subtopics are supplied, diversify into other valid syllabus angles unless revision pressure clearly demands reuse.
+ 
+ Return ONLY valid JSON matching this exact schema:
+ {
+@@ -194,6 +199,18 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
+       userPrompt += `\nAvoid these recent question types: ${avoidQuestionTypes.join(", ")}`;
+     }
+ 
++    if (Array.isArray(recentQuestionFingerprints) && recentQuestionFingerprints.length > 0) {
++      userPrompt += `\n\n=== NOVELTY GUARDRAILS ===\nAvoid generating questions with stems/scenarios matching these recent fingerprints: ${recentQuestionFingerprints.join(", ")}\nCreate a fresh setup, new numerical values where relevant, and a different line of reasoning.`;
++    }
++
++    if (Array.isArray(recentConcepts) && recentConcepts.length > 0) {
++      userPrompt += `\nRecent concepts already emphasised: ${recentConcepts.join(", ")}\nDiversify into other syllabus-valid concepts when possible.`;
++    }
++
++    if (Array.isArray(recentSubtopics) && recentSubtopics.length > 0) {
++      userPrompt += `\nRecent subtopics already used heavily: ${recentSubtopics.join(", ")}\nPrefer another subtopic or angle while staying within the same topic.`;
++    }
++
+     if (paperBlueprint && typeof paperBlueprint === "object") {
+       userPrompt += `\n\n=== TARGET PAPER BLUEPRINT ===\n`;
+       if (paperBlueprint.paper_code) userPrompt += `Paper: ${paperBlueprint.paper_code}\n`;
+diff --git a/supabase/functions/generate-task-content/index.ts b/supabase/functions/generate-task-content/index.ts
+index 0d61814..bead14c 100644
+--- a/supabase/functions/generate-task-content/index.ts
++++ b/supabase/functions/generate-task-content/index.ts
+@@ -32,6 +32,8 @@ Always align to the provided syllabus context and past-paper patterns.
+ - Mirror exam language (command words, mark-style phrasing), but do not copy questions verbatim.
+ - Keep output practical, exam-focused, and age/level appropriate.
+ - If weak areas are mentioned, prioritise those in your output.
++- Every new generation should feel fresh, expansive, and non-repetitive while remaining syllabus-locked.
++- Vary scenario framing, numbers, examples, contexts, diagrams-in-words, and command-word combinations across generations.
+ 
+ MATHEMATICAL NOTATION:
+ - For ALL mathematical expressions, use LaTeX notation wrapped in dollar signs.
+@@ -277,6 +279,11 @@ serve(async (req) => {
+       notesOrDocuments,
+       pastPaperContext,
+       previouslyStudiedSubtopics,
++      recentQuestionFingerprints,
++      recentSubtopics,
++      recentConcepts,
++      recentGenerationNotes,
++      variationInstruction,
+     } = body;
+ 
+     if (!taskType || !subject || !topic) {
+@@ -314,10 +321,32 @@ serve(async (req) => {
+ 
+     let userPrompt = `Generate ${taskType} content for the topic "${topic}" in ${subject}.\n\n${context}`;
+ 
++    userPrompt += `\n\nNOVELTY REQUIREMENTS:\n- Produce materially different content from recent generations.\n- Use a fresh scenario, fresh worked example, and fresh question framing.\n- Do NOT repeat the same question stems, exact examples, or the same subtopic focus unless spaced revision is explicitly required.\n- Keep curriculum precision high while maximising variety.`;
++
++    if (variationInstruction) {
++      userPrompt += `\nAdditional variation instruction: ${variationInstruction}`;
++    }
++
+     if (previouslyStudiedSubtopics && previouslyStudiedSubtopics.length > 0) {
+       userPrompt += `\n\nPREVIOUSLY STUDIED SUBTOPICS (do NOT repeat these â pick a different one):\n- ${previouslyStudiedSubtopics.join('\n- ')}`;
+     }
+ 
++    if (recentSubtopics && recentSubtopics.length > 0) {
++      userPrompt += `\n\nRECENT SUBTOPIC FOCUSES TO AVOID REPEATING:\n- ${recentSubtopics.join('\n- ')}`;
++    }
++
++    if (recentConcepts && recentConcepts.length > 0) {
++      userPrompt += `\n\nRECENTLY EMPHASISED CONCEPTS (do not overuse unless essential):\n- ${recentConcepts.join('\n- ')}`;
++    }
++
++    if (recentQuestionFingerprints && recentQuestionFingerprints.length > 0) {
++      userPrompt += `\n\nRECENT QUESTION FINGERPRINTS (these represent recently used stems/scenarios; generate different ones):\n- ${recentQuestionFingerprints.join('\n- ')}`;
++    }
++
++    if (recentGenerationNotes && recentGenerationNotes.length > 0) {
++      userPrompt += `\n\nRECENT GENERATION NOTES:\n- ${recentGenerationNotes.join('\n- ')}`;
++    }
++
+     // ââ Make streaming request to AI API ââââââââââââââââââââââââââââââââââ
+     const aiResponse = await fetch(ai.url, {
+       method: "POST",
