@@ -15,6 +15,7 @@ const LearnerApp = lazy(() => import("./pages/LearnerApp"));
 const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
 const TutorApp = lazy(() => import("./pages/TutorApp"));
 const TutorAuth = lazy(() => import("./pages/TutorAuth"));
+const TrialSignupFlow = lazy(() => import("./pages/TrialSignupFlow"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ChooseStudyLevel = lazy(() => import("./pages/ChooseStudyLevel"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
@@ -61,6 +62,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/learner" element={<LearnerApp />} />
+              <Route path="/start-trial" element={<TrialSignupFlow />} />
               <Route path="/learner/auth" element={<LearnerAuth />} />
               <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
               <Route path="/tutor" element={<TutorApp />} />
