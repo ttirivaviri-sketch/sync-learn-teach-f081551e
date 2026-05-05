@@ -12,9 +12,6 @@ const HowItWorksSection = lazy(() => import("@/components/HowItWorksSection"));
 const TestimonialSection = lazy(() =>
   import("@/components/TestimonialSection").then((m) => ({ default: m.TestimonialSection }))
 );
-const StatsSection = lazy(() =>
-  import("@/components/StatsSection").then((m) => ({ default: m.StatsSection }))
-);
 const ContactStrip = lazy(() => import("@/components/ContactStrip"));
 const Footer = lazy(() => import("@/components/Footer"));
 const PWAInstallPrompt = lazy(() =>
