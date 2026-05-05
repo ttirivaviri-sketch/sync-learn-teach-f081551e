@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const StudyModeSection = () => {
   const navigate = useNavigate();
+  const openTrialFlow = () => navigate("/start-trial?role=learner");
 
   return (
     <section id="studymode" className="py-20 bg-white">
@@ -62,7 +63,7 @@ const StudyModeSection = () => {
           <Button
             size="lg"
             className="bg-[hsl(220,80%,50%)] hover:bg-[hsl(220,80%,44%)] text-white font-bold text-base px-10 rounded-full gap-2 group"
-            onClick={() => navigate("/learner/auth")}
+            onClick={openTrialFlow}
           >
             Try It Free
             <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
