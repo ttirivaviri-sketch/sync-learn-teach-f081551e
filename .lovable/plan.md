@@ -1,37 +1,52 @@
-## Goal
+## What's already shipped vs. what's still needed
 
-Make every book and past paper in the learner Library actually open (using `pdf_url` as a robust fallback), and verify Study Clips video playback still works.
+### ✅ Already done (verified by reading the code)
+1. **Books / past papers open via `pdf_url` fallback** — `src/components/StudySyncLibrary.tsx` `openResource` (lines 112–128) already handles `book | guide | pastpaper | pdf` with a `videoUrl → pdf_url → url` fallback chain and toasts "File not available" otherwise. DB confirms 8 system PDFs all have `pdf_url` populated, so taps on Books / Past Papers tabs will open the file in a new tab. ✅
+2. **Study Clips still works** — `openResource` keeps the original `video` branch intact: it finds the resource's index in `recommendedTutorials` and opens `StudyClipsFeed` (the reels overlay) at that index. The Tutorials tab shortcut and the "Top Tutorial Videos" rack both feed the same flow. DB has 2 published video tutorials, so the reels feed will mount with content. ✅
+3. **`logGenerationHistory` try/catch** — there are no `logGenerationHistory` references anywhere in `src/` or `supabase/`. Nothing to wrap. (If you meant a different logger, point me at it and I'll harden it.)
 
-## Findings from inspection
+### ❌ Still to do
+1. **Remove StatsSection** — you've now confirmed the numbers are made-up and the section must go.
+2. **Add "7-day free trial" CTA on the landing hero**, with a **"Become a tutor"** CTA directly below it.
 
-- `src/hooks/useLibraryResources.ts` already maps system resources' `pdf_url` → `LibraryResource.videoUrl` (line 379), and tutor PDFs the same way (line 336–341). So the data is there.
-- `src/components/StudySyncLibrary.tsx` `openResource` (lines 112–146) currently only fires a toast `"Opening Resource"` for non-video resources — it never calls `window.open`. **This is the bug**: books and past papers do not actually open. PR #40's diff fixes this; we'll apply that fix with an extra `pdf_url` fallback for safety.
-- Study Clips path (video → `setReelsFeedOpen(true)`) is unchanged by the fix, so clips keep working.
+---
 
-## Change
+## Plan
 
-Edit `src/components/StudySyncLibrary.tsx` `openResource`:
+### 1. Remove `StatsSection` from the landing page
+**File:** `src/pages/Index.tsx`
+- Drop the `StatsSection` lazy import.
+- Remove `<StatsSection />` from the JSX.
+- Leave `src/components/StatsSection.tsx` on disk (unused) so it can be revived later if you ever want real numbers — no other file imports it.
 
-1. If `resource.type` is `book | guide | pastpaper | pdf`:
-   - Resolve `documentUrl = resource.videoUrl ?? (resource as any).pdf_url ?? (resource as any).url`.
-   - If found → `window.open(documentUrl, "_blank", "noopener,noreferrer")` and toast "Opening Resource".
-   - If not → toast "File not available".
-2. Leave the existing video branch untouched (Study Clips feed still opens at the right index, single-video overlay still works as fallback).
+### 2. Add the two new CTAs to the hero
+**File:** `src/components/HeroSection.tsx` (the CTA block currently has "Start Learning" + "Find a Tutor" side-by-side)
 
-No type changes, no hook changes, no DB changes. Pure UX fix in one function.
+Replace that CTA block with a stacked layout:
 
-## Verification (smoke test, no automation needed)
+```text
+[ Start 7-day free trial ]   ← primary, yellow, full-width on mobile
+[ Become a tutor          ]   ← secondary outline, directly below
+[ Start Learning ] [ Find a Tutor ]   ← keep existing pair as a thinner row
+```
 
-In the learner app → Library:
+- **"Start 7-day free trial"** → `navigate("/learner/auth")` (signup flow already grants the 7-day trial via the Postgres trigger noted in memory — no backend change needed).
+- **"Become a tutor"** → `navigate("/tutor/auth")`.
+- Add a tiny line under the trial button: `"No card required · cancel anytime"` to reduce friction.
+- Mirror the same two CTAs in the mobile menu in `Navbar` (it currently shows "Get Started" + "Become a Tutor"; I'll relabel "Get Started" → "Start free trial" for consistency).
 
-1. **Books tab**: click a poster of a seeded textbook → new tab opens its `pdf_url`. Click one without an attached file → toast says "File not available".
-2. **Past Papers tab**: click a past-paper poster → new tab opens its PDF.
-3. **Browse tab → Past Exam Papers rack**: click a card → opens PDF.
-4. **Search results**: search a textbook title → click → opens PDF.
-5. **Tutorials / Top Tutorial Videos rack**: click a video card → Study Clips feed opens at the correct slide and plays. Confirms clips still work.
-6. **Empty case**: open a video resource that has no URL → toast "No Video URL" (unchanged behavior).
-7. Browser console clean (no errors); confirm `useLibraryResources` log line shows `documents: N` > 0.
+### 3. Sanity verification (no automation needed)
+- Open `/` → confirm: hero shows trial CTA + tutor CTA stacked; StatsSection gone; ContactStrip + WhatsApp FAB still present.
+- Open Learner → Library → Books tab → tap a poster → PDF opens in a new tab.
+- Library → Past Papers tab → tap → PDF opens.
+- Browse tab → "Top Tutorial Videos" rack → tap → reels feed opens at the correct slide.
+- Tutorials tab → reels feed auto-opens.
 
-## Risks
+---
 
-- Popup blockers may block `window.open` on some browsers if not triggered directly by a user gesture. The call sits inside a click handler so this should be fine across Chrome/Safari/Firefox/mobile webviews.
+## Risks / notes
+- `StatsSection.tsx` left on disk = small dead weight (~5 KB), but it's not imported anywhere after this change so it won't ship in the bundle. I can delete the file too if you'd rather — say the word.
+- The 7-day trial is already enforced by the existing `useSubscription` hook + DB trigger (per memory). The new button is purely a relabeled CTA into the same signup; no payment / Paddle / PayFast wiring needed.
+- No DB, RLS, or edge-function changes.
+
+Approve and I'll apply these three edits.
