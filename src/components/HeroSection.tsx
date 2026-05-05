@@ -8,6 +8,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
+  const openTrialFlow = (role: "learner" | "tutor") => navigate(`/start-trial?role=${role}`);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -69,7 +70,7 @@ const Navbar = () => {
           <Button
             size="sm"
             className="bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-semibold rounded-full px-6"
-            onClick={() => navigate("/learner/auth")}
+            onClick={() => openTrialFlow("learner")}
           >
             Get Started
           </Button>
@@ -104,14 +105,14 @@ const Navbar = () => {
           <div className="flex gap-3 pt-2">
             <Button
               className="flex-1 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-semibold rounded-full"
-              onClick={() => navigate("/learner/auth")}
+              onClick={() => openTrialFlow("learner")}
             >
               Start free trial
             </Button>
             <Button
               variant="outline"
               className="flex-1 border-gray-300 text-gray-700 rounded-full"
-              onClick={() => navigate("/tutor/auth")}
+              onClick={() => openTrialFlow("tutor")}
             >
               Become a Tutor
             </Button>
@@ -150,6 +151,7 @@ const FeatureCard = ({ icon, title, highlight, description }: FeatureCardProps) 
    ══════════════════════════════════════════════════════ */
 const HeroSection = () => {
   const navigate = useNavigate();
+  const openTrialFlow = (role: "learner" | "tutor") => navigate(`/start-trial?role=${role}`);
 
   const checkItems = [
     "AI study assistant",
@@ -193,7 +195,7 @@ const HeroSection = () => {
                 <Button
                   size="lg"
                   className="w-full bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold text-base px-8 rounded-full shadow-md"
-                  onClick={() => navigate("/learner/auth")}
+                  onClick={() => openTrialFlow("learner")}
                 >
                   Start 7-day free trial
                 </Button>
@@ -201,7 +203,7 @@ const HeroSection = () => {
                   size="lg"
                   variant="outline"
                   className="w-full border-2 border-gray-300 text-gray-800 hover:bg-gray-50 font-semibold text-base px-8 rounded-full"
-                  onClick={() => navigate("/tutor/auth")}
+                  onClick={() => openTrialFlow("tutor")}
                 >
                   Become a tutor
                 </Button>
@@ -214,7 +216,7 @@ const HeroSection = () => {
                   size="sm"
                   variant="ghost"
                   className="text-gray-700 hover:text-gray-900 font-semibold rounded-full"
-                  onClick={() => navigate("/learner/auth")}
+                  onClick={() => openTrialFlow("learner")}
                 >
                   Start Learning →
                 </Button>
@@ -222,7 +224,7 @@ const HeroSection = () => {
                   size="sm"
                   variant="ghost"
                   className="text-[hsl(220,80%,50%)] hover:text-[hsl(220,80%,40%)] font-semibold rounded-full"
-                  onClick={() => navigate("/tutor/auth")}
+                  onClick={() => openTrialFlow("tutor")}
                 >
                   Find a Tutor →
                 </Button>
