@@ -106,7 +106,7 @@ const Navbar = () => {
               className="flex-1 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-semibold rounded-full"
               onClick={() => navigate("/learner/auth")}
             >
-              Get Started
+              Start free trial
             </Button>
             <Button
               variant="outline"
@@ -188,21 +188,43 @@ const HeroSection = () => {
                 ))}
               </div>
 
-              {/* CTA buttons */}
-              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
+              {/* Primary CTA stack */}
+              <div className="flex flex-col gap-3 items-center lg:items-start mb-4 max-w-md mx-auto lg:mx-0">
                 <Button
                   size="lg"
-                  className="bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold text-base px-8 rounded-full shadow-md"
+                  className="w-full bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold text-base px-8 rounded-full shadow-md"
                   onClick={() => navigate("/learner/auth")}
                 >
-                  Start Learning
+                  Start 7-day free trial
                 </Button>
                 <Button
                   size="lg"
-                  className="bg-[hsl(220,80%,50%)] hover:bg-[hsl(220,80%,44%)] text-white font-bold text-base px-8 rounded-full shadow-md"
+                  variant="outline"
+                  className="w-full border-2 border-gray-300 text-gray-800 hover:bg-gray-50 font-semibold text-base px-8 rounded-full"
                   onClick={() => navigate("/tutor/auth")}
                 >
-                  Find a Tutor
+                  Become a tutor
+                </Button>
+                <p className="text-xs text-gray-500">No card required · cancel anytime</p>
+              </div>
+
+              {/* Secondary CTAs */}
+              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-gray-700 hover:text-gray-900 font-semibold rounded-full"
+                  onClick={() => navigate("/learner/auth")}
+                >
+                  Start Learning →
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-[hsl(220,80%,50%)] hover:text-[hsl(220,80%,40%)] font-semibold rounded-full"
+                  onClick={() => navigate("/tutor/auth")}
+                >
+                  Find a Tutor →
                 </Button>
               </div>
 
