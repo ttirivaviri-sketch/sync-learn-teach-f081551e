@@ -46,6 +46,7 @@ const trustCards: TrustCard[] = [
 
 const TrustSection = () => {
   const navigate = useNavigate();
+  const openTrialFlow = () => navigate("/start-trial?role=learner");
 
   return (
     <section className="py-28 bg-muted/30 overflow-hidden">
@@ -129,7 +130,7 @@ const TrustSection = () => {
 
           <div className="mt-10 text-center">
             <button
-              onClick={() => navigate("/learner/auth")}
+              onClick={openTrialFlow}
               className="inline-flex items-center gap-2 bg-primary text-white hover:bg-primary/90 px-7 py-3 rounded-xl font-bold text-sm shadow-elegant transition-all group"
             >
               Get Started Safely

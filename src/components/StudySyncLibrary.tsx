@@ -22,6 +22,7 @@ import { VideoPlayerOverlay } from "@/components/library/VideoPlayerOverlay";
 import { StuckPrompt } from "@/components/library/StuckPrompt";
 import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
 import { PosterCard } from "@/components/library/PosterCard";
+import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
@@ -45,6 +46,7 @@ const StudySyncLibrary = ({
   const [activeCategory, setActiveCategory] = useState("all");
   const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
+  const [activeDocument, setActiveDocument] = useState<{ resource: LibraryResource; url: string } | null>(null);
   const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
@@ -59,10 +61,14 @@ const StudySyncLibrary = ({
     search,
   } = useLibraryResources(academicProfile);
 
+  const tutorialFeed = (academicProfile ? personalizedResources : allResources).filter(
+    (resource) => resource.isTutorial
+  );
+
   // Tabs handler: when user picks "tutorials", drop them straight into the carousel
   const handleTabChange = (next: string) => {
     if (next === "tutorials") {
-      if (recommendedTutorials.length > 0) {
+      if (tutorialFeed.length > 0) {
         setReelsStartIndex(0);
         setReelsFeedOpen(true);
       }
@@ -119,7 +125,7 @@ const StudySyncLibrary = ({
         (typeof extra.pdf_url === "string" ? (extra.pdf_url as string) : undefined) ||
         (typeof extra.url === "string" ? (extra.url as string) : undefined);
       if (documentUrl) {
-        window.open(documentUrl, "_blank", "noopener,noreferrer");
+        setActiveDocument({ resource, url: documentUrl });
         dispatchToast("Opening Resource", `Loading ${resource.title}...`);
       } else {
         dispatchToast("File not available", "This resource doesn't have an attached file yet.");
@@ -144,9 +150,8 @@ const StudySyncLibrary = ({
       }
     }
     if (resource.type === "video" && videoUrl) {
-      // Open Study Clips feed at correct index — preserves clip playback flow
-      const idx = recommendedTutorials.findIndex((r) => String(r.id) === String(resource.id));
-      if (idx >= 0 && recommendedTutorials.length > 0) {
+      const idx = tutorialFeed.findIndex((r) => String(r.id) === String(resource.id));
+      if (idx >= 0 && tutorialFeed.length > 0) {
         setReelsStartIndex(idx);
         setReelsFeedOpen(true);
       } else {
@@ -480,10 +485,18 @@ const StudySyncLibrary = ({
         />
       )}
 
+      {activeDocument && (
+        <DocumentViewerOverlay
+          resource={activeDocument.resource}
+          documentUrl={activeDocument.url}
+          onClose={() => setActiveDocument(null)}
+        />
+      )}
+
       {/* Study Clips Feed */}
-      {reelsFeedOpen && recommendedTutorials.length > 0 && (
+      {reelsFeedOpen && tutorialFeed.length > 0 && (
         <StudyClipsFeed
-          videos={recommendedTutorials}
+          videos={tutorialFeed}
           startIndex={reelsStartIndex}
           onClose={() => setReelsFeedOpen(false)}
           onBookTutor={handleBookTutor}
