@@ -448,12 +448,18 @@ export function useLibraryResources(
       })
     : allResources;
 
-  const visibleResources = academicProfile ? personalizedResources : allResources;
+  // Soft personalization: fall back to all resources if filter returns nothing
+  const visibleResources =
+    academicProfile && personalizedResources.length > 0
+      ? personalizedResources
+      : allResources;
 
   const recommendedTutorials = visibleResources.filter((r) => r.isTutorial);
 
   const pastPapers = visibleResources.filter(
-    (r) => r.type === "pastpaper" || r.category.toLowerCase().includes("past paper")
+    (r) =>
+      r.type === "pastpaper" ||
+      (r.category || "").toLowerCase().includes("past paper")
   );
 
   const topTutors = visibleResources

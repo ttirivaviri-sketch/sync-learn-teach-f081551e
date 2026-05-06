@@ -1,52 +1,91 @@
-## What's already shipped vs. what's still needed
+## What's actually broken
 
-### ✅ Already done (verified by reading the code)
-1. **Books / past papers open via `pdf_url` fallback** — `src/components/StudySyncLibrary.tsx` `openResource` (lines 112–128) already handles `book | guide | pastpaper | pdf` with a `videoUrl → pdf_url → url` fallback chain and toasts "File not available" otherwise. DB confirms 8 system PDFs all have `pdf_url` populated, so taps on Books / Past Papers tabs will open the file in a new tab. ✅
-2. **Study Clips still works** — `openResource` keeps the original `video` branch intact: it finds the resource's index in `recommendedTutorials` and opens `StudyClipsFeed` (the reels overlay) at that index. The Tutorials tab shortcut and the "Top Tutorial Videos" rack both feed the same flow. DB has 2 published video tutorials, so the reels feed will mount with content. ✅
-3. **`logGenerationHistory` try/catch** — there are no `logGenerationHistory` references anywhere in `src/` or `supabase/`. Nothing to wrap. (If you meant a different logger, point me at it and I'll harden it.)
+I read the data and code. Here's what I found:
 
-### ❌ Still to do
-1. **Remove StatsSection** — you've now confirmed the numbers are made-up and the section must go.
-2. **Add "7-day free trial" CTA on the landing hero**, with a **"Become a tutor"** CTA directly below it.
+**Library tabs are empty (Clips, Books, Past Papers):**
+- DB has 8 system resources (CAPS/IEB/ZIMSEC/Cambridge textbooks + Grade 12 papers) and 2 published video tutorials (one IEB Grade 12, one ZIMSEC Form 6).
+- `useLibraryResources.ts` filters everything through `personalizedResources` first. If the learner's `academic_profile` doesn't match curriculum + grade + subject exactly, `recommendedTutorials`, `pastPapers`, and the `tutorialFeed` derived in `StudySyncLibrary.tsx` all collapse to **0 items**.
+- That's why the Clips tab does nothing (handler early-returns when `tutorialFeed.length === 0`), and Books/Papers tabs show empty states.
+
+**PDFs don't open on mobile:**
+- `DocumentViewerOverlay` renders the PDF in a plain `<iframe src={pdfUrl}>`. iOS Safari and most Android browsers do NOT render PDFs inline in iframes — they show a blank frame. Needs a real PDF viewer (PDF.js / Google viewer) or a clear "Open" fallback that actually triggers download/native viewer reliably.
+
+**Pricing is wrong / wrong structure:**
+- `PLAN_PRICING.premium` is `R99/mo`. You want a 3-product structure (AI Moderate / AI Premium / Tutor Sessions / Combo discount) — not a single "premium" plan.
+- Trial signup currently shows only `R{premium.monthly}/mo` with no Moderate vs Premium choice and no tutor-session product.
 
 ---
 
 ## Plan
 
-### 1. Remove `StatsSection` from the landing page
-**File:** `src/pages/Index.tsx`
-- Drop the `StatsSection` lazy import.
-- Remove `<StatsSection />` from the JSX.
-- Leave `src/components/StatsSection.tsx` on disk (unused) so it can be revived later if you ever want real numbers — no other file imports it.
+### 1. Plan & pricing model (data + UI)
 
-### 2. Add the two new CTAs to the hero
-**File:** `src/components/HeroSection.tsx` (the CTA block currently has "Start Learning" + "Find a Tutor" side-by-side)
+Update `src/sail/types/index.ts`:
+- Replace `PLAN_PRICING` with a richer structure:
+  ```ts
+  export const PRICING = {
+    ai_moderate:  { monthly: 250,    annually: 2500,    currency: 'ZAR', usd: 15 },
+    ai_premium:   { monthly: 500,    annually: 5000,    currency: 'ZAR', usd: 30 },
+    ai_moderate_combo: { monthly: 179.99, currency: 'ZAR', usd: 11 },
+    ai_premium_combo:  { monthly: 399.99, currency: 'ZAR', usd: 24 },
+    tutor_session: { perSession: 300, currency: 'ZAR' },
+    combo_minimum_sessions_per_month: 4, // 1/week
+  };
+  ```
+- Keep legacy `PLAN_PRICING` export pointing to the new values to avoid breaking other call sites; map `basic → ai_moderate`, `premium → ai_premium`.
 
-Replace that CTA block with a stacked layout:
+Rewrite `src/pages/TrialSignupFlow.tsx` as a 3-step flow matching the screenshot:
+1. **Choose your plan** — three cards: "AI Study Mode (from R250/mo)", "Tutor Sessions (R300/session)", "Combo Plan — Most Popular (save up to R100/mo)".
+2. **AI plan picker** (Moderate R250 vs Premium R500) — only shown for AI / Combo paths.
+3. **Tutor sessions builder** (subject chips + lessons-per-week slider 1–5, total = sessions × R300) — only shown for Tutor / Combo paths.
+4. **Review & Pay** — shows itemized monthly total. For Combo with ≥4 sessions/month, AI line is automatically discounted (R250→R179.99 or R500→R399.99) with a green "Discount applied" pill.
+5. Final "Start 7-Day Free Trial" CTA continues to `/learner/auth?trial=1&plan=…&billing=…&sessions=…`.
 
-```text
-[ Start 7-day free trial ]   ← primary, yellow, full-width on mobile
-[ Become a tutor          ]   ← secondary outline, directly below
-[ Start Learning ] [ Find a Tutor ]   ← keep existing pair as a thinner row
-```
+Routing: keep `/start-trial` route. Hero "Start 7-day free trial" already lands here.
 
-- **"Start 7-day free trial"** → `navigate("/learner/auth")` (signup flow already grants the 7-day trial via the Postgres trigger noted in memory — no backend change needed).
-- **"Become a tutor"** → `navigate("/tutor/auth")`.
-- Add a tiny line under the trial button: `"No card required · cancel anytime"` to reduce friction.
-- Mirror the same two CTAs in the mobile menu in `Navbar` (it currently shows "Get Started" + "Become a Tutor"; I'll relabel "Get Started" → "Start free trial" for consistency).
+### 2. Library: stop returning empty tabs
 
-### 3. Sanity verification (no automation needed)
-- Open `/` → confirm: hero shows trial CTA + tutor CTA stacked; StatsSection gone; ContactStrip + WhatsApp FAB still present.
-- Open Learner → Library → Books tab → tap a poster → PDF opens in a new tab.
-- Library → Past Papers tab → tap → PDF opens.
-- Browse tab → "Top Tutorial Videos" rack → tap → reels feed opens at the correct slide.
-- Tutorials tab → reels feed auto-opens.
+In `src/hooks/useLibraryResources.ts`:
+- Make personalization a **soft preference, not a hard filter**:
+  - Compute `personalizedResources` as today.
+  - For derived lists, fall back to full pool if personalized is empty:
+    ```ts
+    const visibleResources = (academicProfile && personalizedResources.length > 0)
+      ? personalizedResources
+      : allResources;
+    ```
+- Loosen `pastPapers` filter to also include resources where `kind`/`type` indicates a paper regardless of category string.
+- Same fallback in `StudySyncLibrary.tsx` for `tutorialFeed`.
+
+Result: Clips tab opens reels (DB has 2 videos), Past Papers tab shows the 4 Grade 12 papers, Books tab shows the 4 OpenStax textbooks — even before the learner sets a profile.
+
+### 3. In-app PDF viewing that works on mobile
+
+Replace iframe in `src/components/library/DocumentViewerOverlay.tsx`:
+- Use **PDF.js via `react-pdf`** (already common in the stack) to render pages to canvas — works on iOS/Android.
+- Keep the overlay shell (header with title, Close, "Open in new tab"). Add page navigation (prev/next + page X of Y) and pinch/scroll zoom.
+- Fallback: if `react-pdf` fails to load the URL (CORS), show "Open in new tab" + "Download" buttons rather than a blank frame.
+
+If `react-pdf` isn't desired, alternative is Mozilla's hosted viewer:
+`https://mozilla.github.io/pdf.js/web/viewer.html?file=<encoded url>` — works in iframe on mobile. I'll use `react-pdf` for offline reliability and styling control.
+
+Add `react-pdf` and `pdfjs-dist` deps.
+
+### 4. Hero / landing copy stays as-is
+
+No further changes to `HeroSection`, `Index.tsx`, `Navbar` from the previous turn — CTAs already point to `/start-trial?role=…`.
 
 ---
 
-## Risks / notes
-- `StatsSection.tsx` left on disk = small dead weight (~5 KB), but it's not imported anywhere after this change so it won't ship in the bundle. I can delete the file too if you'd rather — say the word.
-- The 7-day trial is already enforced by the existing `useSubscription` hook + DB trigger (per memory). The new button is purely a relabeled CTA into the same signup; no payment / Paddle / PayFast wiring needed.
-- No DB, RLS, or edge-function changes.
+## Files to change
 
-Approve and I'll apply these three edits.
+- `src/sail/types/index.ts` — new `PRICING` constants, keep `PLAN_PRICING` shim.
+- `src/pages/TrialSignupFlow.tsx` — full rewrite with 3-product picker, AI tier picker, tutor-sessions builder, review/pay step, combo discount logic.
+- `src/hooks/useLibraryResources.ts` — soft personalization fallback; broaden `pastPapers` filter.
+- `src/components/StudySyncLibrary.tsx` — `tutorialFeed` falls back to all tutorials when personalized is empty; small empty-state copy tweak.
+- `src/components/library/DocumentViewerOverlay.tsx` — replace iframe with `react-pdf` viewer + pager + robust fallbacks.
+- `package.json` — add `react-pdf`, `pdfjs-dist`.
+
+## Out of scope (call out)
+- Wiring real billing for the new combo/tutor-session SKUs to PayFast — current flow ends at auth with query params; PayFast catalog updates are a separate task once you confirm SKU IDs.
+- No DB migration needed; we're not changing `subscriptions` schema, just the pre-auth pricing UI.
