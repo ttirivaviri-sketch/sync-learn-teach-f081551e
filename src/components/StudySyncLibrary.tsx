@@ -61,9 +61,14 @@ const StudySyncLibrary = ({
     search,
   } = useLibraryResources(academicProfile);
 
-  const tutorialFeed = (academicProfile ? personalizedResources : allResources).filter(
-    (resource) => resource.isTutorial
-  );
+  // Soft personalization: prefer matched resources but fall back to all so the
+  // Clips/Books/Past Papers tabs are never empty when content exists.
+  const personalizedTutorials = personalizedResources.filter((r) => r.isTutorial);
+  const allTutorials = allResources.filter((r) => r.isTutorial);
+  const tutorialFeed =
+    academicProfile && personalizedTutorials.length > 0
+      ? personalizedTutorials
+      : allTutorials;
 
   // Tabs handler: when user picks "tutorials", drop them straight into the carousel
   const handleTabChange = (next: string) => {
@@ -360,6 +365,7 @@ const StudySyncLibrary = ({
             {/* Books Tab — Netflix-style poster racks */}
             <TabsContent value="books" className="space-y-5 mt-4">
               {(() => {
+                // Use full pool so books always show even before profile setup
                 const books = allResources.filter(
                   (r) => r.type === "book" || r.type === "guide"
                 );
