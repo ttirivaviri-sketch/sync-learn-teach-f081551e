@@ -356,15 +356,36 @@ const StudySyncLibrary = ({
             {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel) */}
             <TabsContent value="tutorials" className="mt-4" />
 
-            {/* Books Tab — Netflix-style poster racks */}
+            {/* Books Tab — Netflix-style poster racks (strict personalization) */}
             <TabsContent value="books" className="space-y-5 mt-4">
               {(() => {
-                // Use full pool so books always show even before profile setup
-                const books = allResources.filter(
+                const books = personalizedResources.filter(
                   (r) => r.type === "book" || r.type === "guide"
                 );
+                if (!academicProfile) {
+                  return (
+                    <Card className="bg-muted/30">
+                      <CardContent className="p-6 text-center">
+                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Set your curriculum, grade and subjects to see books for your syllabus.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
                 if (books.length === 0) {
                   return (
+                    <Card className="bg-muted/30">
+                      <CardContent className="p-6 text-center">
+                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          No {academicProfile.curriculum} {academicProfile.grade} books yet — tutors are uploading more weekly.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
                     <Card className="bg-muted/30">
                       <CardContent className="p-6 text-center">
                         <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
