@@ -386,16 +386,6 @@ const StudySyncLibrary = ({
                     </Card>
                   );
                 }
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-6 text-center">
-                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Textbooks &amp; study guides will appear here.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                }
                 // Group by subject for Netflix-style racks
                 const bySubject = books.reduce<Record<string, LibraryResource[]>>(
                   (acc, b) => {
