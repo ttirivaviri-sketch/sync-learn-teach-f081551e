@@ -43,6 +43,10 @@ interface UseTutorDataOptions {
   searchQuery?: string;
   studyLevel?: string;
   maxActiveBookings?: number;
+  /** Learner's selected subjects from academic profile */
+  subjects?: string[];
+  /** Learner's grade (e.g., "Form 4", "Grade 12", "A-Level") */
+  grade?: string;
 }
 
 export const useTutorData = (
