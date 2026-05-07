@@ -122,6 +122,8 @@ const LearnerApp = () => {
     subjectFilter: selectedSubject,
     searchQuery: debouncedSearchQuery,
     studyLevel: profile?.study_level || undefined,
+    subjects: academicProfile?.subjects || undefined,
+    grade: academicProfile?.grade || undefined,
   });
   const { isUserOnline } = usePresenceTracking(session);
 
