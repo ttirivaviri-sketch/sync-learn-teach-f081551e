@@ -16,27 +16,36 @@ const extractVideoUrl = (text: string | null | undefined): string | undefined =>
 
 const normalizeText = (value: string | null | undefined) => (value || "").trim().toLowerCase();
 
-const hasGradeOverlap = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) => {
-  if (!resourceGrades?.length || !learnerGrade) return true;
-  const target = normalizeText(learnerGrade);
-  return resourceGrades.some((grade) => {
-    const normalized = normalizeText(grade);
-    return normalized === target || normalized.includes(target) || target.includes(normalized);
-  });
+// Curriculum synonyms (CAPS↔NSC, Cambridge↔CAMB↔IGCSE)
+const CURRICULUM_SYNONYMS: Record<string, string[]> = {
+  caps: ["caps", "nsc"],
+  nsc: ["caps", "nsc"],
+  cambridge: ["cambridge", "camb", "igcse"],
+  camb: ["cambridge", "camb", "igcse"],
+  igcse: ["cambridge", "camb", "igcse"],
+  ieb: ["ieb"],
+  zimsec: ["zimsec"],
 };
 
-const matchesSubject = (resource: LibraryResource, subjects: string[] | null | undefined) => {
-  if (!subjects?.length) return true;
-  const resourceSubject = normalizeText(resource.tags?.subject || resource.category);
+const curriculumMatches = (resourceCurriculum: string | null | undefined, learnerCurriculum: string | null | undefined) => {
+  if (!resourceCurriculum || !learnerCurriculum) return true;
+  const r = normalizeText(resourceCurriculum);
+  const l = normalizeText(learnerCurriculum);
+  if (r === l) return true;
+  const synonyms = CURRICULUM_SYNONYMS[l];
+  return synonyms ? synonyms.includes(r) : false;
+};
 
-  return subjects.some((subject) => {
-    const normalized = normalizeText(subject);
-    return (
-      resourceSubject === normalized ||
-      resourceSubject.includes(normalized) ||
-      normalized.includes(resourceSubject)
-    );
-  });
+const gradeMatches = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) => {
+  if (!resourceGrades?.length || !learnerGrade) return false;
+  const target = normalizeText(learnerGrade);
+  return resourceGrades.some((grade) => normalizeText(grade) === target);
+};
+
+const subjectMatches = (resource: LibraryResource, subjects: string[] | null | undefined) => {
+  if (!subjects?.length) return false;
+  const resourceSubject = normalizeText(resource.tags?.subject || resource.category);
+  return subjects.some((s) => normalizeText(s) === resourceSubject);
 };
 
 // ─── Seed data (used when Supabase table doesn't have items yet) ──────────────
@@ -433,26 +442,25 @@ export function useLibraryResources(
 
   // ── Personalization logic ─────────────────────────────────────────────────
 
+  // Strict personalization: only show resources matching learner's curriculum,
+  // grade, and subjects. No soft fallback — empty tabs get explicit copy in UI.
   const personalizedResources = academicProfile
     ? allResources.filter((r) => {
-        if (!r.tags) return true;
-        const matchCurriculum =
-          !r.tags.curriculum || normalizeText(r.tags.curriculum) === normalizeText(academicProfile.curriculum);
-        const matchGrade = hasGradeOverlap(
-          [r.tags?.grade, ...r.gradeLevel.split("•")].filter(Boolean) as string[],
-          academicProfile.grade
-        );
-        const matchSubjects = matchesSubject(r, academicProfile.subjects);
-
-        return matchCurriculum && matchGrade && matchSubjects;
+        if (!r.tags) return false;
+        const matchCurriculum = curriculumMatches(r.tags.curriculum, academicProfile.curriculum);
+        const gradePool = [
+          r.tags?.grade,
+          ...(r.gradeLevel ? r.gradeLevel.split(/[•·]/) : []),
+        ]
+          .map((g) => (g || "").trim())
+          .filter(Boolean) as string[];
+        const matchGrade = gradeMatches(gradePool, academicProfile.grade);
+        const matchSubject = subjectMatches(r, academicProfile.subjects);
+        return matchCurriculum && matchGrade && matchSubject;
       })
-    : allResources;
+    : [];
 
-  // Soft personalization: fall back to all resources if filter returns nothing
-  const visibleResources =
-    academicProfile && personalizedResources.length > 0
-      ? personalizedResources
-      : allResources;
+  const visibleResources = personalizedResources;
 
   const recommendedTutorials = visibleResources.filter((r) => r.isTutorial);
 

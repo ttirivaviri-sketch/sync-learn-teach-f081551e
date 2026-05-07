@@ -44,11 +44,18 @@ function resolveVideoUrl(r: LibraryResource): string | null {
 
 function embedUrl(raw: string): { src: string; isEmbed: boolean } {
   const yt = raw.match(YOUTUBE_RE);
-  if (yt) return { src: `https://www.youtube.com/embed/${yt[1]}?autoplay=1&mute=1&loop=1&playsinline=1`, isEmbed: true };
+  if (yt) {
+    // loop=1 only works when paired with playlist=<id>
+    const id = yt[1];
+    return {
+      src: `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&playsinline=1&controls=1&modestbranding=1&rel=0&enablejsapi=1`,
+      isEmbed: true,
+    };
+  }
   const vm = raw.match(VIMEO_RE);
-  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1`, isEmbed: true };
+  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&playsinline=1`, isEmbed: true };
   const lm = raw.match(LOOM_RE);
-  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1`, isEmbed: true };
+  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`, isEmbed: true };
   return { src: raw, isEmbed: false };
 }
 
@@ -95,8 +102,9 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
           <iframe
             src={isActive ? resolved.src : "about:blank"}
             className="absolute inset-0 w-full h-full"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
             frameBorder="0"
           />
         ) : (

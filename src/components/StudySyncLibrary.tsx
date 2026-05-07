@@ -61,14 +61,8 @@ const StudySyncLibrary = ({
     search,
   } = useLibraryResources(academicProfile);
 
-  // Soft personalization: prefer matched resources but fall back to all so the
-  // Clips/Books/Past Papers tabs are never empty when content exists.
-  const personalizedTutorials = personalizedResources.filter((r) => r.isTutorial);
-  const allTutorials = allResources.filter((r) => r.isTutorial);
-  const tutorialFeed =
-    academicProfile && personalizedTutorials.length > 0
-      ? personalizedTutorials
-      : allTutorials;
+  // Strict personalization: only show content matching learner's syllabus + grade + subjects
+  const tutorialFeed = personalizedResources.filter((r) => r.isTutorial);
 
   // Tabs handler: when user picks "tutorials", drop them straight into the carousel
   const handleTabChange = (next: string) => {
@@ -76,8 +70,14 @@ const StudySyncLibrary = ({
       if (tutorialFeed.length > 0) {
         setReelsStartIndex(0);
         setReelsFeedOpen(true);
+      } else {
+        dispatchToast(
+          "No clips yet",
+          academicProfile
+            ? `No ${academicProfile.curriculum} ${academicProfile.grade} clips for your subjects yet — tutors are uploading more weekly.`
+            : "Set your curriculum, grade and subjects to see clips for your syllabus."
+        );
       }
-      // Don't actually switch the visible tab — stay where they were
       return;
     }
     setPreviousCategory(activeCategory);
@@ -362,20 +362,31 @@ const StudySyncLibrary = ({
             {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel) */}
             <TabsContent value="tutorials" className="mt-4" />
 
-            {/* Books Tab — Netflix-style poster racks */}
+            {/* Books Tab — Netflix-style poster racks (strict personalization) */}
             <TabsContent value="books" className="space-y-5 mt-4">
               {(() => {
-                // Use full pool so books always show even before profile setup
-                const books = allResources.filter(
+                const books = personalizedResources.filter(
                   (r) => r.type === "book" || r.type === "guide"
                 );
+                if (!academicProfile) {
+                  return (
+                    <Card className="bg-muted/30">
+                      <CardContent className="p-6 text-center">
+                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-sm text-muted-foreground">
+                          Set your curriculum, grade and subjects to see books for your syllabus.
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                }
                 if (books.length === 0) {
                   return (
                     <Card className="bg-muted/30">
                       <CardContent className="p-6 text-center">
                         <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
                         <p className="text-sm text-muted-foreground">
-                          Textbooks &amp; study guides will appear here.
+                          No {academicProfile.curriculum} {academicProfile.grade} books yet — tutors are uploading more weekly.
                         </p>
                       </CardContent>
                     </Card>
@@ -410,11 +421,22 @@ const StudySyncLibrary = ({
 
             {/* Past Papers Tab — Netflix-style poster racks */}
             <TabsContent value="papers" className="space-y-5 mt-4">
-              {pastPapers.length === 0 ? (
+              {!academicProfile ? (
                 <Card className="bg-muted/30">
                   <CardContent className="p-6 text-center">
                     <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Past papers will appear here.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Set your curriculum, grade and subjects to see past papers for your syllabus.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : pastPapers.length === 0 ? (
+                <Card className="bg-muted/30">
+                  <CardContent className="p-6 text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No {academicProfile.curriculum} {academicProfile.grade} past papers yet — more are being added weekly.
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
