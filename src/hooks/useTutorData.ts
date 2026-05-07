@@ -265,6 +265,8 @@ export const useTutorData = (
     options?.subjectFilter,
     options?.searchQuery,
     options?.studyLevel,
+    options?.grade,
+    JSON.stringify(options?.subjects || []),
     toast,
   ]);
 
