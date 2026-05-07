@@ -415,11 +415,22 @@ const StudySyncLibrary = ({
 
             {/* Past Papers Tab — Netflix-style poster racks */}
             <TabsContent value="papers" className="space-y-5 mt-4">
-              {pastPapers.length === 0 ? (
+              {!academicProfile ? (
                 <Card className="bg-muted/30">
                   <CardContent className="p-6 text-center">
                     <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Past papers will appear here.</p>
+                    <p className="text-sm text-muted-foreground">
+                      Set your curriculum, grade and subjects to see past papers for your syllabus.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : pastPapers.length === 0 ? (
+                <Card className="bg-muted/30">
+                  <CardContent className="p-6 text-center">
+                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      No {academicProfile.curriculum} {academicProfile.grade} past papers yet — more are being added weekly.
+                    </p>
                   </CardContent>
                 </Card>
               ) : (
