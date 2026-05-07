@@ -161,16 +161,46 @@ export const useTutorData = (
       });
 
       let filtered = tutorsWithSubjects.filter(t => t.subjects.length > 0);
-      filtered = filtered.filter(t => t.confirmedBookingsCount < maxActive);
+      // Don't hide fully-booked tutors anymore — surface them with a flag instead.
+      // (consumers can read confirmedBookingsCount >= maxActive to render a "Fully booked" pill)
 
-      if (options?.subjectFilter) {
+      // Match learner subjects from academic profile (case-insensitive exact)
+      if (options?.subjects && options.subjects.length > 0) {
+        const wanted = options.subjects.map(s => s.toLowerCase().trim());
+        filtered = filtered.filter(t =>
+          t.subjects.some(s => wanted.includes(s.subject.toLowerCase().trim()))
+        );
+      } else if (options?.subjectFilter) {
         const subjectLower = options.subjectFilter.toLowerCase();
         filtered = filtered.filter(t =>
           t.subjects.some(s => s.subject.toLowerCase().includes(subjectLower))
         );
       }
 
-      if (options?.studyLevel) {
+      // Grade matching: bidirectional Form ↔ Grade ↔ A-Level mapping
+      if (options?.grade) {
+        const gradeSynonyms: Record<string, string[]> = {
+          'form 1': ['grade 7', 'grade 7-9', 'junior high'],
+          'form 2': ['grade 8', 'grade 7-9', 'junior high'],
+          'form 3': ['grade 9', 'grade 7-9', 'junior high'],
+          'form 4': ['grade 10', 'grade 11', 'grade 10-12', 'o-level', 'senior high'],
+          'form 5': ['grade 11', 'grade 12', 'grade 10-12', 'a-level', 'senior high'],
+          'form 6': ['grade 12', 'a-level', 'grade 10-12', 'senior high'],
+          'a-level': ['form 5', 'form 6', 'grade 12', 'grade 10-12', 'senior high'],
+          'o-level': ['form 4', 'grade 10', 'grade 11', 'grade 10-12', 'senior high'],
+          'grade 12': ['form 5', 'form 6', 'a-level', 'grade 10-12', 'senior high'],
+          'grade 11': ['form 4', 'form 5', 'grade 10-12', 'senior high'],
+          'grade 10': ['form 4', 'grade 10-12', 'senior high'],
+        };
+        const learnerGrade = options.grade.toLowerCase().trim();
+        const acceptable = new Set([learnerGrade, ...(gradeSynonyms[learnerGrade] || [])]);
+        filtered = filtered.filter(t =>
+          t.subjects.some(s => {
+            const lvl = s.level.toLowerCase().trim();
+            return acceptable.has(lvl) || [...acceptable].some(a => lvl.includes(a) || a.includes(lvl));
+          })
+        );
+      } else if (options?.studyLevel) {
         const levelMap: Record<string, string[]> = {
           junior_primary: ['grade 1-3'],
           senior_primary: ['grade 4-6'],
