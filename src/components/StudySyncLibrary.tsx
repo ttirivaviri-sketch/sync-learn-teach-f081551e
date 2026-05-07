@@ -70,8 +70,14 @@ const StudySyncLibrary = ({
       if (tutorialFeed.length > 0) {
         setReelsStartIndex(0);
         setReelsFeedOpen(true);
+      } else {
+        dispatchToast(
+          "No clips yet",
+          academicProfile
+            ? `No ${academicProfile.curriculum} ${academicProfile.grade} clips for your subjects yet — tutors are uploading more weekly.`
+            : "Set your curriculum, grade and subjects to see clips for your syllabus."
+        );
       }
-      // Don't actually switch the visible tab — stay where they were
       return;
     }
     setPreviousCategory(activeCategory);
