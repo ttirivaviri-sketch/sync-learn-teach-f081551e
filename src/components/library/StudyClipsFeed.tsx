@@ -102,8 +102,9 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
           <iframe
             src={isActive ? resolved.src : "about:blank"}
             className="absolute inset-0 w-full h-full"
-            allow="autoplay; encrypted-media; picture-in-picture"
+            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
             allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
             frameBorder="0"
           />
         ) : (
