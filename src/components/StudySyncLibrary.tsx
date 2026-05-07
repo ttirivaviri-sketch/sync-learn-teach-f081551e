@@ -61,14 +61,8 @@ const StudySyncLibrary = ({
     search,
   } = useLibraryResources(academicProfile);
 
-  // Soft personalization: prefer matched resources but fall back to all so the
-  // Clips/Books/Past Papers tabs are never empty when content exists.
-  const personalizedTutorials = personalizedResources.filter((r) => r.isTutorial);
-  const allTutorials = allResources.filter((r) => r.isTutorial);
-  const tutorialFeed =
-    academicProfile && personalizedTutorials.length > 0
-      ? personalizedTutorials
-      : allTutorials;
+  // Strict personalization: only show content matching learner's syllabus + grade + subjects
+  const tutorialFeed = personalizedResources.filter((r) => r.isTutorial);
 
   // Tabs handler: when user picks "tutorials", drop them straight into the carousel
   const handleTabChange = (next: string) => {
