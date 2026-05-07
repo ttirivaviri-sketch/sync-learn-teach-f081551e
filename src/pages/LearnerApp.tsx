@@ -118,6 +118,12 @@ const LearnerApp = () => {
 
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
+
+  const {
+    profile: academicProfile, loading: academicProfileLoading,
+    saving: academicProfileSaving, saveProfile: saveAcademicProfile,
+  } = useAcademicProfile(userId);
+
   const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
     subjectFilter: selectedSubject,
     searchQuery: debouncedSearchQuery,
@@ -126,11 +132,6 @@ const LearnerApp = () => {
     grade: academicProfile?.grade || undefined,
   });
   const { isUserOnline } = usePresenceTracking(session);
-
-  const {
-    profile: academicProfile, loading: academicProfileLoading,
-    saving: academicProfileSaving, saveProfile: saveAcademicProfile,
-  } = useAcademicProfile(userId);
 
   const confirmedBookingIds = useMemo(
     () => bookings.filter((b) => b.status === "confirmed").map((b) => b.id),
