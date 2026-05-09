@@ -23,6 +23,7 @@ import { StuckPrompt } from "@/components/library/StuckPrompt";
 import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
 import { PosterCard } from "@/components/library/PosterCard";
 import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
+import { MatchExplanation } from "@/components/library/MatchExplanation";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
