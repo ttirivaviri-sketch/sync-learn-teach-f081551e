@@ -118,6 +118,27 @@ export const AuthForm = ({
     }
   };
 
+  // ── Google OAuth ────────────────────────────────────────────────────────
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}${redirectTo}`,
+          queryParams: { user_type: userType },
+        },
+      });
+      if (error) {
+        toast({ title: "Google sign-in failed", description: error.message, variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Error", description: "Could not start Google sign-in.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ── Forgot Password ─────────────────────────────────────────────────────
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
