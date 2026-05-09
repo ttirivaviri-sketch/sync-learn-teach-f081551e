@@ -14,7 +14,6 @@ const CURRICULUMS: { key: Curriculum; label: string; flag: string }[] = [
   { key: "CAMB", label: "Cambridge (CIE)", flag: "GB" },
   { key: "IEB", label: "IEB (South Africa)", flag: "ZA" },
   { key: "NSC", label: "NSC / Matric (SA)", flag: "ZA" },
-  { key: "IGCSE", label: "IGCSE", flag: "INT" },
   { key: "OTHER", label: "Other / General", flag: "OTH" },
 ];
 
