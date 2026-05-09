@@ -26,6 +26,14 @@ interface GenerateOptions {
   tutorId?: string | null;
   /** Days of history to summarise (default 60) */
   windowDays?: number;
+  /** When true, also email the PDF (to tutor + guardian as configured) */
+  email?: boolean;
+  /** Optional override for tutor email recipient */
+  tutorEmail?: string | null;
+  /** Optional override for guardian email recipient */
+  guardianEmail?: string | null;
+  /** Optional message from the student */
+  message?: string;
 }
 
 export function useProgressReport(learnerId: string | null | undefined) {
