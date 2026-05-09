@@ -611,5 +611,7 @@ export function useLibraryResources(
     search: setSearchQuery,
     getBySubject,
     getByTopic,
+    matchStats,
+    getMatchStatsFor,
   };
 }
