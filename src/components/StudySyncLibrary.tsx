@@ -62,10 +62,18 @@ const StudySyncLibrary = ({
     searchResults,
     loading,
     search,
+    getMatchStatsFor,
   } = useLibraryResources(academicProfile);
 
   // Strict personalization: only show content matching learner's syllabus + grade + subjects
   const tutorialFeed = personalizedResources.filter((r) => r.isTutorial);
+
+  // Per-tab match diagnostics for empty-state explanations
+  const tutorialStats = getMatchStatsFor((r) => !!r.isTutorial);
+  const bookStats = getMatchStatsFor((r) => r.type === "book" || r.type === "guide");
+  const paperStats = getMatchStatsFor(
+    (r) => r.type === "pastpaper" || (r.category || "").toLowerCase().includes("past paper")
+  );
 
   // Tabs handler: when user picks "tutorials", drop them straight into the carousel
   const handleTabChange = (next: string) => {
@@ -74,12 +82,25 @@ const StudySyncLibrary = ({
         setReelsStartIndex(0);
         setReelsFeedOpen(true);
       } else {
-        dispatchToast(
-          "No clips yet",
-          academicProfile
-            ? `No ${academicProfile.curriculum} ${academicProfile.grade} clips for your subjects yet — tutors are uploading more weekly.`
-            : "Set your curriculum, grade and subjects to see clips for your syllabus."
-        );
+        // Build a precise reason string from match stats
+        let reason = "No clips have been uploaded yet — tutors are adding more weekly.";
+        if (academicProfile) {
+          if (tutorialStats.blockedBySubject > 0) {
+            reason = `${tutorialStats.blockedBySubject} clip${tutorialStats.blockedBySubject === 1 ? "" : "s"} exist for ${academicProfile.curriculum} ${academicProfile.grade}, but in subjects you haven't picked.`;
+          } else if (tutorialStats.blockedByGrade > 0) {
+            reason = `${tutorialStats.blockedByGrade} clip${tutorialStats.blockedByGrade === 1 ? "" : "s"} match your subjects but not grade "${academicProfile.grade}".`;
+          } else if (tutorialStats.blockedByCurriculum > 0) {
+            reason = `${tutorialStats.blockedByCurriculum} clip${tutorialStats.blockedByCurriculum === 1 ? "" : "s"} match your subjects but are tagged for a different curriculum.`;
+          } else {
+            reason = `No ${academicProfile.curriculum} ${academicProfile.grade} clips for your subjects yet.`;
+          }
+        } else {
+          reason = "Set your curriculum, grade and subjects to see clips for your syllabus.";
+        }
+        dispatchToast("No clips match your profile", reason);
+        // Also navigate to "all" so the inline MatchExplanation card is visible
+        setPreviousCategory(activeCategory);
+        setActiveCategory("all");
       }
       return;
     }
