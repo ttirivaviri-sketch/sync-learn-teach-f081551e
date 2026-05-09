@@ -231,6 +231,24 @@ const SEED_TUTORIALS: LibraryResource[] = [
   },
 ];
 
+export interface LibraryMatchStats {
+  total: number;
+  matchedAll: number;
+  matchedCurriculum: number;
+  matchedGrade: number;
+  matchedSubject: number;
+  // Counts of resources that match every filter EXCEPT the named one — these are
+  // the items the learner is "just missing" because of that single mismatch.
+  blockedByCurriculum: number;
+  blockedByGrade: number;
+  blockedBySubject: number;
+  // Distinct values seen on resources that already match curriculum+grade —
+  // useful to suggest "we have <subject>, but you didn't pick it".
+  availableSubjects: string[];
+  availableGrades: string[];
+  availableCurricula: string[];
+}
+
 interface UseLibraryResourcesReturn {
   allResources: LibraryResource[];
   personalizedResources: LibraryResource[];
@@ -242,6 +260,10 @@ interface UseLibraryResourcesReturn {
   search: (query: string) => void;
   getBySubject: (subject: string) => LibraryResource[];
   getByTopic: (topic: string) => LibraryResource[];
+  /** Per-filter match diagnostics for empty-state explanations. */
+  matchStats: LibraryMatchStats;
+  /** Same as matchStats, but scoped to a single resource type (book/pastpaper/video). */
+  getMatchStatsFor: (predicate: (r: LibraryResource) => boolean) => LibraryMatchStats;
 }
 
 export function useLibraryResources(
@@ -474,7 +496,73 @@ export function useLibraryResources(
     .filter((r) => r.isTutorial && r.tutor)
     .sort((a, b) => (b.tutor?.rating || 0) - (a.tutor?.rating || 0));
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── Match diagnostics ─────────────────────────────────────────────────────
+  const computeStats = useCallback(
+    (predicate?: (r: LibraryResource) => boolean): LibraryMatchStats => {
+      const pool = predicate ? allResources.filter(predicate) : allResources;
+      const empty: LibraryMatchStats = {
+        total: pool.length,
+        matchedAll: 0,
+        matchedCurriculum: 0,
+        matchedGrade: 0,
+        matchedSubject: 0,
+        blockedByCurriculum: 0,
+        blockedByGrade: 0,
+        blockedBySubject: 0,
+        availableSubjects: [],
+        availableGrades: [],
+        availableCurricula: [],
+      };
+      if (!academicProfile) return empty;
+
+      const subjects = new Set<string>();
+      const grades = new Set<string>();
+      const curricula = new Set<string>();
+
+      for (const r of pool) {
+        if (!r.tags) continue;
+        const cur = curriculumMatches(r.tags.curriculum, academicProfile.curriculum);
+        const gradePool = [
+          r.tags?.grade,
+          ...(r.gradeLevel ? r.gradeLevel.split(/[•·]/) : []),
+        ]
+          .map((g) => (g || "").trim())
+          .filter(Boolean) as string[];
+        const grd = gradeMatches(gradePool, academicProfile.grade);
+        const sub = subjectMatches(r, academicProfile.subjects);
+
+        if (cur) empty.matchedCurriculum++;
+        if (grd) empty.matchedGrade++;
+        if (sub) empty.matchedSubject++;
+        if (cur && grd && sub) empty.matchedAll++;
+        if (!cur && grd && sub) empty.blockedByCurriculum++;
+        if (cur && !grd && sub) empty.blockedByGrade++;
+        if (cur && grd && !sub) empty.blockedBySubject++;
+
+        // Collect what's available within learner's curriculum+grade scope
+        if (cur && grd) {
+          const s = (r.tags?.subject || r.category || "").trim();
+          if (s) subjects.add(s);
+        }
+        if (cur) gradePool.forEach((g) => grades.add(g));
+        if (r.tags?.curriculum) curricula.add(r.tags.curriculum);
+      }
+
+      empty.availableSubjects = [...subjects].sort();
+      empty.availableGrades = [...grades].sort();
+      empty.availableCurricula = [...curricula].sort();
+      return empty;
+    },
+    [allResources, academicProfile]
+  );
+
+  const matchStats = computeStats();
+  const getMatchStatsFor = useCallback(
+    (predicate: (r: LibraryResource) => boolean) => computeStats(predicate),
+    [computeStats]
+  );
+
+
 
   const searchResults = searchQuery.trim()
     ? personalizedResources.filter((r) => {
@@ -523,5 +611,7 @@ export function useLibraryResources(
     search: setSearchQuery,
     getBySubject,
     getByTopic,
+    matchStats,
+    getMatchStatsFor,
   };
 }

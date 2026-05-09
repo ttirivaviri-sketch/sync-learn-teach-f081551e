@@ -68,6 +68,7 @@ export const LearnerLibraryTab = ({
         academicProfile={academicProfile as any}
         onBookTutor={onBookTutor}
         onNeedHelp={onNeedHelp}
+        onEditProfile={onShowAcademicSetup}
       />
     </div>
   );
