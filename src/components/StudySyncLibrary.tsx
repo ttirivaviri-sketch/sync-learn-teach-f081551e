@@ -383,8 +383,16 @@ const StudySyncLibrary = ({
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
             </TabsContent>
 
-            {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel) */}
-            <TabsContent value="tutorials" className="mt-4" />
+            {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel).
+                If empty, surface the inline match-reason card here too. */}
+            <TabsContent value="tutorials" className="mt-4">
+              <MatchExplanation
+                stats={tutorialStats}
+                profile={academicProfile}
+                resourceLabel="clips"
+                onEditProfile={onEditProfile}
+              />
+            </TabsContent>
 
             {/* Books Tab — Netflix-style poster racks (strict personalization) */}
             <TabsContent value="books" className="space-y-5 mt-4">
@@ -392,28 +400,14 @@ const StudySyncLibrary = ({
                 const books = personalizedResources.filter(
                   (r) => r.type === "book" || r.type === "guide"
                 );
-                if (!academicProfile) {
+                if (!academicProfile || books.length === 0) {
                   return (
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-6 text-center">
-                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          Set your curriculum, grade and subjects to see books for your syllabus.
-                        </p>
-                      </CardContent>
-                    </Card>
-                  );
-                }
-                if (books.length === 0) {
-                  return (
-                    <Card className="bg-muted/30">
-                      <CardContent className="p-6 text-center">
-                        <Book className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          No {academicProfile.curriculum} {academicProfile.grade} books yet — tutors are uploading more weekly.
-                        </p>
-                      </CardContent>
-                    </Card>
+                    <MatchExplanation
+                      stats={bookStats}
+                      profile={academicProfile}
+                      resourceLabel="books"
+                      onEditProfile={onEditProfile}
+                    />
                   );
                 }
                 // Group by subject for Netflix-style racks
@@ -445,24 +439,13 @@ const StudySyncLibrary = ({
 
             {/* Past Papers Tab — Netflix-style poster racks */}
             <TabsContent value="papers" className="space-y-5 mt-4">
-              {!academicProfile ? (
-                <Card className="bg-muted/30">
-                  <CardContent className="p-6 text-center">
-                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      Set your curriculum, grade and subjects to see past papers for your syllabus.
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : pastPapers.length === 0 ? (
-                <Card className="bg-muted/30">
-                  <CardContent className="p-6 text-center">
-                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No {academicProfile.curriculum} {academicProfile.grade} past papers yet — more are being added weekly.
-                    </p>
-                  </CardContent>
-                </Card>
+              {!academicProfile || pastPapers.length === 0 ? (
+                <MatchExplanation
+                  stats={paperStats}
+                  profile={academicProfile}
+                  resourceLabel="past papers"
+                  onEditProfile={onEditProfile}
+                />
               ) : (
                 Object.entries(
                   pastPapers.reduce<Record<string, LibraryResource[]>>((acc, p) => {
