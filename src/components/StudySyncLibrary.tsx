@@ -34,12 +34,14 @@ interface StudySyncLibraryProps {
   academicProfile?: AcademicProfile | null;
   onBookTutor?: (tutorId: string, tutorName: string) => void;
   onNeedHelp?: () => void;
+  onEditProfile?: () => void;
 }
 
 const StudySyncLibrary = ({
   academicProfile,
   onBookTutor,
   onNeedHelp,
+  onEditProfile,
 }: StudySyncLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [myLibraryItems, setMyLibraryItems] = useState<string[]>([]);
