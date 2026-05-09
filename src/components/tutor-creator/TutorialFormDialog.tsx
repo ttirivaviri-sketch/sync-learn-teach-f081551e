@@ -38,7 +38,7 @@ interface TutorialForm {
   resourceCategory: ResourceCategory;
 }
 
-const CURRICULUM_OPTIONS: Curriculum[] = ["ZIMSEC", "CAMB", "IEB", "NSC", "IGCSE", "OTHER"];
+const CURRICULUM_OPTIONS: Curriculum[] = ["ZIMSEC", "CAMB", "IEB", "NSC", "OTHER"];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB videos
 const MAX_PDF_SIZE = 50 * 1024 * 1024; // 50MB pdfs
 const ACCEPTED_VIDEO_TYPES = ["video/mp4", "video/quicktime", "video/webm"];
