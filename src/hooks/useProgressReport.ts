@@ -351,7 +351,8 @@ export function useProgressReport(learnerId: string | null | undefined) {
         const blob = await generateProgressReportPdf(reportData);
         const stamp = new Date().toISOString().slice(0, 10);
         const suffix = opts.audience === "tutor" ? "-for-tutor" : "";
-        saveAs(blob, `StudySync-Progress-${stamp}${suffix}.pdf`);
+        const fileName = `StudySync-Progress-${stamp}${suffix}.pdf`;
+        saveAs(blob, fileName);
 
         // Persist tutor-flavoured report so the tutor can see it on their booking
         if (opts.audience === "tutor" && opts.tutorId) {
@@ -366,13 +367,65 @@ export function useProgressReport(learnerId: string | null | undefined) {
             });
           if (insErr) {
             logger.warn("Could not persist progress report for tutor", insErr);
-          } else {
             toast({
-              title: "Shared with your tutor",
-              description:
-                "Your tutor will see this report on your next session.",
+              title: "Saved locally",
+              description: "Downloaded, but couldn't save to your tutor's dashboard.",
+              variant: "destructive",
             });
           }
+        }
+
+        // Email to tutor / guardian on behalf of the student
+        if (opts.email) {
+          const recipients: Array<{ email: string; role: "tutor" | "guardian" }> = [];
+          const tutorEmail = opts.tutorEmail?.trim();
+          const guardianEmail =
+            opts.guardianEmail?.trim() || (academic as any)?.guardian_email?.trim();
+          if (tutorEmail) recipients.push({ email: tutorEmail, role: "tutor" });
+          if (guardianEmail) recipients.push({ email: guardianEmail, role: "guardian" });
+
+          if (recipients.length === 0) {
+            toast({
+              title: "No recipients",
+              description: "Add a tutor or guardian email in your profile first.",
+              variant: "destructive",
+            });
+          } else {
+            const pdfBase64 = await blobToBase64(blob);
+            const studentEmail =
+              (academic as any)?.student_email || profile?.email || "";
+            const { data: sendData, error: sendErr } =
+              await supabase.functions.invoke("send-progress-report", {
+                body: {
+                  learnerId,
+                  pdfBase64,
+                  fileName,
+                  recipients,
+                  studentName: profile?.full_name || "Student",
+                  studentEmail,
+                  message: opts.message,
+                },
+              });
+            if (sendErr) {
+              logger.error("send-progress-report failed", sendErr);
+              toast({
+                title: "Couldn't send email",
+                description: sendErr.message,
+                variant: "destructive",
+              });
+            } else {
+              const sent = (sendData as any)?.sent ?? recipients.length;
+              toast({
+                title: `Report sent to ${sent} recipient${sent === 1 ? "" : "s"}`,
+                description: "They'll receive it as if from you (replies come to your email).",
+              });
+            }
+          }
+        } else if (opts.audience === "tutor" && opts.tutorId) {
+          toast({
+            title: "Shared with your tutor",
+            description: "Your tutor will see this report on your next session.",
+          });
         }
       } catch (err) {
         logger.error("Progress report generation failed", err);
