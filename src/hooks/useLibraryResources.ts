@@ -231,6 +231,24 @@ const SEED_TUTORIALS: LibraryResource[] = [
   },
 ];
 
+export interface LibraryMatchStats {
+  total: number;
+  matchedAll: number;
+  matchedCurriculum: number;
+  matchedGrade: number;
+  matchedSubject: number;
+  // Counts of resources that match every filter EXCEPT the named one — these are
+  // the items the learner is "just missing" because of that single mismatch.
+  blockedByCurriculum: number;
+  blockedByGrade: number;
+  blockedBySubject: number;
+  // Distinct values seen on resources that already match curriculum+grade —
+  // useful to suggest "we have <subject>, but you didn't pick it".
+  availableSubjects: string[];
+  availableGrades: string[];
+  availableCurricula: string[];
+}
+
 interface UseLibraryResourcesReturn {
   allResources: LibraryResource[];
   personalizedResources: LibraryResource[];
@@ -242,6 +260,10 @@ interface UseLibraryResourcesReturn {
   search: (query: string) => void;
   getBySubject: (subject: string) => LibraryResource[];
   getByTopic: (topic: string) => LibraryResource[];
+  /** Per-filter match diagnostics for empty-state explanations. */
+  matchStats: LibraryMatchStats;
+  /** Same as matchStats, but scoped to a single resource type (book/pastpaper/video). */
+  getMatchStatsFor: (predicate: (r: LibraryResource) => boolean) => LibraryMatchStats;
 }
 
 export function useLibraryResources(
