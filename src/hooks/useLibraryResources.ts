@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LibraryResource, AcademicProfile } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
+import {
+  curriculumMatches as curriculumMatchesShared,
+  gradeMatches as gradeMatchesShared,
+  subjectMatches as subjectMatchesShared,
+} from "@/lib/personalization";
 
 /** Try to extract a video URL from a text string (description, summary, etc.) */
 const extractVideoUrl = (text: string | null | undefined): string | undefined => {
@@ -14,39 +19,13 @@ const extractVideoUrl = (text: string | null | undefined): string | undefined =>
   return match ? match[0] : undefined;
 };
 
-const normalizeText = (value: string | null | undefined) => (value || "").trim().toLowerCase();
-
-// Curriculum synonyms (CAPS↔NSC, Cambridge↔CAMB↔IGCSE)
-const CURRICULUM_SYNONYMS: Record<string, string[]> = {
-  caps: ["caps", "nsc"],
-  nsc: ["caps", "nsc"],
-  cambridge: ["cambridge", "camb", "igcse"],
-  camb: ["cambridge", "camb", "igcse"],
-  igcse: ["cambridge", "camb", "igcse"],
-  ieb: ["ieb"],
-  zimsec: ["zimsec"],
-};
-
-const curriculumMatches = (resourceCurriculum: string | null | undefined, learnerCurriculum: string | null | undefined) => {
-  if (!resourceCurriculum || !learnerCurriculum) return true;
-  const r = normalizeText(resourceCurriculum);
-  const l = normalizeText(learnerCurriculum);
-  if (r === l) return true;
-  const synonyms = CURRICULUM_SYNONYMS[l];
-  return synonyms ? synonyms.includes(r) : false;
-};
-
-const gradeMatches = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) => {
-  if (!resourceGrades?.length || !learnerGrade) return false;
-  const target = normalizeText(learnerGrade);
-  return resourceGrades.some((grade) => normalizeText(grade) === target);
-};
-
-const subjectMatches = (resource: LibraryResource, subjects: string[] | null | undefined) => {
-  if (!subjects?.length) return false;
-  const resourceSubject = normalizeText(resource.tags?.subject || resource.category);
-  return subjects.some((s) => normalizeText(s) === resourceSubject);
-};
+// Re-exports from shared personalization library so callers within this
+// module can keep using the original local names.
+const curriculumMatches = curriculumMatchesShared;
+const gradeMatches = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) =>
+  gradeMatchesShared(resourceGrades, learnerGrade);
+const subjectMatches = (resource: LibraryResource, subjects: string[] | null | undefined) =>
+  subjectMatchesShared(resource.tags?.subject || resource.category, subjects);
 
 // ─── Seed data (used when Supabase table doesn't have items yet) ──────────────
 // This mirrors the database structure and allows the UI to work offline/dev mode
