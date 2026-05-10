@@ -52,6 +52,12 @@ function riskEmoji(level: string): string {
 
 serve(async (req) => {
   try {
+    // Cron-only endpoint: require shared secret.
+    const expectedToken = Deno.env.get("CRON_SECRET");
+    const authHeader = req.headers.get("Authorization") || "";
+    if (!expectedToken || authHeader !== `Bearer ${expectedToken}`) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    }
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // 1. Get all students with guardian_email
