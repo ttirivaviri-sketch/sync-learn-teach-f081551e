@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-migration-token",
 };
 
-const MIGRATION_TOKEN = "studysync-migrate-2026-secure";
+const MIGRATION_TOKEN = Deno.env.get("MIGRATION_SECRET") || Deno.env.get("CRON_SECRET") || "";
 
 // ---------------------------------------------------------------------------
 // All pending migration steps (idempotent – safe to re-run)
