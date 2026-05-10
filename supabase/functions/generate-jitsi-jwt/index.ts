@@ -103,12 +103,59 @@ Deno.serve(async (req) => {
       throw new Error("JaaS credentials not configured (JAAS_APP_ID / JAAS_API_KEY_ID / JAAS_PRIVATE_KEY)");
     }
 
+    // ── AUTH: require valid Supabase JWT; identity & moderator role are
+    // derived server-side from the booking, NOT taken from the request body.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2.39.3");
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: userData, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (authErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const user = userData.user;
+
     const body = await req.json().catch(() => ({}));
-    const room: string = body.room || body.roomName || "*";
-    const userName: string = body.userName || body.displayName || "Participant";
-    const userEmail: string = body.userEmail || body.email || "";
-    const moderator: boolean = !!body.moderator || !!body.isModerator;
-    const userId: string = body.userId || crypto.randomUUID();
+    const room: string = body.room || body.roomName || "";
+    if (!room) {
+      return new Response(JSON.stringify({ error: "room is required" }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Verify caller participates in the booking matching `room` and derive
+    // moderator status (tutor = moderator).
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("tutor_id, learner_id")
+      .eq("room_name", room)
+      .maybeSingle();
+    if (!booking || (booking.tutor_id !== user.id && booking.learner_id !== user.id)) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Identity comes from the verified user, never the request body.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, email")
+      .eq("id", user.id)
+      .maybeSingle();
+    const userName: string = profile?.full_name || user.email || "Participant";
+    const userEmail: string = profile?.email || user.email || "";
+    const moderator: boolean = booking.tutor_id === user.id;
+    const userId: string = user.id;
 
     const token = await signJaasJwt({ room, userName, userEmail, moderator, userId });
 

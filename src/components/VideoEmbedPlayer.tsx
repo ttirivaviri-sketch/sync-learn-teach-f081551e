@@ -139,18 +139,23 @@ export function VideoEmbedPlayer({ url, title = "Video Player" }: VideoEmbedPlay
         playsInline
         controlsList="nodownload"
         onError={(e) => {
-          // If native video fails, replace with link
+          // If native video fails, replace with link — built via DOM nodes
+          // (NOT innerHTML) so untrusted URLs cannot inject HTML/JS.
           const container = (e.target as HTMLVideoElement).parentElement;
-          if (container) {
-            container.innerHTML = `
-              <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-6">
-                <p class="text-sm text-muted-foreground mb-2">Unable to play this video directly.</p>
-                <a href="${url}" target="_blank" rel="noopener noreferrer" class="text-primary underline text-sm">
-                  Open video in new tab
-                </a>
-              </div>
-            `;
-          }
+          if (!container) return;
+          const wrap = document.createElement("div");
+          wrap.className = "absolute inset-0 flex flex-col items-center justify-center text-center p-6";
+          const p = document.createElement("p");
+          p.className = "text-sm text-muted-foreground mb-2";
+          p.textContent = "Unable to play this video directly.";
+          const a = document.createElement("a");
+          a.href = url; // browser sanitizes javascript:/data: in href
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.className = "text-primary underline text-sm";
+          a.textContent = "Open video in new tab";
+          wrap.append(p, a);
+          container.replaceChildren(wrap);
         }}
       >
         Your browser does not support the video tag.

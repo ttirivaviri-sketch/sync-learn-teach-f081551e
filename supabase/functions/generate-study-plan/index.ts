@@ -52,6 +52,19 @@ serve(async (req: Request) => {
       auth: { persistSession: false },
     });
 
+    // ── AUTH: derive userId from validated JWT, never trust body
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const { data: userData, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (authErr || !userData?.user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const userId = userData.user.id;
+
     const body = await req.json();
     const {
       profile,
@@ -61,14 +74,9 @@ serve(async (req: Request) => {
       syllabusContext = "",
       pastPaperContext = "",
       mode = "initial",
-      userId,
       weakAreas,
       notesOrDocuments,
     } = body;
-
-    if (!userId) {
-      return jsonResponse({ error: "userId is required" }, 400);
-    }
 
     // ── Build rich subject/topic summary ────────────────────────────────────
     const subjectSummary = subjects

@@ -1,14 +1,56 @@
-import { useEffect } from "react";
-import { Outlet, Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Outlet, Link, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AppSidebar from "@/components/admin/AppSidebar";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
+
+type GuardState = "checking" | "ok" | "denied";
 
 const AdminLayout = () => {
+  const navigate = useNavigate();
+  const [state, setState] = useState<GuardState>("checking");
+
   useEffect(() => {
     document.title = "Admin Panel | StudySync";
     const metaDesc = document.querySelector('meta[name="description"]');
     if (metaDesc) metaDesc.setAttribute("content", "StudySync Admin Panel for managing users, bookings, payments, and support.");
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        if (!cancelled) {
+          setState("denied");
+          navigate("/admin/auth", { replace: true });
+        }
+        return;
+      }
+      const { data: isAdmin, error } = await supabase.rpc("has_role", {
+        _user_id: session.user.id,
+        _role: "admin" as never,
+      });
+      if (cancelled) return;
+      if (error || !isAdmin) {
+        setState("denied");
+        navigate("/admin/auth", { replace: true });
+        return;
+      }
+      setState("ok");
+    })();
+    return () => { cancelled = true; };
+  }, [navigate]);
+
+  if (state === "checking") {
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin mr-2" /> Verifying admin access…
+      </main>
+    );
+  }
+  if (state !== "ok") return null;
 
   return (
     <SidebarProvider>

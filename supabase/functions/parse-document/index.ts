@@ -393,6 +393,19 @@ serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
+    // ── AUTH: require valid JWT and verify document ownership
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const { data: userData, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (authErr || !userData?.user) {
+      return jsonResponse({ error: "Unauthorized" }, 401);
+    }
+    const callerId = userData.user.id;
+
     const {
       documentId,
       content,
@@ -406,6 +419,16 @@ serve(async (req) => {
         { error: "documentId and content are required" },
         400
       );
+    }
+
+    // Ownership check
+    const { data: ownerRow } = await supabase
+      .from("documents")
+      .select("user_id")
+      .eq("id", documentId)
+      .maybeSingle();
+    if (!ownerRow || ownerRow.user_id !== callerId) {
+      return jsonResponse({ error: "Forbidden" }, 403);
     }
 
     // ── Select prompt and tool based on document type ────────────────────

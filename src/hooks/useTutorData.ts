@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { analytics } from '@/utils/analytics';
 import { logger } from "@/utils/logger";
+import { gradeMatches as gradeMatchesShared } from '@/lib/personalization';
 
 export interface TutorSubject {
   id: string;
@@ -177,28 +178,11 @@ export const useTutorData = (
         );
       }
 
-      // Grade matching: bidirectional Form ↔ Grade ↔ A-Level mapping
+      // Grade matching: use shared personalization matcher (handles ranges,
+      // Form↔Grade synonyms, IGCSE/O-Level/A-Level, "Senior High", etc.)
       if (options?.grade) {
-        const gradeSynonyms: Record<string, string[]> = {
-          'form 1': ['grade 7', 'grade 7-9', 'junior high'],
-          'form 2': ['grade 8', 'grade 7-9', 'junior high'],
-          'form 3': ['grade 9', 'grade 7-9', 'junior high'],
-          'form 4': ['grade 10', 'grade 11', 'grade 10-12', 'o-level', 'senior high'],
-          'form 5': ['grade 11', 'grade 12', 'grade 10-12', 'a-level', 'senior high'],
-          'form 6': ['grade 12', 'a-level', 'grade 10-12', 'senior high'],
-          'a-level': ['form 5', 'form 6', 'grade 12', 'grade 10-12', 'senior high'],
-          'o-level': ['form 4', 'grade 10', 'grade 11', 'grade 10-12', 'senior high'],
-          'grade 12': ['form 5', 'form 6', 'a-level', 'grade 10-12', 'senior high'],
-          'grade 11': ['form 4', 'form 5', 'grade 10-12', 'senior high'],
-          'grade 10': ['form 4', 'grade 10-12', 'senior high'],
-        };
-        const learnerGrade = options.grade.toLowerCase().trim();
-        const acceptable = new Set([learnerGrade, ...(gradeSynonyms[learnerGrade] || [])]);
         filtered = filtered.filter(t =>
-          t.subjects.some(s => {
-            const lvl = s.level.toLowerCase().trim();
-            return acceptable.has(lvl) || [...acceptable].some(a => lvl.includes(a) || a.includes(lvl));
-          })
+          t.subjects.some(s => gradeMatchesShared([s.level], options.grade))
         );
       } else if (options?.studyLevel) {
         const levelMap: Record<string, string[]> = {

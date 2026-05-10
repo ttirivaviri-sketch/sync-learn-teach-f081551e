@@ -31,7 +31,38 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    // ── AUTH: accept either a valid admin JWT, or a shared SAIL_SECRET header
+    // for trusted internal callers.
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const sailSecret = Deno.env.get("SAIL_SECRET") || Deno.env.get("CRON_SECRET");
+    const internalHeader = req.headers.get("x-sail-secret");
+    let authorized = !!(sailSecret && internalHeader && internalHeader === sailSecret);
+
+    if (!authorized) {
+      const authHeader = req.headers.get("Authorization");
+      if (!authHeader?.startsWith("Bearer ")) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: userData, error: authErr } = await supabase.auth.getUser(
+        authHeader.replace("Bearer ", "")
+      );
+      if (authErr || !userData?.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: userData.user.id, _role: "admin",
+      });
+      if (!isAdmin) {
+        return new Response(JSON.stringify({ error: "Forbidden" }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     const body = await req.json();
 
     const { event_type, source, severity, data } = body;
