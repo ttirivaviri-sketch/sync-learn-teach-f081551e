@@ -1,99 +1,91 @@
-# Personalization, Weekly Insights & Security Hardening
 
-## 1. Fix personalization (root cause)
+## 1. Fix email delivery — switch to Lovable Emails on studysync.co.za
 
-Tutors, books, past papers, and clips don't show because the matchers do **exact-equality** on grade strings. Real data uses ranges like `"Grade 10-12"`, `"Form 3-4"`, `"Grade 10-12 / Form 3-6"`, and tutors store levels like `"Senior High"` or `"O-Level"`. Curriculum strings are also inconsistent (`"Cambridge"` vs `"CAMB"` vs `"IGCSE"` — IGCSE is a Cambridge level, not curriculum).
+**Why emails fail today**: `send-guardian-report` and `send-progress-report` send via Resend using `onboarding@resend.dev` (a sandbox sender that only delivers to the API-key owner's verified inbox). No domain is verified, so all real recipients silently fail.
 
-### 1a. New shared matcher `src/lib/personalization.ts`
+**Fix**:
+1. Open the email-domain setup dialog so the user adds NS records for `notify.studysync.co.za` at their registrar (one-time, ~5 min).
+2. Provision the queue/tables/cron job (pgmq, `email_send_log`, `suppressed_emails`, `process-email-queue`).
+3. Scaffold the transactional email Edge Function (`send-transactional-email`) + unsubscribe page + suppression webhook.
+4. Apply StudySync brand styling (white body, primary `#1a3fc4`, logo lockup, Inter font) to the template shell.
 
-A single source of truth used by both library + tutor hooks:
-- `expandGradeTokens(raw: string): string[]` — parses any string into a normalized set of grade tokens. Handles:
-  - Numeric ranges: `"Grade 10-12"` → `[grade 10, grade 11, grade 12]`, `"Form 3-4"` → `[form 3, form 4]`.
-  - Combined: `"Grade 10-12 / Form 3-6"` split on `/`, `•`, `·`, `,`, `&`.
-  - Cross-system synonyms: Form 4 ↔ Grade 10/11 ↔ O-Level ↔ IGCSE; Form 5/6 ↔ Grade 11/12 ↔ A-Level; Senior High = Grade 10-12 + Form 4-6.
-  - Bands: `"Senior High"`, `"Junior High"`, `"All Grades"` (matches anything).
-- `gradeMatches(resourceGrades: string[], learnerGrade: string): boolean` — true if any expanded resource token intersects expanded learner token.
-- `curriculumMatches(...)` — keep existing synonyms but treat IGCSE/O-Level/A-Level as **Cambridge curriculum levels**, not separate curricula.
-- `subjectMatches(...)` — case-insensitive trim + canonicalisation (strip parenthetical qualifiers, e.g. `"Mathematics (Pure)"` → `"mathematics"`), reuse existing `subject_canonical_name` SQL helper logic in TS.
+DNS verification can take up to 72h but scaffolding/code wiring proceeds immediately; sends start as soon as DNS is verified (status visible in Cloud → Emails).
 
-### 1b. Replace matchers in:
-- `src/hooks/useLibraryResources.ts` (clips, books, past papers)
-- `src/hooks/useTutorData.ts` (tutor list filter — replace ad-hoc `gradeSynonyms` map)
+## 2. Branded weekly Insights template (one template, two audiences)
 
-### 1c. Fix tutor visibility specifically
-- A tutor with `tutor_subjects.level = "Grade 10-12"` will now match a learner on Grade 10, 11, or 12.
-- Match is OR across the tutor's subjects (a tutor offering Maths Grade 10-12 + English Grade 8-9 is visible to any Grade 10 maths learner).
+Create `_shared/transactional-email-templates/student-insights.tsx` — a single React Email component with an `audience: "guardian" | "tutor"` prop that swaps tone, depth, and CTA:
 
-### 1d. Library tagging tolerance
-- When a resource has no `curriculum` tag, don't auto-fail; treat as "any curriculum" (so cross-curriculum content like NSC + CAMB shows for both). Same when grade is `"All Grades"` / null.
-- This satisfies "content that covers more than one curriculum and grade — students don't see their own version".
+```text
+┌──────────────────────────────────────────┐
+│  [StudySync logo]                        │
+│  Weekly Insights · {Student Name}        │
+│  {Curriculum} · {Grade} · Week of {date} │
+├──────────────────────────────────────────┤
+│  Snapshot                                │
+│   • Study time:   X hrs (▲/▼ vs last wk) │
+│   • Avg score:    X%                     │
+│   • Streak:       X days                 │
+│   • Overall:      🟢 On track            │
+├──────────────────────────────────────────┤
+│  Per-subject (rows)                      │
+│   Maths    🟡  62%  3/5 tasks  Exam 12d  │
+│   English  🟢  78%  4/5 tasks  Exam 40d  │
+│   ...                                    │
+├──────────────────────────────────────────┤
+│  Strengths        Areas to focus         │
+│  • Algebra        • Trig identities      │
+│  • Comprehension  • Essay structure      │
+├──────────────────────────────────────────┤
+│  Recommendations (audience-specific)     │
+│   Guardian → encouraging + 2 actions     │
+│   Tutor    → topic list + suggested plan │
+├──────────────────────────────────────────┤
+│  CTA: "View full report" → app deeplink  │
+└──────────────────────────────────────────┘
+```
 
----
+Audience differences:
+- **Guardian**: plain-language summary, encouraging tone, "How you can support" tips, no jargon.
+- **Tutor**: data-dense, weak-concept list, suggested next-session focus, links to the booking insights panel.
 
-## 2. Weekly auto-scheduled insights
+Wire-ups:
+- Replace the inline HTML in `send-guardian-report` with `supabase.functions.invoke('send-transactional-email', { body: { templateName: 'student-insights', recipientEmail, templateData: { audience: 'guardian', ... }, idempotencyKey: \`insights-${user_id}-${week_start}-guardian\` } })`.
+- Update `send-progress-report` (manual student-triggered send) to use the same template with `audience: 'tutor'` for booked-tutor recipients and `audience: 'guardian'` for guardian recipients. Continue to attach the existing PDF.
+- Update `useStudentInsights`/manual send UI to gate the tutor-recipient picker to **booked tutors only** (already partially done — re-verify the filter uses `bookings.status IN ('confirmed','completed')`).
 
-### 2a. Determine "best day"
-Add column on `academic_profiles`: `weekly_report_dow smallint` (0–6, default 0 = Sunday). Day picked automatically as the day with the **lowest historical study activity** (so the report lands when the student is least active and parents have time to read). Computed weekly by the cron job from the last 30 days of `study_activity`; falls back to Sunday.
+## 3. Weekly auto-send (already-migrated `scheduled_insight_runs`)
 
-### 2b. Database
-Migration:
-- New table `scheduled_insight_runs(user_id, week_start, sent_to_guardian bool, sent_to_tutors uuid[], status, created_at)` to dedupe.
-- Add `weekly_report_dow` column to `academic_profiles`.
-- Enable `pg_cron` + `pg_net` and schedule daily call to a new edge function.
+The previous migration added `scheduled_insight_runs` and `weekly_report_dow`. Add the dispatcher:
+- New Edge Function `dispatch-weekly-insights` (cron, every hour) → for each learner whose local DOW matches `weekly_report_dow` and who has no row in `scheduled_insight_runs` for the current week, enqueue one guardian email + one email per booked tutor, then upsert the run row.
+- pg_cron entry calling it hourly with `Bearer ${CRON_SECRET}`.
+- Idempotency key: `insights-${user_id}-${week_start}-${recipient_role}-${tutor_id?}`.
 
-### 2c. Edge function `weekly-insights-dispatch`
-- Runs daily at 07:00 UTC.
-- For each learner whose `weekly_report_dow` matches today AND no run for current ISO week:
-  1. Generate insights via existing `useStudentInsights`/`generate-student-insights` logic (server-side variant).
-  2. Email guardian via `send-guardian-report` (already exists).
-  3. For each **confirmed/active** booked tutor of the learner, email tutor-scoped insights via `send-progress-report` with `reply_to = student_email`.
-  4. Insert `scheduled_insight_runs` row.
-- Auth: `CRON_SECRET` header check.
+## 4. Seed 20+ free, CC-licensed high-school books with covers
 
-### 2d. Manual flow stays
-- `ProgressReportButton` keeps the manual send dialog.
-- **Recipient list**: tutors picker is restricted to tutors with a booking row (`status in ('confirmed','completed')`) for that student — no other tutors offered, addressing "Insights should only be available to send to booked tutors".
+Add to `library_system_resources` (kind=`book`, with `thumbnail_url` cover + `pdf_url`). Sources, all free & CC-licensed or public domain:
 
----
+**Siyavula (CC-BY, ZA syllabus, Grades 10–12)** — Maths, Mathematical Literacy, Physical Sciences, Life Sciences (Grade 10/11/12 each = 12 books).
+**OpenStax (CC-BY)** — College Algebra, Biology 2e, Concepts of Biology, Chemistry: Atoms First, Physics (5 books, mapped Grade 11–12).
+**CK-12 FlexBooks (CC-BY-NC)** — Earth Science, Trigonometry, World History (3 books).
+**Project Gutenberg (public domain literature)** — *Romeo and Juliet*, *Animal Farm* (where PD), *Things Fall Apart* extract, *A Tale of Two Cities*, *Pride and Prejudice* (5 set-work classics).
 
-## 3. Security fixes (from scan)
+Total: ~25 books. Each row gets:
+- Real cover image (hot-linked from publisher CDN, then mirrored to `library-covers` storage bucket for stability).
+- Curriculum tags (`ZIMSEC`/`CAMB`/`IEB`/`NSC` per relevance) so the personalisation engine surfaces them correctly.
+- `grade_levels` array (e.g. `['Grade 10','Grade 11','Form 4','O-Level','IGCSE']`) so multi-grade content shows for all matching learners.
+- `subject` matched to canonical names used in Library tabs.
 
-All **error**-level findings + key warns:
-
-| Finding | Fix |
-|---|---|
-| `send_guardian_report_no_auth` | Require `Authorization: Bearer <CRON_SECRET>` header. |
-| `run_migration_hardcoded_token` | Delete the function entirely (migrations now go through Lovable migration tool). |
-| `admin_panel_no_auth` | Add session + `has_role('admin')` guard in `AdminLayout.tsx`; remove the bypass button in `AdminAuth.tsx`. |
-| `tutor_insights_no_auth` | Verify JWT, confirm caller is the tutor in the booking before returning data. |
-| `jitsi_jwt_no_auth` | Verify JWT, derive `userId/userName/userEmail` server-side, force `moderator` from booking record. |
-| `parse_document_no_auth` | Verify JWT + ownership of `documentId`. |
-| `study_plan_no_auth` | Verify JWT, derive `userId` from token. |
-| `sail_agent_no_auth` | Require JWT (admin role) or `SAIL_SECRET` header. |
-| `video_player_xss` | Replace `innerHTML` interpolation in `VideoEmbedPlayer.tsx` with safe DOM construction. |
-| `profiles_tutor_email_public_exposure` | Drop public tutor select policy; create `public.tutors_public` view (`security_invoker=on`) excluding `email`/`phone`; update `useTutorData` to read the view (auth users keep email). |
-| `subject_exams_public_exposure` | Replace SELECT policy USING `true` with `auth.uid() = user_id`. |
-| `learner_subjects_public_exposure` | Same fix. |
-| `subject_xp_authenticated_mass_exposure` | Restrict SELECT to own row; leaderboards already use `SECURITY DEFINER` RPCs. |
-| `academic_profiles_realtime_email_leak` | Remove `academic_profiles` from the realtime publication. |
-| `tutor_documents_bucket_no_update_delete` | Add storage UPDATE/DELETE policies scoped to owner folder. |
-| `realtime_messages_no_channel_authorization` | Add RLS policy on `realtime.messages` requiring `auth.uid()` matches topic owner. |
-
-A new secret `CRON_SECRET` will be requested before deploying the cron + guardian endpoints.
-
----
-
-## 4. Order of execution
-
-1. DB migration (matcher column, run-tracking table, RLS fixes, view, realtime publication change).
-2. Add `CRON_SECRET` secret.
-3. Edge function lockdowns + new `weekly-insights-dispatch` + cron schedule.
-4. New `src/lib/personalization.ts` + replace matchers in library/tutor hooks.
-5. Restrict manual progress-report recipient list to booked tutors.
-6. UI fixes: admin guard, video player XSS.
+Implemented as a single SQL `INSERT … ON CONFLICT (title) DO NOTHING` migration so it's idempotent and re-runnable.
 
 ## Technical notes
 
-- `gradeMatches` complexity is bounded (resources × ~6 tokens) — fine for current dataset.
-- Weekly cron uses `net.http_post` against the edge function URL with `CRON_SECRET` header.
-- View `tutors_public` exposes: `id, full_name, avatar_url, bio, online_status, last_seen, location_lat, location_lng`. `email`/`phone` only via authenticated direct table access (RLS: own row OR confirmed booking with caller).
+- Order of operations: domain setup dialog → infra setup → scaffold → template + wiring → cron dispatcher → book seed.
+- `RESEND_API_KEY` paths in `send-guardian-report` and `send-progress-report` will be removed; both functions become thin orchestrators that call `send-transactional-email`. Existing PDF attachment in `send-progress-report` is preserved.
+- All recipient resolution uses the new `personalization.ts` helpers + booked-tutor filter; no contact info leaks (uses `tutors_public` view).
+- Insights template subject line: `"{StudentName}'s StudySync weekly insights — week of {Mon DD}"`.
+- After scaffold, run `deploy_edge_functions` for every touched function.
+
+## Out of scope (call out)
+
+- Building a full marketing/newsletter system (Lovable Emails covers transactional only).
+- Replacing the manual send flow in the app — it stays, but recipient list is locked to booked tutors + guardian.
