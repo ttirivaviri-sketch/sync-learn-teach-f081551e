@@ -221,7 +221,7 @@ export async function generateProgressReportPdf(
     doc.setFont("helvetica", "normal");
     for (const ed of data.learner.examDates.slice(0, 6)) {
       doc.text(
-        `• ${ed.subject}: ${format(new Date(ed.date), "dd MMM yyyy")}`,
+        `• ${ed.subject}: ${safeFormat(ed.date, "dd MMM yyyy")}`,
         margin,
         y
       );
@@ -310,7 +310,7 @@ export async function generateProgressReportPdf(
         type: "line",
         data: {
           labels: data.mockTrajectory.map((m) =>
-            format(new Date(m.date), "dd MMM")
+            safeFormat(m.date, "dd MMM")
           ),
           datasets: [
             {
@@ -400,7 +400,7 @@ export async function generateProgressReportPdf(
       startY: py,
       head: [["Date", "Subject", "Paper", "Marks", "Score", "Grade", "Time"]],
       body: data.mockTrajectory.map((m) => [
-        format(new Date(m.date), "dd MMM"),
+        safeFormat(m.date, "dd MMM"),
         m.subject,
         m.paperCode,
         `${m.marksAwarded}/${m.totalMarks}`,
