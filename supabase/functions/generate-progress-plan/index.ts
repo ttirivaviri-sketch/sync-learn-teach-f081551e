@@ -64,37 +64,45 @@ serve(async (req) => {
 
     const audience = body.audience === "tutor" ? "tutor" : "self";
 
-    const userPrompt = `AUDIENCE: ${audience}
-${body.tutor_name ? `TUTOR NAME: ${body.tutor_name}` : ""}
+    // Trim arrays so the prompt stays well under the AI gateway request limit.
+    // Oversized payloads were causing 400 "Invalid request body" responses.
+    const trim = (v: unknown, n: number) => Array.isArray(v) ? v.slice(0, n) : v ?? [];
+    const compact = (v: unknown) => JSON.stringify(v);
 
-LEARNER PROFILE:
-${JSON.stringify(body.profile ?? {}, null, 2)}
-
-OVERALL SUMMARY:
-${JSON.stringify(body.summary ?? {}, null, 2)}
-
-WEAK TOPICS (priority for the plan):
-${JSON.stringify(body.weak_topics ?? [], null, 2)}
-
-STRONG TOPICS (preserve momentum):
-${JSON.stringify(body.strong_topics ?? [], null, 2)}
-
-SUBJECT MASTERY:
-${JSON.stringify(body.subject_mastery ?? [], null, 2)}
-
-RECENT MOCK EXAMS:
-${JSON.stringify(body.recent_mocks ?? [], null, 2)}
-
-Produce the JSON plan now.`;
+    const userPrompt = [
+      `AUDIENCE: ${audience}`,
+      body.tutor_name ? `TUTOR NAME: ${String(body.tutor_name).slice(0, 120)}` : "",
+      `LEARNER PROFILE: ${compact(body.profile ?? {})}`,
+      `OVERALL SUMMARY: ${compact(body.summary ?? {})}`,
+      `WEAK TOPICS: ${compact(trim(body.weak_topics, 12))}`,
+      `STRONG TOPICS: ${compact(trim(body.strong_topics, 8))}`,
+      `SUBJECT MASTERY: ${compact(trim(body.subject_mastery, 12))}`,
+      `RECENT MOCK EXAMS: ${compact(trim(body.recent_mocks, 5))}`,
+      `Produce the JSON plan now.`,
+    ].filter(Boolean).join("\n\n");
 
     const ai = getAIConfig("standard");
-    const raw = await callAI(ai, SYSTEM_PROMPT, userPrompt, {
-      jsonMode: true,
-      temperature: 0.4,
-      maxTokens: 2200,
-    });
-
-    const parsed = safeJsonParse(raw);
+    let parsed: unknown = null;
+    try {
+      const raw = await callAI(ai, SYSTEM_PROMPT, userPrompt, {
+        temperature: 0.4,
+        maxTokens: 2000,
+      });
+      parsed = safeJsonParse(raw);
+    } catch (aiErr) {
+      // Don't fail the whole report — return an empty plan so the PDF still renders.
+      console.error("generate-progress-plan AI call failed:", aiErr);
+      parsed = {
+        headline_assessment: "",
+        top_concerns: [],
+        seven_day_plan: [],
+        recommended_focus_areas: [],
+        suggested_past_paper_questions: [],
+        tutor_session_plan: [],
+        motivational_note: "",
+        _ai_unavailable: true,
+      };
+    }
     return jsonResponse(parsed);
   } catch (err) {
     console.error("generate-progress-plan error:", err);
