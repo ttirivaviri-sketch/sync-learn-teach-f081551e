@@ -180,8 +180,8 @@ export async function generateProgressReportPdf(
   doc.setFontSize(12);
   doc.setTextColor(110);
   doc.text(
-    `Period: last ${data.windowDays} days · Generated ${format(
-      new Date(data.generatedAt),
+    `Period: last ${data.windowDays} days · Generated ${safeFormat(
+      data.generatedAt,
       "dd MMM yyyy, HH:mm"
     )}`,
     margin,
