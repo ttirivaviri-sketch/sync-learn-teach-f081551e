@@ -110,6 +110,17 @@ const PRIORITY_COLORS: Record<string, [number, number, number]> = {
   low: [37, 99, 235],
 };
 
+function safeFormat(value: unknown, fmt: string, fallback = "—"): string {
+  if (!value) return fallback;
+  const d = value instanceof Date ? value : new Date(value as string);
+  if (isNaN(d.getTime())) return fallback;
+  try {
+    return format(d, fmt);
+  } catch {
+    return fallback;
+  }
+}
+
 function fmtMinutes(min: number): string {
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
@@ -169,8 +180,8 @@ export async function generateProgressReportPdf(
   doc.setFontSize(12);
   doc.setTextColor(110);
   doc.text(
-    `Period: last ${data.windowDays} days · Generated ${format(
-      new Date(data.generatedAt),
+    `Period: last ${data.windowDays} days · Generated ${safeFormat(
+      data.generatedAt,
       "dd MMM yyyy, HH:mm"
     )}`,
     margin,
@@ -210,7 +221,7 @@ export async function generateProgressReportPdf(
     doc.setFont("helvetica", "normal");
     for (const ed of data.learner.examDates.slice(0, 6)) {
       doc.text(
-        `• ${ed.subject}: ${format(new Date(ed.date), "dd MMM yyyy")}`,
+        `• ${ed.subject}: ${safeFormat(ed.date, "dd MMM yyyy")}`,
         margin,
         y
       );
@@ -299,7 +310,7 @@ export async function generateProgressReportPdf(
         type: "line",
         data: {
           labels: data.mockTrajectory.map((m) =>
-            format(new Date(m.date), "dd MMM")
+            safeFormat(m.date, "dd MMM")
           ),
           datasets: [
             {
@@ -389,7 +400,7 @@ export async function generateProgressReportPdf(
       startY: py,
       head: [["Date", "Subject", "Paper", "Marks", "Score", "Grade", "Time"]],
       body: data.mockTrajectory.map((m) => [
-        format(new Date(m.date), "dd MMM"),
+        safeFormat(m.date, "dd MMM"),
         m.subject,
         m.paperCode,
         `${m.marksAwarded}/${m.totalMarks}`,
