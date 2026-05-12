@@ -110,6 +110,17 @@ const PRIORITY_COLORS: Record<string, [number, number, number]> = {
   low: [37, 99, 235],
 };
 
+function safeFormat(value: unknown, fmt: string, fallback = "—"): string {
+  if (!value) return fallback;
+  const d = value instanceof Date ? value : new Date(value as string);
+  if (isNaN(d.getTime())) return fallback;
+  try {
+    return format(d, fmt);
+  } catch {
+    return fallback;
+  }
+}
+
 function fmtMinutes(min: number): string {
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
