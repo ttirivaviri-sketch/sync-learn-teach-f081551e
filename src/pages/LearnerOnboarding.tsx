@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Sparkles, ArrowRight, Lock, Rocket } from "lucide-react";
+import { CheckCircle2, Sparkles, ArrowRight, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,14 +23,12 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AcademicProfileSetup } from "@/components/AcademicProfileSetup";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StepperHeader } from "@/components/onboarding/StepperHeader";
 import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
 
 const STEPS = [
   { label: "Welcome" },
   { label: "Your studies" },
-  { label: "Choose your plan" },
   { label: "All set" },
 ];
 
