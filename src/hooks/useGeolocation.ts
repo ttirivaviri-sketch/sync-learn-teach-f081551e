@@ -17,7 +17,8 @@ export const useGeolocation = () => {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const getCurrentLocation = useCallback(() => {
+  const getCurrentLocation = useCallback((opts?: { silent?: boolean }) => {
+    const silent = opts?.silent ?? false;
     if (!navigator.geolocation) {
       const err = { code: 0, message: 'Geolocation is not supported' };
       setError(err);
@@ -35,10 +36,12 @@ export const useGeolocation = () => {
         };
         setLocation(coords);
         setLoading(false);
-        toast({
-          title: "Location updated",
-          description: "Found tutors near your location!",
-        });
+        if (!silent) {
+          toast({
+            title: "Location updated",
+            description: "Found tutors near your location!",
+          });
+        }
       },
       (error) => {
         const locationError = {
@@ -47,11 +50,13 @@ export const useGeolocation = () => {
         };
         setError(locationError);
         setLoading(false);
-        toast({
-          title: "Location access denied",
-          description: "Using default location for tutor search.",
-          variant: "destructive",
-        });
+        if (!silent) {
+          toast({
+            title: "Location access denied",
+            description: "Using default location for tutor search.",
+            variant: "destructive",
+          });
+        }
       },
       {
         enableHighAccuracy: true,
