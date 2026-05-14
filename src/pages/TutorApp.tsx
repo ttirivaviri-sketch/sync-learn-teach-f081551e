@@ -83,6 +83,7 @@ const TutorApp = () => {
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
   const { formattedStats, weeklyData, recentEarnings, loading: statsLoading } =
     useTutorStats(session?.user?.id);
+  const gate = useTutorVerificationGate(userId);
 
   // ── Load tutor's own subjects (real-time) ───────────────────────────────
   useEffect(() => {
@@ -186,7 +187,7 @@ const TutorApp = () => {
   if (!session?.user) return null;
 
   // ── Verification gate ───────────────────────────────────────────────────
-  const gate = useTutorVerificationGate(userId);
+  // (gate hook called above)
   if (gate.status === "loading") {
     return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
   }
