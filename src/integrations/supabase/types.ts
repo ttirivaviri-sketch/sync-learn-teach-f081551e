@@ -1919,6 +1919,54 @@ export type Database = {
         }
         Relationships: []
       }
+      seeding_jobs: {
+        Row: {
+          created_at: string
+          details: Json
+          error: string | null
+          failed: number
+          finished_at: string | null
+          id: string
+          kind: string
+          skipped: number
+          started_at: string
+          status: string
+          succeeded: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          error?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          kind: string
+          skipped?: number
+          started_at?: string
+          status?: string
+          succeeded?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          error?: string | null
+          failed?: number
+          finished_at?: string | null
+          id?: string
+          kind?: string
+          skipped?: number
+          started_at?: string
+          status?: string
+          succeeded?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       study_activity: {
         Row: {
           activity_type: string
