@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,15 @@ interface SuccessSplashProps {
 
 /**
  * Full-screen celebration splash for onboarding milestones.
+ * Auto-advance fires once via useEffect to avoid render-loop navigations.
  */
 export function SuccessSplash({ title, subtitle, checklist = [], ctaLabel, onCta, autoAdvanceMs }: SuccessSplashProps) {
-  if (autoAdvanceMs && onCta) {
-    setTimeout(onCta, autoAdvanceMs);
-  }
+  useEffect(() => {
+    if (!autoAdvanceMs || !onCta) return;
+    const id = setTimeout(onCta, autoAdvanceMs);
+    return () => clearTimeout(id);
+  }, [autoAdvanceMs, onCta]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background bg-mesh p-4">
       <motion.div
