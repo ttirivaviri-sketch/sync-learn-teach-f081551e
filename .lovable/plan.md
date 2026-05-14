@@ -1,57 +1,49 @@
 ## Goal
 
-Mirror the published app's subscription flow exactly inside the learner app. Six screens, same copy and structure as the screenshots:
+Make the SAIL admin dashboard do real work: when an event triggers a task, an LLM analyzes it and writes a `code_patch` (proposed fix / recommendation) onto the task. Approvals then produce something meaningful instead of a no-op status flip.
 
-```
-1. Sign in / Welcome           (already exists — no change)
-2. Choose Your Plan            (3 cards: AI Study Mode, Tutor Sessions, Combo · Most Popular)
-3. AI Study Mode Plans         (Moderate / Premium toggle, perks, 7-day free trial CTA)
-4. Tutor Sessions              (subjects chips, lessons-per-week slider 1–5, monthly summary)
-5. Build Combo Plan            (Moderate/Premium toggle, lessons/week slider, savings line)
-6. Review & Pay                (line-itemed summary, "Start My Plan", trust bullets)
-```
+## Scope
 
-The same flow runs in **two** places:
-- `LearnerOnboarding` step 1 — replaces the current inline `PlanPicker`.
-- `Profile → Subscription & Plans` — replaces the current inline `PlanPicker`.
+Backend-only changes. No UI redesign — the existing dashboard at `/admin/sail` already renders `code_patch`, agent logs, etc., so once the function fills those fields the dashboard "comes alive" automatically.
 
-## New components — `src/components/subscription/`
+## Changes
 
-- `SubscriptionFlow.tsx` — orchestrator. Internal step state `'choose' | 'ai' | 'tutor' | 'combo' | 'review'`, back-arrow header, animated transitions. Props: `mode: 'onboarding' | 'profile'`, `onComplete?(plan)`. This is the single component dropped into both call-sites.
-- `PlanChooser.tsx` — screen 2. Three cards (AI = blue, Tutor = green, Combo = purple with "★ Most Popular" badge). "Cancel or change anytime" footnote.
-- `AIPlanScreen.tsx` — screen 3. Robot avatar, **Moderate / Premium** segmented toggle, dynamic perks list, primary CTA = "Start 7-Day Free Trial" (or "Choose Plan" outside trial), secondary "Continue Without Trial".
-- `TutorSessionsScreen.tsx` — screen 4. Subject chips (multi-select, optional, sourced from `useLearnerSubjects` with the screenshot's static fallback), lessons-per-week slider 1–5, monthly summary `R300 × 4 × N`, "Continue to Payment" CTA.
-- `ComboScreen.tsx` — screen 5. Moderate/Premium toggle (R179.99 / R399.99), discount-applied banner, lessons-per-week slider, line-itemed monthly summary, green "You save Rxx / month 🎉" line, "Continue to Payment" CTA.
-- `ReviewPayScreen.tsx` — screen 6. "Combo Plan / AI Plan / Tutor Sessions" header card with line items + total, trust bullets (Cancel anytime, No long-term contracts, Secure payments, 7-day free trial for AI), "Start My Plan" CTA, trial-end note.
+### 1. Update `supabase/functions/sail-agent/index.ts`
 
-All screens use existing semantic tokens (no new colors added to `index.css`/`tailwind.config.ts`), shadcn primitives (`Card`, `Button`, `Slider`, `Badge`, `Toggle`/segmented), and the glassmorphism mesh background already in use. Pricing pulled from `PRICING` in `src/sail/types/index.ts`.
+After creating the task row, call the Lovable AI Gateway with an agent-specific system prompt and the event payload. Save the model output to `sail_tasks.code_patch` and append a `sail_agent_logs` row with the LLM duration and token usage.
 
-## Wiring
+- Model: `google/gemini-3-flash-preview` (default per platform rules).
+- Use tool-calling for structured output: `{ summary, root_cause, proposed_patch, risk_assessment, confidence }`.
+- System prompts per agent (debug / frontend / backend / learning / monetization / reviewer) — short, role-scoped, instructing the model to suggest a patch only, never claim to deploy.
+- On 429/402, log to `sail_agent_logs` with `success=false` and a clear error; still return the created task so the UI shows it.
+- Keep the existing low-risk auto-advance to `review`; high/medium remain pending until admin approves.
 
-- `src/pages/LearnerOnboarding.tsx` — step 1 `Card` body becomes `<SubscriptionFlow mode="onboarding" onComplete={() => setStep(2)} />`. The step-1 outer header copy moves into `PlanChooser` so it's only visible on the chooser screen.
-- `src/pages/learner/LearnerProfileTab.tsx` — `<PlanPicker mode="profile" />` is replaced with `<SubscriptionFlow mode="profile" />`. `PlanChooser` shows a "Selected" badge on the user's current plan group.
+### 2. New edge function `sail-execute-approved` (optional second step)
 
-## Persistence & payment
+Triggered when admin approves a task. Reads `code_patch`, posts a follow-up "execution plan" via the LLM (still no real code deploy — SAIL safety rules forbid it), writes the result into `sail_tasks` (new column) and flips status to `deployed`. If you'd rather not add this now, approval simply marks `approved` and we stop there.
 
-- "Start My Plan" / "Start 7-Day Free Trial" calls existing `supabase.rpc("set_subscription_plan", { p_plan })` with the resolved key (`ai_moderate | ai_premium | tutor_payg | combo_moderate | combo_premium`) — same as today.
-- For paid plans outside the trial window, route to the existing PayFast checkout (`payfast-create-payment` edge function via the current `useBookingPayments` flow). During an active 7-day trial, just save the plan and resolve `onComplete` (matches current behaviour — no charge until trial ends).
-- `lessons_per_week` and `selected_subjects` are persisted to `localStorage` under `subscription:preferences:{userId}` so the Tutor booking flow can pre-fill. **No DB schema change.**
+### 3. No DB schema change required
 
-## Removed
+`sail_tasks.code_patch` is already `text | null` and the dashboard already renders it inside the task detail dialog. No migration unless we add the second function (which would need a `sail_tasks.execution_notes text` column).
 
-- `src/components/subscription/PlanPicker.tsx` — deleted after both call-sites switch to `SubscriptionFlow`.
+### 4. Secrets
+
+`LOVABLE_API_KEY` is already configured. Nothing to add.
 
 ## Out of scope
 
-- No DB migration. Reuses `subscriptions` table and `set_subscription_plan` RPC as-is.
-- No edge-function changes.
-- No landing-page pricing section.
-- Sign-in / Welcome screen unchanged (screen 1 already matches).
-- Tutor app subscription UI unchanged.
+- No client-side changes to `useSAILTasks` or `SAIL.tsx`.
+- No real code deployment / git operations — SAIL stays advisory.
+- No cron / autonomous scheduler — triggers stay manual + `globalErrorHandler`.
+- No changes to `src/sail/agents/*` client modules (those remain unused stubs for now).
 
 ## Validation
 
-- Onboarding → Choose Your Plan → AI → toggle Premium → Start 7-Day Free Trial → Review & Pay shows "AI Plan (Premium) R500/mo" → Start My Plan → `ai_premium` saved, advances to onboarding step 2.
-- Onboarding → Tutor Sessions → pick 2 subjects + slider 3 → monthly summary R3,600 → Continue → Review → `tutor_payg` saved.
-- Onboarding → Combo → Premium + slider 4 → savings line shows correct delta vs standalone AI Premium → Continue → Review shows two line items + total → `combo_premium` saved.
-- Profile → Subscription opens at chooser, current plan group has "Selected" badge, back arrow works at every step, refresh returns to chooser.
+1. Open `/admin/sail` → click "Error Scan" → new task appears within ~5s with a populated `code_patch` (visible via the eye icon → "Code Patch" section).
+2. Agent Logs tab shows two rows per trigger: `process_<event>` and `llm_analysis` with non-zero `duration_ms`.
+3. Trigger with severity "high" → task lands in `pending` and the Approve/Reject buttons are visible.
+4. Edge function logs show no 4xx/5xx; on 429 the task still appears with an error log row.
+
+## Decision needed
+
+Do you want step 2 (`sail-execute-approved`) included now, or just the analysis step? I'd recommend analysis-only first — it's the smallest change that makes the dashboard actually useful.
