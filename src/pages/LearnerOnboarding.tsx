@@ -168,59 +168,6 @@ export default function LearnerOnboarding() {
               </Card>
             )}
 
-            {/* ── Step 2: Subscription ── */}
-            {step === 2 && (
-              <Card className="p-5 bg-card/95 backdrop-blur-xl">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h1 className="text-lg font-semibold">You're on a 7-day free trial</h1>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Full access to StudyMode, AI tutoring, and the library for the next 7 days.
-                </p>
-
-                <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Premium</div>
-                      <div className="text-2xl font-bold">R249<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                    </div>
-                    <Badge className="bg-emerald-600">Trial active</Badge>
-                  </div>
-                  <ul className="mt-3 space-y-1.5 text-sm">
-                    <Bullet>Unlimited AI tutoring & quizzes</Bullet>
-                    <Bullet>Full library access</Bullet>
-                    <Bullet>Mock papers & detailed insights</Bullet>
-                    <Bullet>Guardian progress reports</Bullet>
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border p-4 mb-4 bg-muted/30">
-                  <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <Lock className="h-4 w-4 text-muted-foreground" /> If you skip
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    You'll keep a free taste — <strong>3 active recalls</strong> and <strong>flashcards</strong> in StudyMode.
-                    AI usage is capped after that. Add a card any time from your Profile tab to unlock everything.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Button onClick={() => navigate("/start-trial?role=learner")} className="w-full" size="lg">
-                    <ArrowRight className="h-4 w-4 mr-1" /> Add card & continue
-                  </Button>
-                  <Button variant="ghost" onClick={skipSubscription} className="w-full">
-                    Remind me later
-                  </Button>
-                </div>
-
-                {subscription.data?.status === "trial" && (
-                  <p className="mt-3 text-xs text-center text-muted-foreground">
-                    Trial ends {subscription.data.trial_end ? new Date(subscription.data.trial_end).toLocaleDateString() : "in 7 days"}.
-                  </p>
-                )}
-              </Card>
-            )}
           </motion.div>
         </AnimatePresence>
       </div>
