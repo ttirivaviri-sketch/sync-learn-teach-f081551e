@@ -272,6 +272,42 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_topic_templates: {
+        Row: {
+          created_at: string
+          curriculum: string
+          grade: string
+          source: string
+          subject: string
+          topics: Json
+          updated_at: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          curriculum: string
+          grade: string
+          source?: string
+          subject: string
+          topics?: Json
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          curriculum?: string
+          grade?: string
+          source?: string
+          subject?: string
+          topics?: Json
+          updated_at?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       daily_task_concepts: {
         Row: {
           concept: string
@@ -1254,6 +1290,7 @@ export type Database = {
           last_seen: string | null
           location_lat: number | null
           location_lng: number | null
+          onboarding_completed_at: string | null
           online_status: boolean | null
           phone: string | null
           study_level: Database["public"]["Enums"]["study_level"] | null
@@ -1271,6 +1308,7 @@ export type Database = {
           last_seen?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          onboarding_completed_at?: string | null
           online_status?: boolean | null
           phone?: string | null
           study_level?: Database["public"]["Enums"]["study_level"] | null
@@ -1288,6 +1326,7 @@ export type Database = {
           last_seen?: string | null
           location_lat?: number | null
           location_lng?: number | null
+          onboarding_completed_at?: string | null
           online_status?: boolean | null
           phone?: string | null
           study_level?: Database["public"]["Enums"]["study_level"] | null
@@ -1984,6 +2023,33 @@ export type Database = {
           },
         ]
       }
+      subject_coverage_audit: {
+        Row: {
+          covered_topics: number
+          last_audit_at: string
+          mastered_topics: number
+          subject_id: string
+          total_topics: number
+          user_id: string
+        }
+        Insert: {
+          covered_topics?: number
+          last_audit_at?: string
+          mastered_topics?: number
+          subject_id: string
+          total_topics?: number
+          user_id: string
+        }
+        Update: {
+          covered_topics?: number
+          last_audit_at?: string
+          mastered_topics?: number
+          subject_id?: string
+          total_topics?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       subject_exams: {
         Row: {
           created_at: string | null
@@ -2565,6 +2631,39 @@ export type Database = {
         }
         Relationships: []
       }
+      tutor_teaching_profile: {
+        Row: {
+          bio: string | null
+          created_at: string
+          curriculums: string[]
+          grades: string[]
+          onboarding_completed_at: string | null
+          teaching_style: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bio?: string | null
+          created_at?: string
+          curriculums?: string[]
+          grades?: string[]
+          onboarding_completed_at?: string | null
+          teaching_style?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bio?: string | null
+          created_at?: string
+          curriculums?: string[]
+          grades?: string[]
+          onboarding_completed_at?: string | null
+          teaching_style?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       tutor_tutorials: {
         Row: {
           completion_rate: number | null
@@ -2654,6 +2753,13 @@ export type Database = {
           id_number: string | null
           police_clearance_url: string | null
           profile_photo_url: string | null
+          qualification_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          student_status: string | null
+          submitted_at: string | null
+          transcript_url: string | null
           updated_at: string
           user_id: string
           verification_status: string | null
@@ -2665,6 +2771,13 @@ export type Database = {
           id_number?: string | null
           police_clearance_url?: string | null
           profile_photo_url?: string | null
+          qualification_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          student_status?: string | null
+          submitted_at?: string | null
+          transcript_url?: string | null
           updated_at?: string
           user_id: string
           verification_status?: string | null
@@ -2676,6 +2789,13 @@ export type Database = {
           id_number?: string | null
           police_clearance_url?: string | null
           profile_photo_url?: string | null
+          qualification_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          student_status?: string | null
+          submitted_at?: string | null
+          transcript_url?: string | null
           updated_at?: string
           user_id?: string
           verification_status?: string | null
@@ -3030,6 +3150,7 @@ export type Database = {
         }
         Returns: string
       }
+      mark_learner_onboarding_complete: { Args: never; Returns: undefined }
       request_tutor_withdrawal: {
         Args: {
           _amount: number
