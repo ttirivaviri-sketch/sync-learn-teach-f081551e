@@ -204,6 +204,22 @@ const TutorApp = () => {
       onResubmit={() => gate.refetch()}
     />;
   }
+  // First time landing as verified → one-time celebration splash
+  if (gate.status === "verified") {
+    const seenKey = `tutor-approved-seen:${userId}`;
+    if (!showApprovalSplash && typeof window !== "undefined" && !localStorage.getItem(seenKey)) {
+      setShowApprovalSplash(true);
+    }
+    if (showApprovalSplash) {
+      return <SuccessSplash
+        title="You're verified! 🎉"
+        subtitle="Welcome aboard. Your tutor account is now live."
+        checklist={["Profile is visible to learners", "Booking requests will appear in Activity", "Payments are ready to be received"]}
+        ctaLabel="Start teaching"
+        onCta={() => { localStorage.setItem(seenKey, "1"); setShowApprovalSplash(false); }}
+      />;
+    }
+  }
 
 
   if (showVideoMeeting && videoMeetingData) {
