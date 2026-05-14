@@ -79,6 +79,7 @@ const LearnerApp = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
