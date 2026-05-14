@@ -267,8 +267,11 @@ const PaymentSuccess = () => {
           </p>
 
           <div className="flex flex-col gap-2">
-            <Button onClick={() => navigate("/learner")} className="w-full">
-              Go to My Sessions
+            <Button
+              onClick={() => navigate(searchParams.get("next") || "/learner")}
+              className="w-full"
+            >
+              {searchParams.get("next") ? "Continue setup" : "Go to My Sessions"}
             </Button>
             {status === "failed" && bookingId && (
               <Button variant="destructive" onClick={() => navigate(`/learner?retryPayment=${bookingId}`)} className="w-full">

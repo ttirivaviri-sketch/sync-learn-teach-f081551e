@@ -5,7 +5,7 @@
  *       header, bottom nav, and cross-cutting modals.
  * Delegates each tab's UI to a focused sub-component.
  */
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,6 +55,7 @@ interface UserProfile {
   user_type?: string;
   study_level?: string;
   avatar_url?: string;
+  onboarding_completed_at?: string | null;
 }
 
 interface VideoMeetingData {
@@ -154,13 +155,20 @@ const LearnerApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
-  // Redirect new users to the guided onboarding flow if they haven't set
-  // up their academic profile yet (replaces the old in-app modal prompt).
+  // Redirect users who haven't completed onboarding (academic profile + flag).
+  // Fire at most once per mount to prevent navigation thrash.
+  const redirectedToOnboardingRef = useRef(false);
   useEffect(() => {
-    if (!academicProfileLoading && !academicProfile && session?.user) {
-      navigate("/learner/onboarding", { replace: true });
-    }
-  }, [academicProfileLoading, academicProfile, session?.user, navigate]);
+    if (redirectedToOnboardingRef.current) return;
+    if (academicProfileLoading) return;
+    if (!session?.user) return;
+    // If we have an academic profile we trust the wizard has surfaced it;
+    // only redirect when neither the profile nor the completion flag are set.
+    if (academicProfile) return;
+    if (profile && profile.onboarding_completed_at) return; // type-augmented below
+    redirectedToOnboardingRef.current = true;
+    navigate("/learner/onboarding", { replace: true });
+  }, [academicProfileLoading, academicProfile, session?.user, navigate, profile]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {

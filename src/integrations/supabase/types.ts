@@ -3235,6 +3235,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_subscription_plan: {
+        Args: { p_plan: string }
+        Returns: {
+          amount: number | null
+          created_at: string
+          currency: string | null
+          id: string
+          payment_provider: string | null
+          payment_ref: string | null
+          plan: string
+          status: string
+          trial_end: string | null
+          trial_start: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "subscriptions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       start_topic_session: {

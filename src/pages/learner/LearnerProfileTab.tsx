@@ -13,6 +13,7 @@ import { SyllabusSetupGate } from "@/components/SyllabusSetupGate";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProgressReportButton } from "@/components/ProgressReportButton";
+import { PlanPicker } from "@/components/subscription/PlanPicker";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface UserProfile {
@@ -122,6 +123,7 @@ export const LearnerProfileTab = ({
 }: LearnerProfileTabProps) => {
   const [showSyllabus, setShowSyllabus] = useState(false);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
 
   const completedBookings = bookings.filter((b) => b.status === "completed");
   const upcomingBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "requested");
@@ -207,6 +209,16 @@ export const LearnerProfileTab = ({
       {/* ── Menu Rows ── */}
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
         <ThemeToggle />
+        <MenuRow
+          icon={<Sparkles className="h-4 w-4" />}
+          label="Subscription & Plans"
+          onClick={() => setShowPlans(!showPlans)}
+        />
+        {showPlans && (
+          <div className="pb-4">
+            <PlanPicker mode="profile" />
+          </div>
+        )}
         <MenuRow
           icon={<Clock className="h-4 w-4" />}
           label="Payment History"
