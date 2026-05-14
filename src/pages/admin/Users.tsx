@@ -59,12 +59,16 @@ const Users = () => {
 
   const toggleSuspend = async (user: any) => {
     const next = !user.is_suspended;
+    let reason: string | null = null;
+    if (next) {
+      reason = window.prompt('Reason for suspension (shown to the user):', 'Violation of terms') || 'Suspended by admin';
+    }
     const { error } = await supabase
       .from('profiles')
       .update({
         is_suspended: next,
         suspended_at: next ? new Date().toISOString() : null,
-        suspended_reason: next ? 'Suspended by admin' : null,
+        suspended_reason: next ? reason : null,
       })
       .eq('id', user.id);
     if (error) {
