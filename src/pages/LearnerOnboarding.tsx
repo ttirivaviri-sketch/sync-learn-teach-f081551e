@@ -132,8 +132,8 @@ export default function LearnerOnboarding() {
                 </p>
                 <ul className="text-left text-sm space-y-2 mb-6 max-w-xs mx-auto">
                   <Bullet>Tell us your curriculum, grade & subjects</Bullet>
-                  <Bullet>Pick your plan (7-day free trial included)</Bullet>
-                  <Bullet>Jump into a personalised library + StudyMode</Bullet>
+                  <Bullet>We'll personalise your library & StudyMode</Bullet>
+                  <Bullet>Your 7-day free trial is already active</Bullet>
                 </ul>
                 <Button size="lg" className="w-full" onClick={() => setStep(1)}>
                   Let's go <ArrowRight className="h-4 w-4 ml-1" />
