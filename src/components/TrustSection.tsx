@@ -46,7 +46,7 @@ const trustCards: TrustCard[] = [
 
 const TrustSection = () => {
   const navigate = useNavigate();
-  const openTrialFlow = () => navigate("/start-trial?role=learner");
+  const openTrialFlow = () => navigate("/learner/auth");
 
   return (
     <section className="py-28 bg-muted/30 overflow-hidden">

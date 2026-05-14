@@ -1,20 +1,22 @@
 /**
- * LearnerOnboarding — guided once-off post-signup flow.
+ * LearnerOnboarding — guided post-signup flow.
  *
- *  0. Welcome splash — hello + what we'll set up
- *  1. Academic profile (curriculum, grade, subjects)
- *  2. Subscription / trial (skippable)
- *  3. Celebration — auto routes to /learner
- *
- * On profile save we:
- *  - Insert subjects into `subjects` and copy curriculum_topic_templates.topics
- *  - Fire personalise-curriculum-deep-dive (background, non-blocking) so the
- *    daily-task engine has a full concept pool by the time they land on Home.
+ *  0. Welcome splash
+ *  1. Subscription / trial (choose plan or continue with free trial)
+ *  2. Academic profile (guided setup)
+ *  3. Celebration → /learner
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Sparkles, ArrowRight, Rocket } from "lucide-react";
+import {
+  CheckCircle2,
+  Sparkles,
+  ArrowRight,
+  Rocket,
+  Crown,
+  Gift,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,14 +25,18 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AcademicProfileSetup } from "@/components/AcademicProfileSetup";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { StepperHeader } from "@/components/onboarding/StepperHeader";
 import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
 
 const STEPS = [
   { label: "Welcome" },
+  { label: "Plan" },
   { label: "Your studies" },
   { label: "All set" },
 ];
+
+type Step = 0 | 1 | 2 | 3;
 
 export default function LearnerOnboarding() {
   const navigate = useNavigate();
@@ -45,26 +51,19 @@ export default function LearnerOnboarding() {
   const { profile, loading: profileLoading, saving, saveProfile } = useAcademicProfile(userId);
   const { subscription } = useSubscription();
 
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [step, setStep] = useState<Step>(0);
 
-  // If profile already exists (returning user partway through), skip to celebration.
+  // Returning user with profile already set → jump to celebration.
   useEffect(() => {
-    if (profile && step === 1) setStep(2);
+    if (profile && step === 2) setStep(3);
   }, [profile, step]);
 
-  /**
-   * Kick off background personalisation:
-   *   1. The next StudyMode entry will copy topic templates → subjects (handled by useSeedSubjectsFromProfile).
-   *   2. Pre-warm the deep-dive concept map so daily tasks are available immediately.
-   * Both calls are fire-and-forget — onboarding does NOT block on them.
-   */
   const kickOffPersonalisation = async () => {
     try {
       toast({
         title: "Personalising your study plan…",
         description: "We're setting up curriculum-aligned tasks in the background.",
       });
-      // Fire-and-forget background calls
       supabase.functions.invoke("personalise-curriculum-deep-dive").catch(() => {});
     } catch {
       /* non-blocking */
@@ -84,8 +83,7 @@ export default function LearnerOnboarding() {
     );
   }
 
-  // ── Step 2: Celebration → auto-route ────────────────────────
-  if (step === 2) {
+  if (step === 3) {
     return (
       <SuccessSplash
         title="You're all set!"
@@ -131,9 +129,9 @@ export default function LearnerOnboarding() {
                   Let's set up your StudySync in under a minute.
                 </p>
                 <ul className="text-left text-sm space-y-2 mb-6 max-w-xs mx-auto">
+                  <Bullet>Pick your plan (free trial included)</Bullet>
                   <Bullet>Tell us your curriculum, grade & subjects</Bullet>
                   <Bullet>We'll personalise your library & StudyMode</Bullet>
-                  <Bullet>Your 7-day free trial is already active</Bullet>
                 </ul>
                 <Button size="lg" className="w-full" onClick={() => setStep(1)}>
                   Let's go <ArrowRight className="h-4 w-4 ml-1" />
@@ -141,8 +139,64 @@ export default function LearnerOnboarding() {
               </Card>
             )}
 
-            {/* ── Step 1: Academic profile ── */}
-            {step === 1 && userId && (
+            {/* ── Step 1: Subscription ── */}
+            {step === 1 && (
+              <Card className="p-5 bg-card/95 backdrop-blur-xl">
+                <div className="text-center mb-5">
+                  <h1 className="text-xl font-bold mb-1">Choose your plan</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Start with a 7-day free trial — no card required.
+                  </p>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  <div className="rounded-2xl border-2 border-primary bg-primary/5 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-start gap-3">
+                        <div className="rounded-xl bg-primary/10 p-2.5">
+                          <Gift className="h-5 w-5 text-primary" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold">7-day Free Trial</p>
+                            <Badge className="bg-primary text-primary-foreground border-0 text-[10px]">
+                              Active
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Full access to AI Study Mode, library & tutor matching.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-border bg-card p-4">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-violet-500/10 p-2.5">
+                        <Crown className="h-5 w-5 text-violet-500" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Premium</p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Upgrade anytime from your Profile after the trial.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Button size="lg" className="w-full" onClick={() => setStep(2)}>
+                  Continue with free trial <ArrowRight className="h-4 w-4 ml-1" />
+                </Button>
+                <p className="text-center text-[11px] text-muted-foreground mt-3">
+                  You can switch plans anytime from your Profile.
+                </p>
+              </Card>
+            )}
+
+            {/* ── Step 2: Academic profile ── */}
+            {step === 2 && userId && (
               <Card className="p-5 bg-card/95 backdrop-blur-xl">
                 <div className="flex items-center gap-2 mb-1">
                   <Sparkles className="h-5 w-5 text-primary" />
@@ -159,7 +213,7 @@ export default function LearnerOnboarding() {
                     const ok = await saveProfile(data);
                     if (ok) {
                       kickOffPersonalisation();
-                      setStep(2);
+                      setStep(3);
                     }
                     return ok;
                   }}
@@ -167,7 +221,6 @@ export default function LearnerOnboarding() {
                 />
               </Card>
             )}
-
           </motion.div>
         </AnimatePresence>
       </div>

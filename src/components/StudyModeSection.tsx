@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 const StudyModeSection = () => {
   const navigate = useNavigate();
-  const openTrialFlow = () => navigate("/start-trial?role=learner");
+  const openTrialFlow = () => navigate("/learner/auth");
 
   return (
     <section id="studymode" className="py-20 bg-white">

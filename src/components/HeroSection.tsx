@@ -8,7 +8,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
-  const openTrialFlow = (role: "learner" | "tutor") => navigate(`/start-trial?role=${role}`);
+  const openTrialFlow = (role: "learner" | "tutor") => navigate(role === "tutor" ? "/tutor/auth" : "/learner/auth");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -151,7 +151,7 @@ const FeatureCard = ({ icon, title, highlight, description }: FeatureCardProps) 
    ══════════════════════════════════════════════════════ */
 const HeroSection = () => {
   const navigate = useNavigate();
-  const openTrialFlow = (role: "learner" | "tutor") => navigate(`/start-trial?role=${role}`);
+  const openTrialFlow = (role: "learner" | "tutor") => navigate(role === "tutor" ? "/tutor/auth" : "/learner/auth");
 
   const checkItems = [
     "AI study assistant",
