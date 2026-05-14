@@ -31,6 +31,7 @@ import { TutorProfileTab } from "./tutor/TutorProfileTab";
 import TutorOnboardingWizard from "./tutor/TutorOnboardingWizard";
 import { TutorPendingScreen } from "./tutor/TutorPendingScreen";
 import { useTutorVerificationGate } from "@/hooks/useTutorVerificationGate";
+import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
 
 // ── Local types ─────────────────────────────────────────────────────────────
 interface VideoMeetingData {
@@ -54,6 +55,7 @@ const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [isOnline, setIsOnline] = useState(true);
   const [mySubjects, setMySubjects] = useState<unknown[]>([]);
+  const [showApprovalSplash, setShowApprovalSplash] = useState(false);
 
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
@@ -201,6 +203,22 @@ const TutorApp = () => {
       rejectionReason={gate.rejectionReason}
       onResubmit={() => gate.refetch()}
     />;
+  }
+  // First time landing as verified → one-time celebration splash
+  if (gate.status === "verified") {
+    const seenKey = `tutor-approved-seen:${userId}`;
+    if (!showApprovalSplash && typeof window !== "undefined" && !localStorage.getItem(seenKey)) {
+      setShowApprovalSplash(true);
+    }
+    if (showApprovalSplash) {
+      return <SuccessSplash
+        title="You're verified! 🎉"
+        subtitle="Welcome aboard. Your tutor account is now live."
+        checklist={["Profile is visible to learners", "Booking requests will appear in Activity", "Payments are ready to be received"]}
+        ctaLabel="Start teaching"
+        onCta={() => { localStorage.setItem(seenKey, "1"); setShowApprovalSplash(false); }}
+      />;
+    }
   }
 
 

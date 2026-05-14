@@ -59,21 +59,24 @@ ${syllabusText ? `OFFICIAL SYLLABUS REFERENCE (use as ground truth):\n${syllabus
 {
   "topics": [
     {
-      "name": "string (top-level topic, e.g. 'Algebra')",
-      "subtopics": ["string", ...],
-      "learning_objectives": ["string verb-led objective", ...],
-      "key_concepts": ["string", ...],
+      "name": "string (top-level syllabus strand, e.g. 'Algebra')",
+      "subtopics": ["string sub-strand", ...],
+      "learning_objectives": ["verb-led objective covering every assessment objective", ...],
+      "key_concepts": ["granular concept name a teacher would test", ...],
+      "assessment_objectives": ["AO1: …", "AO2: …", ...],
+      "typical_question_styles": ["e.g. 'short structured 4-mark', 'extended 12-mark essay'", ...],
       "exam_weight": number (0-100, share of paper marks),
-      "prerequisites": ["string topic name", ...]
+      "prerequisites": ["string topic name from earlier years", ...]
     }
   ]
 }
 
 Rules:
-- Cover EVERY topic on the official ${curriculum} ${grade} ${subject} syllabus. Aim for 8–15 top-level topics.
-- 3–8 subtopics per topic.
-- exam_weight values across all topics should sum roughly to 100.
-- Use proper subject terminology. For Math, use LaTeX in concept descriptions if needed.
+- Cover EVERY strand and sub-strand on the official ${curriculum} ${grade} ${subject} syllabus. Do NOT abbreviate or merge.
+- Aim for 10–18 top-level topics where the syllabus warrants it.
+- 4–10 subtopics per topic; 5–15 key_concepts per topic (granular — these drive day-to-day practice).
+- exam_weight values across all topics should sum to ~100.
+- Use proper subject terminology. For Math/Science, use LaTeX inside strings when needed.
 - Do NOT include any explanation outside the JSON.`;
 }
 
@@ -139,8 +142,9 @@ Deno.serve(async (req) => {
     let topics = Array.isArray(result?.topics) ? result.topics : [];
     if (topics.length === 0) throw new Error('AI returned no topics');
 
-    // 4. Optional validator pass (only when no syllabus doc was used)
-    if (validate && source === 'ai') {
+    // 4. Validator pass — runs for ALL sources by default. Quality matters
+    //    more than cost on a one-shot per-template seed.
+    if (validate) {
       try {
         const v = await callGemini(buildValidatorPrompt(curriculum, grade, subject, topics), VALIDATOR_SYSTEM);
         if (Array.isArray(v?.topics) && v.topics.length > 0) topics = v.topics;
