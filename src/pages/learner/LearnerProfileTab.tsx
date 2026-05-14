@@ -13,7 +13,7 @@ import { SyllabusSetupGate } from "@/components/SyllabusSetupGate";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ProgressReportButton } from "@/components/ProgressReportButton";
-import { PlanPicker } from "@/components/subscription/PlanPicker";
+import { SubscriptionFlow } from "@/components/subscription/SubscriptionFlow";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface UserProfile {
@@ -216,7 +216,7 @@ export const LearnerProfileTab = ({
         />
         {showPlans && (
           <div className="pb-4">
-            <PlanPicker mode="profile" />
+            <SubscriptionFlow mode="profile" />
           </div>
         )}
         <MenuRow
