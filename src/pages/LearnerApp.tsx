@@ -55,6 +55,7 @@ interface UserProfile {
   user_type?: string;
   study_level?: string;
   avatar_url?: string;
+  onboarding_completed_at?: string | null;
 }
 
 interface VideoMeetingData {
