@@ -1,4 +1,5 @@
-import { Clock, ShieldCheck, FileText, AlertTriangle } from "lucide-react";
+import { useEffect } from "react";
+import { Clock, ShieldCheck, FileText, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
@@ -15,14 +16,22 @@ export function TutorPendingScreen({ status, submittedAt, rejectionReason, onRes
   const navigate = useNavigate();
   const isRejected = status === "rejected";
 
+  // Auto-poll: refetch verification status every 30s while pending so the
+  // approval is reflected without a manual refresh.
+  useEffect(() => {
+    if (isRejected || !onResubmit) return;
+    const id = setInterval(() => onResubmit(), 30_000);
+    return () => clearInterval(id);
+  }, [isRejected, onResubmit]);
+
   return (
     <div className="min-h-screen bg-background bg-mesh flex items-center justify-center p-4">
-      <Card className="w-full max-w-md p-6 space-y-5 bg-card/95 backdrop-blur">
+      <Card className="w-full max-w-md p-6 space-y-5 bg-card/95 backdrop-blur-xl">
         <div className="flex justify-center">
           <div className={`h-16 w-16 rounded-full flex items-center justify-center ${isRejected ? "bg-destructive/10" : "bg-primary/10"}`}>
             {isRejected
               ? <AlertTriangle className="h-8 w-8 text-destructive" />
-              : <Clock className="h-8 w-8 text-primary" />}
+              : <Clock className="h-8 w-8 text-primary animate-pulse" />}
           </div>
         </div>
 
@@ -33,7 +42,7 @@ export function TutorPendingScreen({ status, submittedAt, rejectionReason, onRes
           <p className="text-sm text-muted-foreground">
             {isRejected
               ? "One or more documents need to be re-uploaded."
-              : "Our team reviews tutor documents within 24–48 hours."}
+              : "Our team reviews tutor documents within 24–48 hours. We'll update this screen automatically."}
           </p>
         </div>
 
@@ -60,8 +69,8 @@ export function TutorPendingScreen({ status, submittedAt, rejectionReason, onRes
           {isRejected ? (
             <Button onClick={onResubmit} className="w-full">Re-upload documents</Button>
           ) : (
-            <Button variant="outline" className="w-full" onClick={() => location.reload()}>
-              Refresh status
+            <Button variant="outline" className="w-full" onClick={() => onResubmit?.()}>
+              <RefreshCw className="h-4 w-4 mr-1" /> Refresh status
             </Button>
           )}
           <Button
