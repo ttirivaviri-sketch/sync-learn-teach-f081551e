@@ -76,10 +76,6 @@ export default function LearnerOnboarding() {
     navigate("/learner", { replace: true });
   };
 
-  const skipSubscription = async () => {
-    setStep(3);
-  };
-
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background bg-mesh">
@@ -88,8 +84,8 @@ export default function LearnerOnboarding() {
     );
   }
 
-  // ── Step 3: Celebration → auto-route ────────────────────────
-  if (step === 3) {
+  // ── Step 2: Celebration → auto-route ────────────────────────
+  if (step === 2) {
     return (
       <SuccessSplash
         title="You're all set!"
@@ -101,7 +97,7 @@ export default function LearnerOnboarding() {
         ]}
         ctaLabel="Enter app"
         onCta={finish}
-        autoAdvanceMs={2800}
+        autoAdvanceMs={2200}
       />
     );
   }
