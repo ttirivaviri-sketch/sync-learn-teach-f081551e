@@ -79,6 +79,7 @@ const LearnerApp = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
@@ -150,25 +151,22 @@ const LearnerApp = () => {
   useEffect(() => {
     if (session?.user) {
       loadUserProfile();
-      getCurrentLocation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
   // Redirect users who haven't completed onboarding (academic profile + flag).
-  // Fire at most once per mount to prevent navigation thrash.
+  // Wait for BOTH academic profile + base profile loads to avoid races.
   const redirectedToOnboardingRef = useRef(false);
   useEffect(() => {
     if (redirectedToOnboardingRef.current) return;
-    if (academicProfileLoading) return;
+    if (loading || academicProfileLoading || !profileLoaded) return;
     if (!session?.user) return;
-    // If we have an academic profile we trust the wizard has surfaced it;
-    // only redirect when neither the profile nor the completion flag are set.
+    if (profile?.onboarding_completed_at) return;
     if (academicProfile) return;
-    if (profile && profile.onboarding_completed_at) return; // type-augmented below
     redirectedToOnboardingRef.current = true;
     navigate("/learner/onboarding", { replace: true });
-  }, [academicProfileLoading, academicProfile, session?.user, navigate, profile]);
+  }, [loading, academicProfileLoading, profileLoaded, academicProfile, session?.user, navigate, profile]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
@@ -194,6 +192,7 @@ const LearnerApp = () => {
         navigate("/learner/choose-level");
       }
     } catch (err) { logger.error("Profile load error:", err); }
+    finally { setProfileLoaded(true); }
   };
 
   const handleSignOut = () => setShowSignOutConfirm(true);
