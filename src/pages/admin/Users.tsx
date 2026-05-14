@@ -163,7 +163,15 @@ const Users = () => {
                             <div className="flex items-center gap-2">
                               {user.full_name || 'N/A'}
                               {isAdmin && <Badge variant="destructive" className="text-[10px]">admin</Badge>}
-                              {user.is_suspended && <Badge variant="outline" className="text-[10px] border-destructive text-destructive">suspended</Badge>}
+                              {user.is_suspended && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] border-destructive text-destructive"
+                                  title={user.suspended_reason || 'Suspended'}
+                                >
+                                  suspended
+                                </Badge>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm">
