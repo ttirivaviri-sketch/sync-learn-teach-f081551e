@@ -130,89 +130,8 @@ const TutorAuth = () => {
     }
   };
 
-  // ── Step 2: Verification ──────────────────────────────────────────────────
-  if (currentStep === 2 && session?.user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl">
-          <LogoBlock />
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-extrabold text-white mb-1">Tutor Verification</h1>
-            <p className="text-white/80">Complete your verification to start tutoring</p>
-          </div>
-
-          <Card className="bg-white/95 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Verification Documents
-              </CardTitle>
-              <CardDescription>Upload required documents for security and quality assurance</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Identity */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <FileText className="w-4 h-4" />
-                  Identity Verification
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="id-number">ID Number</Label>
-                  <Input id="id-number" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="Enter your ID number" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="id-document">ID Document Upload</Label>
-                  <Input id="id-document" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleFileChange("idDocument", e.target.files[0])} required />
-                </div>
-              </div>
-
-              {/* Profile Photo */}
-              <div className="space-y-2">
-                <Label htmlFor="profile-photo">Profile Photo</Label>
-                <Input id="profile-photo" type="file" accept=".jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleFileChange("profilePhoto", e.target.files[0])} required />
-              </div>
-
-              {/* Police Clearance */}
-              <div className="space-y-2">
-                <Label htmlFor="police-clearance">Police Clearance Certificate</Label>
-                <Input id="police-clearance" type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files?.[0] && handleFileChange("policeClearance", e.target.files[0])} required />
-              </div>
-
-              {/* Qualifications */}
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm font-medium">
-                  <GraduationCap className="w-4 h-4" />
-                  Qualifications & Transcripts
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="qual-type">Qualification Type</Label>
-                    <Input id="qual-type" value={qualificationDetails.type} onChange={(e) => setQualificationDetails((p) => ({ ...p, type: e.target.value }))} placeholder="e.g., Bachelor's Degree" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="institution">Institution</Label>
-                    <Input id="institution" value={qualificationDetails.institution} onChange={(e) => setQualificationDetails((p) => ({ ...p, institution: e.target.value }))} placeholder="e.g., University of Cape Town" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="year">Year Obtained</Label>
-                  <Input id="year" type="number" value={qualificationDetails.year} onChange={(e) => setQualificationDetails((p) => ({ ...p, year: e.target.value }))} placeholder="2020" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="qualifications">Upload Qualifications/Transcripts</Label>
-                  <Input id="qualifications" type="file" multiple accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => e.target.files && handleFileChange("qualifications", Array.from(e.target.files))} />
-                </div>
-              </div>
-
-              <Button onClick={handleVerificationSubmit} className="w-full" disabled={loading || !idNumber || !files.idDocument || !files.profilePhoto || !files.policeClearance}>
-                {loading ? "Uploading..." : "Submit Verification"}
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
+  // Note: After signup we redirect to /tutor; the verification gate inside
+  // TutorApp routes new accounts straight to the onboarding wizard.
 
   // ── Step 1: Auth Form ─────────────────────────────────────────────────────
   return (
@@ -237,7 +156,7 @@ const TutorAuth = () => {
               </div>
             </div>
           }
-          onSignUpSuccess={() => setCurrentStep(2)}
+          onSignUpSuccess={() => navigate("/tutor")}
         />
       </div>
     </div>
