@@ -210,6 +210,16 @@ export const LearnerProfileTab = ({
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
         <ThemeToggle />
         <MenuRow
+          icon={<Sparkles className="h-4 w-4" />}
+          label="Subscription & Plans"
+          onClick={() => setShowPlans(!showPlans)}
+        />
+        {showPlans && (
+          <div className="pb-4">
+            <PlanPicker mode="profile" />
+          </div>
+        )}
+        <MenuRow
           icon={<Clock className="h-4 w-4" />}
           label="Payment History"
           onClick={() => setShowPaymentHistory(!showPaymentHistory)}
