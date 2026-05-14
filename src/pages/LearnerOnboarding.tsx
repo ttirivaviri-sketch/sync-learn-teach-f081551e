@@ -25,7 +25,7 @@ import { useAcademicProfile } from "@/hooks/useAcademicProfile";
 import { useSubscription } from "@/hooks/useSubscription";
 import { useResumableWizard } from "@/hooks/useResumableWizard";
 import { AcademicProfileSetup } from "@/components/AcademicProfileSetup";
-import { PlanPicker } from "@/components/subscription/PlanPicker";
+import { SubscriptionFlow } from "@/components/subscription/SubscriptionFlow";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { StepperHeader } from "@/components/onboarding/StepperHeader";
@@ -184,13 +184,12 @@ export default function LearnerOnboarding() {
             {/* ── Step 1: Plan ── */}
             {step === 1 && (
               <Card className="p-5 bg-card/95 backdrop-blur-xl">
-                <div className="text-center mb-5">
-                  <h1 className="text-xl font-bold mb-1">Choose your plan</h1>
-                  <p className="text-sm text-muted-foreground">
-                    Your 7-day free trial is already active — pick the plan that kicks in after.
-                  </p>
+                <SubscriptionFlow mode="onboarding" onComplete={() => setStep(2)} />
+                <div className="pt-4 mt-4 border-t">
+                  <Button variant="ghost" className="w-full" onClick={() => setStep(2)}>
+                    Decide later — continue with free trial
+                  </Button>
                 </div>
-                <PlanPicker mode="onboarding" onContinue={() => setStep(2)} />
               </Card>
             )}
 
