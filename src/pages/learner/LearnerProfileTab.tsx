@@ -123,6 +123,7 @@ export const LearnerProfileTab = ({
 }: LearnerProfileTabProps) => {
   const [showSyllabus, setShowSyllabus] = useState(false);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [showPlans, setShowPlans] = useState(false);
 
   const completedBookings = bookings.filter((b) => b.status === "completed");
   const upcomingBookings = bookings.filter((b) => b.status === "confirmed" || b.status === "requested");
