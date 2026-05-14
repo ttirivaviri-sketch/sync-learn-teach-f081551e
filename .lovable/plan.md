@@ -1,91 +1,38 @@
-## Goal
+# Fix Start Trial flow
 
-Polish the full new-user flow end-to-end so it feels like a high-end app:
-- **Tutor**: signup → guided onboarding (docs + teaching profile) → pending screen → admin approval → instant teaching access. No subscription anywhere.
-- **Learner**: signup → guided profile → 7-day trial / skip → personalised library + StudyMode pre-seeded with curriculum-aligned topics from day one.
+## Desired flow
+`Start Trial` (landing) → `/learner/auth` (sign in / sign up) → Subscription step → Guided setup (academic profile) → Learner app
 
-Most plumbing already exists (`TutorOnboardingWizard`, `useTutorVerificationGate`, `LearnerOnboarding`, `useSeedSubjectsFromProfile`, `seed-curriculum-topics` edge fn). This pass closes the remaining gaps and elevates the UX.
+## Changes
 
----
+### 1. Landing page CTAs → go straight to auth
+**`src/components/HeroSection.tsx`**
+- Replace `openTrialFlow("learner")` with `navigate("/learner/auth")` for both Start Trial buttons (lines ~110 and ~200).
+- Tutor CTA continues to `/tutor/auth` directly (no trial picker).
+- Also audit `TrustSection.tsx` and `StudyModeSection.tsx` for any other `/start-trial` links and point them at `/learner/auth`.
 
-## 1. Tutor onboarding — completion & polish
+### 2. Retire the standalone TrialSignupFlow page
+- Remove the `/start-trial` route from `src/App.tsx` and the `TrialSignupFlow` import.
+- Delete `src/pages/TrialSignupFlow.tsx` (no longer needed; subscription now lives inside the app).
 
-**1a. Resumable wizard.** Persist wizard state to `localStorage` per `user.id` (text fields + step index — files re-pick). Loader on mount restores progress so a refresh mid-application doesn't reset.
+### 3. Add Subscription step inside the onboarding wizard
+**`src/pages/LearnerOnboarding.tsx`** — restructure to 4 steps:
 
-**1b. High-end visual treatment** in `TutorOnboardingWizard.tsx`:
-- Animated step transitions (framer-motion fade/slide).
-- Replace flat progress bar with a segmented stepper showing icons per step + checkmarks on completed steps.
-- Each step gets a hero icon, short benefit copy, and clear primary CTA.
-- File inputs → drag-and-drop dropzones with thumbnail preview for images, filename + size for PDFs.
-- Step 8 becomes a **Review & Submit** screen that summarises every entry (photo, ID #, curriculums, grades, subjects, rate, bio) before submission.
+```
+0. Welcome splash
+1. Choose plan / start trial   ← NEW (re-added in correct position)
+2. Academic profile (guided setup)
+3. All set → /learner
+```
 
-**1c. Welcome celebration** after submission — full-screen success card ("You're in! We'll let you know within 24–48 hours"), then redirect to pending screen instead of bare toast.
+- Bring back a Subscription step component using the existing `useSubscription` hook (mirrors the card that lives in Profile tab) with options: Start 7-day free trial (default, one-tap continue), choose paid plan, or "Skip for now" (still gets trial via DB trigger).
+- Update `STEPS` labels and `step` state to `0 | 1 | 2 | 3`.
+- Update the "skip to celebration if profile exists" effect so returning users still land correctly (e.g. profile present → jump to step 3).
+- Keep `kickOffPersonalisation` firing right after academic profile save (unchanged).
 
-**1d. Approval celebration.** When `gate.status` flips from `pending` → `verified`, show a one-time `<TutorApprovedSplash>` overlay before TutorApp renders normally (flag in `localStorage` so it shows once).
+### 4. Keep gating in `LearnerApp.tsx` unchanged
+The existing redirect to `/learner/onboarding` when no academic profile exists still works — the new subscription step sits inside that same wizard, so users naturally hit it before reaching the app surface.
 
-**1e. Pending screen polish** (`TutorPendingScreen`): live status pill that re-polls every 30s using the existing `gate.refetch()`; clearer "what we're checking" checklist; link to "Edit my application" if `pending` (allow re-uploading docs).
-
-**1f. Notifications.** Verify the admin-decision notification insert in `Verifications.tsx` works (it does); add a Postgres trigger as backup so manual `verification_status` flips also notify.
-
----
-
-## 2. Learner onboarding — completion & polish
-
-**2a. Polish `LearnerOnboarding.tsx`** with same visual language as the tutor wizard (segmented stepper, motion transitions, branded card).
-
-**2b. Add a Step 0 "Welcome" splash** with the user's first name, what we'll set up, and a single "Let's go" CTA. Skip if profile already exists.
-
-**2c. Celebration step 3** after subscription decision: animated "All set!" card with a quick checklist ("Library personalised ✓ / StudyMode subjects ready ✓ / Free trial active ✓") then auto-route to `/learner`.
-
-**2d. Eager seeding.** When the learner saves their academic profile in onboarding, immediately:
-1. Insert subjects into `subjects` table (the existing seed hook handles this on first StudyMode entry — call it here too so it's done by the time they land on home).
-2. Fire `bulk-seed-curriculum`-style request narrowed to *just their (curriculum, grade, subjects)* — a new lightweight call to the existing `seed-curriculum-topics` per missing subject. Show a tiny toast "Personalising your study plan…" — non-blocking.
-
-**2e. Confirm subscription is learner-only.** Tutor app already has zero `useSubscription` references — keep it that way; ensure no tutor route ever reaches `/start-trial`. (Audited — clean.)
-
----
-
-## 3. Library auto-filter (verification only)
-
-`StudySyncLibrary` is already keyed off `academicProfile` (curriculum / grade / subjects). Audit the filter inside `StudySyncLibrary` to make sure:
-- `library_system_resources` query filters by `curriculum = profile.curriculum AND grade_levels @> [profile.grade] AND subject = ANY(profile.subjects)`.
-- Empty state when nothing matches points to "Edit profile" instead of showing irrelevant content.
-- Add unit-style smoke check by reading the component and patching the query if needed.
-
----
-
-## 4. StudyMode curriculum coverage — make it thorough
-
-Build on the existing `seed-curriculum-topics` and `useSeedSubjectsFromProfile`:
-
-**4a. Strengthen `seed-curriculum-topics` prompt** to require:
-- Every official syllabus strand and sub-strand (no abbreviation).
-- Per topic: `learning_objectives[]`, `key_concepts[]`, `assessment_objectives[]`, `prerequisites[]`, `exam_weight`, `typical_question_styles[]`.
-- Validator pass enabled by default for ALL sources (not only `ai`) — the doubled cost is acceptable since seeding is one-shot per template.
-
-**4b. After topics seed for a learner, kick off a one-time `personalise-curriculum-deep-dive` background job** (new edge function) per subject that:
-- Reads the subject's seeded topics.
-- Generates a coverage map of *concepts* (not just topics) and writes them into `daily_task_concepts` so the daily-task engine has a full pool to draw from.
-- Builds an initial spaced-rotation plan in `daily_tasks` for the first 7 days so home tab is never empty after onboarding.
-
-**4c. Daily task engine guard.** Ensure `generate-daily-task` always picks topics from the user's seeded `subjects.topics` (curriculum-aligned), never from generic AI brainstorm. Add a fallback that re-runs `seed-curriculum-topics` if the subject has < 5 topics.
-
-**4d. Admin curriculum dashboard** (`/admin/curriculum-templates` already exists): add per-template coverage stats (topic count, concept count, last verified) and a "Re-seed with validator" button.
-
----
-
-## 5. Technical notes
-
-- New file: `src/components/onboarding/StepperHeader.tsx` (shared between tutor + learner wizards).
-- New file: `src/components/onboarding/SuccessSplash.tsx`.
-- New edge function: `personalise-curriculum-deep-dive` (CRON_SECRET-gated, called from learner onboarding completion).
-- New hook: `src/hooks/useResumableWizard.ts` for tutor wizard state persistence.
-- `TutorPendingScreen` polling: `useEffect` interval calling `gate.refetch()` every 30s; clear on unmount.
-- No schema changes required — `daily_task_concepts`, `subjects`, `curriculum_topic_templates`, `tutor_verifications`, `tutor_teaching_profile` all already exist.
-- Animations: use `motion/react` (already in deps from Lovable preset) for step transitions and splash overlays.
-
----
-
-## Open question
-
-Validator pass on **all** template seeding doubles AI cost (~1200 calls). Confirm OK, or keep current behavior (validator only when no syllabus PDF). Default in this plan: **validator on for all** — quality wins for a one-shot seed.
+## Out of scope
+- Tutor flow (tutors don't pay subscription).
+- Pricing/plan content itself — reuse the same plan UI already used in the Profile subscription card.
