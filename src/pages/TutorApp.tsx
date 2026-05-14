@@ -31,6 +31,7 @@ import { TutorProfileTab } from "./tutor/TutorProfileTab";
 import TutorOnboardingWizard from "./tutor/TutorOnboardingWizard";
 import { TutorPendingScreen } from "./tutor/TutorPendingScreen";
 import { useTutorVerificationGate } from "@/hooks/useTutorVerificationGate";
+import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
 
 // ── Local types ─────────────────────────────────────────────────────────────
 interface VideoMeetingData {
@@ -54,6 +55,7 @@ const TutorApp = () => {
   const [activeTab, setActiveTab] = useState("home");
   const [isOnline, setIsOnline] = useState(true);
   const [mySubjects, setMySubjects] = useState<unknown[]>([]);
+  const [showApprovalSplash, setShowApprovalSplash] = useState(false);
 
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
