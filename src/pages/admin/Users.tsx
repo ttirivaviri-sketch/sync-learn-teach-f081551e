@@ -59,12 +59,16 @@ const Users = () => {
 
   const toggleSuspend = async (user: any) => {
     const next = !user.is_suspended;
+    let reason: string | null = null;
+    if (next) {
+      reason = window.prompt('Reason for suspension (shown to the user):', 'Violation of terms') || 'Suspended by admin';
+    }
     const { error } = await supabase
       .from('profiles')
       .update({
         is_suspended: next,
         suspended_at: next ? new Date().toISOString() : null,
-        suspended_reason: next ? 'Suspended by admin' : null,
+        suspended_reason: next ? reason : null,
       })
       .eq('id', user.id);
     if (error) {
@@ -159,7 +163,15 @@ const Users = () => {
                             <div className="flex items-center gap-2">
                               {user.full_name || 'N/A'}
                               {isAdmin && <Badge variant="destructive" className="text-[10px]">admin</Badge>}
-                              {user.is_suspended && <Badge variant="outline" className="text-[10px] border-destructive text-destructive">suspended</Badge>}
+                              {user.is_suspended && (
+                                <Badge
+                                  variant="outline"
+                                  className="text-[10px] border-destructive text-destructive"
+                                  title={user.suspended_reason || 'Suspended'}
+                                >
+                                  suspended
+                                </Badge>
+                              )}
                             </div>
                           </td>
                           <td className="px-4 py-3 text-sm">

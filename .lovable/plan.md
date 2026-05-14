@@ -1,49 +1,19 @@
-## Goal
+## Enforce User Suspension at Sign-In and Runtime
 
-Make the SAIL admin dashboard do real work: when an event triggers a task, an LLM analyzes it and writes a `code_patch` (proposed fix / recommendation) onto the task. Approvals then produce something meaningful instead of a no-op status flip.
+The admin Users page can already flag accounts as suspended (`profiles.is_suspended`), but nothing currently blocks a suspended user from using the app. This plan wires that flag into the auth flow.
 
-## Scope
+### Scope
+1. **Block sign-in** — In the auth provider/hook (`src/hooks/useAuth` or equivalent), after a successful login fetch `profiles.is_suspended`. If true, immediately `supabase.auth.signOut()` and surface a toast: "Your account has been suspended. Contact support." Include `suspended_reason` if present.
+2. **Block active sessions** — Subscribe to realtime updates on the current user's `profiles` row. If `is_suspended` flips to true mid-session, sign them out and redirect to `/auth` with the same toast.
+3. **Guard route loader** — In the top-level protected route wrapper, treat a suspended profile the same as an unauthenticated user (redirect to `/auth`).
+4. **Admin UX polish** — On the Users admin page, show the `suspended_reason` in the row tooltip and prompt for an optional reason when suspending (simple `prompt()` is fine; persists into `suspended_reason` and stamps `suspended_at`).
 
-Backend-only changes. No UI redesign — the existing dashboard at `/admin/sail` already renders `code_patch`, agent logs, etc., so once the function fills those fields the dashboard "comes alive" automatically.
+### Out of scope
+- Email notification to the suspended user (can add later via edge function if you want).
+- Appeals workflow.
+- Suspending tutors specifically affecting their public listing (already hidden because protected routes will reject them).
 
-## Changes
-
-### 1. Update `supabase/functions/sail-agent/index.ts`
-
-After creating the task row, call the Lovable AI Gateway with an agent-specific system prompt and the event payload. Save the model output to `sail_tasks.code_patch` and append a `sail_agent_logs` row with the LLM duration and token usage.
-
-- Model: `google/gemini-3-flash-preview` (default per platform rules).
-- Use tool-calling for structured output: `{ summary, root_cause, proposed_patch, risk_assessment, confidence }`.
-- System prompts per agent (debug / frontend / backend / learning / monetization / reviewer) — short, role-scoped, instructing the model to suggest a patch only, never claim to deploy.
-- On 429/402, log to `sail_agent_logs` with `success=false` and a clear error; still return the created task so the UI shows it.
-- Keep the existing low-risk auto-advance to `review`; high/medium remain pending until admin approves.
-
-### 2. New edge function `sail-execute-approved` (optional second step)
-
-Triggered when admin approves a task. Reads `code_patch`, posts a follow-up "execution plan" via the LLM (still no real code deploy — SAIL safety rules forbid it), writes the result into `sail_tasks` (new column) and flips status to `deployed`. If you'd rather not add this now, approval simply marks `approved` and we stop there.
-
-### 3. No DB schema change required
-
-`sail_tasks.code_patch` is already `text | null` and the dashboard already renders it inside the task detail dialog. No migration unless we add the second function (which would need a `sail_tasks.execution_notes text` column).
-
-### 4. Secrets
-
-`LOVABLE_API_KEY` is already configured. Nothing to add.
-
-## Out of scope
-
-- No client-side changes to `useSAILTasks` or `SAIL.tsx`.
-- No real code deployment / git operations — SAIL stays advisory.
-- No cron / autonomous scheduler — triggers stay manual + `globalErrorHandler`.
-- No changes to `src/sail/agents/*` client modules (those remain unused stubs for now).
-
-## Validation
-
-1. Open `/admin/sail` → click "Error Scan" → new task appears within ~5s with a populated `code_patch` (visible via the eye icon → "Code Patch" section).
-2. Agent Logs tab shows two rows per trigger: `process_<event>` and `llm_analysis` with non-zero `duration_ms`.
-3. Trigger with severity "high" → task lands in `pending` and the Approve/Reject buttons are visible.
-4. Edge function logs show no 4xx/5xx; on 429 the task still appears with an error log row.
-
-## Decision needed
-
-Do you want step 2 (`sail-execute-approved`) included now, or just the analysis step? I'd recommend analysis-only first — it's the smallest change that makes the dashboard actually useful.
+### Technical notes
+- Files likely touched: `src/hooks/useAuth.tsx` (or `src/contexts/AuthContext.tsx`), `src/components/ProtectedRoute.tsx`, `src/pages/admin/Users.tsx`.
+- No schema changes — columns already exist.
+- Use existing `has_role` pattern; no new RLS needed since admin already has UPDATE on profiles.
