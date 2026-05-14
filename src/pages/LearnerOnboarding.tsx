@@ -45,9 +45,9 @@ export default function LearnerOnboarding() {
   const { profile, loading: profileLoading, saving, saveProfile } = useAcademicProfile(userId);
   const { subscription } = useSubscription();
 
-  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+  const [step, setStep] = useState<0 | 1 | 2>(0);
 
-  // If profile already exists (returning user partway through), skip to step 2.
+  // If profile already exists (returning user partway through), skip to celebration.
   useEffect(() => {
     if (profile && step === 1) setStep(2);
   }, [profile, step]);
