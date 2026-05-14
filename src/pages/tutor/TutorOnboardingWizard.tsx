@@ -1,26 +1,21 @@
 /**
  * TutorOnboardingWizard — guided one-time setup for new tutors.
  *
- * Steps:
- *  1. Identity: ID number + ID document
- *  2. Profile photo
- *  3. Student status: current_student | graduate
- *  4. Transcript (student) OR Qualification doc (graduate)
- *  5. Teaching profile: curriculums + grades
- *  6. Subjects + hourly rate per subject
- *  7. Bio + teaching style
- *
- * On submit:
- *  - Creates/updates tutor_verifications (status='pending')
- *  - Creates tutor_teaching_profile (onboarding_completed_at = now())
- *  - Creates tutor_subjects rows with rate
+ * 9 steps (last is Review & Submit). Form state is persisted to localStorage
+ * so a refresh mid-flow doesn't reset progress (file inputs still need
+ * re-picking — they can't be serialised).
  */
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, Upload, GraduationCap, Briefcase, IdCard, Camera, BookOpen, FileText, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  ChevronLeft, ChevronRight, Upload, GraduationCap, Briefcase, IdCard,
+  Camera, BookOpen, FileText, CheckCircle2, ClipboardCheck,
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useResumableWizard } from "@/hooks/useResumableWizard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -29,6 +24,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { security } from "@/utils/security";
 import { CURRICULUM_SUBJECTS, GRADE_LEVELS_BY_CURRICULUM, type Curriculum } from "@/types/academicProfile";
+import { StepperHeader } from "@/components/onboarding/StepperHeader";
+import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
 
 const CURRICULUMS: { code: Curriculum; label: string }[] = [
   { code: "ZIMSEC", label: "ZIMSEC" },
@@ -37,58 +34,82 @@ const CURRICULUMS: { code: Curriculum; label: string }[] = [
   { code: "NSC", label: "NSC (South Africa)" },
 ];
 
-const STEPS = ["Identity", "Photo", "Status", "Document", "Curriculums", "Grades", "Subjects", "Bio"] as const;
+const STEPS = [
+  { label: "Identity" }, { label: "Photo" }, { label: "Status" }, { label: "Document" },
+  { label: "Curriculums" }, { label: "Grades" }, { label: "Subjects" }, { label: "Bio" },
+  { label: "Review" },
+];
+
+interface SerialState {
+  step: number;
+  idNumber: string;
+  studentStatus: "current_student" | "graduate" | "";
+  qualType: string;
+  institution: string;
+  year: string;
+  curriculums: Curriculum[];
+  grades: string[];
+  subjects: string[];
+  rate: string;
+  bio: string;
+  style: string;
+}
+
+const INITIAL: SerialState = {
+  step: 0, idNumber: "", studentStatus: "", qualType: "", institution: "", year: "",
+  curriculums: [], grades: [], subjects: [], rate: "250", bio: "", style: "",
+};
 
 export default function TutorOnboardingWizard() {
   const { session } = useAuth({ redirectTo: "/tutor/auth" });
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
+  const { state, setState, clear } = useResumableWizard<SerialState>(
+    `tutor-onboarding:${session?.user?.id ?? "anon"}`,
+    INITIAL,
+  );
+  const setField = <K extends keyof SerialState>(k: K, v: SerialState[K]) =>
+    setState((s) => ({ ...s, [k]: v }));
+  const step = state.step;
+  const setStep = (n: number) => setField("step", n);
 
-  const [idNumber, setIdNumber] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  // Files are NOT persisted — kept in component state only.
   const [idDoc, setIdDoc] = useState<File | null>(null);
   const [photo, setPhoto] = useState<File | null>(null);
-  const [studentStatus, setStudentStatus] = useState<"current_student" | "graduate" | "">("");
   const [transcript, setTranscript] = useState<File | null>(null);
   const [qualification, setQualification] = useState<File | null>(null);
-  const [qualType, setQualType] = useState("");
-  const [institution, setInstitution] = useState("");
-  const [year, setYear] = useState("");
-
-  const [curriculums, setCurriculums] = useState<Curriculum[]>([]);
-  const [grades, setGrades] = useState<string[]>([]);
-  const [subjects, setSubjects] = useState<string[]>([]);
-  const [rate, setRate] = useState("250");
-  const [bio, setBio] = useState("");
-  const [style, setStyle] = useState("");
 
   const availableGrades = useMemo(() => {
     const set = new Set<string>();
-    curriculums.forEach((c) => GRADE_LEVELS_BY_CURRICULUM[c]?.forEach((g) => set.add(g)));
+    state.curriculums.forEach((c) => GRADE_LEVELS_BY_CURRICULUM[c]?.forEach((g) => set.add(g)));
     return Array.from(set);
-  }, [curriculums]);
+  }, [state.curriculums]);
 
   const availableSubjects = useMemo(() => {
     const set = new Set<string>();
-    curriculums.forEach((c) => CURRICULUM_SUBJECTS[c]?.forEach((s) => set.add(s)));
+    state.curriculums.forEach((c) => CURRICULUM_SUBJECTS[c]?.forEach((s) => set.add(s)));
     return Array.from(set).sort();
-  }, [curriculums]);
+  }, [state.curriculums]);
 
   const toggle = <T,>(arr: T[], v: T) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
 
-  // ── validation per step ───────────────────────────
   const canNext = () => {
     switch (step) {
-      case 0: return !!idNumber.trim() && !!idDoc;
+      case 0: return !!state.idNumber.trim() && !!idDoc;
       case 1: return !!photo;
-      case 2: return !!studentStatus;
-      case 3: return studentStatus === "current_student" ? !!transcript : (!!qualification && !!qualType.trim() && !!institution.trim());
-      case 4: return curriculums.length > 0;
-      case 5: return grades.length > 0;
-      case 6: return subjects.length > 0 && Number(rate) > 0;
-      case 7: return bio.trim().length >= 30;
+      case 2: return !!state.studentStatus;
+      case 3: return state.studentStatus === "current_student"
+        ? !!transcript
+        : (!!qualification && !!state.qualType.trim() && !!state.institution.trim());
+      case 4: return state.curriculums.length > 0;
+      case 5: return state.grades.length > 0;
+      case 6: return state.subjects.length > 0 && Number(state.rate) > 0;
+      case 7: return state.bio.trim().length >= 30;
+      case 8: return true;
       default: return true;
     }
   };
@@ -122,10 +143,10 @@ export default function TutorOnboardingWizard() {
 
       const { error: vErr } = await supabase.from("tutor_verifications").upsert({
         user_id: session.user.id,
-        id_number: idNumber,
+        id_number: state.idNumber,
         id_document_url: idDocUrl,
         profile_photo_url: photoUrl,
-        student_status: studentStatus,
+        student_status: state.studentStatus,
         transcript_url: transcriptUrl,
         qualification_url: qualUrl,
         verification_status: "pending",
@@ -133,48 +154,43 @@ export default function TutorOnboardingWizard() {
       } as any);
       if (vErr) throw vErr;
 
-      if (studentStatus === "graduate" && qualUrl) {
+      if (state.studentStatus === "graduate" && qualUrl) {
         await supabase.from("qualifications").insert({
           user_id: session.user.id,
-          qualification_type: qualType,
-          institution,
+          qualification_type: state.qualType,
+          institution: state.institution,
           document_url: qualUrl,
-          year_obtained: Number(year) || null,
+          year_obtained: Number(state.year) || null,
         });
       }
 
       const { error: pErr } = await supabase.from("tutor_teaching_profile").upsert({
         user_id: session.user.id,
-        curriculums,
-        grades,
-        bio,
-        teaching_style: style || null,
+        curriculums: state.curriculums,
+        grades: state.grades,
+        bio: state.bio,
+        teaching_style: state.style || null,
         onboarding_completed_at: new Date().toISOString(),
       } as any);
       if (pErr) throw pErr;
 
-      // Insert tutor_subjects (level required, default to first grade)
-      const rateNum = Number(rate);
-      const levelLabel = grades[0] ?? "All";
-      // Avoid duplicates: fetch existing subjects first
+      const rateNum = Number(state.rate);
+      const levelLabel = state.grades[0] ?? "All";
       const { data: existing } = await supabase
-        .from("tutor_subjects")
-        .select("subject")
-        .eq("user_id", session.user.id);
+        .from("tutor_subjects").select("subject").eq("user_id", session.user.id);
       const have = new Set((existing ?? []).map((r: any) => r.subject));
-      const rows = subjects
+      const rows = state.subjects
         .filter((s) => !have.has(s))
         .map((s) => ({ user_id: session.user.id, subject: s, level: levelLabel, hourly_rate: rateNum }));
       if (rows.length) await supabase.from("tutor_subjects").insert(rows as any);
 
-      // Update profile photo url (publicly visible avatar)
       if (photoUrl) {
         const { data: pub } = supabase.storage.from("profile-photos").getPublicUrl(photoUrl);
         await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("id", session.user.id);
       }
 
-      toast({ title: "Submitted!", description: "Your application is in review. We'll notify you within 24–48 hours." });
-      navigate("/tutor", { replace: true });
+      clear();
+      setSubmitted(true);
     } catch (e: any) {
       toast({ title: "Submission failed", description: e?.message ?? "Please try again.", variant: "destructive" });
     } finally {
@@ -182,147 +198,197 @@ export default function TutorOnboardingWizard() {
     }
   };
 
+  if (submitted) {
+    return (
+      <SuccessSplash
+        title="Application submitted!"
+        subtitle="Our team reviews tutor documents within 24–48 hours. You'll be notified the moment you're approved."
+        checklist={[
+          "Identity & documents received",
+          "Teaching profile saved",
+          `${state.subjects.length} subject${state.subjects.length === 1 ? "" : "s"} ready to teach`,
+        ]}
+        ctaLabel="Continue"
+        onCta={() => navigate("/tutor", { replace: true })}
+        autoAdvanceMs={3500}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background bg-mesh py-6 px-4">
       <div className="max-w-xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-xs text-muted-foreground">Step {step + 1} of {STEPS.length}</div>
-          <div className="text-xs font-medium">{STEPS[step]}</div>
-        </div>
-        <div className="h-1 w-full rounded-full bg-muted mb-6 overflow-hidden">
-          <div className="h-full bg-primary transition-all" style={{ width: `${((step + 1) / STEPS.length) * 100}%` }} />
-        </div>
+        <StepperHeader steps={STEPS} current={step} className="mb-6" />
 
-        <Card className="p-5 bg-card/95 backdrop-blur">
-          {step === 0 && (
-            <Section icon={IdCard} title="Identity verification" desc="We'll verify your ID with the relevant authority.">
-              <Label>ID / Passport number</Label>
-              <Input value={idNumber} onChange={(e) => setIdNumber(e.target.value)} placeholder="e.g. 9001015800087" />
-              <Label className="mt-3 block">Upload ID document (PDF/JPG/PNG, ≤10MB)</Label>
-              <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => {
-                const f = e.target.files?.[0]; if (!f) return;
-                if (!validateFile(f, ["application/pdf","image/png","image/jpeg","image/jpg"], 10)) return;
-                setIdDoc(f);
-              }} />
-              {idDoc && <p className="mt-1 text-xs text-emerald-600">✓ {idDoc.name}</p>}
-            </Section>
-          )}
+        <Card className="p-5 bg-card/95 backdrop-blur-xl">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={step}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {step === 0 && (
+                <Section icon={IdCard} title="Identity verification" desc="We verify your ID with the relevant authority. Your details are encrypted.">
+                  <Label>ID / Passport number</Label>
+                  <Input value={state.idNumber} onChange={(e) => setField("idNumber", e.target.value)} placeholder="e.g. 9001015800087" />
+                  <Label className="mt-3 block">Upload ID document (PDF / JPG / PNG, ≤10MB)</Label>
+                  <FileDropzone
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    file={idDoc}
+                    onFile={(f) => {
+                      if (!validateFile(f, ["application/pdf","image/png","image/jpeg","image/jpg"], 10)) return;
+                      setIdDoc(f);
+                    }}
+                  />
+                </Section>
+              )}
 
-          {step === 1 && (
-            <Section icon={Camera} title="Profile photo" desc="Clear, recent photo of your face. Learners will see this.">
-              <Input type="file" accept=".jpg,.jpeg,.png" onChange={(e) => {
-                const f = e.target.files?.[0]; if (!f) return;
-                if (!validateFile(f, ["image/png","image/jpeg","image/jpg"], 5)) return;
-                setPhoto(f);
-              }} />
-              {photo && <p className="mt-1 text-xs text-emerald-600">✓ {photo.name}</p>}
-            </Section>
-          )}
+              {step === 1 && (
+                <Section icon={Camera} title="Profile photo" desc="A clear, recent photo of your face. Learners will see this.">
+                  <FileDropzone
+                    accept=".jpg,.jpeg,.png"
+                    file={photo}
+                    isImage
+                    onFile={(f) => {
+                      if (!validateFile(f, ["image/png","image/jpeg","image/jpg"], 5)) return;
+                      setPhoto(f);
+                    }}
+                  />
+                </Section>
+              )}
 
-          {step === 2 && (
-            <Section icon={GraduationCap} title="Where are you in your studies?">
-              {(["current_student","graduate"] as const).map((s) => (
-                <button key={s} type="button"
-                  onClick={() => setStudentStatus(s)}
-                  className={`w-full text-left p-3 rounded-lg border mb-2 transition ${studentStatus === s ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
-                  <div className="font-medium">{s === "current_student" ? "I'm currently at university" : "I've completed my qualification"}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{s === "current_student" ? "We'll need your most recent academic transcript." : "We'll need your degree / diploma certificate."}</div>
-                </button>
-              ))}
-            </Section>
-          )}
+              {step === 2 && (
+                <Section icon={GraduationCap} title="Where are you in your studies?">
+                  {(["current_student","graduate"] as const).map((s) => (
+                    <button key={s} type="button"
+                      onClick={() => setField("studentStatus", s)}
+                      className={`w-full text-left p-3 rounded-lg border mb-2 transition ${state.studentStatus === s ? "border-primary bg-primary/5" : "border-border hover:bg-muted/50"}`}>
+                      <div className="font-medium">{s === "current_student" ? "I'm currently at university" : "I've completed my qualification"}</div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{s === "current_student" ? "We'll need your most recent academic transcript." : "We'll need your degree / diploma certificate."}</div>
+                    </button>
+                  ))}
+                </Section>
+              )}
 
-          {step === 3 && studentStatus === "current_student" && (
-            <Section icon={FileText} title="Upload your latest transcript">
-              <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => {
-                const f = e.target.files?.[0]; if (!f) return;
-                if (!validateFile(f, ["application/pdf","image/png","image/jpeg","image/jpg"], 10)) return;
-                setTranscript(f);
-              }} />
-              {transcript && <p className="mt-1 text-xs text-emerald-600">✓ {transcript.name}</p>}
-            </Section>
-          )}
+              {step === 3 && state.studentStatus === "current_student" && (
+                <Section icon={FileText} title="Upload your latest transcript">
+                  <FileDropzone
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    file={transcript}
+                    onFile={(f) => {
+                      if (!validateFile(f, ["application/pdf","image/png","image/jpeg","image/jpg"], 10)) return;
+                      setTranscript(f);
+                    }}
+                  />
+                </Section>
+              )}
 
-          {step === 3 && studentStatus === "graduate" && (
-            <Section icon={FileText} title="Qualification details">
-              <Label>Qualification type</Label>
-              <Input value={qualType} onChange={(e) => setQualType(e.target.value)} placeholder="e.g. BSc Mathematics" />
-              <Label className="mt-3 block">Institution</Label>
-              <Input value={institution} onChange={(e) => setInstitution(e.target.value)} placeholder="e.g. University of Zimbabwe" />
-              <Label className="mt-3 block">Year obtained</Label>
-              <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} placeholder="2022" />
-              <Label className="mt-3 block">Upload certificate (PDF/JPG/PNG, ≤10MB)</Label>
-              <Input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={(e) => {
-                const f = e.target.files?.[0]; if (!f) return;
-                if (!validateFile(f, ["application/pdf","image/png","image/jpeg","image/jpg"], 10)) return;
-                setQualification(f);
-              }} />
-              {qualification && <p className="mt-1 text-xs text-emerald-600">✓ {qualification.name}</p>}
-            </Section>
-          )}
+              {step === 3 && state.studentStatus === "graduate" && (
+                <Section icon={FileText} title="Qualification details">
+                  <Label>Qualification type</Label>
+                  <Input value={state.qualType} onChange={(e) => setField("qualType", e.target.value)} placeholder="e.g. BSc Mathematics" />
+                  <Label className="mt-3 block">Institution</Label>
+                  <Input value={state.institution} onChange={(e) => setField("institution", e.target.value)} placeholder="e.g. University of Zimbabwe" />
+                  <Label className="mt-3 block">Year obtained</Label>
+                  <Input type="number" value={state.year} onChange={(e) => setField("year", e.target.value)} placeholder="2022" />
+                  <Label className="mt-3 block">Upload certificate (PDF / JPG / PNG, ≤10MB)</Label>
+                  <FileDropzone
+                    accept=".pdf,.jpg,.jpeg,.png"
+                    file={qualification}
+                    onFile={(f) => {
+                      if (!validateFile(f, ["application/pdf","image/png","image/jpeg","image/jpg"], 10)) return;
+                      setQualification(f);
+                    }}
+                  />
+                </Section>
+              )}
 
-          {step === 4 && (
-            <Section icon={BookOpen} title="Which curriculums do you teach?" desc="Pick all that apply — learners will be matched to you based on this.">
-              <div className="flex flex-wrap gap-2">
-                {CURRICULUMS.map((c) => (
-                  <button key={c.code} type="button" onClick={() => setCurriculums((prev) => toggle(prev, c.code))}
-                    className={`px-3 py-2 rounded-full border text-sm ${curriculums.includes(c.code) ? "border-primary bg-primary/10 text-primary font-medium" : "border-border"}`}>
-                    {c.label}
-                  </button>
-                ))}
-              </div>
-            </Section>
-          )}
+              {step === 4 && (
+                <Section icon={BookOpen} title="Which curriculums do you teach?" desc="Pick all that apply — learners will be matched to you based on this.">
+                  <div className="flex flex-wrap gap-2">
+                    {CURRICULUMS.map((c) => (
+                      <button key={c.code} type="button" onClick={() => setField("curriculums", toggle(state.curriculums, c.code))}
+                        className={`px-3 py-2 rounded-full border text-sm transition ${state.curriculums.includes(c.code) ? "border-primary bg-primary/10 text-primary font-medium" : "border-border hover:bg-muted/50"}`}>
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                </Section>
+              )}
 
-          {step === 5 && (
-            <Section icon={GraduationCap} title="Which grades / levels do you teach?">
-              <div className="flex flex-wrap gap-2">
-                {availableGrades.map((g) => (
-                  <button key={g} type="button" onClick={() => setGrades((prev) => toggle(prev, g))}
-                    className={`px-3 py-1.5 rounded-full border text-sm ${grades.includes(g) ? "border-primary bg-primary/10 text-primary font-medium" : "border-border"}`}>
-                    {g}
-                  </button>
-                ))}
-              </div>
-            </Section>
-          )}
+              {step === 5 && (
+                <Section icon={GraduationCap} title="Which grades / levels do you teach?">
+                  <div className="flex flex-wrap gap-2">
+                    {availableGrades.map((g) => (
+                      <button key={g} type="button" onClick={() => setField("grades", toggle(state.grades, g))}
+                        className={`px-3 py-1.5 rounded-full border text-sm transition ${state.grades.includes(g) ? "border-primary bg-primary/10 text-primary font-medium" : "border-border hover:bg-muted/50"}`}>
+                        {g}
+                      </button>
+                    ))}
+                  </div>
+                </Section>
+              )}
 
-          {step === 6 && (
-            <Section icon={Briefcase} title="Subjects & hourly rate">
-              <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-1">
-                {availableSubjects.map((s) => (
-                  <button key={s} type="button" onClick={() => setSubjects((prev) => toggle(prev, s))}
-                    className={`px-3 py-1.5 rounded-full border text-sm ${subjects.includes(s) ? "border-primary bg-primary/10 text-primary font-medium" : "border-border"}`}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-              <Label className="mt-4 block">Default hourly rate (R)</Label>
-              <Input type="number" min={50} step={50} value={rate} onChange={(e) => setRate(e.target.value)} />
-              <p className="mt-1 text-xs text-muted-foreground">You can set per-subject rates from your profile later.</p>
-            </Section>
-          )}
+              {step === 6 && (
+                <Section icon={Briefcase} title="Subjects & hourly rate">
+                  <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto p-1">
+                    {availableSubjects.map((s) => (
+                      <button key={s} type="button" onClick={() => setField("subjects", toggle(state.subjects, s))}
+                        className={`px-3 py-1.5 rounded-full border text-sm transition ${state.subjects.includes(s) ? "border-primary bg-primary/10 text-primary font-medium" : "border-border hover:bg-muted/50"}`}>
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <Label className="mt-4 block">Default hourly rate (R)</Label>
+                  <Input type="number" min={50} step={50} value={state.rate} onChange={(e) => setField("rate", e.target.value)} />
+                  <p className="mt-1 text-xs text-muted-foreground">You can set per-subject rates from your profile later.</p>
+                </Section>
+              )}
 
-          {step === 7 && (
-            <Section icon={CheckCircle2} title="Tell learners about yourself">
-              <Label>Bio (min 30 characters)</Label>
-              <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={4} placeholder="Briefly: who you are, your experience, and what makes your tutoring effective." />
-              <Label className="mt-3 block">Teaching style (optional)</Label>
-              <Textarea value={style} onChange={(e) => setStyle(e.target.value)} rows={2} placeholder="e.g. Visual, exam-focused, build from first principles…" />
-              <div className="mt-4 flex flex-wrap gap-1">
-                {curriculums.map((c) => <Badge key={c} variant="secondary">{c}</Badge>)}
-                {grades.map((g) => <Badge key={g} variant="outline">{g}</Badge>)}
-              </div>
-              <p className="mt-3 text-xs text-muted-foreground">After submission your application is reviewed within 24–48 hours.</p>
-            </Section>
-          )}
+              {step === 7 && (
+                <Section icon={CheckCircle2} title="Tell learners about yourself">
+                  <Label>Bio (min 30 characters)</Label>
+                  <Textarea value={state.bio} onChange={(e) => setField("bio", e.target.value)} rows={4} placeholder="Briefly: who you are, your experience, and what makes your tutoring effective." />
+                  <Label className="mt-3 block">Teaching style (optional)</Label>
+                  <Textarea value={state.style} onChange={(e) => setField("style", e.target.value)} rows={2} placeholder="e.g. Visual, exam-focused, build from first principles…" />
+                </Section>
+              )}
+
+              {step === 8 && (
+                <Section icon={ClipboardCheck} title="Review & submit" desc="Quick check before we send to our review team.">
+                  <ReviewBlock label="ID number" value={state.idNumber} />
+                  <ReviewBlock label="Status" value={state.studentStatus === "current_student" ? "Current student" : "Graduate"} />
+                  {state.studentStatus === "graduate" && (
+                    <>
+                      <ReviewBlock label="Qualification" value={`${state.qualType} · ${state.institution}${state.year ? ` (${state.year})` : ""}`} />
+                    </>
+                  )}
+                  <ReviewBlock label="Curriculums" value={state.curriculums.join(", ")} />
+                  <ReviewBlock label="Grades" value={state.grades.join(", ")} />
+                  <ReviewBlock label="Subjects" value={`${state.subjects.length} · ${state.subjects.slice(0, 4).join(", ")}${state.subjects.length > 4 ? "…" : ""}`} />
+                  <ReviewBlock label="Default rate" value={`R${state.rate}/hr`} />
+                  <ReviewBlock label="Documents" value={[
+                    idDoc && "ID", photo && "Photo",
+                    transcript && "Transcript", qualification && "Certificate",
+                  ].filter(Boolean).join(" · ") || "—"} />
+                  <div className="mt-4 flex flex-wrap gap-1">
+                    {state.curriculums.map((c) => <Badge key={c} variant="secondary">{c}</Badge>)}
+                    {state.grades.map((g) => <Badge key={g} variant="outline">{g}</Badge>)}
+                  </div>
+                  <p className="mt-4 text-xs text-muted-foreground">After submission your application is reviewed within 24–48 hours.</p>
+                </Section>
+              )}
+            </motion.div>
+          </AnimatePresence>
 
           <div className="flex justify-between gap-2 mt-6">
-            <Button variant="outline" disabled={step === 0 || submitting} onClick={() => setStep((s) => s - 1)}>
+            <Button variant="outline" disabled={step === 0 || submitting} onClick={() => setStep(step - 1)}>
               <ChevronLeft className="h-4 w-4 mr-1" /> Back
             </Button>
             {step < STEPS.length - 1 ? (
-              <Button disabled={!canNext()} onClick={() => setStep((s) => s + 1)}>
+              <Button disabled={!canNext()} onClick={() => setStep(step + 1)}>
                 Next <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             ) : (
@@ -344,5 +410,47 @@ function Section({ icon: Icon, title, desc, children }: { icon: any; title: stri
       {desc && <p className="text-sm text-muted-foreground mb-3">{desc}</p>}
       <div className="space-y-1">{children}</div>
     </div>
+  );
+}
+
+function ReviewBlock({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-3 py-1.5 border-b border-border/50 text-sm">
+      <span className="text-muted-foreground shrink-0">{label}</span>
+      <span className="font-medium text-right break-words">{value || "—"}</span>
+    </div>
+  );
+}
+
+function FileDropzone({
+  accept, file, onFile, isImage,
+}: { accept: string; file: File | null; onFile: (f: File) => void; isImage?: boolean }) {
+  const id = `dz-${Math.random().toString(36).slice(2, 8)}`;
+  const previewUrl = isImage && file ? URL.createObjectURL(file) : null;
+  return (
+    <label
+      htmlFor={id}
+      className="relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border hover:border-primary/60 hover:bg-muted/30 transition cursor-pointer p-6 text-center"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => {
+        e.preventDefault();
+        const f = e.dataTransfer.files?.[0];
+        if (f) onFile(f);
+      }}
+    >
+      {previewUrl ? (
+        <img src={previewUrl} alt="preview" className="h-24 w-24 rounded-full object-cover" />
+      ) : (
+        <Upload className="h-7 w-7 text-muted-foreground" />
+      )}
+      <div className="text-sm">
+        {file ? (
+          <span className="text-emerald-600 font-medium">✓ {file.name} <span className="text-xs text-muted-foreground">({Math.round(file.size / 1024)} KB)</span></span>
+        ) : (
+          <span className="text-muted-foreground">Drag & drop or <span className="text-primary font-medium">click to upload</span></span>
+        )}
+      </div>
+      <input id={id} type="file" accept={accept} className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }} />
+    </label>
   );
 }
