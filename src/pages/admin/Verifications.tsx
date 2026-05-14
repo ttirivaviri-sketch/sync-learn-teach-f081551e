@@ -58,7 +58,7 @@ export default function AdminVerifications() {
           .limit(100);
         return (d2 ?? []) as Row[];
       }
-      return (data ?? []) as Row[];
+      return (data ?? []) as unknown as Row[];
     },
   });
 
