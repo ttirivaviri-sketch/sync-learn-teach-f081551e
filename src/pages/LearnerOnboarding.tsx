@@ -14,7 +14,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2, Sparkles, ArrowRight, Lock, Rocket } from "lucide-react";
+import { CheckCircle2, Sparkles, ArrowRight, Rocket } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -23,14 +23,12 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AcademicProfileSetup } from "@/components/AcademicProfileSetup";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { StepperHeader } from "@/components/onboarding/StepperHeader";
 import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
 
 const STEPS = [
   { label: "Welcome" },
   { label: "Your studies" },
-  { label: "Choose your plan" },
   { label: "All set" },
 ];
 
@@ -47,9 +45,9 @@ export default function LearnerOnboarding() {
   const { profile, loading: profileLoading, saving, saveProfile } = useAcademicProfile(userId);
   const { subscription } = useSubscription();
 
-  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
+  const [step, setStep] = useState<0 | 1 | 2>(0);
 
-  // If profile already exists (returning user partway through), skip to step 2.
+  // If profile already exists (returning user partway through), skip to celebration.
   useEffect(() => {
     if (profile && step === 1) setStep(2);
   }, [profile, step]);
@@ -78,10 +76,6 @@ export default function LearnerOnboarding() {
     navigate("/learner", { replace: true });
   };
 
-  const skipSubscription = async () => {
-    setStep(3);
-  };
-
   if (authLoading || profileLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background bg-mesh">
@@ -90,8 +84,8 @@ export default function LearnerOnboarding() {
     );
   }
 
-  // ── Step 3: Celebration → auto-route ────────────────────────
-  if (step === 3) {
+  // ── Step 2: Celebration → auto-route ────────────────────────
+  if (step === 2) {
     return (
       <SuccessSplash
         title="You're all set!"
@@ -103,7 +97,7 @@ export default function LearnerOnboarding() {
         ]}
         ctaLabel="Enter app"
         onCta={finish}
-        autoAdvanceMs={2800}
+        autoAdvanceMs={2200}
       />
     );
   }
@@ -138,8 +132,8 @@ export default function LearnerOnboarding() {
                 </p>
                 <ul className="text-left text-sm space-y-2 mb-6 max-w-xs mx-auto">
                   <Bullet>Tell us your curriculum, grade & subjects</Bullet>
-                  <Bullet>Pick your plan (7-day free trial included)</Bullet>
-                  <Bullet>Jump into a personalised library + StudyMode</Bullet>
+                  <Bullet>We'll personalise your library & StudyMode</Bullet>
+                  <Bullet>Your 7-day free trial is already active</Bullet>
                 </ul>
                 <Button size="lg" className="w-full" onClick={() => setStep(1)}>
                   Let's go <ArrowRight className="h-4 w-4 ml-1" />
@@ -174,59 +168,6 @@ export default function LearnerOnboarding() {
               </Card>
             )}
 
-            {/* ── Step 2: Subscription ── */}
-            {step === 2 && (
-              <Card className="p-5 bg-card/95 backdrop-blur-xl">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="h-5 w-5 text-primary" />
-                  <h1 className="text-lg font-semibold">You're on a 7-day free trial</h1>
-                </div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Full access to StudyMode, AI tutoring, and the library for the next 7 days.
-                </p>
-
-                <div className="rounded-xl border bg-gradient-to-br from-primary/5 to-primary/10 p-4 mb-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-xs text-muted-foreground">Premium</div>
-                      <div className="text-2xl font-bold">R249<span className="text-sm font-normal text-muted-foreground">/mo</span></div>
-                    </div>
-                    <Badge className="bg-emerald-600">Trial active</Badge>
-                  </div>
-                  <ul className="mt-3 space-y-1.5 text-sm">
-                    <Bullet>Unlimited AI tutoring & quizzes</Bullet>
-                    <Bullet>Full library access</Bullet>
-                    <Bullet>Mock papers & detailed insights</Bullet>
-                    <Bullet>Guardian progress reports</Bullet>
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border p-4 mb-4 bg-muted/30">
-                  <div className="flex items-center gap-2 text-sm font-medium mb-1">
-                    <Lock className="h-4 w-4 text-muted-foreground" /> If you skip
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    You'll keep a free taste — <strong>3 active recalls</strong> and <strong>flashcards</strong> in StudyMode.
-                    AI usage is capped after that. Add a card any time from your Profile tab to unlock everything.
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2">
-                  <Button onClick={() => navigate("/start-trial?role=learner")} className="w-full" size="lg">
-                    <ArrowRight className="h-4 w-4 mr-1" /> Add card & continue
-                  </Button>
-                  <Button variant="ghost" onClick={skipSubscription} className="w-full">
-                    Remind me later
-                  </Button>
-                </div>
-
-                {subscription.data?.status === "trial" && (
-                  <p className="mt-3 text-xs text-center text-muted-foreground">
-                    Trial ends {subscription.data.trial_end ? new Date(subscription.data.trial_end).toLocaleDateString() : "in 7 days"}.
-                  </p>
-                )}
-              </Card>
-            )}
           </motion.div>
         </AnimatePresence>
       </div>
