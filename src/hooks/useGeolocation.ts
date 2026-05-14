@@ -114,10 +114,11 @@ export const useGeolocation = () => {
     return `${distance.toFixed(1)}km`;
   }, [location, calculateDistance]);
 
-  // Auto-request location on hook initialization
+  // Auto-request location on hook initialization (silent — no toast)
   useEffect(() => {
-    getCurrentLocation();
-  }, [getCurrentLocation]);
+    getCurrentLocation({ silent: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     location,
