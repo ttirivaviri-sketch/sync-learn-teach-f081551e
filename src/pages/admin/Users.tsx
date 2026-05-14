@@ -34,7 +34,7 @@ const Users = () => {
     try {
       let query = supabase
         .from('profiles')
-        .select('*')
+        .select('*, user_roles(role)')
         .order('created_at', { ascending: false });
 
       if (userType !== 'all') {
@@ -42,7 +42,7 @@ const Users = () => {
       }
 
       const { data, error } = await query;
-      
+
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
@@ -55,6 +55,44 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleSuspend = async (user: any) => {
+    const next = !user.is_suspended;
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_suspended: next,
+        suspended_at: next ? new Date().toISOString() : null,
+        suspended_reason: next ? 'Suspended by admin' : null,
+      })
+      .eq('id', user.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: next ? "User suspended" : "User reinstated" });
+    loadUsers();
+  };
+
+  const grantAdmin = async (user: any) => {
+    const { error } = await supabase.from('user_roles').insert({ user_id: user.id, role: 'admin' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Admin role granted" });
+    loadUsers();
+  };
+
+  const revokeAdmin = async (user: any) => {
+    const { error } = await supabase.from('user_roles').delete().eq('user_id', user.id).eq('role', 'admin');
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Admin role revoked" });
+    loadUsers();
   };
 
   const filteredUsers = users.filter(user => 
