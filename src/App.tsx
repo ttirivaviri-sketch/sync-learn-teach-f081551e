@@ -18,6 +18,7 @@ const TutorAuth = lazy(() => import("./pages/TutorAuth"));
 const TrialSignupFlow = lazy(() => import("./pages/TrialSignupFlow"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ChooseStudyLevel = lazy(() => import("./pages/ChooseStudyLevel"));
+const LearnerOnboarding = lazy(() => import("./pages/LearnerOnboarding"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentCancelled = lazy(() => import("./pages/PaymentCancelled"));
 const AdminAuth = lazy(() => import("./pages/AdminAuth"));
@@ -34,6 +35,7 @@ const AdminRoles = lazy(() => import("./pages/admin/Roles"));
 const AdminSecurity = lazy(() => import("./pages/admin/Security"));
 const AdminRefunds = lazy(() => import("./pages/admin/Refunds"));
 const AdminSAIL = lazy(() => import("./pages/admin/SAIL"));
+const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 
 // ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -64,6 +66,7 @@ const App = () => (
               <Route path="/learner" element={<LearnerApp />} />
               <Route path="/start-trial" element={<TrialSignupFlow />} />
               <Route path="/learner/auth" element={<LearnerAuth />} />
+              <Route path="/learner/onboarding" element={<LearnerOnboarding />} />
               <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
               <Route path="/tutor" element={<TutorApp />} />
               <Route path="/tutor/auth" element={<TutorAuth />} />
@@ -85,6 +88,7 @@ const App = () => (
                 <Route path="security" element={<AdminSecurity />} />
                 <Route path="refunds" element={<AdminRefunds />} />
                 <Route path="sail" element={<AdminSAIL />} />
+                <Route path="verifications" element={<AdminVerifications />} />
               </Route>
 
               {/* 404 handling */}

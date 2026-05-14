@@ -154,12 +154,13 @@ const LearnerApp = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
+  // Redirect new users to the guided onboarding flow if they haven't set
+  // up their academic profile yet (replaces the old in-app modal prompt).
   useEffect(() => {
-    if (!academicProfileLoading && !academicProfile && !profileSetupDismissed && session?.user) {
-      const timer = setTimeout(() => setShowAcademicSetup(true), 2000);
-      return () => clearTimeout(timer);
+    if (!academicProfileLoading && !academicProfile && session?.user) {
+      navigate("/learner/onboarding", { replace: true });
     }
-  }, [academicProfileLoading, academicProfile, profileSetupDismissed, session?.user]);
+  }, [academicProfileLoading, academicProfile, session?.user, navigate]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {

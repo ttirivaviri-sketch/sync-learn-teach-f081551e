@@ -28,6 +28,9 @@ import { TutorCreatorDashboard } from "@/components/TutorCreatorDashboard";
 import { TutorHomeTab } from "./tutor/TutorHomeTab";
 import { TutorActivityTab } from "./tutor/TutorActivityTab";
 import { TutorProfileTab } from "./tutor/TutorProfileTab";
+import TutorOnboardingWizard from "./tutor/TutorOnboardingWizard";
+import { TutorPendingScreen } from "./tutor/TutorPendingScreen";
+import { useTutorVerificationGate } from "@/hooks/useTutorVerificationGate";
 
 // ── Local types ─────────────────────────────────────────────────────────────
 interface VideoMeetingData {
@@ -80,6 +83,7 @@ const TutorApp = () => {
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
   const { formattedStats, weeklyData, recentEarnings, loading: statsLoading } =
     useTutorStats(session?.user?.id);
+  const gate = useTutorVerificationGate(userId);
 
   // ── Load tutor's own subjects (real-time) ───────────────────────────────
   useEffect(() => {
@@ -181,6 +185,24 @@ const TutorApp = () => {
   }
 
   if (!session?.user) return null;
+
+  // ── Verification gate ───────────────────────────────────────────────────
+  // (gate hook called above)
+  if (gate.status === "loading") {
+    return <div className="min-h-screen flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+  }
+  if (gate.status === "not_submitted" || gate.status === "incomplete") {
+    return <TutorOnboardingWizard />;
+  }
+  if (gate.status === "pending" || gate.status === "rejected") {
+    return <TutorPendingScreen
+      status={gate.status}
+      submittedAt={gate.submittedAt}
+      rejectionReason={gate.rejectionReason}
+      onResubmit={() => gate.refetch()}
+    />;
+  }
+
 
   if (showVideoMeeting && videoMeetingData) {
     return (
