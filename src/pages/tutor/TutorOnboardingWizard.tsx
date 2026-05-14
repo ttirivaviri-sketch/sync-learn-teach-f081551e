@@ -153,18 +153,19 @@ export default function TutorOnboardingWizard() {
       } as any);
       if (pErr) throw pErr;
 
-      // Insert tutor_subjects (skip duplicates)
+      // Insert tutor_subjects (level required, default to first grade)
       const rateNum = Number(rate);
-      const rows = subjects.map((s) => ({
-        user_id: session.user.id,
-        subject: s,
-        hourly_rate: rateNum,
-        is_active: true,
-      }));
-      if (rows.length) {
-        // upsert by composite (user_id, subject) — fall back to insert ignore
-        await supabase.from("tutor_subjects").upsert(rows as any, { onConflict: "user_id,subject", ignoreDuplicates: true });
-      }
+      const levelLabel = grades[0] ?? "All";
+      // Avoid duplicates: fetch existing subjects first
+      const { data: existing } = await supabase
+        .from("tutor_subjects")
+        .select("subject")
+        .eq("user_id", session.user.id);
+      const have = new Set((existing ?? []).map((r: any) => r.subject));
+      const rows = subjects
+        .filter((s) => !have.has(s))
+        .map((s) => ({ user_id: session.user.id, subject: s, level: levelLabel, hourly_rate: rateNum }));
+      if (rows.length) await supabase.from("tutor_subjects").insert(rows as any);
 
       // Update profile photo url (publicly visible avatar)
       if (photoUrl) {
