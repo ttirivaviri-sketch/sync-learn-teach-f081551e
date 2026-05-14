@@ -1,69 +1,91 @@
-## StudyMode Curriculum Topic Seeding
+## Goal
 
-Build the `seed-curriculum-topics` edge function and a one-shot bulk runner that populates `curriculum_topic_templates` for every (curriculum, grade, subject) combination across ZIMSEC, CAMB, IEB, and NSC. Learners then copy from templates instead of paying AI cost per signup.
+Polish the full new-user flow end-to-end so it feels like a high-end app:
+- **Tutor**: signup → guided onboarding (docs + teaching profile) → pending screen → admin approval → instant teaching access. No subscription anywhere.
+- **Learner**: signup → guided profile → 7-day trial / skip → personalised library + StudyMode pre-seeded with curriculum-aligned topics from day one.
 
-### 1. Edge function: `seed-curriculum-topics`
+Most plumbing already exists (`TutorOnboardingWizard`, `useTutorVerificationGate`, `LearnerOnboarding`, `useSeedSubjectsFromProfile`, `seed-curriculum-topics` edge fn). This pass closes the remaining gaps and elevates the UX.
 
-Path: `supabase/functions/seed-curriculum-topics/index.ts` (verify_jwt = false, gated by `CRON_SECRET` header).
+---
 
-Input: `{ curriculum, grade, subject, force?: boolean }`
+## 1. Tutor onboarding — completion & polish
 
-Flow:
-1. Skip if template already exists for `(curriculum, grade, subject)` unless `force=true`.
-2. Look for an official syllabus document in `documents` table matching curriculum/grade/subject (`type='syllabus'`). If found, extract topics from `parsed_content`.
-3. Look for past papers (`type='past_paper'`) for same key → extract recurring topics into `exam_patterns`-style hints.
-4. Call Lovable AI Gateway (`google/gemini-2.5-flash`) with a strict prompt: "Generate the COMPLETE official syllabus topic tree for {curriculum} {grade} {subject}. Output JSON `{topics:[{name, subtopics[], learning_objectives[], key_concepts[], exam_weight, prerequisites[]}]}`. Cover EVERY topic in the official syllabus — do not abbreviate."
-5. Run a second AI validator pass that scores each topic against syllabus context and drops/merges low-confidence ones.
-6. Upsert into `curriculum_topic_templates` with `source` = `syllabus` | `ai` | `hybrid`, `verified_at=now()`.
+**1a. Resumable wizard.** Persist wizard state to `localStorage` per `user.id` (text fields + step index — files re-pick). Loader on mount restores progress so a refresh mid-application doesn't reset.
 
-Uses `safeJsonParse` for repair. Uses `LOVABLE_API_KEY`.
+**1b. High-end visual treatment** in `TutorOnboardingWizard.tsx`:
+- Animated step transitions (framer-motion fade/slide).
+- Replace flat progress bar with a segmented stepper showing icons per step + checkmarks on completed steps.
+- Each step gets a hero icon, short benefit copy, and clear primary CTA.
+- File inputs → drag-and-drop dropzones with thumbnail preview for images, filename + size for PDFs.
+- Step 8 becomes a **Review & Submit** screen that summarises every entry (photo, ID #, curriculums, grades, subjects, rate, bio) before submission.
 
-### 2. Edge function: `bulk-seed-curriculum`
+**1c. Welcome celebration** after submission — full-screen success card ("You're in! We'll let you know within 24–48 hours"), then redirect to pending screen instead of bare toast.
 
-Path: `supabase/functions/bulk-seed-curriculum/index.ts` (CRON_SECRET-gated).
+**1d. Approval celebration.** When `gate.status` flips from `pending` → `verified`, show a one-time `<TutorApprovedSplash>` overlay before TutorApp renders normally (flag in `localStorage` so it shows once).
 
-- Iterates `CURRICULUM_SUBJECTS` × `GRADE_LEVELS_BY_CURRICULUM` from `src/types/academicProfile.ts` (mirrored as a Deno constant in `_shared/curriculum-matrix.ts`).
-- Calls `seed-curriculum-topics` per combo with concurrency=3, retry on failure.
-- Returns progress summary: `{ total, succeeded, failed, skipped }`.
-- Writes a `seeding_jobs` row tracking progress so the admin UI can poll.
+**1e. Pending screen polish** (`TutorPendingScreen`): live status pill that re-polls every 30s using the existing `gate.refetch()`; clearer "what we're checking" checklist; link to "Edit my application" if `pending` (allow re-uploading docs).
 
-Run as: `curl -H "x-cron-secret: …" .../bulk-seed-curriculum`. One-shot, not on cron (idempotent — skips existing).
+**1f. Notifications.** Verify the admin-decision notification insert in `Verifications.tsx` works (it does); add a Postgres trigger as backup so manual `verification_status` flips also notify.
 
-### 3. Schema additions
+---
 
-```text
-seeding_jobs (NEW)
-  id uuid PK, kind text, status text ('running'|'done'|'failed')
-  total int, succeeded int, failed int, skipped int
-  started_at, finished_at, error text
-  RLS: admin only
-```
+## 2. Learner onboarding — completion & polish
 
-(`curriculum_topic_templates` already exists from the prior migration.)
+**2a. Polish `LearnerOnboarding.tsx`** with same visual language as the tutor wizard (segmented stepper, motion transitions, branded card).
 
-### 4. Wire into learner flow
+**2b. Add a Step 0 "Welcome" splash** with the user's first name, what we'll set up, and a single "Let's go" CTA. Skip if profile already exists.
 
-On learner subject pick (StudyMode `useSubjects` first-load or `LearnerOnboarding` profile step):
-- For each subject, copy `curriculum_topic_templates.topics` into `subjects.topics` for that user. No AI call at runtime.
-- If template missing (edge case), fall back to lazy `seed-curriculum-topics` for that one combo.
+**2c. Celebration step 3** after subscription decision: animated "All set!" card with a quick checklist ("Library personalised ✓ / StudyMode subjects ready ✓ / Free trial active ✓") then auto-route to `/learner`.
 
-Add `src/studymode/hooks/useSeedSubjectsFromProfile.ts` that runs on first StudyMode entry.
+**2d. Eager seeding.** When the learner saves their academic profile in onboarding, immediately:
+1. Insert subjects into `subjects` table (the existing seed hook handles this on first StudyMode entry — call it here too so it's done by the time they land on home).
+2. Fire `bulk-seed-curriculum`-style request narrowed to *just their (curriculum, grade, subjects)* — a new lightweight call to the existing `seed-curriculum-topics` per missing subject. Show a tiny toast "Personalising your study plan…" — non-blocking.
 
-### 5. Admin trigger
+**2e. Confirm subscription is learner-only.** Tutor app already has zero `useSubscription` references — keep it that way; ensure no tutor route ever reaches `/start-trial`. (Audited — clean.)
 
-Add a "Seed Curriculum Templates" button on `/admin/curriculum-templates` (new minimal page) that POSTs to `bulk-seed-curriculum` and polls `seeding_jobs` for progress (table + per-row status, with a retry button per failed combo).
+---
 
-### 6. Execution
+## 3. Library auto-filter (verification only)
 
-After deploy:
-1. Apply schema migration for `seeding_jobs`.
-2. Hit `bulk-seed-curriculum` once from admin UI (or curl). Estimate ~4 curricula × ~10 grades × ~15 subjects ≈ 600 AI calls; with skip-existing it's safe to re-run.
-3. Spot-check 5 random templates in admin UI; mark `verified_by` once reviewed.
+`StudySyncLibrary` is already keyed off `academicProfile` (curriculum / grade / subjects). Audit the filter inside `StudySyncLibrary` to make sure:
+- `library_system_resources` query filters by `curriculum = profile.curriculum AND grade_levels @> [profile.grade] AND subject = ANY(profile.subjects)`.
+- Empty state when nothing matches points to "Edit profile" instead of showing irrelevant content.
+- Add unit-style smoke check by reading the component and patching the query if needed.
 
-### Open questions
+---
 
-1. **Validator pass** — run it now (doubles AI cost, ~1200 calls) or only on subjects with no syllabus doc? Default suggestion: only when `source='ai'` (no syllabus available).
-2. **Topic granularity** — target ~8–15 top-level topics per subject, with 3–8 subtopics each. OK?
-3. **Admin verification UI** — minimal "view JSON + approve" for v1, or full topic-tree editor? Suggest minimal first; editor later.
+## 4. StudyMode curriculum coverage — make it thorough
 
-Once you confirm, I'll create the migration + both edge functions + admin trigger page.
+Build on the existing `seed-curriculum-topics` and `useSeedSubjectsFromProfile`:
+
+**4a. Strengthen `seed-curriculum-topics` prompt** to require:
+- Every official syllabus strand and sub-strand (no abbreviation).
+- Per topic: `learning_objectives[]`, `key_concepts[]`, `assessment_objectives[]`, `prerequisites[]`, `exam_weight`, `typical_question_styles[]`.
+- Validator pass enabled by default for ALL sources (not only `ai`) — the doubled cost is acceptable since seeding is one-shot per template.
+
+**4b. After topics seed for a learner, kick off a one-time `personalise-curriculum-deep-dive` background job** (new edge function) per subject that:
+- Reads the subject's seeded topics.
+- Generates a coverage map of *concepts* (not just topics) and writes them into `daily_task_concepts` so the daily-task engine has a full pool to draw from.
+- Builds an initial spaced-rotation plan in `daily_tasks` for the first 7 days so home tab is never empty after onboarding.
+
+**4c. Daily task engine guard.** Ensure `generate-daily-task` always picks topics from the user's seeded `subjects.topics` (curriculum-aligned), never from generic AI brainstorm. Add a fallback that re-runs `seed-curriculum-topics` if the subject has < 5 topics.
+
+**4d. Admin curriculum dashboard** (`/admin/curriculum-templates` already exists): add per-template coverage stats (topic count, concept count, last verified) and a "Re-seed with validator" button.
+
+---
+
+## 5. Technical notes
+
+- New file: `src/components/onboarding/StepperHeader.tsx` (shared between tutor + learner wizards).
+- New file: `src/components/onboarding/SuccessSplash.tsx`.
+- New edge function: `personalise-curriculum-deep-dive` (CRON_SECRET-gated, called from learner onboarding completion).
+- New hook: `src/hooks/useResumableWizard.ts` for tutor wizard state persistence.
+- `TutorPendingScreen` polling: `useEffect` interval calling `gate.refetch()` every 30s; clear on unmount.
+- No schema changes required — `daily_task_concepts`, `subjects`, `curriculum_topic_templates`, `tutor_verifications`, `tutor_teaching_profile` all already exist.
+- Animations: use `motion/react` (already in deps from Lovable preset) for step transitions and splash overlays.
+
+---
+
+## Open question
+
+Validator pass on **all** template seeding doubles AI cost (~1200 calls). Confirm OK, or keep current behavior (validator only when no syllabus PDF). Default in this plan: **validator on for all** — quality wins for a one-shot seed.
