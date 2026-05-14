@@ -4,11 +4,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, Mail, Phone, Calendar } from "lucide-react";
+import { Search, Mail, Phone, Calendar, Ban, ShieldCheck, ShieldOff, MoreHorizontal } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 const Users = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -27,7 +34,7 @@ const Users = () => {
     try {
       let query = supabase
         .from('profiles')
-        .select('*')
+        .select('*, user_roles(role)')
         .order('created_at', { ascending: false });
 
       if (userType !== 'all') {
@@ -35,7 +42,7 @@ const Users = () => {
       }
 
       const { data, error } = await query;
-      
+
       if (error) throw error;
       setUsers(data || []);
     } catch (error) {
@@ -48,6 +55,44 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const toggleSuspend = async (user: any) => {
+    const next = !user.is_suspended;
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_suspended: next,
+        suspended_at: next ? new Date().toISOString() : null,
+        suspended_reason: next ? 'Suspended by admin' : null,
+      })
+      .eq('id', user.id);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: next ? "User suspended" : "User reinstated" });
+    loadUsers();
+  };
+
+  const grantAdmin = async (user: any) => {
+    const { error } = await supabase.from('user_roles').insert({ user_id: user.id, role: 'admin' });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Admin role granted" });
+    loadUsers();
+  };
+
+  const revokeAdmin = async (user: any) => {
+    const { error } = await supabase.from('user_roles').delete().eq('user_id', user.id).eq('role', 'admin');
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Admin role revoked" });
+    loadUsers();
   };
 
   const filteredUsers = users.filter(user => 
@@ -93,21 +138,30 @@ const Users = () => {
                       <th className="px-4 py-3 text-left text-sm font-medium">Type</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Status</th>
                       <th className="px-4 py-3 text-left text-sm font-medium">Joined</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {loading ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
+                        <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">Loading...</td>
                       </tr>
                     ) : filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">No users found</td>
+                        <td colSpan={7} className="px-4 py-8 text-center text-muted-foreground">No users found</td>
                       </tr>
                     ) : (
-                      filteredUsers.map((user) => (
+                      filteredUsers.map((user) => {
+                        const isAdmin = user.user_roles?.some((r: any) => r.role === 'admin');
+                        return (
                         <tr key={user.id} className="border-b hover:bg-muted/50">
-                          <td className="px-4 py-3 text-sm font-medium">{user.full_name || 'N/A'}</td>
+                          <td className="px-4 py-3 text-sm font-medium">
+                            <div className="flex items-center gap-2">
+                              {user.full_name || 'N/A'}
+                              {isAdmin && <Badge variant="destructive" className="text-[10px]">admin</Badge>}
+                              {user.is_suspended && <Badge variant="outline" className="text-[10px] border-destructive text-destructive">suspended</Badge>}
+                            </div>
+                          </td>
                           <td className="px-4 py-3 text-sm">
                             <div className="flex items-center gap-2">
                               <Mail className="h-3 w-3 text-muted-foreground" />
@@ -140,8 +194,37 @@ const Users = () => {
                               {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
                             </div>
                           </td>
+                          <td className="px-4 py-3 text-right">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => toggleSuspend(user)}>
+                                  {user.is_suspended ? (
+                                    <><ShieldCheck className="h-4 w-4 mr-2" /> Reinstate</>
+                                  ) : (
+                                    <><Ban className="h-4 w-4 mr-2" /> Suspend</>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                {isAdmin ? (
+                                  <DropdownMenuItem onClick={() => revokeAdmin(user)} className="text-destructive">
+                                    <ShieldOff className="h-4 w-4 mr-2" /> Revoke admin
+                                  </DropdownMenuItem>
+                                ) : (
+                                  <DropdownMenuItem onClick={() => grantAdmin(user)}>
+                                    <ShieldCheck className="h-4 w-4 mr-2" /> Make admin
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </td>
                         </tr>
-                      ))
+                        );
+                      })
                     )}
                   </tbody>
                 </table>

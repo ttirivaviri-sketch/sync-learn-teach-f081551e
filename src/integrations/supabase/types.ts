@@ -1287,6 +1287,7 @@ export type Database = {
           full_name: string | null
           id: string
           is_official: boolean
+          is_suspended: boolean
           last_seen: string | null
           location_lat: number | null
           location_lng: number | null
@@ -1294,6 +1295,8 @@ export type Database = {
           online_status: boolean | null
           phone: string | null
           study_level: Database["public"]["Enums"]["study_level"] | null
+          suspended_at: string | null
+          suspended_reason: string | null
           updated_at: string
           user_type: string
         }
@@ -1305,6 +1308,7 @@ export type Database = {
           full_name?: string | null
           id: string
           is_official?: boolean
+          is_suspended?: boolean
           last_seen?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1312,6 +1316,8 @@ export type Database = {
           online_status?: boolean | null
           phone?: string | null
           study_level?: Database["public"]["Enums"]["study_level"] | null
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
           user_type: string
         }
@@ -1323,6 +1329,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           is_official?: boolean
+          is_suspended?: boolean
           last_seen?: string | null
           location_lat?: number | null
           location_lng?: number | null
@@ -1330,6 +1337,8 @@ export type Database = {
           online_status?: boolean | null
           phone?: string | null
           study_level?: Database["public"]["Enums"]["study_level"] | null
+          suspended_at?: string | null
+          suspended_reason?: string | null
           updated_at?: string
           user_type?: string
         }
