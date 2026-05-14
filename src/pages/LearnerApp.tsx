@@ -5,7 +5,7 @@
  *       header, bottom nav, and cross-cutting modals.
  * Delegates each tab's UI to a focused sub-component.
  */
-import { useState, useEffect, useMemo, lazy, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
