@@ -192,6 +192,7 @@ const LearnerApp = () => {
         navigate("/learner/choose-level");
       }
     } catch (err) { logger.error("Profile load error:", err); }
+    finally { setProfileLoaded(true); }
   };
 
   const handleSignOut = () => setShowSignOutConfirm(true);
