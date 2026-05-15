@@ -145,16 +145,15 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
-    // Documents (books, guides, past papers): open the PDF in a new tab.
-    // Fall back to pdf_url / url if the mapper didn't populate videoUrl.
+    // Documents (books, guides, past papers) open in the protected in-app viewer.
     if (["book", "guide", "pastpaper", "pdf"].includes(resource.type)) {
       const extra = resource as unknown as Record<string, unknown>;
-      const documentUrl =
-        resource.videoUrl ||
-        (typeof extra.pdf_url === "string" ? (extra.pdf_url as string) : undefined) ||
-        (typeof extra.url === "string" ? (extra.url as string) : undefined);
-      if (documentUrl) {
-        setActiveDocument({ resource, url: documentUrl });
+      const hasFile =
+        !!resource.videoUrl ||
+        typeof extra.pdf_url === "string" ||
+        typeof extra.url === "string";
+      if (hasFile && resource.pdfSource) {
+        setActiveDocument({ resource });
         dispatchToast("Opening Resource", `Loading ${resource.title}...`);
       } else {
         dispatchToast("File not available", "This resource doesn't have an attached file yet.");
