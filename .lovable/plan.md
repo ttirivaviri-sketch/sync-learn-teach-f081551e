@@ -20,11 +20,16 @@ The secure PDF architecture is mostly in place, but the client-side fetch path i
 - If needed, support both `VITE_SUPABASE_URL` and a client-derived fallback so preview and published builds behave the same.
 - Preserve blob URL creation and cleanup logic.
 
-### 3. Improve failure handling in the protected PDF hook
+### 3. Harden the PDF worker import if needed
+- The preview console also shows `Importing a module script failed`, which can happen when the PDF.js worker asset path is not emitted correctly.
+- If the function URL fix alone is not enough, update `DocumentViewerOverlay` to use the same Vite-safe `?url` worker pattern already used elsewhere in the project (`pdfjs-dist/legacy/build/pdf.worker.min.mjs?url`).
+- Keep the viewer otherwise unchanged.
+
+### 4. Improve failure handling in the protected PDF hook
 - Return clearer errors when the function URL cannot be resolved or the function returns a non-OK response.
 - Keep the viewer’s empty/error state, but make sure it reflects real transport or auth failures rather than generic “Load failed”.
 
-### 4. Verify end-to-end
+### 5. Verify end-to-end
 - Open a system book and a past paper from the learner library.
 - Confirm the network request goes to `https://uynoykcratwbcdzmsxfw.supabase.co/functions/v1/library-stream...` instead of `undefined.supabase.co`.
 - Confirm the overlay renders the PDF successfully.
@@ -32,7 +37,7 @@ The secure PDF architecture is mostly in place, but the client-side fetch path i
 
 ## Files to change
 - `src/hooks/useProtectedPdfBlob.ts`
-- Possibly `src/components/library/DocumentViewerOverlay.tsx` only if the error messaging needs a small adjustment
+- `src/components/library/DocumentViewerOverlay.tsx` if the worker import needs the Vite-safe path or the error messaging needs a small adjustment
 
 ## Out of scope
 - Reworking the secure storage architecture
