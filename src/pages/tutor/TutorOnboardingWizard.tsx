@@ -126,7 +126,7 @@ export default function TutorOnboardingWizard() {
   const upload = async (file: File, bucket: string, folder: string): Promise<string | null> => {
     if (!session?.user) return null;
     const ext = file.name.split(".").pop();
-    const path = `${folder}/${session.user.id}/${Date.now()}.${ext}`;
+    const path = `${session.user.id}/${folder}/${Date.now()}.${ext}`;
     const { data, error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
     if (error) throw error;
     return data.path;
