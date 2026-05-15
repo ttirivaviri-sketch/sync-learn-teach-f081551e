@@ -1,8 +1,10 @@
-// Streams library PDFs through an authenticated, server-mediated endpoint
-// so we never expose direct/public Storage URLs to the client.
+// Resolves a library PDF to a URL the client can render directly.
+// Returns JSON { url, kind: "external" | "signed" } so the client can load
+// the PDF via <iframe> or react-pdf without us trying to proxy hundreds of MB
+// through the Edge runtime (which fails for large OpenStax/archive.org files).
 //
 // Request:  GET /library-stream?id=<resource_uuid>&source=system|tutorial
-// Response: application/pdf bytes (inline), or JSON error.
+// Response: 200 application/json { url, kind } | 4xx/5xx { error }
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -28,11 +30,9 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
-  if (req.method !== "GET") {
-    return json(405, { error: "Method not allowed" });
-  }
+  if (req.method !== "GET") return json(405, { error: "Method not allowed" });
 
-  // 1. Auth: validate the caller's JWT
+  // Auth
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return json(401, { error: "Missing auth token" });
@@ -40,24 +40,18 @@ Deno.serve(async (req) => {
   const userClient = createClient(SUPABASE_URL, ANON_KEY, {
     global: { headers: { Authorization: `Bearer ${token}` } },
   });
-  const {
-    data: { user },
-    error: userErr,
-  } = await userClient.auth.getUser();
+  const { data: { user }, error: userErr } = await userClient.auth.getUser();
   if (userErr || !user) return json(401, { error: "Invalid session" });
 
-  // 2. Parse params
+  // Params
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   const source = (url.searchParams.get("source") ?? "").toLowerCase();
-  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
-    return json(400, { error: "Invalid id" });
-  }
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(400, { error: "Invalid id" });
   if (source !== "system" && source !== "tutorial") {
     return json(400, { error: "Invalid source" });
   }
 
-  // 3. Look up storage path with service role
   const admin = createClient(SUPABASE_URL, SERVICE_KEY);
   let path: string | null = null;
 
@@ -85,64 +79,21 @@ Deno.serve(async (req) => {
   if (!path) return json(404, { error: "Resource not found" });
 
   // Best-effort access log (non-blocking)
-  admin
-    .from("library_access_log")
+  admin.from("library_access_log")
     .insert({ user_id: user.id, resource_id: id, source })
     .then(() => {});
 
-  // External (non-Storage) URLs — proxy the bytes through so the client never
-  // sees the origin URL and stays inside our app.
+  // External URL — return as-is. Browser/iframe renders it; no proxy needed.
   if (/^https?:\/\//i.test(path)) {
-    try {
-      const upstream = await fetch(path, {
-        headers: { "User-Agent": "StudySync-LibraryProxy/1.0" },
-        redirect: "follow",
-      });
-      if (!upstream.ok || !upstream.body) {
-        return json(upstream.status || 502, {
-          error: `Upstream returned ${upstream.status}`,
-        });
-      }
-      const ct = upstream.headers.get("Content-Type") ?? "application/pdf";
-      // Only stream if it actually looks like a PDF; HTML landing pages are useless to a PDF viewer.
-      if (!ct.toLowerCase().includes("pdf")) {
-        return json(415, {
-          error: "Source is not a direct PDF link",
-          contentType: ct,
-        });
-      }
-      return new Response(upstream.body, {
-        status: 200,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/pdf",
-          "Content-Disposition": "inline",
-          "Cache-Control": "private, no-store",
-          "X-Content-Type-Options": "nosniff",
-        },
-      });
-    } catch (e) {
-      return json(502, { error: e instanceof Error ? e.message : "Proxy failed" });
-    }
+    return json(200, { url: path, kind: "external" });
   }
 
-  // 4. Pull bytes from the private bucket
-  const { data: blob, error: dlErr } = await admin.storage
+  // Storage path — issue a short-lived signed URL from the private bucket.
+  const { data: signed, error: signErr } = await admin.storage
     .from("library-pdfs")
-    .download(path);
-  if (dlErr || !blob) {
-    return json(404, { error: dlErr?.message ?? "File missing" });
+    .createSignedUrl(path, 60 * 60); // 1 hour
+  if (signErr || !signed?.signedUrl) {
+    return json(404, { error: signErr?.message ?? "File missing" });
   }
-
-  const buf = await blob.arrayBuffer();
-  return new Response(buf, {
-    status: 200,
-    headers: {
-      ...corsHeaders,
-      "Content-Type": "application/pdf",
-      "Content-Disposition": "inline",
-      "Cache-Control": "private, no-store",
-      "X-Content-Type-Options": "nosniff",
-    },
-  });
+  return json(200, { url: signed.signedUrl, kind: "signed" });
 });

@@ -8,9 +8,14 @@ interface State {
 }
 
 /**
- * Fetches a library PDF through the authenticated `library-stream` edge
- * function and returns an in-memory blob: URL. The URL is revoked on unmount
- * so the bytes are not retained beyond the viewer's lifetime.
+ * Resolves a library PDF to a directly-loadable URL by calling the
+ * authenticated `library-stream` Edge Function. The function returns either
+ * the upstream URL (for external resources like OpenStax) or a short-lived
+ * signed URL (for files in the private `library-pdfs` bucket).
+ *
+ * The viewer renders the result via <iframe>, which sidesteps cross-origin
+ * fetch restrictions and avoids streaming hundreds of MB through the Edge
+ * runtime.
  */
 export function useProtectedPdfBlob(
   resourceId: string | null | undefined,
@@ -24,7 +29,6 @@ export function useProtectedPdfBlob(
 
   useEffect(() => {
     let cancelled = false;
-    let blobUrl: string | null = null;
 
     if (!resourceId || !source) {
       setState({ url: null, loading: false, error: null });
@@ -39,13 +43,9 @@ export function useProtectedPdfBlob(
         const token = sessionData.session?.access_token;
         if (!token) throw new Error("Not signed in");
 
-        // Derive the function base from the configured Supabase URL so we
-        // don't depend on a separate VITE_SUPABASE_PROJECT_ID env var (which
-        // can be missing in some preview/runtime builds and produced
-        // `https://undefined.supabase.co/...` requests).
         const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
         const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
-        const fallbackUrl = (supabase as any)?.supabaseUrl as string | undefined;
+        const fallbackUrl = (supabase as unknown as { supabaseUrl?: string })?.supabaseUrl;
         const base =
           envUrl ||
           (projectId ? `https://${projectId}.supabase.co` : undefined) ||
@@ -60,29 +60,22 @@ export function useProtectedPdfBlob(
           headers: { Authorization: `Bearer ${token}` },
         });
 
+        const json = await res.json().catch(() => ({}));
         if (!res.ok) {
-          let msg = `Request failed (${res.status})`;
-          try {
-            const j = await res.json();
-            if (j?.error) msg = j.error;
-          } catch {/* ignore */}
-          throw new Error(msg);
+          throw new Error(json?.error ?? `Request failed (${res.status})`);
         }
+        if (!json?.url) throw new Error("No URL returned");
 
-        const blob = await res.blob();
         if (cancelled) return;
-        blobUrl = URL.createObjectURL(blob);
-        setState({ url: blobUrl, loading: false, error: null });
-      } catch (err: any) {
+        setState({ url: json.url as string, loading: false, error: null });
+      } catch (err) {
         if (cancelled) return;
-        setState({ url: null, loading: false, error: err?.message ?? "Failed to load" });
+        const msg = err instanceof Error ? err.message : "Failed to load";
+        setState({ url: null, loading: false, error: msg });
       }
     })();
 
-    return () => {
-      cancelled = true;
-      if (blobUrl) URL.revokeObjectURL(blobUrl);
-    };
+    return () => { cancelled = true; };
   }, [resourceId, source]);
 
   return state;

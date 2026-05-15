@@ -37,6 +37,7 @@ const AdminRefunds = lazy(() => import("./pages/admin/Refunds"));
 const AdminSAIL = lazy(() => import("./pages/admin/SAIL"));
 const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemplates"));
+const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 
 // ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -91,6 +92,7 @@ const App = () => (
                 <Route path="sail" element={<AdminSAIL />} />
                 <Route path="verifications" element={<AdminVerifications />} />
                 <Route path="curriculum-templates" element={<AdminCurriculumTemplates />} />
+                <Route path="library" element={<AdminLibrary />} />
               </Route>
 
               {/* 404 handling */}
