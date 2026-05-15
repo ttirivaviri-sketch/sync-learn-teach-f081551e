@@ -245,10 +245,10 @@ export const useTutorData = (
       const finalTutors = filtered.map(s => s.tutor);
 
       if (controller.signal.aborted || !mountedRef.current) return;
-      setTutors(filtered);
+      setTutors(finalTutors);
 
       analytics.track('tutors_loaded', {
-        count: filtered.length,
+        count: finalTutors.length,
         hasLocation: !!userLocation,
         authenticated: !!session?.user,
         subjectFilter: options?.subjectFilter || null,
