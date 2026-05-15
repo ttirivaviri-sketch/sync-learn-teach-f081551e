@@ -113,6 +113,36 @@ export function getUserIdFromRequest(req: Request): string | null {
  * Calls the SECURITY DEFINER function check_and_increment_ai_usage.
  * Returns { allowed, used, limit }. If the user is anonymous, always allowed.
  */
+// In-memory admin cache (per cold start) to avoid re-querying has_role on every call
+const ADMIN_CACHE = new Map<string, boolean>();
+
+async function isAdminUser(
+  userId: string,
+  supabaseUrl: string,
+  serviceKey: string,
+): Promise<boolean> {
+  const cached = ADMIN_CACHE.get(userId);
+  if (cached !== undefined) return cached;
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/has_role`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({ _user_id: userId, _role: "admin" }),
+    });
+    if (!resp.ok) return false;
+    const result = await resp.json();
+    const isAdmin = result === true;
+    ADMIN_CACHE.set(userId, isAdmin);
+    return isAdmin;
+  } catch {
+    return false;
+  }
+}
+
 export async function enforceQuota(
   req: Request,
   bucket: QuotaBucket,
@@ -128,6 +158,11 @@ export async function enforceQuota(
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !serviceKey) {
     // Fail open — quota infra missing, do not block users
+    return { allowed: true, used: 0, limit, userId };
+  }
+
+  // Admins bypass all AI quotas (bulk-seed, curriculum tools, etc.)
+  if (await isAdminUser(userId, supabaseUrl, serviceKey)) {
     return { allowed: true, used: 0, limit, userId };
   }
 
