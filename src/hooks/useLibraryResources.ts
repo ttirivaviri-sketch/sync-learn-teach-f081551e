@@ -388,6 +388,7 @@ export function useLibraryResources(
             duration: row.pages ? `${row.pages} pages` : "PDF",
             isTutorial: false,
             videoUrl: row.pdf_url,
+            pdfSource: "system",
             tags: {
               subject: row.subject || "General",
               topic: row.topic || "All Topics",
