@@ -37,6 +37,7 @@ const AdminRefunds = lazy(() => import("./pages/admin/Refunds"));
 const AdminSAIL = lazy(() => import("./pages/admin/SAIL"));
 const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemplates"));
+const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 
 // ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
