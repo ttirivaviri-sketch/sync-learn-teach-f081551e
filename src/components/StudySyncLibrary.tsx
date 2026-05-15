@@ -522,7 +522,6 @@ const StudySyncLibrary = ({
       {activeDocument && (
         <DocumentViewerOverlay
           resource={activeDocument.resource}
-          documentUrl={activeDocument.url}
           onClose={() => setActiveDocument(null)}
         />
       )}
