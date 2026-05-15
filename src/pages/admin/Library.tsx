@@ -138,10 +138,18 @@ export default function Library() {
     setPreviewing({
       id: r.id,
       title: r.title,
-      type: r.kind === "past_paper" ? "pastpaper" : "textbook",
-      subject: r.subject,
+      author: "System",
+      type: r.kind === "past_paper" ? "pastpaper" : "pdf",
+      category: r.subject,
+      gradeLevel: r.grade_levels?.[0] ?? "",
+      summary: r.description ?? "",
+      rating: 0,
+      reviews: 0,
+      thumbnail: r.thumbnail_url ?? "",
+      isOffline: false,
+      duration: "",
       pdfSource: "system",
-    } as LibraryResource);
+    });
   };
 
   return (
