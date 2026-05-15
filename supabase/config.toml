@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.render-question-visual]
 verify_jwt = false
+
+[functions.library-stream]
+verify_jwt = false
