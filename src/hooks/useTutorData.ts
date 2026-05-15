@@ -36,6 +36,9 @@ export interface TutorProfile {
   totalReviews: number;
   distance?: string;
   confirmedBookingsCount: number;
+  curriculums?: string[];
+  grades?: string[];
+  profileIncomplete?: boolean;
 }
 
 interface UseTutorDataOptions {
@@ -48,6 +51,8 @@ interface UseTutorDataOptions {
   subjects?: string[];
   /** Learner's grade (e.g., "Form 4", "Grade 12", "A-Level") */
   grade?: string;
+  /** Learner's curriculum (ZIMSEC, CAPS, IEB, Cambridge) */
+  curriculum?: string;
 }
 
 export const useTutorData = (
