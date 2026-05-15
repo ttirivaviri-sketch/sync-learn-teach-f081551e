@@ -1,0 +1,14 @@
+# StudySync
+
+> StudySync connects South African students with verified tutors and an AI-powered StudyMode for curriculum-aligned learning, quizzes, flashcards, and exam prep.
+
+## Pages
+
+- [Home](/): Overview of StudySync — AI study tools, tutor matching, and resource library.
+- [Learner Sign Up](/learner/auth): Create a learner account to access StudyMode and book tutors.
+- [Become a Tutor](/tutor/auth): Apply to join as a verified tutor on StudySync.
+
+## Optional
+
+- [Payment Success](/payment-success): Post-checkout confirmation page.
+- [Payment Cancelled](/payment-cancelled): Cancelled checkout page.
