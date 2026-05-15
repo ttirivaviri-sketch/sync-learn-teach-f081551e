@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { analytics } from '@/utils/analytics';
 import { logger } from "@/utils/logger";
-import { gradeMatches as gradeMatchesShared } from '@/lib/personalization';
+import { gradeMatches as gradeMatchesShared, curriculumMatches, subjectOverlapCount, subjectMatches } from '@/lib/personalization';
 
 export interface TutorSubject {
   id: string;
