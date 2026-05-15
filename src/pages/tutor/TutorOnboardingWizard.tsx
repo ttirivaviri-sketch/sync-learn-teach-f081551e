@@ -177,12 +177,19 @@ export default function TutorOnboardingWizard() {
       const rateNum = Number(state.rate);
       const levelLabel = state.grades[0] ?? "All";
       const { data: existing } = await supabase
-        .from("tutor_subjects").select("subject").eq("user_id", session.user.id);
-      const have = new Set((existing ?? []).map((r: any) => r.subject));
+        .from("tutor_subjects").select("id, subject").eq("user_id", session.user.id);
+      const have = new Map((existing ?? []).map((r: any) => [r.subject, r.id]));
+      const wanted = new Set(state.subjects);
+      // Insert missing
       const rows = state.subjects
         .filter((s) => !have.has(s))
         .map((s) => ({ user_id: session.user.id, subject: s, level: levelLabel, hourly_rate: rateNum }));
       if (rows.length) await supabase.from("tutor_subjects").insert(rows as any);
+      // Remove stale (subjects the tutor unselected)
+      const staleIds = (existing ?? [])
+        .filter((r: any) => !wanted.has(r.subject))
+        .map((r: any) => r.id);
+      if (staleIds.length) await supabase.from("tutor_subjects").delete().in("id", staleIds);
 
       if (photoUrl) {
         const { data: pub } = supabase.storage.from("profile-photos").getPublicUrl(photoUrl);

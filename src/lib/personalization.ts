@@ -182,12 +182,59 @@ function canonicalSubject(s: string | null | undefined): string {
   return norm(s).replace(/\(.*?\)/g, "").replace(/\s+/g, " ").trim();
 }
 
+// Common cross-curriculum aliases. Each group is treated as the same subject.
+const SUBJECT_ALIAS_GROUPS: string[][] = [
+  ["mathematics", "maths", "math", "pure mathematics", "core mathematics", "additional mathematics", "add maths"],
+  ["mathematical literacy", "maths literacy", "math literacy", "maths lit"],
+  ["physics", "physical sciences", "physical science"],
+  ["chemistry"],
+  ["biology", "life sciences", "life science"],
+  ["combined science", "integrated science", "natural sciences", "natural science", "general science", "science"],
+  ["accounting", "accountancy", "principles of accounts", "financial accounting"],
+  ["business studies", "business management", "business"],
+  ["economics", "economic management sciences", "ems"],
+  ["english", "english home language", "english first additional language", "english language", "english fal", "english hl"],
+  ["literature in english", "english literature"],
+  ["history"],
+  ["geography"],
+  ["computer science", "computing", "information technology", "it", "computers"],
+  ["agriculture", "agricultural science", "agricultural sciences"],
+  ["religious studies", "religious education", "divinity", "bible knowledge"],
+];
+
+const SUBJECT_TO_CANONICAL = (() => {
+  const m = new Map<string, string>();
+  for (const group of SUBJECT_ALIAS_GROUPS) {
+    const canon = group[0];
+    for (const alias of group) m.set(alias, canon);
+  }
+  return m;
+})();
+
+function subjectKey(s: string | null | undefined): string {
+  const c = canonicalSubject(s);
+  return SUBJECT_TO_CANONICAL.get(c) ?? c;
+}
+
 export function subjectMatches(
   resourceSubject: string | null | undefined,
   learnerSubjects: string[] | null | undefined,
 ): boolean {
   if (!learnerSubjects?.length) return false;
-  const r = canonicalSubject(resourceSubject);
+  const r = subjectKey(resourceSubject);
   if (!r) return false;
-  return learnerSubjects.some((s) => canonicalSubject(s) === r);
+  return learnerSubjects.some((s) => subjectKey(s) === r);
+}
+
+/** Returns the count of learner subjects that overlap any of the resource subjects. */
+export function subjectOverlapCount(
+  resourceSubjects: Array<string | null | undefined> | null | undefined,
+  learnerSubjects: string[] | null | undefined,
+): number {
+  if (!learnerSubjects?.length || !resourceSubjects?.length) return 0;
+  const learnerKeys = new Set(learnerSubjects.map(subjectKey).filter(Boolean));
+  const resourceKeys = new Set(resourceSubjects.map(subjectKey).filter(Boolean));
+  let n = 0;
+  for (const k of resourceKeys) if (learnerKeys.has(k)) n++;
+  return n;
 }

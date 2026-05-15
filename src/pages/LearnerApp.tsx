@@ -132,6 +132,7 @@ const LearnerApp = () => {
     studyLevel: profile?.study_level || undefined,
     subjects: academicProfile?.subjects || undefined,
     grade: academicProfile?.grade || undefined,
+    curriculum: academicProfile?.curriculum || undefined,
   });
   const { isUserOnline } = usePresenceTracking(session);
 

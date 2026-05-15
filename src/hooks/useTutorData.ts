@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { analytics } from '@/utils/analytics';
 import { logger } from "@/utils/logger";
-import { gradeMatches as gradeMatchesShared } from '@/lib/personalization';
+import { gradeMatches as gradeMatchesShared, curriculumMatches, subjectOverlapCount, subjectMatches } from '@/lib/personalization';
 
 export interface TutorSubject {
   id: string;
@@ -36,6 +36,9 @@ export interface TutorProfile {
   totalReviews: number;
   distance?: string;
   confirmedBookingsCount: number;
+  curriculums?: string[];
+  grades?: string[];
+  profileIncomplete?: boolean;
 }
 
 interface UseTutorDataOptions {
@@ -48,6 +51,8 @@ interface UseTutorDataOptions {
   subjects?: string[];
   /** Learner's grade (e.g., "Form 4", "Grade 12", "A-Level") */
   grade?: string;
+  /** Learner's curriculum (ZIMSEC, CAPS, IEB, Cambridge) */
+  curriculum?: string;
 }
 
 export const useTutorData = (
@@ -92,7 +97,7 @@ export const useTutorData = (
       const { data: { session } } = await supabase.auth.getSession();
       if (controller.signal.aborted) return;
 
-      const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult] = await Promise.all([
+      const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult, teachingResult] = await Promise.all([
         supabase.from('tutor_subjects').select('*').abortSignal(controller.signal),
         supabase.from('reviews').select('reviewed_id, rating').abortSignal(controller.signal),
         supabase
@@ -104,6 +109,10 @@ export const useTutorData = (
           .from('qualifications')
           .select('id, user_id, qualification_type, institution, year_obtained')
           .abortSignal(controller.signal),
+        supabase
+          .from('tutor_teaching_profile')
+          .select('user_id, curriculums, grades')
+          .abortSignal(controller.signal),
       ]);
 
       if (controller.signal.aborted) return;
@@ -112,6 +121,7 @@ export const useTutorData = (
       const reviewsData = reviewsResult.data || [];
       const activeBookingsData = activeBookingsResult.data || [];
       const qualificationsData = qualificationsResult.data || [];
+      const teachingData = teachingResult.data || [];
 
       const uniqueSubjects = [...new Set(subjectsData.map(s => s.subject))].sort();
       if (mountedRef.current) setAllSubjects(uniqueSubjects);
@@ -129,6 +139,11 @@ export const useTutorData = (
         bookingsCountMap.set(booking.tutor_id, (bookingsCountMap.get(booking.tutor_id) || 0) + 1);
       }
 
+      const teachingMap = new Map<string, { curriculums: string[]; grades: string[] }>();
+      for (const t of teachingData) {
+        teachingMap.set(t.user_id, { curriculums: t.curriculums || [], grades: t.grades || [] });
+      }
+
       const tutorsWithSubjects = tutorsData.map(tutor => {
         const tutorSubjects = subjectsData.filter(s => s.user_id === tutor.id);
         const tutorQualifications = qualificationsData.filter(q => q.user_id === tutor.id);
@@ -136,6 +151,7 @@ export const useTutorData = (
         const avgRating = ratingInfo ? Math.round((ratingInfo.total / ratingInfo.count) * 10) / 10 : 0;
         const totalReviews = ratingInfo?.count || 0;
         const confirmedBookingsCount = bookingsCountMap.get(tutor.id) || 0;
+        const teaching = teachingMap.get(tutor.id);
 
         const distance = userLocation && tutor.location_lat && tutor.location_lng
           ? calculateRealDistance(tutor.location_lat, tutor.location_lng, userLocation)
@@ -156,73 +172,83 @@ export const useTutorData = (
           rating: avgRating,
           totalReviews,
           confirmedBookingsCount,
+          curriculums: teaching?.curriculums || [],
+          grades: teaching?.grades || [],
+          profileIncomplete: tutorSubjects.length === 0,
           distance: distance ? `${distance.toFixed(1)}km` : 'Unknown',
           distanceValue: distance,
         };
       });
 
-      let filtered = tutorsWithSubjects.filter(t => t.subjects.length > 0);
-      // Don't hide fully-booked tutors anymore — surface them with a flag instead.
-      // (consumers can read confirmedBookingsCount >= maxActive to render a "Fully booked" pill)
+      // Score-and-rank: keep tutors who match on subject, grade, or curriculum.
+      // Tutors with incomplete profiles can still surface when grade+curriculum align.
+      const learnerSubjects = options?.subjects && options.subjects.length > 0
+        ? options.subjects
+        : (options?.subjectFilter ? [options.subjectFilter] : []);
+      const learnerGrade = options?.grade;
+      const learnerCurriculum = options?.curriculum;
+      const queryLower = options?.searchQuery?.toLowerCase().trim();
 
-      // Match learner subjects from academic profile (case-insensitive exact)
-      if (options?.subjects && options.subjects.length > 0) {
-        const wanted = options.subjects.map(s => s.toLowerCase().trim());
-        filtered = filtered.filter(t =>
-          t.subjects.some(s => wanted.includes(s.subject.toLowerCase().trim()))
-        );
-      } else if (options?.subjectFilter) {
-        const subjectLower = options.subjectFilter.toLowerCase();
-        filtered = filtered.filter(t =>
-          t.subjects.some(s => s.subject.toLowerCase().includes(subjectLower))
-        );
-      }
+      const scored = tutorsWithSubjects.map(t => {
+        const tutorSubjectNames = t.subjects.map(s => s.subject);
+        const subjectScore = learnerSubjects.length
+          ? subjectOverlapCount(tutorSubjectNames, learnerSubjects)
+          : (t.subjects.length > 0 ? 1 : 0);
 
-      // Grade matching: use shared personalization matcher (handles ranges,
-      // Form↔Grade synonyms, IGCSE/O-Level/A-Level, "Senior High", etc.)
-      if (options?.grade) {
-        filtered = filtered.filter(t =>
-          t.subjects.some(s => gradeMatchesShared([s.level], options.grade))
-        );
-      } else if (options?.studyLevel) {
-        const levelMap: Record<string, string[]> = {
-          junior_primary: ['grade 1-3'],
-          senior_primary: ['grade 4-6'],
-          junior_high: ['grade 7-9'],
-          senior_high: ['grade 10-12'],
-          tertiary: ['university', 'adult education'],
-        };
-        const matchLevels = levelMap[options.studyLevel.toLowerCase()] || [];
-        if (matchLevels.length > 0) {
-          filtered = filtered.filter(t =>
-            t.subjects.some(s => matchLevels.includes(s.level.toLowerCase()))
-          );
-        }
-      }
+        const gradeLabels = [
+          ...t.subjects.map(s => s.level),
+          ...(t.grades || []),
+        ];
+        const gradeScore = learnerGrade
+          ? (gradeMatchesShared(gradeLabels, learnerGrade) ? 1 : 0)
+          : 1;
 
-      if (options?.searchQuery) {
-        const queryLower = options.searchQuery.toLowerCase();
-        filtered = filtered.filter(t =>
-          t.full_name.toLowerCase().includes(queryLower) ||
-          t.subjects.some(s => s.subject.toLowerCase().includes(queryLower))
-        );
-      }
+        const curriculumScore = learnerCurriculum && t.curriculums.length
+          ? (t.curriculums.some(c => curriculumMatches(c, learnerCurriculum)) ? 1 : 0)
+          : 1;
+
+        const queryScore = queryLower
+          ? ((t.full_name.toLowerCase().includes(queryLower) ||
+              tutorSubjectNames.some(s => s.toLowerCase().includes(queryLower)) ||
+              (t.bio || '').toLowerCase().includes(queryLower)) ? 1 : 0)
+          : 1;
+
+        return { tutor: t, subjectScore, gradeScore, curriculumScore, queryScore };
+      });
+
+      const filtered = scored
+        .filter(s => s.queryScore > 0)
+        .filter(s => {
+          if (!learnerSubjects.length) return true;
+          if (s.subjectScore > 0) return true;
+          // Profile-incomplete tutors slip through when grade+curriculum align.
+          return s.tutor.profileIncomplete && s.gradeScore > 0 && s.curriculumScore > 0;
+        });
 
       filtered.sort((a, b) => {
-        if (b.rating !== a.rating) return b.rating - a.rating;
+        const ascore =
+          a.subjectScore * 10 + a.gradeScore * 3 + a.curriculumScore * 2 +
+          (a.tutor.profileIncomplete ? 0 : 1);
+        const bscore =
+          b.subjectScore * 10 + b.gradeScore * 3 + b.curriculumScore * 2 +
+          (b.tutor.profileIncomplete ? 0 : 1);
+        if (bscore !== ascore) return bscore - ascore;
+        if (b.tutor.rating !== a.tutor.rating) return b.tutor.rating - a.tutor.rating;
         if (userLocation) {
-          if (a.distanceValue === null) return 1;
-          if (b.distanceValue === null) return -1;
-          return a.distanceValue - b.distanceValue;
+          if (a.tutor.distanceValue === null) return 1;
+          if (b.tutor.distanceValue === null) return -1;
+          return (a.tutor.distanceValue ?? 0) - (b.tutor.distanceValue ?? 0);
         }
         return 0;
       });
 
+      const finalTutors = filtered.map(s => s.tutor);
+
       if (controller.signal.aborted || !mountedRef.current) return;
-      setTutors(filtered);
+      setTutors(finalTutors);
 
       analytics.track('tutors_loaded', {
-        count: filtered.length,
+        count: finalTutors.length,
         hasLocation: !!userLocation,
         authenticated: !!session?.user,
         subjectFilter: options?.subjectFilter || null,
@@ -250,6 +276,7 @@ export const useTutorData = (
     options?.searchQuery,
     options?.studyLevel,
     options?.grade,
+    options?.curriculum,
     JSON.stringify(options?.subjects || []),
     toast,
   ]);
