@@ -45,6 +45,9 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connecting');
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const { toast } = useToast();
+  const failureCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlightRef = useRef<AbortController | null>(null);
 
   const bookingSelect = `
     *,
