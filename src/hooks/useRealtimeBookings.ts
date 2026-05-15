@@ -86,8 +86,16 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   const loadBookings = useCallback(async () => {
     if (!userId) return;
 
+    // Cancel any in-flight request to avoid duplicate fetches racing each other
+    // (Safari aborts duplicates with "TypeError: Load failed").
+    if (inFlightRef.current) {
+      inFlightRef.current.abort();
+    }
+    const controller = new AbortController();
+    inFlightRef.current = controller;
+
     try {
-      setSyncStatus('connecting');
+      setSyncStatus((prev) => (prev === 'synced' ? 'synced' : 'connecting'));
 
       const validation = await security.validateSession();
       if (!validation.valid) {
@@ -98,7 +106,8 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
       const query = supabase
         .from('bookings')
-        .select(bookingSelect);
+        .select(bookingSelect)
+        .abortSignal(controller.signal);
 
       if (userType === 'learner') {
         query.eq('learner_id', userId);
@@ -108,7 +117,32 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
+      if (controller.signal.aborted) return;
+
       if (error) {
+        const msg = (error.message || '').toLowerCase();
+        const isTransient =
+          msg.includes('load failed') ||
+          msg.includes('failed to fetch') ||
+          msg.includes('networkerror') ||
+          msg.includes('aborted') ||
+          msg.includes('timeout');
+
+        if (isTransient) {
+          failureCountRef.current += 1;
+          setSyncStatus('degraded');
+          // Silent retry once after a short backoff; don't spam a destructive toast.
+          if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+          if (failureCountRef.current <= 3) {
+            retryTimerRef.current = setTimeout(() => {
+              loadBookings();
+            }, 1500 * failureCountRef.current);
+          } else {
+            setSyncStatus('error');
+          }
+          return;
+        }
+
         logger.error('Error loading bookings:', error);
         toast({
           title: 'Error',
@@ -119,16 +153,27 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
         return;
       }
 
+      failureCountRef.current = 0;
       setBookings((data || []) as BookingRequest[]);
       setLastSyncedAt(new Date());
       setSyncStatus('synced');
     } catch (error) {
+      if (controller.signal.aborted) return;
       logger.error('Error in loadBookings:', error);
-      setSyncStatus('error');
+      setSyncStatus('degraded');
     } finally {
+      if (inFlightRef.current === controller) inFlightRef.current = null;
       setLoading(false);
     }
   }, [bookingSelect, toast, userId, userType]);
+
+  // Cleanup retry timer on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (inFlightRef.current) inFlightRef.current.abort();
+    };
+  }, []);
 
   // Load initial bookings
   useEffect(() => {
