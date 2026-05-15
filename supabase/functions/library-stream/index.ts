@@ -84,9 +84,46 @@ Deno.serve(async (req) => {
 
   if (!path) return json(404, { error: "Resource not found" });
 
-  // External (non-Storage) URLs are not proxied – treat as not found.
+  // Best-effort access log (non-blocking)
+  admin
+    .from("library_access_log")
+    .insert({ user_id: user.id, resource_id: id, source })
+    .then(() => {});
+
+  // External (non-Storage) URLs — proxy the bytes through so the client never
+  // sees the origin URL and stays inside our app.
   if (/^https?:\/\//i.test(path)) {
-    return json(404, { error: "Resource not streamable" });
+    try {
+      const upstream = await fetch(path, {
+        headers: { "User-Agent": "StudySync-LibraryProxy/1.0" },
+        redirect: "follow",
+      });
+      if (!upstream.ok || !upstream.body) {
+        return json(upstream.status || 502, {
+          error: `Upstream returned ${upstream.status}`,
+        });
+      }
+      const ct = upstream.headers.get("Content-Type") ?? "application/pdf";
+      // Only stream if it actually looks like a PDF; HTML landing pages are useless to a PDF viewer.
+      if (!ct.toLowerCase().includes("pdf")) {
+        return json(415, {
+          error: "Source is not a direct PDF link",
+          contentType: ct,
+        });
+      }
+      return new Response(upstream.body, {
+        status: 200,
+        headers: {
+          ...corsHeaders,
+          "Content-Type": "application/pdf",
+          "Content-Disposition": "inline",
+          "Cache-Control": "private, no-store",
+          "X-Content-Type-Options": "nosniff",
+        },
+      });
+    } catch (e) {
+      return json(502, { error: e instanceof Error ? e.message : "Proxy failed" });
+    }
   }
 
   // 4. Pull bytes from the private bucket
@@ -96,12 +133,6 @@ Deno.serve(async (req) => {
   if (dlErr || !blob) {
     return json(404, { error: dlErr?.message ?? "File missing" });
   }
-
-  // 5. Best-effort access log (non-blocking)
-  admin
-    .from("library_access_log")
-    .insert({ user_id: user.id, resource_id: id, source })
-    .then(() => {});
 
   const buf = await blob.arrayBuffer();
   return new Response(buf, {
