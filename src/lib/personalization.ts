@@ -200,7 +200,6 @@ const SUBJECT_ALIAS_GROUPS: string[][] = [
   ["computer science", "computing", "information technology", "it", "computers"],
   ["agriculture", "agricultural science", "agricultural sciences"],
   ["religious studies", "religious education", "divinity", "bible knowledge"],
-  ["shona", "ndebele", "isizulu", "isixhosa", "afrikaans"], // keep separate? grouping for indigenous langs is wrong; leaving each alone
 ];
 
 const SUBJECT_TO_CANONICAL = (() => {
