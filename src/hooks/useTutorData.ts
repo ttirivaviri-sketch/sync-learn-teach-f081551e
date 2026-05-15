@@ -256,6 +256,28 @@ export const useTutorData = (
     } catch (error: any) {
       // Aborts surface as DOMException / "AbortError" — silently ignore.
       if (controller.signal.aborted || error?.name === 'AbortError') return;
+
+      // Safari over flaky networks throws "TypeError: Load failed" for any
+      // dropped fetch. Treat these as transient: retry quietly, do not toast.
+      const msg = (error?.message || '').toLowerCase();
+      const isTransient =
+        msg.includes('load failed') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('networkerror') ||
+        msg.includes('network request failed') ||
+        msg.includes('timeout');
+
+      if (isTransient) {
+        logger.warn('Transient network error fetching tutors, will retry:', error?.message);
+        if (mountedRef.current) {
+          // Single silent retry after a short backoff.
+          setTimeout(() => {
+            if (mountedRef.current) fetchTutors();
+          }, 2500);
+        }
+        return;
+      }
+
       logger.error('Error fetching tutors:', error);
       analytics.error(error as Error, 'fetch_tutors_failed');
       if (mountedRef.current) {
