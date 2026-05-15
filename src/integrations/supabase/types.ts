@@ -681,6 +681,30 @@ export type Database = {
           },
         ]
       }
+      library_access_log: {
+        Row: {
+          created_at: string
+          id: string
+          resource_id: string
+          source: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          resource_id: string
+          source: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          resource_id?: string
+          source?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       library_saved_items: {
         Row: {
           id: string

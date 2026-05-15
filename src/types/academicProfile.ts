@@ -107,6 +107,8 @@ export interface LibraryResource {
   watchCount?: number;
   completionRate?: number;
   videoUrl?: string;
+  /** Origin table for protected PDF streaming. */
+  pdfSource?: "system" | "tutorial";
 }
 
 // ─── Tutor Ranking ────────────────────────────────────────────────────────────

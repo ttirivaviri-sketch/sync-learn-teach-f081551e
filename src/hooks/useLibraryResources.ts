@@ -349,6 +349,7 @@ export function useLibraryResources(
                 extractVideoUrl(row.description) ||
                 extractVideoUrl(row.title) ||
                 undefined,
+            pdfSource: isPdf ? "tutorial" : undefined,
             tags: {
               subject: row.subject,
               topic: row.topic,
@@ -387,6 +388,7 @@ export function useLibraryResources(
             duration: row.pages ? `${row.pages} pages` : "PDF",
             isTutorial: false,
             videoUrl: row.pdf_url,
+            pdfSource: "system",
             tags: {
               subject: row.subject || "General",
               topic: row.topic || "All Topics",

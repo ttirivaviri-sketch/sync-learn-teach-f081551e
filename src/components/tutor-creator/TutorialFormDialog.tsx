@@ -162,10 +162,11 @@ export function TutorialFormDialog({
         .upload(path, file, { contentType: "application/pdf", upsert: false });
       clearInterval(interval);
       if (error) throw error;
-      const { data: urlData } = supabase.storage.from("library-pdfs").getPublicUrl(path);
+      // Store the storage object PATH (not a public URL) – the file is now
+      // streamed through the protected `library-stream` edge function.
       setUploadProgress(100);
       setUploadedFileName(file.name);
-      onUpdateForm("pdfUrl", urlData.publicUrl);
+      onUpdateForm("pdfUrl", path);
     } catch (err: any) {
       logger.warn("PDF upload failed:", err);
       setUploadError(err.message || "Upload failed. Please try again.");
