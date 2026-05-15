@@ -49,7 +49,7 @@ const StudySyncLibrary = ({
   const [activeCategory, setActiveCategory] = useState("all");
   const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
-  const [activeDocument, setActiveDocument] = useState<{ resource: LibraryResource; url: string } | null>(null);
+  const [activeDocument, setActiveDocument] = useState<{ resource: LibraryResource } | null>(null);
   const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
