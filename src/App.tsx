@@ -92,6 +92,7 @@ const App = () => (
                 <Route path="sail" element={<AdminSAIL />} />
                 <Route path="verifications" element={<AdminVerifications />} />
                 <Route path="curriculum-templates" element={<AdminCurriculumTemplates />} />
+                <Route path="library" element={<AdminLibrary />} />
               </Route>
 
               {/* 404 handling */}
