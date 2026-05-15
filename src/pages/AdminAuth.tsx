@@ -26,12 +26,37 @@ const AdminAuth = () => {
         toast({ title: "Sign-in failed", description: error?.message || "Invalid credentials", variant: "destructive" });
         return;
       }
-      // Verify admin role server-side via has_role RPC
-      const { data: isAdmin, error: roleErr } = await supabase.rpc("has_role", {
-        _user_id: data.session.user.id,
-        _role: "admin" as never,
-      });
-      if (roleErr || !isAdmin) {
+      // Verify admin role server-side via has_role RPC.
+      // Retry once on transient Safari "Load failed"/network errors so a
+      // flaky connection doesn't masquerade as "Access denied".
+      let isAdmin: boolean | null = null;
+      let roleErr: any = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const res = await supabase.rpc("has_role", {
+          _user_id: data.session.user.id,
+          _role: "admin" as never,
+        });
+        roleErr = res.error;
+        isAdmin = res.data as boolean | null;
+        const msg = (roleErr?.message || "").toLowerCase();
+        const transient =
+          msg.includes("load failed") ||
+          msg.includes("failed to fetch") ||
+          msg.includes("networkerror") ||
+          msg.includes("timeout");
+        if (!roleErr || !transient) break;
+        await new Promise((r) => setTimeout(r, 1000));
+      }
+
+      if (roleErr) {
+        toast({
+          title: "Network error",
+          description: "Couldn't verify admin access. Check your connection and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+      if (!isAdmin) {
         await supabase.auth.signOut();
         toast({ title: "Access denied", description: "Your account is not an admin.", variant: "destructive" });
         return;
