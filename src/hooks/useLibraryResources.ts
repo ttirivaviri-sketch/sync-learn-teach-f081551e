@@ -349,6 +349,7 @@ export function useLibraryResources(
                 extractVideoUrl(row.description) ||
                 extractVideoUrl(row.title) ||
                 undefined,
+            pdfSource: isPdf ? "tutorial" : undefined,
             tags: {
               subject: row.subject,
               topic: row.topic,
