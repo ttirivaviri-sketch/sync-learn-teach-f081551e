@@ -39,8 +39,20 @@ export function useProtectedPdfBlob(
         const token = sessionData.session?.access_token;
         if (!token) throw new Error("Not signed in");
 
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string;
-        const endpoint = `https://${projectId}.supabase.co/functions/v1/library-stream?id=${encodeURIComponent(
+        // Derive the function base from the configured Supabase URL so we
+        // don't depend on a separate VITE_SUPABASE_PROJECT_ID env var (which
+        // can be missing in some preview/runtime builds and produced
+        // `https://undefined.supabase.co/...` requests).
+        const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
+        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+        const fallbackUrl = (supabase as any)?.supabaseUrl as string | undefined;
+        const base =
+          envUrl ||
+          (projectId ? `https://${projectId}.supabase.co` : undefined) ||
+          fallbackUrl?.replace(/\/$/, "") ||
+          "https://uynoykcratwbcdzmsxfw.supabase.co";
+
+        const endpoint = `${base}/functions/v1/library-stream?id=${encodeURIComponent(
           resourceId,
         )}&source=${source}`;
 
