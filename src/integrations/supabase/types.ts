@@ -612,6 +612,27 @@ export type Database = {
           },
         ]
       }
+      fx_rates: {
+        Row: {
+          base: string
+          fetched_at: string
+          quote: string
+          rate: number
+        }
+        Insert: {
+          base: string
+          fetched_at?: string
+          quote: string
+          rate: number
+        }
+        Update: {
+          base?: string
+          fetched_at?: string
+          quote?: string
+          rate?: number
+        }
+        Relationships: []
+      }
       landing_events: {
         Row: {
           created_at: string
@@ -1306,7 +1327,9 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
+          country: string | null
           created_at: string
+          currency: string | null
           email: string
           full_name: string | null
           id: string
@@ -1321,13 +1344,17 @@ export type Database = {
           study_level: Database["public"]["Enums"]["study_level"] | null
           suspended_at: string | null
           suspended_reason: string | null
+          terms_accepted_at: string | null
+          terms_version: string | null
           updated_at: string
           user_type: string
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
+          country?: string | null
           created_at?: string
+          currency?: string | null
           email: string
           full_name?: string | null
           id: string
@@ -1342,13 +1369,17 @@ export type Database = {
           study_level?: Database["public"]["Enums"]["study_level"] | null
           suspended_at?: string | null
           suspended_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           user_type: string
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
+          country?: string | null
           created_at?: string
+          currency?: string | null
           email?: string
           full_name?: string | null
           id?: string
@@ -1363,6 +1394,8 @@ export type Database = {
           study_level?: Database["public"]["Enums"]["study_level"] | null
           suspended_at?: string | null
           suspended_reason?: string | null
+          terms_accepted_at?: string | null
+          terms_version?: string | null
           updated_at?: string
           user_type?: string
         }
