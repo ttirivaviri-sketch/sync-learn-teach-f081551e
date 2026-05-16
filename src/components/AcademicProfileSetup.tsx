@@ -10,12 +10,15 @@ import {
   GRADE_LEVELS_BY_CURRICULUM,
 } from "@/types/academicProfile";
 
+import { CountryStep } from "./academic-profile/CountryStep";
 import { CurriculumStep } from "./academic-profile/CurriculumStep";
 import { GradeStep } from "./academic-profile/GradeStep";
 import { SubjectsStep } from "./academic-profile/SubjectsStep";
 import { EmailsStep } from "./academic-profile/EmailsStep";
 import { ExamDatesStep } from "./academic-profile/ExamDatesStep";
 import { SummaryStep } from "./academic-profile/SummaryStep";
+import { supabase } from "@/integrations/supabase/client";
+import { COUNTRIES, countryByCode, detectCountry, type CountryCode } from "@/lib/legal";
 
 interface AcademicProfileSetupProps {
   userId: string;
