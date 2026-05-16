@@ -39,6 +39,15 @@ const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemplates"));
 const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 
+// Legal pages
+const LegalTerms = lazy(() => import("./pages/legal/Terms"));
+const LegalPrivacy = lazy(() => import("./pages/legal/Privacy"));
+const LegalCookies = lazy(() => import("./pages/legal/Cookies"));
+const LegalCopyright = lazy(() => import("./pages/legal/Copyright"));
+const LegalLibrary = lazy(() => import("./pages/legal/LibraryDisclaimer"));
+const LegalCommunity = lazy(() => import("./pages/legal/Community"));
+const LegalRefunds = lazy(() => import("./pages/legal/Refunds"));
+
 // ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +103,15 @@ const App = () => (
                 <Route path="curriculum-templates" element={<AdminCurriculumTemplates />} />
                 <Route path="library" element={<AdminLibrary />} />
               </Route>
+
+              {/* Legal */}
+              <Route path="/legal/terms" element={<LegalTerms />} />
+              <Route path="/legal/privacy" element={<LegalPrivacy />} />
+              <Route path="/legal/cookies" element={<LegalCookies />} />
+              <Route path="/legal/copyright" element={<LegalCopyright />} />
+              <Route path="/legal/library" element={<LegalLibrary />} />
+              <Route path="/legal/community" element={<LegalCommunity />} />
+              <Route path="/legal/refunds" element={<LegalRefunds />} />
 
               {/* 404 handling */}
               <Route path="/404" element={<NotFound />} />

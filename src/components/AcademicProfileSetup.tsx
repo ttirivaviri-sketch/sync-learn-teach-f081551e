@@ -10,12 +10,15 @@ import {
   GRADE_LEVELS_BY_CURRICULUM,
 } from "@/types/academicProfile";
 
+import { CountryStep } from "./academic-profile/CountryStep";
 import { CurriculumStep } from "./academic-profile/CurriculumStep";
 import { GradeStep } from "./academic-profile/GradeStep";
 import { SubjectsStep } from "./academic-profile/SubjectsStep";
 import { EmailsStep } from "./academic-profile/EmailsStep";
 import { ExamDatesStep } from "./academic-profile/ExamDatesStep";
 import { SummaryStep } from "./academic-profile/SummaryStep";
+import { supabase } from "@/integrations/supabase/client";
+import { countryByCode, detectCountry, type CountryCode } from "@/lib/legal";
 
 interface AcademicProfileSetupProps {
   userId: string;
@@ -29,16 +32,17 @@ interface AcademicProfileSetupProps {
   compact?: boolean;
 }
 
-type StepKey = "curriculum" | "grade" | "subjects" | "emails" | "examdates" | "exam";
+type StepKey = "country" | "curriculum" | "grade" | "subjects" | "emails" | "examdates" | "exam";
 
-const STEPS = ["Curriculum", "Grade", "Subjects", "Emails", "Exam Dates", "Summary"];
+const STEPS = ["Country", "Curriculum", "Grade", "Subjects", "Emails", "Exam Dates", "Summary"];
 const STEP_INDEX: Record<StepKey, number> = {
-  curriculum: 1,
-  grade: 2,
-  subjects: 3,
-  emails: 4,
-  examdates: 5,
-  exam: 6,
+  country: 1,
+  curriculum: 2,
+  grade: 3,
+  subjects: 4,
+  emails: 5,
+  examdates: 6,
+  exam: 7,
 };
 
 export function AcademicProfileSetup({
@@ -49,9 +53,10 @@ export function AcademicProfileSetup({
   saving = false,
   compact = false,
 }: AcademicProfileSetupProps) {
-  const [step, setStep] = useState<StepKey>(existingProfile ? "subjects" : "curriculum");
+  const [step, setStep] = useState<StepKey>(existingProfile ? "subjects" : "country");
+  const [country, setCountry] = useState<CountryCode>(() => detectCountry());
   const [curriculum, setCurriculum] = useState<Curriculum>(
-    (existingProfile?.curriculum as Curriculum) || "ZIMSEC"
+    (existingProfile?.curriculum as Curriculum) || countryByCode(detectCountry()).defaultCurriculum as Curriculum
   );
   const [grade, setGrade] = useState<GradeLevel | "">(
     (existingProfile?.grade as GradeLevel) || ""
@@ -86,6 +91,17 @@ export function AcademicProfileSetup({
       examDates: examDatesArray.length,
       hasStudentEmail: !!studentEmail, hasGuardianEmail: !!guardianEmail,
     });
+
+    // Persist country/currency to profile (best-effort, non-blocking).
+    try {
+      const cfg = countryByCode(country);
+      await supabase
+        .from("profiles")
+        .update({ country, currency: cfg.currency })
+        .eq("id", _userId);
+    } catch (e) {
+      logger.warn("[AcademicProfileSetup] country save failed", e);
+    }
 
     await onSave({
       curriculum,
@@ -130,6 +146,18 @@ export function AcademicProfileSetup({
           ))}
         </div>
 
+        {step === "country" && (
+          <CountryStep
+            country={country}
+            onSelect={(c) => {
+              setCountry(c);
+              const cfg = countryByCode(c);
+              // Pre-select curriculum to match country (user can still change).
+              setCurriculum(cfg.defaultCurriculum as Curriculum);
+            }}
+            onNext={() => setStep("curriculum")}
+          />
+        )}
         {step === "curriculum" && (
           <CurriculumStep curriculum={curriculum} onSelect={setCurriculum} onNext={() => setStep("grade")} />
         )}

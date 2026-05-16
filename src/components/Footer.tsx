@@ -6,7 +6,15 @@ const footerLinks = {
   "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
   "For Tutors":   ["Become a Tutor", "Verification Process", "Earnings & Payouts", "Tutor Dashboard"],
   Company:        ["About Us", "Blog", "Careers", "Press Kit"],
-  Legal:          ["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact Us"],
+  Legal: [
+    { label: "Privacy Policy", href: "/legal/privacy" },
+    { label: "Terms of Service", href: "/legal/terms" },
+    { label: "Cookie Policy", href: "/legal/cookies" },
+    { label: "Copyright & Takedown", href: "/legal/copyright" },
+    { label: "Library Disclaimer", href: "/legal/library" },
+    { label: "Refund Policy", href: "/legal/refunds" },
+    { label: "Community Guidelines", href: "/legal/community" },
+  ],
 };
 
 const socials = [
@@ -105,16 +113,17 @@ const Footer = () => {
                 {heading}
               </p>
               <ul className="space-y-2.5">
-                {links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-sm text-background/60 hover:text-background transition-colors"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
+                {(links as Array<string | { label: string; href: string }>).map((link) => {
+                  const label = typeof link === "string" ? link : link.label;
+                  const href = typeof link === "string" ? "#" : link.href;
+                  return (
+                    <li key={label}>
+                      <a href={href} className="text-sm text-background/60 hover:text-background transition-colors">
+                        {label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
@@ -150,8 +159,12 @@ const Footer = () => {
         <div className="py-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-background/40">
           <p>&copy; 2026 StudySync. All rights reserved.</p>
           <div className="flex gap-5">
-            {["Privacy Policy", "Terms", "Cookie Policy"].map((l) => (
-              <a key={l} href="#" className="hover:text-background/70 transition-colors">{l}</a>
+            {[
+              { label: "Privacy Policy", href: "/legal/privacy" },
+              { label: "Terms", href: "/legal/terms" },
+              { label: "Cookie Policy", href: "/legal/cookies" },
+            ].map((l) => (
+              <a key={l.label} href={l.href} className="hover:text-background/70 transition-colors">{l.label}</a>
             ))}
           </div>
           <p>Made with care for accessible education</p>
