@@ -6,7 +6,15 @@ const footerLinks = {
   "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
   "For Tutors":   ["Become a Tutor", "Verification Process", "Earnings & Payouts", "Tutor Dashboard"],
   Company:        ["About Us", "Blog", "Careers", "Press Kit"],
-  Legal:          ["Privacy Policy", "Terms of Service", "Cookie Policy", "Contact Us"],
+  Legal: [
+    { label: "Privacy Policy", href: "/legal/privacy" },
+    { label: "Terms of Service", href: "/legal/terms" },
+    { label: "Cookie Policy", href: "/legal/cookies" },
+    { label: "Copyright & Takedown", href: "/legal/copyright" },
+    { label: "Library Disclaimer", href: "/legal/library" },
+    { label: "Refund Policy", href: "/legal/refunds" },
+    { label: "Community Guidelines", href: "/legal/community" },
+  ],
 };
 
 const socials = [
