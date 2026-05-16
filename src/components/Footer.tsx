@@ -113,16 +113,17 @@ const Footer = () => {
                 {heading}
               </p>
               <ul className="space-y-2.5">
-                {links.map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-sm text-background/60 hover:text-background transition-colors"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
+                {(links as Array<string | { label: string; href: string }>).map((link) => {
+                  const label = typeof link === "string" ? link : link.label;
+                  const href = typeof link === "string" ? "#" : link.href;
+                  return (
+                    <li key={label}>
+                      <a href={href} className="text-sm text-background/60 hover:text-background transition-colors">
+                        {label}
+                      </a>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
