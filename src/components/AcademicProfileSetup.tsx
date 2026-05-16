@@ -32,16 +32,17 @@ interface AcademicProfileSetupProps {
   compact?: boolean;
 }
 
-type StepKey = "curriculum" | "grade" | "subjects" | "emails" | "examdates" | "exam";
+type StepKey = "country" | "curriculum" | "grade" | "subjects" | "emails" | "examdates" | "exam";
 
-const STEPS = ["Curriculum", "Grade", "Subjects", "Emails", "Exam Dates", "Summary"];
+const STEPS = ["Country", "Curriculum", "Grade", "Subjects", "Emails", "Exam Dates", "Summary"];
 const STEP_INDEX: Record<StepKey, number> = {
-  curriculum: 1,
-  grade: 2,
-  subjects: 3,
-  emails: 4,
-  examdates: 5,
-  exam: 6,
+  country: 1,
+  curriculum: 2,
+  grade: 3,
+  subjects: 4,
+  emails: 5,
+  examdates: 6,
+  exam: 7,
 };
 
 export function AcademicProfileSetup({
