@@ -104,6 +104,15 @@ const App = () => (
                 <Route path="library" element={<AdminLibrary />} />
               </Route>
 
+              {/* Legal */}
+              <Route path="/legal/terms" element={<LegalTerms />} />
+              <Route path="/legal/privacy" element={<LegalPrivacy />} />
+              <Route path="/legal/cookies" element={<LegalCookies />} />
+              <Route path="/legal/copyright" element={<LegalCopyright />} />
+              <Route path="/legal/library" element={<LegalLibrary />} />
+              <Route path="/legal/community" element={<LegalCommunity />} />
+              <Route path="/legal/refunds" element={<LegalRefunds />} />
+
               {/* 404 handling */}
               <Route path="/404" element={<NotFound />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
