@@ -53,9 +53,10 @@ export function AcademicProfileSetup({
   saving = false,
   compact = false,
 }: AcademicProfileSetupProps) {
-  const [step, setStep] = useState<StepKey>(existingProfile ? "subjects" : "curriculum");
+  const [step, setStep] = useState<StepKey>(existingProfile ? "subjects" : "country");
+  const [country, setCountry] = useState<CountryCode>(() => detectCountry());
   const [curriculum, setCurriculum] = useState<Curriculum>(
-    (existingProfile?.curriculum as Curriculum) || "ZIMSEC"
+    (existingProfile?.curriculum as Curriculum) || countryByCode(detectCountry()).defaultCurriculum as Curriculum
   );
   const [grade, setGrade] = useState<GradeLevel | "">(
     (existingProfile?.grade as GradeLevel) || ""
