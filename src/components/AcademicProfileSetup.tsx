@@ -18,7 +18,7 @@ import { EmailsStep } from "./academic-profile/EmailsStep";
 import { ExamDatesStep } from "./academic-profile/ExamDatesStep";
 import { SummaryStep } from "./academic-profile/SummaryStep";
 import { supabase } from "@/integrations/supabase/client";
-import { COUNTRIES, countryByCode, detectCountry, type CountryCode } from "@/lib/legal";
+import { countryByCode, detectCountry, type CountryCode } from "@/lib/legal";
 
 interface AcademicProfileSetupProps {
   userId: string;
