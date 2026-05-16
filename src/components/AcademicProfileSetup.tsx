@@ -92,6 +92,17 @@ export function AcademicProfileSetup({
       hasStudentEmail: !!studentEmail, hasGuardianEmail: !!guardianEmail,
     });
 
+    // Persist country/currency to profile (best-effort, non-blocking).
+    try {
+      const cfg = countryByCode(country);
+      await supabase
+        .from("profiles")
+        .update({ country, currency: cfg.currency })
+        .eq("id", _userId);
+    } catch (e) {
+      logger.warn("[AcademicProfileSetup] country save failed", e);
+    }
+
     await onSave({
       curriculum,
       grade: grade as GradeLevel,
