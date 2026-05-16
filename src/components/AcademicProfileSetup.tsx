@@ -146,6 +146,18 @@ export function AcademicProfileSetup({
           ))}
         </div>
 
+        {step === "country" && (
+          <CountryStep
+            country={country}
+            onSelect={(c) => {
+              setCountry(c);
+              const cfg = countryByCode(c);
+              // Pre-select curriculum to match country (user can still change).
+              setCurriculum(cfg.defaultCurriculum as Curriculum);
+            }}
+            onNext={() => setStep("curriculum")}
+          />
+        )}
         {step === "curriculum" && (
           <CurriculumStep curriculum={curriculum} onSelect={setCurriculum} onNext={() => setStep("grade")} />
         )}
