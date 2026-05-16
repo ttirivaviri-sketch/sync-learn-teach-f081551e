@@ -39,6 +39,15 @@ const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemplates"));
 const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 
+// Legal pages
+const LegalTerms = lazy(() => import("./pages/legal/Terms"));
+const LegalPrivacy = lazy(() => import("./pages/legal/Privacy"));
+const LegalCookies = lazy(() => import("./pages/legal/Cookies"));
+const LegalCopyright = lazy(() => import("./pages/legal/Copyright"));
+const LegalLibrary = lazy(() => import("./pages/legal/LibraryDisclaimer"));
+const LegalCommunity = lazy(() => import("./pages/legal/Community"));
+const LegalRefunds = lazy(() => import("./pages/legal/Refunds"));
+
 // ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
