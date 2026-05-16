@@ -159,8 +159,12 @@ const Footer = () => {
         <div className="py-6 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-background/40">
           <p>&copy; 2026 StudySync. All rights reserved.</p>
           <div className="flex gap-5">
-            {["Privacy Policy", "Terms", "Cookie Policy"].map((l) => (
-              <a key={l} href="#" className="hover:text-background/70 transition-colors">{l}</a>
+            {[
+              { label: "Privacy Policy", href: "/legal/privacy" },
+              { label: "Terms", href: "/legal/terms" },
+              { label: "Cookie Policy", href: "/legal/cookies" },
+            ].map((l) => (
+              <a key={l.label} href={l.href} className="hover:text-background/70 transition-colors">{l.label}</a>
             ))}
           </div>
           <p>Made with care for accessible education</p>
