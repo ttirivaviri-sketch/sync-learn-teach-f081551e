@@ -1,7 +1,10 @@
-// Resolves a library PDF to a URL the client can render directly.
-// Returns JSON { url, kind: "external" | "signed" } so the client can load
-// the PDF via <iframe> or react-pdf without us trying to proxy hundreds of MB
-// through the Edge runtime (which fails for large OpenStax/archive.org files).
+// Resolves a library resource to a URL the client can render.
+//
+// Returns JSON { url, kind: "external" | "signed" | "webpage" }
+//   external  — direct, publicly-accessible PDF URL (OpenStax, archive.org …)
+//   signed    — short-lived Supabase Storage signed URL (private bucket)
+//   webpage   — the stored path is an HTML page (Siyavula, CK-12, Gutenberg …)
+//               The client should open it in a new tab instead of iframing it.
 //
 // Request:  GET /library-stream?id=<resource_uuid>&source=system|tutorial
 // Response: 200 application/json { url, kind } | 4xx/5xx { error }
@@ -26,13 +29,44 @@ function json(status: number, body: unknown) {
   });
 }
 
+/**
+ * Heuristic: decide whether a URL points to a direct PDF file or an HTML page.
+ *
+ * Returns "pdf" when the URL strongly suggests a downloadable PDF:
+ *  - path ends in .pdf (optionally followed by query string)
+ *  - URL is from a known PDF-CDN (OpenStax assets.openstax.org)
+ *
+ * Returns "webpage" for everything else (Siyavula reader, CK-12, Gutenberg
+ * HTML, Project Gutenberg ebooks page, etc.)
+ */
+function detectUrlKind(url: string): "pdf" | "webpage" {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.toLowerCase();
+
+    // Explicit .pdf extension
+    if (path.endsWith(".pdf")) return "pdf";
+
+    // OpenStax assets CDN always serves PDFs
+    if (u.hostname === "assets.openstax.org") return "pdf";
+
+    // archive.org /download/ paths are almost always direct file downloads
+    if (u.hostname.includes("archive.org") && path.startsWith("/download/")) return "pdf";
+
+    // Everything else is treated as a webpage
+    return "webpage";
+  } catch {
+    return "webpage";
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
   if (req.method !== "GET") return json(405, { error: "Method not allowed" });
 
-  // Auth
+  // ── Auth ──────────────────────────────────────────────────────────────────
   const authHeader = req.headers.get("Authorization") ?? "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
   if (!token) return json(401, { error: "Missing auth token" });
@@ -43,7 +77,7 @@ Deno.serve(async (req) => {
   const { data: { user }, error: userErr } = await userClient.auth.getUser();
   if (userErr || !user) return json(401, { error: "Invalid session" });
 
-  // Params
+  // ── Params ────────────────────────────────────────────────────────────────
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   const source = (url.searchParams.get("source") ?? "").toLowerCase();
@@ -78,17 +112,20 @@ Deno.serve(async (req) => {
 
   if (!path) return json(404, { error: "Resource not found" });
 
-  // Best-effort access log (non-blocking)
+  // ── Best-effort access log (non-blocking) ─────────────────────────────────
   admin.from("library_access_log")
     .insert({ user_id: user.id, resource_id: id, source })
     .then(() => {});
 
-  // External URL — return as-is. Browser/iframe renders it; no proxy needed.
+  // ── Resolve the path/URL to the correct kind ──────────────────────────────
+
+  // Case 1: External URL (OpenStax CDN, archive.org, Siyavula, Gutenberg …)
   if (/^https?:\/\//i.test(path)) {
-    return json(200, { url: path, kind: "external" });
+    const kind = detectUrlKind(path);
+    return json(200, { url: path, kind });
   }
 
-  // Storage path — issue a short-lived signed URL from the private bucket.
+  // Case 2: Storage object path — issue a short-lived signed URL
   const { data: signed, error: signErr } = await admin.storage
     .from("library-pdfs")
     .createSignedUrl(path, 60 * 60); // 1 hour

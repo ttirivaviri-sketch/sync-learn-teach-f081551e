@@ -377,6 +377,23 @@ const StudySyncLibrary = ({
                   onWatchTutorial={openResource}
                 />
               )}
+              {/* Study Skills rack — visible to everyone regardless of profile */}
+              {allResources.filter(
+                (r) =>
+                  (r.category || "").toLowerCase().includes("study skill") ||
+                  (r.tags?.subject || "").toLowerCase().includes("study skill")
+              ).length > 0 && (
+                <ContentRack
+                  title="How to Study & Study Skills"
+                  items={allResources.filter(
+                    (r) =>
+                      (r.category || "").toLowerCase().includes("study skill") ||
+                      (r.tags?.subject || "").toLowerCase().includes("study skill")
+                  ).slice(0, 6)}
+                  icon={Brain}
+                  {...rackProps}
+                />
+              )}
               <ContentRack title="Past Exam Papers" items={pastPapers.slice(0, 4)} icon={FileText} {...rackProps} />
               <ContentRack title="All Resources" items={allResources.slice(0, 4)} icon={BookOpen} {...rackProps} />
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
@@ -396,10 +413,26 @@ const StudySyncLibrary = ({
             {/* Books Tab — Netflix-style poster racks (strict personalization) */}
             <TabsContent value="books" className="space-y-5 mt-4">
               {(() => {
-                const books = personalizedResources.filter(
+                const allBooks = personalizedResources.filter(
                   (r) => r.type === "book" || r.type === "guide"
                 );
-                if (!academicProfile || books.length === 0) {
+
+                // Separate study-skills guides from subject-specific books
+                const studySkillsBooks = allBooks.filter(
+                  (r) =>
+                    (r.category || "").toLowerCase().includes("study skill") ||
+                    (r.tags?.subject || "").toLowerCase().includes("study skill")
+                );
+                const subjectBooks = allBooks.filter(
+                  (r) =>
+                    !(r.category || "").toLowerCase().includes("study skill") &&
+                    !(r.tags?.subject || "").toLowerCase().includes("study skill")
+                );
+
+                const hasSubjectBooks = subjectBooks.length > 0;
+                const hasStudySkills = studySkillsBooks.length > 0;
+
+                if (!academicProfile || (!hasSubjectBooks && !hasStudySkills)) {
                   return (
                     <MatchExplanation
                       stats={bookStats}
@@ -409,8 +442,9 @@ const StudySyncLibrary = ({
                     />
                   );
                 }
-                // Group by subject for Netflix-style racks
-                const bySubject = books.reduce<Record<string, LibraryResource[]>>(
+
+                // Group subject books by subject for Netflix-style racks
+                const bySubject = subjectBooks.reduce<Record<string, LibraryResource[]>>(
                   (acc, b) => {
                     const k = b.category || "General";
                     (acc[k] ||= []).push(b);
@@ -418,21 +452,50 @@ const StudySyncLibrary = ({
                   },
                   {}
                 );
-                return Object.entries(bySubject).map(([subject, items]) => (
-                  <div key={subject} className="space-y-2">
-                    <h3 className="font-semibold text-sm">{subject}</h3>
-                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
-                      {items.map((r) => (
-                        <PosterCard
-                          key={String(r.id)}
-                          resource={r}
-                          variant="portrait"
-                          onOpen={openResource}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                ));
+
+                return (
+                  <>
+                    {/* ── Study Skills rack always shown first ── */}
+                    {hasStudySkills && (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Brain className="h-4 w-4 text-purple-500" />
+                          <h3 className="font-semibold text-sm">How to Study &amp; Study Skills</h3>
+                          <span className="text-xs text-muted-foreground ml-1">
+                            — Free for all students
+                          </span>
+                        </div>
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                          {studySkillsBooks.map((r) => (
+                            <PosterCard
+                              key={String(r.id)}
+                              resource={r}
+                              variant="portrait"
+                              onOpen={openResource}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ── Subject-specific books ── */}
+                    {Object.entries(bySubject).map(([subject, items]) => (
+                      <div key={subject} className="space-y-2">
+                        <h3 className="font-semibold text-sm">{subject}</h3>
+                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                          {items.map((r) => (
+                            <PosterCard
+                              key={String(r.id)}
+                              resource={r}
+                              variant="portrait"
+                              onOpen={openResource}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                );
               })()}
             </TabsContent>
 

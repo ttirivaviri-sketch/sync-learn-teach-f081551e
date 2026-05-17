@@ -1,21 +1,29 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/** What the edge function resolved the resource to. */
+export type PdfKind = "external" | "signed" | "webpage";
+
 interface State {
   url: string | null;
   loading: boolean;
   error: string | null;
+  /** Undefined while loading. Set once the edge function responds. */
+  kind: PdfKind | undefined;
 }
 
 /**
- * Resolves a library PDF to a directly-loadable URL by calling the
- * authenticated `library-stream` Edge Function. The function returns either
- * the upstream URL (for external resources like OpenStax) or a short-lived
- * signed URL (for files in the private `library-pdfs` bucket).
+ * Resolves a library resource to a directly-usable URL by calling the
+ * authenticated `library-stream` Edge Function.
  *
- * The viewer renders the result via <iframe>, which sidesteps cross-origin
- * fetch restrictions and avoids streaming hundreds of MB through the Edge
- * runtime.
+ * The edge function returns { url, kind } where kind is one of:
+ *   "external"  — a direct, publicly-accessible PDF URL (OpenStax, archive.org)
+ *   "signed"    — a time-limited Supabase Storage signed URL
+ *   "webpage"   — the stored path is an HTML page (Siyavula, CK-12, Gutenberg)
+ *                 that cannot be iframed — caller should open in new tab.
+ *
+ * The hook surfaces `kind` so the DocumentViewerOverlay can pick the right
+ * rendering strategy.
  */
 export function useProtectedPdfBlob(
   resourceId: string | null | undefined,
@@ -25,17 +33,18 @@ export function useProtectedPdfBlob(
     url: null,
     loading: !!resourceId,
     error: null,
+    kind: undefined,
   });
 
   useEffect(() => {
     let cancelled = false;
 
     if (!resourceId || !source) {
-      setState({ url: null, loading: false, error: null });
+      setState({ url: null, loading: false, error: null, kind: undefined });
       return;
     }
 
-    setState({ url: null, loading: true, error: null });
+    setState({ url: null, loading: true, error: null, kind: undefined });
 
     (async () => {
       try {
@@ -67,11 +76,16 @@ export function useProtectedPdfBlob(
         if (!json?.url) throw new Error("No URL returned");
 
         if (cancelled) return;
-        setState({ url: json.url as string, loading: false, error: null });
+        setState({
+          url: json.url as string,
+          loading: false,
+          error: null,
+          kind: (json.kind as PdfKind | undefined) ?? "external",
+        });
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Failed to load";
-        setState({ url: null, loading: false, error: msg });
+        setState({ url: null, loading: false, error: msg, kind: undefined });
       }
     })();
 
