@@ -80,10 +80,9 @@ export const useTutorData = (
     try {
       setLoading(true);
 
+      // Use directory RPC — never exposes email/phone of other tutors.
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_type', 'tutor')
+        .rpc('get_tutor_directory')
         .abortSignal(controller.signal);
 
       if (controller.signal.aborted) return;
@@ -160,7 +159,7 @@ export const useTutorData = (
         return {
           id: tutor.id,
           full_name: tutor.full_name || 'Anonymous',
-          email: session?.user ? tutor.email : '',
+          email: '', // intentionally hidden — never exposed in tutor directory
           online_status: tutor.online_status || false,
           last_seen: tutor.last_seen || new Date().toISOString(),
           bio: tutor.bio,
