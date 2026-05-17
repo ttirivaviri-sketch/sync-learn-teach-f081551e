@@ -113,7 +113,7 @@ serve(async (req) => {
       : paramString;
 
     const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest("MD5", encoder.encode(sigInput));
+    const hashBuffer = await stdCrypto.subtle.digest("MD5", encoder.encode(sigInput));
     const signature = Array.from(new Uint8Array(hashBuffer))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
