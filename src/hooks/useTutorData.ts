@@ -80,10 +80,9 @@ export const useTutorData = (
     try {
       setLoading(true);
 
+      // Use directory RPC — never exposes email/phone of other tutors.
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_type', 'tutor')
+        .rpc('get_tutor_directory')
         .abortSignal(controller.signal);
 
       if (controller.signal.aborted) return;
