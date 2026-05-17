@@ -159,7 +159,7 @@ export const useTutorData = (
         return {
           id: tutor.id,
           full_name: tutor.full_name || 'Anonymous',
-          email: session?.user ? tutor.email : '',
+          email: '', // intentionally hidden — never exposed in tutor directory
           online_status: tutor.online_status || false,
           last_seen: tutor.last_seen || new Date().toISOString(),
           bio: tutor.bio,
