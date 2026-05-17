@@ -445,11 +445,35 @@ export function useLibraryResources(
 
   // ── Personalization logic ─────────────────────────────────────────────────
 
-  // Strict personalization: only show resources matching learner's curriculum,
-  // grade, and subjects. No soft fallback — empty tabs get explicit copy in UI.
+  // Study-skills / how-to-study guides are cross-curriculum and cross-subject.
+  // They should always appear for any learner regardless of subject selection.
+  const isStudySkillsResource = (r: LibraryResource): boolean =>
+    (r.category || "").toLowerCase().includes("study skill") ||
+    (r.tags?.subject || "").toLowerCase().includes("study skill") ||
+    (r.tags?.topic || "").toLowerCase().includes("study technique") ||
+    (r.tags?.topic || "").toLowerCase().includes("time management") ||
+    (r.tags?.topic || "").toLowerCase().includes("college success");
+
+  // Strict personalization for subject-specific resources.
+  // Study-skills guides bypass the subject filter (they're universal).
   const personalizedResources = academicProfile
     ? allResources.filter((r) => {
         if (!r.tags) return false;
+
+        // Study-skills books: only filter by curriculum + grade (not subject)
+        if (isStudySkillsResource(r)) {
+          const matchCurriculum = curriculumMatches(r.tags.curriculum, academicProfile.curriculum);
+          const gradePool = [
+            r.tags?.grade,
+            ...(r.gradeLevel ? r.gradeLevel.split(/[•·]/) : []),
+          ]
+            .map((g) => (g || "").trim())
+            .filter(Boolean) as string[];
+          const matchGrade = gradeMatches(gradePool, academicProfile.grade);
+          return matchCurriculum && matchGrade;
+        }
+
+        // All other resources: strict curriculum + grade + subject matching
         const matchCurriculum = curriculumMatches(r.tags.curriculum, academicProfile.curriculum);
         const gradePool = [
           r.tags?.grade,
