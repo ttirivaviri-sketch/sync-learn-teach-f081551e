@@ -4,6 +4,10 @@
  * Used by both LearnerAuth and TutorAuth to eliminate ~80% duplicated auth UI.
  * Each page only needs to supply user-type specific copy, the redirect URL,
  * and optional extra sign-up fields (e.g. TutorAuth's verification step).
+ *
+ * Security: sign-up requires explicit Terms & Conditions acceptance before
+ * the form can be submitted.  The acceptance timestamp + version are stored
+ * on the profiles row after account creation.
  */
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,10 +16,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Card, CardContent, CardDescription, CardHeader, CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TERMS_VERSION } from "@/lib/legal";
 
 // ── Props ───────────────────────────────────────────────────────────────────
 export interface AuthFormProps {
@@ -50,6 +56,9 @@ export const AuthForm = ({
   const [fullName, setFullName] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Terms & Conditions acceptance
+  const [termsAccepted, setTermsAccepted] = useState(false);
+
   // Forgot-password state
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
@@ -60,16 +69,36 @@ export const AuthForm = ({
   // ── Sign Up ─────────────────────────────────────────────────────────────
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Guard: Terms must be accepted before we proceed
+    if (!termsAccepted) {
+      toast({
+        title: "Terms & Conditions required",
+        description:
+          "Please read and accept the Terms of Service and Privacy Policy before creating your account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
+      const acceptedAt = new Date().toISOString();
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}${redirectTo}`,
-          data: { full_name: fullName, user_type: userType },
+          data: {
+            full_name: fullName,
+            user_type: userType,
+            terms_accepted_at: acceptedAt,
+            terms_version: TERMS_VERSION,
+          },
         },
       });
+
       if (error) {
         toast({
           title: error.message.includes("already registered") ? "Account exists" : "Sign up failed",
@@ -79,6 +108,18 @@ export const AuthForm = ({
           variant: "destructive",
         });
       } else {
+        // Persist terms acceptance to the profiles row (best-effort; trigger
+        // may already handle this from auth.users metadata)
+        if (data.user) {
+          await supabase
+            .from("profiles")
+            .update({
+              terms_accepted_at: acceptedAt,
+              terms_version: TERMS_VERSION,
+            })
+            .eq("id", data.user.id);
+        }
+
         toast({
           title: userType === "tutor" ? "Account created!" : "Success!",
           description: userType === "tutor"
@@ -299,10 +340,72 @@ export const AuthForm = ({
                     minLength={6}
                   />
                 </div>
+
+                {/* ── Terms & Conditions checkbox — REQUIRED ─────────────── */}
+                <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Checkbox
+                      id="terms-accept"
+                      checked={termsAccepted}
+                      onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                      className="mt-0.5 shrink-0"
+                      aria-required="true"
+                    />
+                    <label
+                      htmlFor="terms-accept"
+                      className="text-xs text-muted-foreground leading-relaxed cursor-pointer select-none"
+                    >
+                      I have read and agree to the{" "}
+                      <a
+                        href="/legal/terms"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:text-primary/80 font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Terms of Service
+                      </a>
+                      {" "}and{" "}
+                      <a
+                        href="/legal/privacy"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline hover:text-primary/80 font-medium"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Privacy Policy
+                      </a>
+                      . I understand that StudySync collects personal information
+                      to provide educational services and will handle it in accordance
+                      with applicable data-protection laws.
+                    </label>
+                  </div>
+                  {!termsAccepted && (
+                    <p className="text-xs text-amber-600 font-medium pl-6">
+                      You must accept the Terms &amp; Conditions to create an account.
+                    </p>
+                  )}
+                </div>
+
                 {signUpHint}
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : userType === "tutor" ? "Create Tutor Account" : "Sign Up"}
+
+                <Button
+                  type="submit"
+                  className="w-full"
+                  disabled={loading || !termsAccepted}
+                  aria-disabled={!termsAccepted}
+                >
+                  {loading
+                    ? "Creating account..."
+                    : userType === "tutor"
+                      ? "Create Tutor Account"
+                      : "Sign Up"}
                 </Button>
+
+                {/* Reassurance note */}
+                <p className="text-center text-xs text-muted-foreground">
+                  By signing up you confirm you are 13 years or older (learners) or 18+ (tutors).
+                </p>
               </form>
             </TabsContent>
           </Tabs>
