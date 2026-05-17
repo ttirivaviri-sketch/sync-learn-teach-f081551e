@@ -63,6 +63,7 @@ export default function LearnerOnboarding() {
 
   // Has the user already completed onboarding? Bounce to app.
   const [completedCheckLoading, setCompletedCheckLoading] = useState(true);
+  const [onboardingFlag, setOnboardingFlag] = useState<boolean>(false);
   const completedRef = useRef(false);
   useEffect(() => {
     if (!userId) return;
@@ -74,15 +75,26 @@ export default function LearnerOnboarding() {
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled) return;
-        if (data?.onboarding_completed_at) {
-          completedRef.current = true;
-          clear();
-          navigate("/learner", { replace: true });
-        }
+        setOnboardingFlag(!!data?.onboarding_completed_at);
         setCompletedCheckLoading(false);
       });
     return () => { cancelled = true; };
-  }, [userId, navigate, clear]);
+  }, [userId]);
+
+  // Only bounce to /learner if BOTH the flag AND academic profile exist —
+  // otherwise the user gets stuck in a loop with LearnerApp (which itself
+  // redirects back here when the academic profile is missing).
+  useEffect(() => {
+    if (completedCheckLoading || profileLoading) return;
+    if (onboardingFlag && academicProfile && !completedRef.current) {
+      completedRef.current = true;
+      clear();
+      navigate("/learner", { replace: true });
+    } else if (onboardingFlag && !academicProfile) {
+      // Flag set but profile missing — jump straight to the academic step.
+      setStep(2);
+    }
+  }, [completedCheckLoading, profileLoading, onboardingFlag, academicProfile, navigate, clear, setStep]);
 
   // Honour ?step= query (e.g. PayFast return) — clamp to valid range.
   useEffect(() => {
