@@ -35,7 +35,9 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Invalid authentication token");
 
-    const { bookingId, savedMethodId } = await req.json();
+    const body = await req.json();
+    const bookingId = body.bookingId;
+    const savedMethodId = body.savedMethodId ?? body.paymentMethodId;
     if (!bookingId || !savedMethodId) throw new Error("Missing bookingId or savedMethodId");
 
     // Fetch saved payment method
