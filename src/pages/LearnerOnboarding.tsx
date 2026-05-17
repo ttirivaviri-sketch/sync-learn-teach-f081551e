@@ -46,6 +46,7 @@ export default function LearnerOnboarding() {
   const { toast } = useToast();
   const { session, loading: authLoading } = useAuth({ redirectTo: "/learner/auth" });
   const userId = session?.user?.id;
+  const isReady = !authLoading && !!userId;
   const firstName =
     (session?.user?.user_metadata?.full_name as string | undefined)?.split(" ")[0] ||
     session?.user?.email?.split("@")[0] ||
@@ -55,7 +56,7 @@ export default function LearnerOnboarding() {
   const { subscription } = useSubscription();
 
   // Persisted step state (per user) so refresh resumes the wizard cleanly.
-  const wizardKey = userId ? `learner-onboarding:${userId}` : "learner-onboarding";
+  const wizardKey = `learner-onboarding:${userId ?? "pending"}`;
   const { state, setState, clear } = useResumableWizard<{ step: Step }>(wizardKey, { step: 0 });
   const step = state.step;
   const setStep = useCallback((s: Step) => setState({ step: s }), [setState]);
@@ -117,7 +118,7 @@ export default function LearnerOnboarding() {
     navigate("/learner", { replace: true });
   }, [navigate, clear]);
 
-  if (authLoading || profileLoading || completedCheckLoading) {
+  if (!isReady || profileLoading || completedCheckLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background bg-mesh">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />

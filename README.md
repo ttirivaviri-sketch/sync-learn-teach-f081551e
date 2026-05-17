@@ -123,6 +123,22 @@ The project uses Supabase with the following key tables:
 2. Click "Code" → "Codespaces" → "New codespace"
 3. Develop in browser-based VS Code environment
 
+
+## 🧪 Sandbox Preview
+
+Run the app in a network-accessible sandbox mode (useful for QA/review):
+
+```bash
+npm install
+npm run sandbox
+```
+
+Then open: `http://localhost:4173`
+
+Notes:
+- Uses `--host 0.0.0.0` so teammates/dev containers can access it.
+- Uses `--strictPort` so it fails fast if the port is busy.
+
 ## 🚀 Deployment
 
 ### Quick Deploy with Lovable
@@ -148,6 +164,15 @@ npm run build
 ## 📈 Improvement Roadmap
 
 If you are planning the next iteration of StudySync, start with the prioritized improvement plan in [`docs/study-sync-improvements.md`](docs/study-sync-improvements.md).
+
+
+## 🧭 Team Development Standards
+
+Before contributing, read:
+- [`CONTRIBUTING.md`](CONTRIBUTING.md)
+- [`docs/app-development-standards.md`](docs/app-development-standards.md)
+
+These documents define branch/PR workflow, testing gates, migration/RLS expectations, and security review checklists for team development.
 
 ## 🤝 Contributing
 
