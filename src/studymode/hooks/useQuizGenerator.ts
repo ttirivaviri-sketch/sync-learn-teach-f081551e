@@ -11,13 +11,14 @@
  * and returns full solutions, marking schemes, and explanations.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Subject, Topic } from '../types/study';
 import { useSyllabusContext } from './useSyllabusContext';
 import { useTopicPerformance } from './useTopicPerformance';
 import { aiRequestJSON } from '../lib/aiClient';
 import { logger } from "@/utils/logger";
 import type { QuestionVisualSpec } from '../components/QuestionVisual';
+import { useStudyMemory, StudyMemoryContext } from './useStudyMemory';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,8 +67,20 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
   // Track recently generated question types to enforce variety
   const recentQuestionTypes = useRef<string[]>([]);
 
-  // ── Fetch curriculum context ───────────────────────────────────────────────
+  // ── AI Memory system ──────────────────────────────────────────────────────
+  const { logEvent, fetchMemoryContext, buildMemoryContext } = useStudyMemory();
+  const memoryCtxRef = useRef<StudyMemoryContext | null>(null);
+
   const activeTopic = topic || subject.currentTopic;
+
+  // Fetch memory context once when the topic changes
+  useEffect(() => {
+    fetchMemoryContext(subject.name).then((ctx) => {
+      memoryCtxRef.current = ctx;
+    });
+  }, [subject.name, activeTopic?.name, fetchMemoryContext]);
+
+  // ── Fetch curriculum context ───────────────────────────────────────────────
   const { curriculumContext, examPatterns, examWeightFromPapers, paperBlueprints, linkedPastPapers, isLoaded: contextLoaded } =
     useSyllabusContext(subject.id, activeTopic?.name);
 
@@ -147,6 +160,21 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
       // Up to 2 real Q+A exemplars from linked mark schemes
       const exemplars = (linkedPastPapers || []).slice(0, 2);
 
+      // ── Inject AI Memory context ─────────────────────────────────────────
+      const memoryCtx = memoryCtxRef.current;
+      const memoryContext = memoryCtx
+        ? buildMemoryContext(memoryCtx, topicData.name)
+        : undefined;
+
+      // Merge memory weak areas with performance weak areas
+      const memoryWeakAreas = memoryCtx?.allWeakConcepts ?? [];
+      const allWeakAreas = [...new Set([...weakAreas, ...memoryWeakAreas])].slice(0, 10);
+
+      // Questions already seen (from memory) — tell AI to avoid these
+      const questionsToAvoid = memoryCtx
+        ? [...memoryCtx.questionsSeenSet].slice(0, 10)
+        : [];
+
       const payload = {
         subject: subject.name,
         topic: topicData.name,
@@ -158,9 +186,12 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         performanceContext: performanceContext || undefined,
         pastPaperStyleNotes,
         avoidQuestionTypes: recentQuestionTypes.current.slice(-2),
-        weakAreas: weakAreas.length > 0 ? weakAreas : undefined,
+        weakAreas: allWeakAreas.length > 0 ? allWeakAreas : undefined,
         pastPaperExemplars: exemplars.length > 0 ? exemplars : undefined,
         paperBlueprint: blueprintForTopic || undefined,
+        // Memory-powered anti-repetition and diversification
+        studyMemoryContext: memoryContext || undefined,
+        questionsAlreadySeen: questionsToAvoid.length > 0 ? questionsToAvoid : undefined,
         count: 1,
       };
 
@@ -183,7 +214,7 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         ];
       }
 
-      setQuestion({
+      const finalQuestion: QuizQuestion = {
         id: questionData.id || crypto.randomUUID(),
         question: questionData.question,
         questionType: questionData.questionType || 'structured',
@@ -202,14 +233,31 @@ export function useQuizGenerator({ subject, topic }: UseQuizGeneratorOptions) {
         syllabusLinks: questionData.syllabusLinks,
         explanation: questionData.explanation,
         visual: questionData.visual ?? null,
+      };
+      setQuestion(finalQuestion);
+
+      // ── Log to AI memory (fire-and-forget) ────────────────────────────
+      logEvent({
+        eventType: 'task_content',
+        subjectId: subject.id,
+        subjectName: subject.name,
+        topicName: topicData.name,
+        curriculum: subject.curriculum,
+        questionText: finalQuestion.question,
+        conceptsTested: finalQuestion.conceptsTested,
+        commandWord: finalQuestion.commandWord,
+        difficulty: (finalQuestion.difficulty as any) ?? undefined,
+        metadata: { questionType: finalQuestion.questionType, marks: finalQuestion.marks },
       });
+      // Invalidate cache so next question fetch sees this event
+      memoryCtxRef.current = null;
     } catch (err) {
       logger.error('Quiz generation error:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate question');
     } finally {
       setIsLoading(false);
     }
-  }, [subject, topic, curriculumContext, examPatterns, examWeightFromPapers, performance, paperBlueprints, linkedPastPapers]);
+  }, [subject, topic, curriculumContext, examPatterns, examWeightFromPapers, performance, paperBlueprints, linkedPastPapers, buildMemoryContext, logEvent]);
 
   const clearQuestion = useCallback(() => {
     setQuestion(null);

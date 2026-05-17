@@ -14,6 +14,7 @@ import { useState, useCallback, useRef } from 'react';
 import { aiRequest } from '../lib/aiClient';
 import type { AIContextPayload } from './useAIStudyIntelligence';
 import { logger } from "@/utils/logger";
+import { useStudyMemory } from './useStudyMemory';
 
 export interface TaskContentParams {
   taskType: string;
@@ -36,6 +37,8 @@ export interface TaskContentParams {
   aiContext?: AIContextPayload | null;
   /** Previously studied subtopics to avoid repetition in concept-learning */
   previouslyStudiedSubtopics?: string[];
+  /** Curriculum identifier for RLS filtering */
+  curriculum?: string;
 }
 
 interface UseTaskContentReturn {
@@ -83,6 +86,9 @@ export function useTaskContent(): UseTaskContentReturn {
   const [error, setError] = useState<string | null>(null);
   const aiContextRef = useRef<AIContextPayload | null>(null);
 
+  // ── AI Memory ───────────────────────────────────────────────────────────
+  const { logEvent, fetchMemoryContext, buildMemoryContext } = useStudyMemory();
+
   const setAIContext = useCallback((ctx: AIContextPayload | null) => {
     aiContextRef.current = ctx;
   }, []);
@@ -99,6 +105,10 @@ export function useTaskContent(): UseTaskContentReturn {
     setError(null);
 
     try {
+      // ── Fetch memory context for this subject ──────────────────────────
+      const memoryCtx = await fetchMemoryContext(params.subject);
+      const memoryContext = buildMemoryContext(memoryCtx, params.topic);
+
       // Merge AI intelligence context into the request
       const aiCtx = params.aiContext || aiContextRef.current;
       const enrichedParams = {
@@ -125,6 +135,15 @@ export function useTaskContent(): UseTaskContentReturn {
           `Use internet access to enrich this ${params.taskType} task for ${params.subject} > ${params.topic}. ` +
           'Look up the latest syllabus specifications, exam patterns, and learning resources. ' +
           'Incorporate real-world examples and up-to-date content relevant to the student\'s curriculum.',
+        // Memory-powered diversification
+        studyMemoryContext: memoryContext || undefined,
+        subtopicsAlreadyCovered: memoryCtx.topicSummaries
+          .find((t) => t.topicName.toLowerCase() === params.topic.toLowerCase())
+          ?.subtopicsCovered ?? params.previouslyStudiedSubtopics ?? [],
+        conceptsAlreadyCovered: memoryCtx.topicSummaries
+          .find((t) => t.topicName.toLowerCase() === params.topic.toLowerCase())
+          ?.conceptsCovered ?? [],
+        weakConceptsToReinforce: memoryCtx.allWeakConcepts.slice(0, 8),
       };
       // Remove the nested aiContext to avoid circular reference
       delete (enrichedParams as any).aiContext;
@@ -250,6 +269,21 @@ export function useTaskContent(): UseTaskContentReturn {
       if (!accumulated.trim()) {
         throw new Error('AI returned empty content. Please try again.');
       }
+
+      // ── Log to memory (fire-and-forget) ──────────────────────────────
+      const eventType =
+        params.taskType === 'concept-learning' ? 'concept_breakdown' : 'task_content';
+      logEvent({
+        eventType,
+        subjectId: params.subjectId,
+        subjectName: params.subject,
+        topicName: params.topic,
+        subtopicName: params.subtopics?.[0],
+        curriculum: params.curriculum,
+        conceptsTested: params.concepts?.slice(0, 10),
+        difficulty: params.difficulty,
+        metadata: { taskType: params.taskType, masteryStatus: params.masteryStatus },
+      });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error';
       logger.error('[useTaskContent] Error:', message);
@@ -257,7 +291,7 @@ export function useTaskContent(): UseTaskContentReturn {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [fetchMemoryContext, buildMemoryContext, logEvent]);
 
   return { content, isLoading, error, generateContent, reset, setAIContext };
 }

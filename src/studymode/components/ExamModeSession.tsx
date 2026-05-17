@@ -27,6 +27,7 @@ import { QuestionVisual } from './QuestionVisual';
 import { useRecallEngine } from '../hooks/useRecallEngine';
 import type { Subject, Topic } from '../types/study';
 import type { SemanticEvaluation } from '../engine/recallEngine';
+import { useStudyMemory } from '../hooks/useStudyMemory';
 
 interface ExamModeSessionProps {
   subject: Subject;
@@ -54,6 +55,7 @@ function formatTime(seconds: number): string {
 
 export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamModeSessionProps) {
   const engine = useRecallEngine({ subject, topic, mode: 'exam', questionCount: 10 });
+  const { logEvent } = useStudyMemory();
 
   const [answers, setAnswers] = useState<Map<number, string>>(new Map());
   const [evaluations, setEvaluations] = useState<Map<number, SemanticEvaluation>>(new Map());
@@ -142,7 +144,29 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
     setIsSubmitting(false);
     setPhase('results');
     engine.completeSession();
-  }, [answers, questionStartTimes, engine]);
+
+    // ── Log exam session to AI memory (fire-and-forget) ───────────────
+    const totalMarks = engine.questions.reduce((s, q) => s + q.marks, 0);
+    const marksAwarded = Array.from(evaluations.values()).reduce((s, e) => s + e.marksAwarded, 0);
+    const allConcepts = [...new Set(
+      engine.questions.flatMap((q) => (q as any).conceptsTested ?? [])
+    )] as string[];
+    logEvent({
+      eventType: 'exam_session',
+      subjectId: subject.id,
+      subjectName: subject.name,
+      topicName: topic?.name ?? subject.currentTopic?.name ?? 'Unknown',
+      curriculum: subject.curriculum,
+      conceptsTested: allConcepts.slice(0, 15),
+      scoreRaw: marksAwarded,
+      scoreMax: totalMarks,
+      difficulty: 'exam-level',
+      metadata: {
+        questionCount: engine.questions.length,
+        answeredCount: answers.size,
+      },
+    });
+  }, [answers, questionStartTimes, engine, evaluations, subject, topic, logEvent]);
 
   // ── Loading ──────────────────────────────────────────────────────────────
 
