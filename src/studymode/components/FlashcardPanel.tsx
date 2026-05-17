@@ -15,6 +15,7 @@ import { supabase } from '../../integrations/supabase/client';
 import { aiRequest } from '../lib/aiClient';
 import { cn } from '@/lib/utils';
 import { logger } from "@/utils/logger";
+import { useStudyMemory } from '../hooks/useStudyMemory';
 
 interface FlashcardPanelProps {
   task: DailyTask;
@@ -301,7 +302,10 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
     : performance?.recommendedDifficulty === 'easy' ? 'easy'
     : 'mixed';
 
-  // ── Persist flashcards to Supabase ────────────────────────────────────────
+  // ── AI Memory ───────────────────────────────────────────────────────────
+  const { logEvent } = useStudyMemory();
+
+  // ── Persist flashcards to Supabase ────────────────────────────────────────────
   const persistCards = useCallback(async (newCards: Flashcard[]) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -367,7 +371,23 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
         checkAndUpdateMastery(userId, subject.id, subject.currentTopic.name, concepts);
       }
     }
-  }, [cards, currentIndex, userId, subject, addXp, updateStreak, recordAttempt, checkAndUpdateMastery]);
+
+    // ── Log to AI memory (fire-and-forget) ───────────────────────────
+    const cardFront = cards[currentIndex]?.front;
+    logEvent({
+      eventType: 'flashcard_review',
+      subjectId: subject.id,
+      subjectName: subject.name,
+      topicName: subject.currentTopic.name,
+      curriculum: subject.curriculum,
+      questionText: cardFront,
+      conceptsTested: Array.isArray(concepts) ? (concepts as string[]) : [],
+      wasCorrect: !skipped,
+      scoreRaw: skipped ? 0 : 1,
+      scoreMax: 1,
+      metadata: { skipped, cardIndex: currentIndex },
+    });
+  }, [cards, currentIndex, userId, subject, addXp, updateStreak, recordAttempt, checkAndUpdateMastery, logEvent]);
 
   // ── Fetch flashcards ──────────────────────────────────────────────────────
   const fetchCards = useCallback(async () => {

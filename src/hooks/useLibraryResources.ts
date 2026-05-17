@@ -210,6 +210,181 @@ const SEED_TUTORIALS: LibraryResource[] = [
   },
 ];
 
+// ─── Study-skills seed books (always shown regardless of DB migration state) ──
+// These are merged into allResources after every DB fetch so the
+// "How to Study & Study Skills" rack is always visible to every learner.
+// Once the DB migration runs, duplicates are deduplicated by id prefix "ss-".
+const SEED_STUDY_SKILLS: LibraryResource[] = [
+  {
+    id: "ss-1",
+    title: "College Success — How to Study, Manage Time & Thrive",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 8 • Grade 9 • Grade 10 • Grade 11 • Grade 12 • O-Level • A-Level • IGCSE",
+    summary:
+      "The definitive open-access guide to studying smarter: time management, memory techniques, note-taking, test prep, goal setting and managing stress. Trusted by millions globally. CC-BY.",
+    rating: 4.9,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/College_Success_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Study Techniques & Time Management", grade: "Grade 10", curriculum: undefined },
+  },
+  {
+    id: "ss-2",
+    title: "College Success Concise — Essential Study Skills",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 8 • Grade 9 • Grade 10 • Grade 11 • Grade 12 • O-Level • A-Level",
+    summary:
+      "Shorter companion to College Success covering the most essential study strategies, time management and academic habits for high-school and first-year university students. CC-BY.",
+    rating: 4.8,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/college-success-concise_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Study Techniques & Time Management", grade: "Grade 10", curriculum: undefined },
+  },
+  {
+    id: "ss-3",
+    title: "Writing Guide with Handbook — Academic Writing & Research",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 10 • Grade 11 • Grade 12 • O-Level • A-Level • IGCSE • AS Level",
+    summary:
+      "Comprehensive guide to academic writing: essays, research papers, citations, critical reading and communication skills essential for exam success. CC-BY.",
+    rating: 4.7,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/writing-guide-with-handbook_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Academic Writing & Research", grade: "Grade 11", curriculum: undefined },
+  },
+  {
+    id: "ss-4",
+    title: "Psychology 2e — Memory, Learning & Motivation",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 10 • Grade 11 • Grade 12 • O-Level • A-Level • IGCSE",
+    summary:
+      "Understand how memory, attention and motivation work — then use that knowledge to study more effectively. Chapters on memory, learning, thinking and intelligence. CC-BY.",
+    rating: 4.8,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/psychology-2e_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Memory & Motivation", grade: "Grade 11", curriculum: undefined },
+  },
+  {
+    id: "ss-5",
+    title: "Principles of Management — Goal Setting & Planning",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 10 • Grade 11 • Grade 12 • A-Level • IGCSE • Form 4 • Form 5 • Form 6",
+    summary:
+      "Develop planning, goal-setting and self-management skills that translate directly to academic success: prioritisation, productivity frameworks and decision-making under pressure. CC-BY.",
+    rating: 4.6,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/principles-management_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Goal Setting & Planning", grade: "Grade 12", curriculum: undefined },
+  },
+  {
+    id: "ss-6",
+    title: "Business Ethics — Critical Thinking & Problem Solving",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 11 • Grade 12 • A-Level • IGCSE • Form 5 • Form 6",
+    summary:
+      "Build critical thinking, ethical reasoning and structured problem-solving skills — all transferable to any exam subject. Essential for top marks on analytical questions. CC-BY.",
+    rating: 4.5,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/business-ethics_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Critical Thinking & Ethics", grade: "Grade 12", curriculum: undefined },
+  },
+  {
+    id: "ss-7",
+    title: "How to Study — A Classic Practical Guide",
+    author: "Arthur C. Bragdon",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 8 • Grade 9 • Grade 10 • Grade 11 • Grade 12 • All Grades",
+    summary:
+      "A timeless, no-nonsense guide to effective studying: how to read actively, take useful notes, prepare for exams, and avoid common study mistakes. Public domain. Free for all.",
+    rating: 4.6,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "Web",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://www.gutenberg.org/files/16317/16317-h/16317-h.htm",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Study Techniques", grade: "Grade 10", curriculum: undefined },
+  },
+  {
+    id: "ss-8",
+    title: "Introductory Statistics 2e — Logical Thinking with Data",
+    author: "OpenStax",
+    type: "book",
+    category: "Study Skills",
+    gradeLevel: "Grade 10 • Grade 11 • Grade 12 • A-Level • IGCSE • Form 5 • Form 6",
+    summary:
+      "Learn to think logically and analytically using data — a skill that supercharges performance in science, economics, business and maths. CC-BY.",
+    rating: 4.6,
+    reviews: 0,
+    thumbnail: "/placeholder.svg",
+    isOffline: false,
+    duration: "PDF",
+    isTutorial: false,
+    watchCount: 0,
+    completionRate: 0,
+    videoUrl: "https://assets.openstax.org/oscms-prodcms/media/documents/introductory-statistics-2e_-_WEB.pdf",
+    pdfSource: "system",
+    tags: { subject: "Study Skills", topic: "Logical Thinking & Data", grade: "Grade 12", curriculum: undefined },
+  },
+];
+
 export interface LibraryMatchStats {
   total: number;
   matchedAll: number;
@@ -253,10 +428,19 @@ export function useLibraryResources(
   const [searchQuery, setSearchQuery] = useState("");
   const [dbFetched, setDbFetched] = useState(false);
 
-  // Show only DB resources once fetched; show seed data only as initial loading placeholder
-  const allResources: LibraryResource[] = dbFetched
-    ? dbResources
-    : SEED_TUTORIALS;
+  // Show only DB resources once fetched; show seed data only as initial loading placeholder.
+  // Study-skills seeds are ALWAYS merged in (deduplicated by id) so the rack is visible
+  // even before the DB migration has run on the remote instance.
+  const allResources: LibraryResource[] = (() => {
+    const base = dbFetched ? dbResources : SEED_TUTORIALS;
+    // Deduplicate: DB rows that match a seed id take precedence (they have more data).
+    // Seed rows whose id doesn't appear in the DB are appended.
+    const dbIds = new Set(base.map((r) => r.id));
+    const seedExtras = SEED_STUDY_SKILLS.filter((s) => !dbIds.has(s.id));
+    // Also filter out DB rows whose subject is "Study Skills" but came back from DB
+    // so we don't double-count if migration DID run (DB rows get different UUIDs).
+    return [...base, ...seedExtras];
+  })();
 
   // Fetch tutor-uploaded tutorials AND PDFs from Supabase
   useEffect(() => {

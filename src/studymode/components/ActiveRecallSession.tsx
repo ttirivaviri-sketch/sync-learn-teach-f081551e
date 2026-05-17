@@ -28,6 +28,7 @@ import { MathMarkdown } from './MathMarkdown';
 import { useRecallEngine } from '../hooks/useRecallEngine';
 import type { Subject, Topic } from '../types/study';
 import type { SemanticEvaluation, MasteryClassification } from '../engine/recallEngine';
+import { useStudyMemory } from '../hooks/useStudyMemory';
 
 interface ActiveRecallSessionProps {
   subject: Subject;
@@ -37,6 +38,7 @@ interface ActiveRecallSessionProps {
 }
 
 export function ActiveRecallSession({ subject, topic, onComplete, onBack }: ActiveRecallSessionProps) {
+  const { logEvent } = useStudyMemory();
   const engine = useRecallEngine({ subject, topic, mode: 'active-recall', questionCount: 10 });
 
   const [userAnswer, setUserAnswer] = useState('');
@@ -66,16 +68,34 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
 
     setPhase('evaluating');
     const timeTaken = Math.round((Date.now() - questionStartTime) / 1000);
+    const q = engine.currentQuestion as any;
     const result = await engine.evaluateAnswer(engine.currentIndex, userAnswer, timeTaken);
 
     if (result) {
       setEvaluation(result);
       setPhase('feedback');
+
+      // ── Log to AI memory (fire-and-forget) ─────────────────────
+      logEvent({
+        eventType: 'quiz_question',
+        subjectId: subject.id,
+        subjectName: subject.name,
+        topicName: topic?.name ?? subject.currentTopic?.name ?? 'Unknown',
+        curriculum: subject.curriculum,
+        questionText: q?.question ?? q?.front,
+        conceptsTested: q?.conceptsTested ?? [],
+        commandWord: q?.commandWord,
+        wasCorrect: result.percentage >= 60,
+        scoreRaw: result.marksAwarded,
+        scoreMax: result.totalMarks,
+        difficulty: q?.difficulty,
+        metadata: { timeTakenSecs: timeTaken, masteryClass: result.classification },
+      });
     } else {
       // Fallback if evaluation failed
       setPhase('feedback');
     }
-  }, [userAnswer, engine.currentQuestion, engine.currentIndex, engine.evaluateAnswer, questionStartTime]);
+  }, [userAnswer, engine.currentQuestion, engine.currentIndex, engine.evaluateAnswer, questionStartTime, subject, topic, logEvent]);
 
   const handleNextQuestion = useCallback(() => {
     engine.goToNextQuestion();
