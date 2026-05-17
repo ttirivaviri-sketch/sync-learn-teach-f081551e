@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Brain, BookOpen, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Brain, BookOpen, CheckCircle2, XCircle, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -10,6 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { MathMarkdown } from './MathMarkdown';
 import { aiRequestJSON } from '../lib/aiClient';
+import { useAuth } from '@/hooks/useAuth';
+import { useAcademicProfile } from '@/hooks/useAcademicProfile';
 import { logger } from "@/utils/logger";
 
 interface PrerequisiteGap {
@@ -17,10 +19,12 @@ interface PrerequisiteGap {
   description: string;
   exampleQuestions: string[];
   missingConcepts: string[];
+  tiedToQuestionType?: string;
 }
 
 interface PrerequisiteRemediationFlowProps {
   subject: string;
+  subjectId?: string;
   currentTopic: string;
   onComplete: () => void;
   onBack: () => void;
@@ -28,11 +32,13 @@ interface PrerequisiteRemediationFlowProps {
 
 export function PrerequisiteRemediationFlow({
   subject,
+  subjectId,
   currentTopic,
   onComplete,
   onBack,
 }: PrerequisiteRemediationFlowProps) {
-  const [phase, setPhase] = useState<'analysis' | 'theory' | 'quiz' | 'complete'>('analysis');
+  const [phase, setPhase] = useState<'analysis' | 'theory' | 'quiz' | 'complete' | 'error'>('analysis');
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [gaps, setGaps] = useState<PrerequisiteGap[]>([]);
   const [currentGapIndex, setCurrentGapIndex] = useState(0);
   const [theoryContent, setTheoryContent] = useState('');
@@ -42,6 +48,10 @@ export function PrerequisiteRemediationFlow({
   const [answers, setAnswers] = useState<boolean[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { session } = useAuth();
+  const { profile } = useAcademicProfile(session?.user?.id);
+  const curriculum = profile?.curriculum || 'ZIMSEC';
+  const grade = profile?.grade || undefined;
 
   // Phase 1: Analyze prerequisites
   useEffect(() => {
@@ -52,8 +62,16 @@ export function PrerequisiteRemediationFlow({
 
   const analyzePrerequisites = async () => {
     setIsLoading(true);
+    setErrorMessage('');
     try {
-      const data = await aiRequestJSON<{ gaps?: PrerequisiteGap[] }>('analyze-prerequisites', { subject, topic: currentTopic });
+      const data = await aiRequestJSON<{ gaps?: PrerequisiteGap[] }>('analyze-prerequisites', {
+        subject,
+        topic: currentTopic,
+        curriculum,
+        grade,
+        gradeLevel: grade,
+        subjectId,
+      });
 
       if (data.gaps && data.gaps.length > 0) {
         setGaps(data.gaps);
@@ -69,12 +87,8 @@ export function PrerequisiteRemediationFlow({
       }
     } catch (error) {
       logger.error('Prerequisite analysis error:', error);
-      toast({
-        title: 'Analysis Error',
-        description: 'Failed to analyze prerequisites. Continuing anyway.',
-        variant: 'destructive',
-      });
-      onComplete();
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to analyze prerequisites.');
+      setPhase('error');
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +102,9 @@ export function PrerequisiteRemediationFlow({
         subject,
         prerequisiteTopic: gap.topic,
         missingConcepts: gap.missingConcepts,
+        curriculum,
+        grade,
+        parentTopic: currentTopic,
       });
       setTheoryContent(data.theory ?? '');
     } catch (error) {
@@ -111,6 +128,8 @@ export function PrerequisiteRemediationFlow({
       const data = await aiRequestJSON<{ questions?: any[] }>('generate-prerequisite-quiz', {
         subject,
         topic: currentGap.topic,
+        curriculum,
+        grade,
         difficulty: 'basic',
         questionCount: 3,
       });
@@ -168,6 +187,41 @@ export function PrerequisiteRemediationFlow({
   };
 
   const currentGap = gaps[currentGapIndex];
+
+  // Error Phase
+  if (phase === 'error') {
+    return (
+      <Card className="p-8 max-w-2xl mx-auto animate-fade-in text-center">
+        <div className="flex justify-center mb-4">
+          <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+            <XCircle className="h-8 w-8 text-destructive" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Couldn't Check Prerequisites</h2>
+        <p className="text-muted-foreground mb-2">
+          {errorMessage || 'Something went wrong while analyzing the foundations for this topic.'}
+        </p>
+        <p className="text-sm text-muted-foreground mb-6">
+          You can retry, skip and continue, or go back.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" onClick={onBack} className="flex-1">
+            Back
+          </Button>
+          <Button variant="outline" onClick={onComplete} className="flex-1">
+            Skip & Continue
+          </Button>
+          <Button
+            onClick={() => { setPhase('analysis'); analyzePrerequisites(); }}
+            className="flex-1 gradient-primary"
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry
+          </Button>
+        </div>
+      </Card>
+    );
+  }
 
   // Analysis Phase
   if (phase === 'analysis') {

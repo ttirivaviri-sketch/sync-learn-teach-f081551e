@@ -34,6 +34,11 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  quotaExceededResponse,
+  buildCacheKey,
+  getCached,
+  setCached,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -41,8 +46,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const ai = getAIConfig("standard");
     const body = await req.json();
+
+    // ── Per-user daily quota (Moderate tier) ────────────────────────────────
+    const quota = await enforceQuota(req, "quiz", { amount: Math.min(Math.max(Number(body.count) || 1, 1), 5) });
+    if (!quota.allowed) {
+      return quotaExceededResponse("quiz", quota.used, quota.limit);
+    }
 
     const {
       subject,
@@ -59,6 +70,9 @@ serve(async (req) => {
       curriculum,
       examLevel,
       notesOrDocuments,
+      pastPaperExemplars,
+      paperBlueprint,
+      examMode,
       count = 1,
     } = body;
 
@@ -99,9 +113,36 @@ MATHEMATICAL NOTATION (CRITICAL):
 - Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$
 
 QUESTION TYPES TO MIX:
-• multiple_choice — 4 options (A–D), one correct, with explanation for each distractor
+• multiple_choice — REQUIRED format: exactly 4 options as a string array WITHOUT "A)" / "B)" prefixes (the UI adds the letters). "correctOption" MUST be one of "A","B","C","D" indexed by position (A=options[0], B=options[1], C=options[2], D=options[3]). Always include "explanation" describing why the correct option is right and why distractors are wrong. Marks are usually 1.
 • short_answer — 1–3 sentence response expected
 • structured — multi-part question with sub-questions (a), (b), (c), mark allocations per part
+
+QUESTION TYPE SELECTION RULE:
+If a TARGET PAPER BLUEPRINT is provided with a "question_type_distribution" (e.g. {"multiple_choice": 40, "structured": 60}), pick "questionType" so that across many generations the mix matches that distribution. For a single-question request, weight your random pick by those percentages — if multiple_choice is ≥30%, often produce multiple_choice. Subjects/papers with high MCQ share (Biology Paper 1, IGCSE Maths Paper 1 MCQ, Physics Paper 1) MUST receive multiple_choice questions accordingly. Never default to "structured" when the blueprint says otherwise.
+
+VISUALS — INCLUDE WHEN THE CURRICULUM REQUIRES THEM:
+${examMode ? `EXAM MODE IS ACTIVE. This question will appear in a timed exam simulation. If the topic conventionally appears with a diagram / graph / figure / chart in real past papers for this curriculum (Maths function graphs and geometry, Physics circuits / forces / ray / wave diagrams, Biology labelled diagrams of cells / organs / processes, Chemistry apparatus or reaction schemes, Geography climate graphs / contour or sketch maps, Economics demand-supply curves), you MUST populate the "visual" field. A real exam paper for this topic almost always includes a figure — do not omit it. Pick the most appropriate visual type below.` : `If the topic typically includes a diagram, graph, or chart in past papers (Maths function graphs, Physics circuits/forces/ray diagrams, Biology cell/anatomy/process diagrams, Chemistry apparatus, Geography climate/contour/sketch maps), populate a "visual" field on the question. Otherwise OMIT the field entirely.`}
+
+Pick exactly ONE "type":
+1. "function-graph" — for plotting mathematical functions y = f(x). Provide:
+     "functions": [{"expression":"x^2 - 4*x + 3","color":"#3b82f6"}]   (mathjs syntax: use *, /, ^, sin(x), cos(x), sqrt(x), log(x))
+     "xRange": [-2, 6], "yRange": [-5, 10] (optional), "gridlines": true,
+     "points": [{"x":1,"y":0,"label":"root"}] (optional)
+2. "data-chart" — for data interpretation (climate graphs, V-I curves, population data). Provide:
+     "chartKind": "bar" | "line" | "scatter",
+     "data": [{"x":"Jan","y":12},{"x":"Feb","y":15}, ...],
+     "xLabel": "Month", "yLabel": "Rainfall (mm)"
+3. "svg-diagram" — for SIMPLE labeled schematics you can author directly (circuits, force diagrams, ray diagrams, simple apparatus). Provide:
+     "svg": "<svg viewBox='0 0 400 300' xmlns='http://www.w3.org/2000/svg'>...</svg>"
+     Use only basic SVG: <line>, <rect>, <circle>, <path>, <text>, <polygon>, <g>. No <script>, no event handlers, no external images.
+     Use stroke='currentColor' and fill='currentColor' or 'none' so the diagram inherits theme color.
+     Keep viewBox around 400x300, label all components with <text>.
+4. "ai-image" — for COMPLEX biological / anatomical / geographical illustrations that can't be cleanly authored as data or simple SVG (heart cross-section, plant cell, kidney nephron, river meander, contour map). Provide:
+     "imagePrompt": "Detailed description in past-paper style. Example: 'Black-and-white labeled cross-section of the human heart, A-Level Biology past paper style, four chambers labeled A, B, C, D with leader lines, line art on white background, no shading.'"
+     The client renders this via an image generation pipeline.
+
+Always include "required": true if the student MUST see the visual to answer; false if the visual just aids understanding.
+Optional "caption": e.g. "Figure 1: Series circuit with two resistors".
 
 RULES:
 1. Anchor every question to the syllabus outline and topic scope.
@@ -120,7 +161,7 @@ Return ONLY valid JSON matching this exact schema:
       "question": "full question text with LaTeX math notation",
       "questionType": "multiple_choice|short_answer|structured",
       "marks": 6,
-      "options": ["A) ...", "B) ...", "C) ...", "D) ..."],
+      "options": ["first option text", "second option text", "third option text", "fourth option text"],
       "correctOption": "B",
       "modelAnswer": "complete model answer with LaTeX math",
       "stepByStepSolution": "step 1: …\\nstep 2: …\\nstep 3: …",
@@ -130,13 +171,15 @@ Return ONLY valid JSON matching this exact schema:
       "commandWord": "explain",
       "conceptsTested": ["concept1", "concept2"],
       "syllabusLinks": ["specific syllabus objective"],
-      "explanation": "why this answer is correct and common mistakes"
+      "explanation": "why this answer is correct and common mistakes",
+      "visual": { "type": "function-graph", "required": true, "caption": "...", "functions": [...] }
     }
   ],
   "weak_area_focus": ["weak area addressed 1", "weak area addressed 2"]
 }
 
-For non-multiple-choice questions, omit "options" and "correctOption".`;
+For non-multiple-choice questions, omit "options" and "correctOption".
+OMIT "visual" entirely for pure-text questions (English essays, history accounts, etc.).`;
 
     // ── User prompt ─────────────────────────────────────────────────────────
     let userPrompt = `Generate ${questionCount} exam-style question(s).\n\n${context}`;
@@ -151,10 +194,44 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
       userPrompt += `\nAvoid these recent question types: ${avoidQuestionTypes.join(", ")}`;
     }
 
-    // ── Call AI ──────────────────────────────────────────────────────────────
+    if (paperBlueprint && typeof paperBlueprint === "object") {
+      userPrompt += `\n\n=== TARGET PAPER BLUEPRINT ===\n`;
+      if (paperBlueprint.paper_code) userPrompt += `Paper: ${paperBlueprint.paper_code}\n`;
+      if (paperBlueprint.total_marks) userPrompt += `Total marks: ${paperBlueprint.total_marks}\n`;
+      if (paperBlueprint.duration_minutes)
+        userPrompt += `Duration: ${paperBlueprint.duration_minutes} min\n`;
+      if (paperBlueprint.question_type_distribution) {
+        userPrompt += `Question type mix: ${JSON.stringify(paperBlueprint.question_type_distribution)}\n`;
+      }
+      if (paperBlueprint.command_word_frequency) {
+        userPrompt += `Common command words: ${Object.keys(paperBlueprint.command_word_frequency).slice(0, 8).join(", ")}\n`;
+      }
+      userPrompt += `Match this paper's style: question length, mark allocation, command-word distribution.\n`;
+    }
+
+    if (Array.isArray(pastPaperExemplars) && pastPaperExemplars.length > 0) {
+      userPrompt += `\n\n=== PAST-PAPER EXEMPLARS (real Q + official mark scheme — DO NOT COPY VERBATIM, mirror the style) ===\n`;
+      pastPaperExemplars.slice(0, 2).forEach((ex: any, i: number) => {
+        userPrompt += `\n--- Exemplar ${i + 1} ---\n`;
+        if (ex.question_number) userPrompt += `Q${ex.question_number} `;
+        if (ex.marks) userPrompt += `[${ex.marks} marks] `;
+        if (ex.command_word || ex.official_command_word)
+          userPrompt += `(${ex.command_word || ex.official_command_word}) `;
+        userPrompt += `\n`;
+        if (ex.question) userPrompt += `Question: ${ex.question}\n`;
+        if (ex.model_answer) userPrompt += `Model answer: ${ex.model_answer}\n`;
+        if (Array.isArray(ex.marking_points) && ex.marking_points.length > 0) {
+          userPrompt += `Marking points:\n${ex.marking_points.map((m: string) => `  • ${m}`).join("\n")}\n`;
+        }
+      });
+      userPrompt += `\nGenerate a NEW question in this same style, of similar mark value, with an examiner-grade marking scheme.\n`;
+    }
+
+    // ── Call AI (with capped output tokens) ─────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
       temperature: 0.5,
       jsonMode: true,
+      maxTokens: questionCount === 1 ? 1500 : 3500,
     });
 
     const parsed = safeJsonParse<{
@@ -186,8 +263,14 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
         ? item.questionType
         : "structured",
       marks: Number(item.marks || 0),
-      options: item.options || undefined,
-      correctOption: item.correctOption || undefined,
+      options: Array.isArray(item.options)
+        ? item.options
+            .slice(0, 4)
+            .map((o: any) => String(o).replace(/^\s*[A-Da-d][\)\.\:]\s*/, "").trim())
+        : undefined,
+      correctOption: typeof item.correctOption === "string"
+        ? item.correctOption.trim().toUpperCase().charAt(0)
+        : undefined,
       modelAnswer: String(item.modelAnswer || "").trim(),
       stepByStepSolution: String(item.stepByStepSolution || "").trim(),
       markingScheme: normalizeArray(item.markingScheme),
@@ -199,6 +282,7 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
       conceptsTested: normalizeArray(item.conceptsTested),
       syllabusLinks: normalizeArray(item.syllabusLinks),
       explanation: String(item.explanation || "").trim(),
+      visual: normalizeVisual(item.visual),
     }));
 
     // Validate
@@ -234,3 +318,41 @@ For non-multiple-choice questions, omit "options" and "correctOption".`;
     return errorResponse(e);
   }
 });
+
+// ─── Visual normaliser ──────────────────────────────────────────────────────
+function normalizeVisual(v: any): any | undefined {
+  if (!v || typeof v !== "object") return undefined;
+  const allowed = ["function-graph", "data-chart", "svg-diagram", "ai-image"];
+  if (!allowed.includes(v.type)) return undefined;
+  const out: any = { type: v.type, required: !!v.required };
+  if (typeof v.caption === "string") out.caption = v.caption.trim();
+
+  if (v.type === "function-graph") {
+    if (Array.isArray(v.functions)) {
+      out.functions = v.functions
+        .filter((f: any) => f && typeof f.expression === "string")
+        .map((f: any) => ({
+          expression: f.expression,
+          color: typeof f.color === "string" ? f.color : undefined,
+          domain: Array.isArray(f.domain) && f.domain.length === 2 ? f.domain : undefined,
+        }));
+    }
+    if (Array.isArray(v.xRange) && v.xRange.length === 2) out.xRange = v.xRange;
+    if (Array.isArray(v.yRange) && v.yRange.length === 2) out.yRange = v.yRange;
+    if (typeof v.gridlines === "boolean") out.gridlines = v.gridlines;
+    if (Array.isArray(v.points)) out.points = v.points;
+  } else if (v.type === "data-chart") {
+    if (["bar", "line", "scatter"].includes(v.chartKind)) out.chartKind = v.chartKind;
+    if (Array.isArray(v.data)) out.data = v.data;
+    if (typeof v.xLabel === "string") out.xLabel = v.xLabel;
+    if (typeof v.yLabel === "string") out.yLabel = v.yLabel;
+  } else if (v.type === "svg-diagram") {
+    if (typeof v.svg === "string" && v.svg.includes("<svg")) out.svg = v.svg;
+    else return undefined;
+  } else if (v.type === "ai-image") {
+    if (typeof v.imagePrompt === "string" && v.imagePrompt.length > 10) {
+      out.imagePrompt = v.imagePrompt;
+    } else return undefined;
+  }
+  return out;
+}

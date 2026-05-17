@@ -2,15 +2,17 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   AlertTriangle, CheckCircle, ArrowRight, Eye, Lightbulb,
   ThumbsUp, ThumbsDown, MessageCircle, Loader2 as LoaderIcon,
-  BookOpen, Zap, Trophy, Target,
+  BookOpen, Zap, Trophy, Target, XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 import { MathMarkdown } from './MathMarkdown';
+import { QuestionVisual } from './QuestionVisual';
 import { useQuizGenerator } from '../hooks/useQuizGenerator';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { useConceptMastery } from '../hooks/useConceptMastery';
@@ -60,6 +62,8 @@ export function ExamQuestionPanel({
   const [userId, setUserId] = useState<string | null>(null);
   const [markResult, setMarkResult] = useState<MarkResult | null>(null);
   const [isAIMarking, setIsAIMarking] = useState(false);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
+  const [mcqResult, setMcqResult] = useState<{ correct: boolean; correctOption: string } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -79,7 +83,7 @@ export function ExamQuestionPanel({
     if (quizGenerator && !quizGenerator.question && !quizGenerator.isLoading) {
       quizGenerator.generateQuestion();
     }
-  }, []);
+  }, [quizGenerator?.isLoading, quizGenerator?.question]);
 
   useEffect(() => {
     if (quizGenerator?.question) {
@@ -277,7 +281,54 @@ export function ExamQuestionPanel({
     setPhase('feedback');
   };
 
-  // ── Loading / error / empty states ────────────────────────────────────────
+  // ── MCQ flow ──────────────────────────────────────────────────────────────
+  const isMCQ =
+    quizGenerator?.question?.questionType === 'multiple_choice' &&
+    Array.isArray(quizGenerator.question.options) &&
+    quizGenerator.question.options.length >= 2 &&
+    !!quizGenerator.question.correctOption;
+
+  const mcqOptions = isMCQ ? quizGenerator!.question!.options! : [];
+  const mcqCorrect = isMCQ
+    ? (quizGenerator!.question!.correctOption || '').toUpperCase().charAt(0)
+    : '';
+  const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+  const handleSubmitMCQ = async () => {
+    if (!selectedOption || !activeQuestion || !isMCQ) return;
+    const chosen = selectedOption.toUpperCase();
+    const correct = chosen === mcqCorrect;
+    const marks = activeQuestion.marks || 1;
+
+    setMcqResult({ correct, correctOption: mcqCorrect });
+    setSelfAssessment(correct ? 'correct' : 'incorrect');
+
+    const concepts = quizGenerator?.question?.conceptsTested || [];
+    if (userId) {
+      await recordAttempt(
+        activeQuestion.topic,
+        activeQuestion.text,
+        correct,
+        subject?.id,
+        marks,
+        {
+          conceptsTested: concepts,
+          userAnswer: chosen,
+          modelAnswer: mcqCorrect,
+          commandWord: 'multiple_choice',
+          marksAwarded: correct ? marks : 0,
+          marksPossible: marks,
+        }
+      );
+      if (subject?.id && concepts.length > 0) {
+        checkAndUpdateMastery(userId, subject.id, activeQuestion.topic, concepts);
+      }
+    }
+
+    addXp.mutate(correct ? 15 : 5);
+    updateStreak.mutate();
+    setPhase('feedback');
+  };
   if (quizGenerator?.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 animate-fade-in gap-3">
@@ -377,6 +428,9 @@ export function ExamQuestionPanel({
         <div className="text-foreground font-medium leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <MathMarkdown>{activeQuestion.text}</MathMarkdown>
         </div>
+        {quizGenerator?.question?.visual && (
+          <QuestionVisual visual={quizGenerator.question.visual} />
+        )}
         {quizGenerator?.question?.commandWord && (
           <p className="text-xs text-muted-foreground mt-2">
             Command word: <span className="font-medium text-accent">{quizGenerator.question.commandWord}</span>
@@ -387,8 +441,53 @@ export function ExamQuestionPanel({
         )}
       </div>
 
-      {/* Phase: Read */}
-      {phase === 'read' && (
+      {/* MCQ flow — bypass analyze/answer/marking phases entirely */}
+      {isMCQ && phase !== 'feedback' && (
+        <div className="space-y-3">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Choose one answer
+          </p>
+          <RadioGroup
+            value={selectedOption ?? ''}
+            onValueChange={(v) => setSelectedOption(v)}
+            className="gap-2"
+          >
+            {mcqOptions.map((opt, i) => {
+              const letter = letters[i];
+              const selected = selectedOption === letter;
+              return (
+                <label
+                  key={letter}
+                  htmlFor={`mcq-${letter}`}
+                  className={cn(
+                    'flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all',
+                    selected
+                      ? 'bg-accent/15 border-accent ring-2 ring-accent/30'
+                      : 'bg-card border-border hover:border-accent/50'
+                  )}
+                >
+                  <RadioGroupItem value={letter} id={`mcq-${letter}`} className="mt-1" />
+                  <span className="flex-1 text-sm text-foreground">
+                    <span className="font-bold mr-2">{letter}.</span>
+                    <MathMarkdown>{String(opt)}</MathMarkdown>
+                  </span>
+                </label>
+              );
+            })}
+          </RadioGroup>
+          <Button
+            onClick={handleSubmitMCQ}
+            disabled={!selectedOption}
+            className="w-full gradient-primary"
+          >
+            Submit Answer
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {/* Phase: Read (non-MCQ) */}
+      {!isMCQ && phase === 'read' && (
         <div className="p-4 rounded-xl bg-warning/10 border border-warning/30">
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
@@ -586,8 +685,81 @@ export function ExamQuestionPanel({
       {/* Phase: Feedback */}
       {phase === 'feedback' && (
         <div className="space-y-4">
-          {/* AI Mark Result */}
-          {markResult ? (
+          {/* MCQ result card with option highlighting */}
+          {isMCQ && mcqResult && (
+            <>
+              <div className={cn(
+                'p-4 rounded-xl border text-center',
+                mcqResult.correct
+                  ? 'bg-success/10 border-success/30'
+                  : 'bg-destructive/10 border-destructive/30'
+              )}>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  {mcqResult.correct ? (
+                    <CheckCircle className="h-5 w-5 text-success" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-destructive" />
+                  )}
+                  <p className="text-sm font-semibold">
+                    {mcqResult.correct ? 'Correct!' : 'Incorrect'}
+                  </p>
+                </div>
+                <p className={cn(
+                  'text-3xl font-bold',
+                  mcqResult.correct ? 'text-success' : 'text-destructive',
+                )}>
+                  {mcqResult.correct ? activeQuestion.marks : 0}/{activeQuestion.marks}
+                </p>
+                <p className="text-xs text-accent mt-2">
+                  +{mcqResult.correct ? 15 : 5} XP earned
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                {mcqOptions.map((opt, i) => {
+                  const letter = letters[i];
+                  const isCorrect = letter === mcqResult.correctOption;
+                  const isChosen = letter === selectedOption;
+                  return (
+                    <div
+                      key={letter}
+                      className={cn(
+                        'flex items-start gap-3 p-3 rounded-xl border text-sm',
+                        isCorrect && 'bg-success/10 border-success/40',
+                        !isCorrect && isChosen && 'bg-destructive/10 border-destructive/40',
+                        !isCorrect && !isChosen && 'bg-muted/40 border-border opacity-70',
+                      )}
+                    >
+                      <span className={cn(
+                        'font-bold w-5',
+                        isCorrect ? 'text-success' : isChosen ? 'text-destructive' : 'text-muted-foreground',
+                      )}>{letter}.</span>
+                      <span className="flex-1 text-foreground">
+                        <MathMarkdown>{String(opt)}</MathMarkdown>
+                      </span>
+                      {isCorrect && <CheckCircle className="h-4 w-4 text-success shrink-0 mt-0.5" />}
+                      {!isCorrect && isChosen && <XCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {quizGenerator?.question?.explanation && (
+                <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
+                  <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-accent" />
+                    Explanation
+                  </h4>
+                  <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+                    <MathMarkdown>{quizGenerator.question.explanation}</MathMarkdown>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* AI Mark Result (non-MCQ) */}
+          {!isMCQ && markResult && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {markResult.percentage >= 70 ? 'Excellent!' : markResult.percentage >= 50 ? 'Good effort!' : 'Keep practicing!'}
@@ -603,7 +775,8 @@ export function ExamQuestionPanel({
                 +{Math.max(5, Math.round(markResult.percentage * 0.3))} XP earned
               </p>
             </div>
-          ) : (
+          )}
+          {!isMCQ && !markResult && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30 text-center">
               <p className="text-sm text-muted-foreground mb-1">
                 {selfAssessment === 'correct' ? 'Great work!' : 'Keep building!'}
@@ -791,6 +964,8 @@ export function ExamQuestionPanel({
                 setAiExplanation('');
                 setShowModelAnswer(false);
                 setMarkResult(null);
+                setSelectedOption(null);
+                setMcqResult(null);
                 quizGenerator.clearQuestion();
                 quizGenerator.generateQuestion();
               }}

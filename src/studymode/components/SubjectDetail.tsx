@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, Brain, Clock, BarChart3, Zap } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
 import { TaskList } from './TaskList';
@@ -12,8 +12,10 @@ import { InsightsDashboardPanel } from './InsightsDashboardPanel';
 import { MasteryTrackerPanel } from './MasteryTrackerPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
+import { Leaderboard } from './Leaderboard';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { cn } from '@/lib/utils';
 
 interface SubjectDetailProps {
@@ -21,17 +23,28 @@ interface SubjectDetailProps {
   tasks: DailyTask[];
   onBack: () => void;
   onOpenChat?: (subject: string, topic: string) => void;
+  onCompleteTask?: (taskId: string) => void;
+  onAddBonusTask?: () => void;
+  curriculum?: string | null;
 }
 
-export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDetailProps) {
+export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTask, onAddBonusTask, curriculum }: SubjectDetailProps) {
   const [selectedTask, setSelectedTask] = useState<DailyTask | null>(null);
   const [currentTasks, setCurrentTasks] = useState(tasks);
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
   const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery'>('tasks');
   const [recallTopic, setRecallTopic] = useState<string | null>(null);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
+  const { awardXP } = useSubjectXP();
+
+  // Keep local task state in sync with parent (also force-unlock all when set is complete)
+  useEffect(() => {
+    const allDone = tasks.length > 0 && tasks.every(t => t.isCompleted);
+    setCurrentTasks(allDone ? tasks.map(t => ({ ...t, isLocked: false })) : tasks);
+  }, [tasks]);
 
   const getMasteryColor = (mastery: number) => {
     if (mastery >= 95) return 'text-success';
@@ -40,27 +53,65 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
     return 'text-destructive';
   };
 
+  const [xpPopup, setXpPopup] = useState<{ amount: number; key: number } | null>(null);
+  const [completionCard, setCompletionCard] = useState<{ task: DailyTask; nextTask: DailyTask | null } | null>(null);
+
   const handleTaskComplete = () => {
     if (!selectedTask) return;
-    
+
+    // Replay path: task already done today — don't re-award XP, don't show completion card,
+    // and don't kick the learner out of the panel. They can keep practising freely.
+    if (selectedTask.isCompleted) {
+      onCompleteTask?.(selectedTask.id); // hook short-circuits the DB write
+      return;
+    }
+
+    // Persist to DB
+    onCompleteTask?.(selectedTask.id);
+
+    let nextUnlocked: DailyTask | null = null;
+
     setCurrentTasks(prev => {
-      const updatedTasks = prev.map(t => 
+      const updatedTasks = prev.map(t =>
         t.id === selectedTask.id ? { ...t, isCompleted: true } : t
       );
-      
+
       const currentIndex = updatedTasks.findIndex(t => t.id === selectedTask.id);
       if (currentIndex < updatedTasks.length - 1) {
         updatedTasks[currentIndex + 1].isLocked = false;
+        nextUnlocked = updatedTasks[currentIndex + 1];
       }
-      
+
+      // If this completion finishes the day's set, unlock everything for free replay
+      if (updatedTasks.every(t => t.isCompleted)) {
+        return updatedTasks.map(t => ({ ...t, isLocked: false }));
+      }
+
       return updatedTasks;
     });
-    
-    // Award XP and update streak
-    addXp.mutate(10);
+
+    // Award XP and update streak (first completion only)
+    const xpAmount = 10;
+    addXp.mutate(xpAmount);
     updateStreak.mutate();
-    
+    awardXP.mutate({ subject: subject.name, curriculum, amount: xpAmount });
+
+    // Show XP popup
+    setXpPopup({ amount: xpAmount, key: Date.now() });
+    setTimeout(() => setXpPopup(null), 1500);
+
+    // Show completion card with auto-advance
+    setCompletionCard({ task: selectedTask, nextTask: nextUnlocked });
     setSelectedTask(null);
+  };
+
+  const handleContinueToNext = (task: DailyTask) => {
+    setCompletionCard(null);
+    setSelectedTask(task);
+  };
+
+  const handleDismissCompletion = () => {
+    setCompletionCard(null);
   };
 
   const handleAdvanceTopic = () => {
@@ -131,6 +182,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
     return (
       <PrerequisiteRemediationFlow
         subject={subject.name}
+        subjectId={subject.id}
         currentTopic={subject.currentTopic.name}
         onComplete={() => setShowPrerequisiteCheck(false)}
         onBack={() => setShowPrerequisiteCheck(false)}
@@ -169,6 +221,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
       <TaskContentPanel
         task={selectedTask}
         subject={subject}
+        curriculum={curriculum}
         onComplete={handleTaskComplete}
         onBack={() => setSelectedTask(null)}
       />
@@ -176,25 +229,92 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
   }
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in relative">
+      {/* XP Popup Animation */}
+      {xpPopup && (
+        <div
+          key={xpPopup.key}
+          className="fixed top-20 left-1/2 -translate-x-1/2 z-[60] pointer-events-none animate-fade-in"
+          style={{ animation: 'xp-float 1.5s ease-out forwards' }}
+        >
+          <div className="bg-accent text-accent-foreground px-4 py-2 rounded-full font-bold text-lg shadow-lg flex items-center gap-1">
+            <Zap className="h-5 w-5" />
+            +{xpPopup.amount} XP
+          </div>
+        </div>
+      )}
+
+      {/* Task Completion Card with Auto-Advance */}
+      {completionCard && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm mx-4 p-6 rounded-2xl bg-card border border-success/30 shadow-lg text-center animate-scale-in">
+            <div className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success/20 text-3xl mb-3">
+              ✅
+            </div>
+            <h3 className="text-lg font-bold text-foreground mb-1">Task Complete!</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Great work on "{completionCard.task.title}"
+            </p>
+            {completionCard.nextTask ? (
+              <div className="space-y-2">
+                <Button
+                  onClick={() => handleContinueToNext(completionCard.nextTask!)}
+                  className="w-full gradient-primary gap-2"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  Continue to Next Task
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleDismissCompletion}
+                  className="w-full text-muted-foreground"
+                >
+                  Back to Task List
+                </Button>
+              </div>
+            ) : (
+              <Button onClick={handleDismissCompletion} className="w-full gradient-primary">
+                🎉 All Tasks Done!
+              </Button>
+            )}
+          </div>
+        </div>
+      )}
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
           <div className={cn(
-            "flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-md",
+            "flex h-12 w-12 items-center justify-center rounded-xl text-2xl shadow-md shrink-0",
             `bg-gradient-to-br ${subject.color}`
           )}>
             {subject.icon}
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground">{subject.name}</h2>
+          <div className="min-w-0">
+            <h2 className="text-xl font-bold text-foreground truncate">{subject.name}</h2>
             <p className="text-sm text-muted-foreground">Today's Study Pack</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setShowLeaderboard(true)}
+          className="shrink-0 gap-1.5 border-accent/40 hover:bg-accent/10"
+        >
+          <Trophy className="h-4 w-4 text-accent" />
+          <span className="hidden sm:inline">Leaderboard</span>
+        </Button>
       </div>
+
+      <Leaderboard
+        open={showLeaderboard}
+        onOpenChange={setShowLeaderboard}
+        curriculum={curriculum}
+        subject={subject.name}
+      />
 
       {/* Current Topic Card */}
       <div className="p-5 rounded-2xl bg-card border border-border">
@@ -350,7 +470,11 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat }: SubjectDet
              AI-powered content
            </span>
          </div>
-        <TaskList tasks={currentTasks} onTaskClick={setSelectedTask} />
+        <TaskList 
+          tasks={currentTasks} 
+          onTaskClick={setSelectedTask}
+          onAddBonusTask={onAddBonusTask}
+        />
       </div>
     </div>
   );

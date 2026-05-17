@@ -21,12 +21,17 @@ import {
   Shield,
   RotateCcw,
   Bot,
+  FileCheck,
+  BookOpen,
 } from "lucide-react";
 
 const items = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "SAIL", url: "/admin/sail", icon: Bot },
   { title: "Users", url: "/admin/users", icon: Users },
+  { title: "Verifications", url: "/admin/verifications", icon: FileCheck },
+  { title: "Curriculum Templates", url: "/admin/curriculum-templates", icon: BookOpen },
+  { title: "Library", url: "/admin/library", icon: BookOpen },
   { title: "Bookings", url: "/admin/bookings", icon: CalendarCheck2 },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
   { title: "Support", url: "/admin/support", icon: LifeBuoy },

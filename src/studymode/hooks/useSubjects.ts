@@ -90,7 +90,7 @@ export function useSubjects() {
             name: t.name,
             subtopics: t.subtopics || [],
             mastery: mastery?.mastery_percentage ?? 0,
-            isLocked: mastery?.is_locked ?? index > 0,
+            isLocked: mastery?.is_locked ?? false,
             prerequisites: t.prerequisites || [],
             examWeight: t.examWeight ?? 0,
           };

@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
 import { formatDistanceToNow } from "date-fns";
-import { useDevMode } from "@/contexts/DevModeContext";
+
 
 interface LiveBookingCardProps {
   booking: BookingRequest;
@@ -28,17 +28,15 @@ export const LiveBookingCard = ({
   onPayNow,
   hasPendingPayment = false,
 }: LiveBookingCardProps) => {
-  const { isDevMode, config } = useDevMode();
-  const devBypass = isDevMode && (config.bypassPayments || config.forcePaidBookings);
-
   const isIncoming = booking.status === 'requested' && userType === 'tutor';
   const isAccepted = booking.status === 'confirmed';
   const scheduledTime = new Date(booking.scheduled_at);
-  const isNow = Math.abs(scheduledTime.getTime() - new Date().getTime()) < 15 * 60 * 1000;
-  // In dev mode with bypass, never show payment required
-  const needsPayment = !devBypass && userType === 'learner' && isAccepted && hasPendingPayment;
-  // In dev mode, always allow joining confirmed sessions
-  const canJoin = isAccepted && (devBypass || (isNow && !needsPayment));
+  const sessionEnd = new Date(scheduledTime.getTime() + booking.duration_minutes * 60 * 1000);
+  const now = new Date();
+  // Allow joining from 15 min before start until session end
+  const isNow = now >= new Date(scheduledTime.getTime() - 15 * 60 * 1000) && now <= sessionEnd;
+  const needsPayment = userType === 'learner' && isAccepted && hasPendingPayment;
+  const canJoin = isAccepted && isNow && !needsPayment;
 
   const getStatusBadge = () => {
     const statusConfig = {
@@ -110,7 +108,7 @@ export const LiveBookingCard = ({
           {canJoin && (
             <Badge variant="default" className="bg-green-500">
               <Video className="h-3 w-3 mr-1" />
-              {devBypass ? 'Dev — Ready' : 'Ready to Join'}
+              Ready to Join
             </Badge>
           )}
           {needsPayment && (
@@ -160,7 +158,7 @@ export const LiveBookingCard = ({
               className="flex-1 bg-green-600 hover:bg-green-700"
             >
               <Video className="h-4 w-4 mr-1" />
-              {devBypass ? '▶ Join (Dev)' : 'Join Session'}
+              Join Session
             </Button>
           )}
 

@@ -34,6 +34,8 @@ export interface TaskContentParams {
   difficulty?: 'easy' | 'medium' | 'hard';
   /** AI intelligence context for enrichment */
   aiContext?: AIContextPayload | null;
+  /** Previously studied subtopics to avoid repetition in concept-learning */
+  previouslyStudiedSubtopics?: string[];
 }
 
 interface UseTaskContentReturn {

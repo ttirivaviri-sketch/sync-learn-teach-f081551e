@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { logger } from '@/utils/logger';
 
 interface PaymentStatus {
@@ -37,12 +38,21 @@ export const useBookingPayments = (bookingIds: string[]) => {
           statusMap[id] = { bookingId: id, status: 'none' };
         });
 
+        // Priority: succeeded > pending > failed > none
+        const priorityOrder: Record<string, number> = { succeeded: 4, pending: 3, failed: 2, refunded: 1 };
+
         payments?.forEach(payment => {
-          statusMap[payment.booking_id] = {
-            bookingId: payment.booking_id,
-            status: payment.status as PaymentStatus['status'],
-            paymentId: payment.id,
-          };
+          const existing = statusMap[payment.booking_id];
+          const existingPriority = priorityOrder[existing?.status || 'none'] || 0;
+          const newPriority = priorityOrder[payment.status] || 0;
+
+          if (newPriority > existingPriority) {
+            statusMap[payment.booking_id] = {
+              bookingId: payment.booking_id,
+              status: payment.status as PaymentStatus['status'],
+              paymentId: payment.id,
+            };
+          }
         });
 
         setPaymentStatuses(statusMap);
@@ -72,6 +82,13 @@ export const useBookingPayments = (bookingIds: string[]) => {
                 paymentId: newPayment.id,
               },
             }));
+
+            // Fire instant toast on payment status change
+            if (newPayment.status === 'succeeded') {
+              toast.success('Payment confirmed!', { description: 'Your session is now secured.' });
+            } else if (newPayment.status === 'failed') {
+              toast.error('Payment failed', { description: 'Please try again or use a different card.' });
+            }
           }
         }
       )
@@ -91,10 +108,46 @@ export const useBookingPayments = (bookingIds: string[]) => {
     return paymentStatuses[bookingId]?.status === 'succeeded';
   };
 
+  /**
+   * Charge a booking using a saved payment method.
+   * Routes to paystack-charge-token or payfast-charge-token based on the
+   * saved method's provider.
+   */
+  const chargeWithSavedMethod = async (
+    bookingId: string,
+    paymentMethodId: string,
+  ): Promise<{ success: boolean; message?: string }> => {
+    try {
+      const { data: method, error } = await supabase
+        .from('saved_payment_methods')
+        .select('provider')
+        .eq('id', paymentMethodId)
+        .single();
+      if (error || !method) throw new Error('Card not found');
+
+      const fnName = method.provider === 'paystack'
+        ? 'paystack-charge-token'
+        : 'payfast-charge-token';
+
+      const res = await supabase.functions.invoke(fnName, {
+        body: { bookingId, paymentMethodId },
+      });
+      if (res.error) throw new Error(res.error.message);
+      return { success: !!res.data?.success, message: res.data?.message };
+    } catch (err) {
+      logger.error('chargeWithSavedMethod failed:', err);
+      return {
+        success: false,
+        message: err instanceof Error ? err.message : 'Charge failed',
+      };
+    }
+  };
+
   return {
     paymentStatuses,
     loading,
     needsPayment,
     isPaid,
+    chargeWithSavedMethod,
   };
 };

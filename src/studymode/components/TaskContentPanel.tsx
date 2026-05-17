@@ -8,14 +8,21 @@ import { useTaskContent } from '../hooks/useTaskContent';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
 import { useTopicPerformance } from '../hooks/useTopicPerformance';
 import { useUserProgress } from '../hooks/useUserProgress';
+import { useSubjectXP } from '../hooks/useSubjectXP';
+import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
 
 interface TaskContentPanelProps {
   task: DailyTask;
   subject: Subject;
+  curriculum?: string | null;
   onComplete: () => void;
   onBack: () => void;
 }
+
+// Task types that should use the new syllabus-grounded structured runner
+const STRUCTURED_TASK_TYPES: DailyTask['type'][] = ['concept-learning'];
 
 const taskLabels: Record<string, string> = {
   'micro-revision': 'Micro Revision',
@@ -40,9 +47,19 @@ const taskIcons: Record<string, string> = {
 // Active recall tasks need an attempt-first answering panel
 const ATTEMPT_FIRST_TYPES = ['active-recall'];
 
-export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskContentPanelProps) {
+export function TaskContentPanel(props: TaskContentPanelProps) {
+  // Syllabus-grounded structured runner for applicable task types
+  if (STRUCTURED_TASK_TYPES.includes(props.task.type)) {
+    return <StructuredDailyTaskRunner {...props} />;
+  }
+  return <LegacyTaskContentPanel {...props} />;
+}
+
+function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack }: TaskContentPanelProps) {
   const { content, isLoading, error, generateContent, reset } = useTaskContent();
   const { addXp, updateStreak } = useUserProgress();
+  const { awardXP } = useSubjectXP();
+  const isReplay = !!task.isCompleted;
 
   // Answer-first state for active-recall
   const [userAnswer, setUserAnswer] = useState('');
@@ -70,28 +87,60 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
     setRevealedEarly(false);
     setXpChange(0);
 
-    let performanceContext = '';
-    if (performance && performance.totalAttempts > 0) {
-      performanceContext = `Student accuracy on this topic: ${Math.round(performance.accuracy * 100)}%. `;
-      if (performance.masteryStatus === 'mastered') {
-        performanceContext += 'Student has mastered this topic — focus on exam application and edge cases.';
-      } else if (performance.weakConcepts.length > 0) {
-        performanceContext += `Student struggles with: ${performance.weakConcepts.join(', ')}. Prioritise these areas.`;
+    const loadAndGenerate = async () => {
+      let performanceContext = '';
+      if (performance && performance.totalAttempts > 0) {
+        performanceContext = `Student accuracy on this topic: ${Math.round(performance.accuracy * 100)}%. `;
+        if (performance.masteryStatus === 'mastered') {
+          performanceContext += 'Student has mastered this topic — focus on exam application and edge cases.';
+        } else if (performance.weakConcepts.length > 0) {
+          performanceContext += `Student struggles with: ${performance.weakConcepts.join(', ')}. Prioritise these areas.`;
+        }
       }
-    }
 
-    generateContent({
-      taskType: task.type,
-      subject: subject.name,
-      subjectId: subject.id,
-      topic: subject.currentTopic.name,
-      subtopics: subject.currentTopic.subtopics,
-      examWeight: examWeightFromPapers || subject.currentTopic.examWeight,
-      curriculumContext: curriculumContext || undefined,
-      performanceContext: performanceContext || undefined,
-      masteryStatus: performance?.masteryStatus,
-      difficulty: performance?.recommendedDifficulty,
-    });
+      // Query recently studied subtopics for concept-learning diversification
+      let previouslyStudiedSubtopics: string[] = [];
+      if (task.type === 'concept-learning') {
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: recentActivity } = await supabase
+              .from('study_activity')
+              .select('metadata')
+              .eq('user_id', user.id)
+              .eq('subject', subject.name)
+              .eq('topic', subject.currentTopic.name)
+              .eq('activity_type', 'concept-learning')
+              .order('created_at', { ascending: false })
+              .limit(20);
+
+            if (recentActivity) {
+              previouslyStudiedSubtopics = recentActivity
+                .map(a => (a.metadata as any)?.subtopicFocus)
+                .filter(Boolean);
+            }
+          }
+        } catch {
+          // silent
+        }
+      }
+
+      generateContent({
+        taskType: task.type,
+        subject: subject.name,
+        subjectId: subject.id,
+        topic: subject.currentTopic.name,
+        subtopics: subject.currentTopic.subtopics,
+        examWeight: examWeightFromPapers || subject.currentTopic.examWeight,
+        curriculumContext: curriculumContext || undefined,
+        performanceContext: performanceContext || undefined,
+        masteryStatus: performance?.masteryStatus,
+        difficulty: performance?.recommendedDifficulty,
+        previouslyStudiedSubtopics: previouslyStudiedSubtopics.length > 0 ? previouslyStudiedSubtopics : undefined,
+      });
+    };
+
+    loadAndGenerate();
   }, [task.id, contextLoaded]);
 
   const hasCurriculumData = !!curriculumContext;
@@ -101,18 +150,22 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
   const handleSubmitAnswer = () => {
     setHasAttempted(true);
     setRevealedEarly(false);
-    // Award XP for attempting
-    addXp.mutate(15);
-    updateStreak.mutate();
-    setXpChange(15);
+    const xp = isReplay ? 4 : 15;
+    addXp.mutate(xp);
+    awardXP.mutate({ subject: subject.name, curriculum, amount: xp });
+    if (!isReplay) updateStreak.mutate();
+    setXpChange(xp);
   };
 
   const handleRevealEarly = () => {
     setHasAttempted(true);
     setRevealedEarly(true);
-    // Negative XP for revealing without attempting
-    addXp.mutate(-5);
-    setXpChange(-5);
+    if (!isReplay) {
+      addXp.mutate(-5);
+      setXpChange(-5);
+    } else {
+      setXpChange(0);
+    }
   };
 
   // For attempt-first types, content is hidden until attempted
@@ -209,15 +262,19 @@ export function TaskContentPanel({ task, subject, onComplete, onBack }: TaskCont
               className="flex-1 gradient-primary"
             >
               <Send className="mr-2 h-4 w-4" />
-              Submit & Reveal Notes (+15 XP)
+              Submit & Reveal Notes (+{isReplay ? 4 : 15} XP)
             </Button>
             <Button
               variant="outline"
               onClick={handleRevealEarly}
-              className="text-destructive border-destructive/30 hover:bg-destructive/10"
+              className={cn(
+                isReplay
+                  ? 'border-border'
+                  : 'text-destructive border-destructive/30 hover:bg-destructive/10'
+              )}
             >
               <MinusCircle className="mr-1 h-4 w-4" />
-              Reveal (−5 XP)
+              {isReplay ? 'Reveal' : 'Reveal (−5 XP)'}
             </Button>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { supabase } from "@/integrations/supabase/client";
 
 // Sub-components
 import { PreCallScreen } from "@/components/video-meeting/PreCallScreen";
@@ -33,22 +34,16 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const jitsiContainer = useRef<HTMLDivElement>(null);
   const jitsiApi = useRef<any>(null);
 
-  // Screen state
   const [screen, setScreen] = useState<Screen>("precall");
-
-  // Pre-call device checks
   const [camOk, setCamOk] = useState<boolean | null>(null);
   const [micOk, setMicOk] = useState<boolean | null>(null);
   const [netOk, setNetOk] = useState<boolean | null>(null);
   const [checksDone, setChecksDone] = useState(false);
-
-  // Session timing
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [sessionDuration, setSessionDuration] = useState(0);
   const scheduledDuration = booking?.duration_minutes || 60;
-
-  // Meeting state
   const [isLoading, setIsLoading] = useState(true);
+  const [hasJoinedSession, setHasJoinedSession] = useState(false);
   const [permissionError, setPermissionError] = useState<string | null>(null);
   const [participantCount, setParticipantCount] = useState(1);
   const [connectionQuality, setConnectionQuality] = useState<"good" | "poor" | "unknown">("unknown");
@@ -60,15 +55,11 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const [showNotes, setShowNotes] = useState(false);
   const [notes, setNotes] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
-
-  // Summary
   const [rating, setRating] = useState(0);
   const [summaryNotes, setSummaryNotes] = useState("");
-
-  // Auto-hide controls timer
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // ─── Timer ───────────────────────────────────────────────
+  // Timer
   useEffect(() => {
     if (screen !== "meeting" || !sessionStartTime) return;
     const timer = setInterval(() => {
@@ -77,7 +68,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     return () => clearInterval(timer);
   }, [screen, sessionStartTime]);
 
-  // ─── Pre-call device checks ───────────────────────────────
+  // Pre-call device checks
   useEffect(() => {
     if (screen !== "precall") return;
     runChecks();
@@ -100,9 +91,19 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     setTimeout(() => setChecksDone(true), 1400);
   };
 
-  // ─── Jitsi init ───────────────────────────────────────────
+  // JaaS auth state
+  const jaasAppId = useRef<string | null>(null);
+  const jaasJwt = useRef<string | null>(null);
+
+  // Jitsi init
   const initSession = async () => {
     setScreen("connecting");
+    setIsLoading(true);
+    setPermissionError(null);
+    setHasJoinedSession(false);
+    setParticipantCount(1);
+    setSessionStartTime(null);
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       stream.getTracks().forEach((t) => t.stop());
@@ -116,17 +117,49 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       return;
     }
 
+    // Fetch JaaS JWT
+    const room = `room-${booking?.id || "demo"}`;
+    const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
+    let appId = "", jwt = "";
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { data, error } = await supabase.functions.invoke("generate-jitsi-jwt", {
+        body: {
+          room,
+          userName: userData?.user?.user_metadata?.full_name || displayName,
+          userEmail: userData?.user?.email || "",
+          moderator: sessionType === "tutor",
+          userId: userData?.user?.id,
+        },
+      });
+      if (error || !data?.token || !data?.appId) {
+        throw new Error(error?.message || data?.error || "JWT generation failed");
+      }
+      appId = data.appId;
+      jwt = data.token;
+      jaasAppId.current = appId;
+      jaasJwt.current = jwt;
+    } catch (e: any) {
+      console.error("[VideoMeeting] JaaS JWT error:", e);
+      setIsLoading(false);
+      setScreen("precall");
+      toast({ title: "Unable to start meeting", description: e?.message || "Could not authenticate with the video service.", variant: "destructive" });
+      return;
+    }
+
+    const scriptSrc = `https://8x8.vc/${appId}/external_api.js`;
+
     if (window.JitsiMeetExternalAPI) {
       initJitsi();
     } else {
       const script = document.createElement("script");
-      script.src = "https://meet.jit.si/external_api.js";
+      script.src = scriptSrc;
       script.async = true;
       script.onload = () => initJitsi();
       script.onerror = () => {
         setIsLoading(false);
-        setScreen("meeting");
-        toast({ title: "Connection Failed", description: "Unable to load video service.", variant: "destructive" });
+        setScreen("precall");
+        toast({ title: "Connection Failed", description: "Unable to load video service. Please check your connection and try again.", variant: "destructive" });
       };
       document.body.appendChild(script);
     }
@@ -134,12 +167,17 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
   const initJitsi = () => {
     if (!jitsiContainer.current || jitsiApi.current) return;
-    const roomName = booking?.room_name || `StudySync-${booking?.id || "demo-session"}`;
+    const appId = jaasAppId.current!;
+    const jwt = jaasJwt.current!;
+    const room = `room-${booking?.id || "demo"}`;
+    const fullRoomName = `${appId}/${room}`;
+    console.log("[VideoMeeting] Joining JaaS room:", fullRoomName);
     const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
 
     try {
-      jitsiApi.current = new window.JitsiMeetExternalAPI("meet.jit.si", {
-        roomName,
+      jitsiApi.current = new window.JitsiMeetExternalAPI("8x8.vc", {
+        roomName: fullRoomName,
+        jwt,
         width: "100%",
         height: "100%",
         parentNode: jitsiContainer.current,
@@ -148,6 +186,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           startWithVideoMuted: false,
           enableWelcomePage: false,
           prejoinPageEnabled: false,
+          prejoinConfig: { enabled: false },
           disableDeepLinking: true,
           enableNoisyMicDetection: true,
           enableNoAudioDetection: true,
@@ -160,15 +199,21 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
           SHOW_BRAND_WATERMARK: false,
-          TOOLBAR_BUTTONS: [],
+          TOOLBAR_BUTTONS: ['microphone', 'camera', 'hangup'],
           DISABLE_DOMINANT_SPEAKER_INDICATOR: false,
         },
         userInfo: { displayName },
       });
 
+      setScreen("meeting");
+      setIsLoading(false);
+
       jitsiApi.current.addEventListener("videoConferenceJoined", () => {
-        setIsLoading(false); setScreen("meeting"); setSessionStartTime(new Date());
-        toast({ title: "Connected ✓", description: "You've joined the session." });
+        setHasJoinedSession(true);
+        setIsLoading(false);
+        setScreen("meeting");
+        setSessionStartTime(new Date());
+        toast({ title: "Connected ✓", description: `Joined session` });
       });
       jitsiApi.current.addEventListener("participantJoined", (p: any) => {
         setParticipantCount((c) => c + 1);
@@ -188,10 +233,6 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
       jitsiApi.current.addEventListener("errorOccurred", (e: any) => {
         toast({ title: "Connection Error", description: e.message || "Video error occurred.", variant: "destructive" });
       });
-
-      setTimeout(() => {
-        if (isLoading) { setIsLoading(false); setScreen("meeting"); }
-      }, 30000);
     } catch {
       setIsLoading(false);
       setScreen("meeting");
@@ -199,9 +240,10 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     }
   };
 
-  // ─── Controls ─────────────────────────────────────────────
+  // Controls
   const handleEndCall = () => {
     if (jitsiApi.current) { jitsiApi.current.dispose(); jitsiApi.current = null; }
+    setHasJoinedSession(false);
     setSummaryNotes(notes);
     setScreen("summary");
   };
@@ -228,152 +270,170 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     return () => { if (hideTimer.current) clearTimeout(hideTimer.current); };
   }, [screen]);
 
-  // ─── Screen routing ───────────────────────────────────────
-  if (screen === "precall") {
-    return (
-      <PreCallScreen
-        subject={subject}
-        partnerName={partnerName}
-        scheduledAt={booking?.scheduled_at}
-        scheduledDuration={scheduledDuration}
-        camOk={camOk}
-        micOk={micOk}
-        netOk={netOk}
-        checksDone={checksDone}
-        onJoin={initSession}
-        onRecheck={runChecks}
-        onCancel={onEndCall}
-      />
-    );
-  }
+  // Persistent Jitsi container class — visible during connecting & meeting, hidden otherwise
+  const jitsiContainerClass =
+    screen === "meeting" || screen === "connecting"
+      ? "fixed inset-0 z-0 w-full h-full"
+      : "fixed top-0 left-0 w-0 h-0 overflow-hidden";
 
-  if (screen === "connecting") {
-    return <ConnectingScreen ref={jitsiContainer} partnerName={partnerName} />;
-  }
-
-  if (screen === "summary") {
-    return (
-      <MeetingSummaryScreen
-        subject={subject}
-        partnerName={partnerName}
-        sessionDuration={sessionDuration}
-        rating={rating}
-        summaryNotes={summaryNotes}
-        onRate={setRating}
-        onDone={onEndCall}
-      />
-    );
-  }
-
-  // ─── MEETING SCREEN ───────────────────────────────────────
   return (
-    <div
-      className="fixed inset-0 flex flex-col bg-[#0d0d1a] overflow-hidden"
-      onPointerMove={resetHideTimer}
-      onPointerDown={resetHideTimer}
-    >
-      <MeetingTopBar
-        subject={subject}
-        partnerName={partnerName}
-        connectionQuality={connectionQuality}
-        participantCount={participantCount}
-        sessionDuration={sessionDuration}
-        scheduledDuration={scheduledDuration}
-        hidden={controlsHidden}
-      />
-
-      {/* Permission Error */}
-      {permissionError && (
-        <div className="absolute top-16 left-4 right-4 z-40">
-          <Alert variant="destructive" className="border-red-500/50 bg-red-950/80 text-red-200">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
-              <span>{permissionError}</span>
-              <Button size="sm" variant="outline" className="border-red-400/50 text-red-200 hover:bg-red-900/50" onClick={() => window.location.reload()}>
-                Retry
-              </Button>
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
-
-      {/* Waiting banner */}
-      {!isLoading && participantCount === 1 && !permissionError && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-xs px-4">
-          <div className="flex items-center gap-2 bg-black/50 backdrop-blur border border-white/10 rounded-2xl px-4 py-3 text-white/80">
-            <div className="relative flex h-2 w-2 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
-            </div>
-            <p className="text-sm">Waiting for {sessionType === "tutor" ? "learner" : "your tutor"} to join…</p>
-          </div>
-        </div>
-      )}
-
-      {/* Loading overlay */}
-      {isLoading && !permissionError && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0d1a] z-10 gap-4">
-          <div className="relative h-16 w-16">
-            <div className="absolute inset-0 rounded-full border-4 border-white/10" />
-            <div className="absolute inset-0 rounded-full border-4 border-t-blue-400 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
-            <Video className="absolute inset-0 m-auto h-6 w-6 text-white/60" />
-          </div>
-          <div className="text-center">
-            <p className="text-white font-medium">Joining session…</p>
-            <p className="text-white/40 text-sm mt-1">Allow camera & mic access when prompted</p>
-          </div>
-        </div>
-      )}
-
-      {/* Jitsi container */}
-      <div className="flex-1 relative w-full overflow-hidden">
+    <>
+      {/* Persistent Jitsi container — always in DOM, never unmounted */}
+      <div className={jitsiContainerClass}>
         <div ref={jitsiContainer} className="w-full h-full" />
       </div>
 
-      {/* Session Notes panel */}
-      {showNotes && (
-        <div className="absolute right-0 top-0 bottom-20 w-72 bg-[#0d0d1a]/95 border-l border-white/10 z-25 flex flex-col">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-            <div className="flex items-center gap-2 text-white">
-              <PenLine className="h-4 w-4" />
-              <span className="text-sm font-medium">Session Notes</span>
-            </div>
-            <button onClick={() => setShowNotes(false)} className="text-white/40 hover:text-white">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          <Textarea
-            className="flex-1 m-3 bg-white/5 border-white/10 text-white/90 text-sm placeholder:text-white/30 resize-none rounded-xl focus-visible:ring-blue-500/50"
-            placeholder={`Jot down key points from the ${subject} session…`}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-          />
-          <p className="text-white/30 text-xs text-center pb-3">Notes are saved locally and shown after the call</p>
+      {/* Screen overlays */}
+      {screen === "precall" && (
+        <PreCallScreen
+          subject={subject}
+          partnerName={partnerName}
+          scheduledAt={booking?.scheduled_at}
+          scheduledDuration={scheduledDuration}
+          camOk={camOk}
+          micOk={micOk}
+          netOk={netOk}
+          checksDone={checksDone}
+          onJoin={initSession}
+          onRecheck={runChecks}
+          onCancel={onEndCall}
+        />
+      )}
+
+      {screen === "connecting" && (
+        <div className="fixed inset-0 z-10">
+          <ConnectingScreen partnerName={partnerName} />
         </div>
       )}
 
-      <MeetingControlBar
-        isAudioMuted={isAudioMuted}
-        isVideoMuted={isVideoMuted}
-        isScreenSharing={isScreenSharing}
-        isHandRaised={isHandRaised}
-        isFullscreen={isFullscreen}
-        showNotes={showNotes}
-        hidden={controlsHidden}
-        onToggleAudio={toggleAudio}
-        onToggleVideo={toggleVideo}
-        onToggleScreenShare={toggleScreenShare}
-        onToggleHandRaise={toggleHandRaise}
-        onToggleFullscreen={toggleFullscreen}
-        onToggleNotes={() => setShowNotes((n) => !n)}
-        onEndCall={handleEndCall}
-      />
-
-      {/* Tap anywhere to reveal controls when hidden */}
-      {controlsHidden && (
-        <button className="absolute inset-0 z-20 cursor-default" onClick={resetHideTimer} aria-label="Show controls" />
+      {screen === "summary" && (
+        <MeetingSummaryScreen
+          subject={subject}
+          partnerName={partnerName}
+          sessionDuration={sessionDuration}
+          rating={rating}
+          summaryNotes={summaryNotes}
+          onRate={setRating}
+          onDone={onEndCall}
+        />
       )}
-    </div>
+
+      {screen === "meeting" && (
+        <div
+          className="fixed inset-0 z-10 flex flex-col pointer-events-none"
+          onPointerMove={resetHideTimer}
+          onPointerDown={resetHideTimer}
+        >
+          {hasJoinedSession && (
+            <div className="pointer-events-auto">
+              <MeetingTopBar
+                subject={subject}
+                partnerName={partnerName}
+                connectionQuality={connectionQuality}
+                participantCount={participantCount}
+                sessionDuration={sessionDuration}
+                scheduledDuration={scheduledDuration}
+                hidden={controlsHidden}
+              />
+            </div>
+          )}
+
+          {/* Permission Error */}
+          {permissionError && (
+            <div className="absolute top-16 left-4 right-4 z-40 pointer-events-auto">
+              <Alert variant="destructive" className="border-red-500/50 bg-red-950/80 text-red-200">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription className="flex items-center justify-between flex-wrap gap-2">
+                  <span>{permissionError}</span>
+                  <Button size="sm" variant="outline" className="border-red-400/50 text-red-200 hover:bg-red-900/50" onClick={() => window.location.reload()}>
+                    Retry
+                  </Button>
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
+
+          {/* Waiting banner */}
+          {hasJoinedSession && !isLoading && participantCount === 1 && !permissionError && (
+            <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 w-full max-w-xs px-4">
+              <div className="flex items-center gap-2 bg-black/50 backdrop-blur border border-white/10 rounded-2xl px-4 py-3 text-white/80">
+                <div className="relative flex h-2 w-2 shrink-0">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500" />
+                </div>
+                <p className="text-sm">Waiting for {sessionType === "tutor" ? "learner" : "your tutor"} to join…</p>
+              </div>
+            </div>
+          )}
+
+          {/* Loading overlay */}
+          {isLoading && !permissionError && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0d1a] z-10 gap-4">
+              <div className="relative h-16 w-16">
+                <div className="absolute inset-0 rounded-full border-4 border-white/10" />
+                <div className="absolute inset-0 rounded-full border-4 border-t-blue-400 border-r-transparent border-b-transparent border-l-transparent animate-spin" />
+                <Video className="absolute inset-0 m-auto h-6 w-6 text-white/60" />
+              </div>
+              <div className="text-center">
+                <p className="text-white font-medium">Joining session…</p>
+                <p className="text-white/40 text-sm mt-1">Allow camera & mic access when prompted</p>
+              </div>
+            </div>
+          )}
+
+          {/* Spacer to push controls to bottom */}
+          <div className="flex-1" />
+
+          {/* Session Notes panel */}
+          {hasJoinedSession && showNotes && (
+            <div className="absolute right-0 top-0 bottom-20 w-72 bg-[#0d0d1a]/95 border-l border-white/10 z-25 flex flex-col pointer-events-auto">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                <div className="flex items-center gap-2 text-white">
+                  <PenLine className="h-4 w-4" />
+                  <span className="text-sm font-medium">Session Notes</span>
+                </div>
+                <button onClick={() => setShowNotes(false)} className="text-white/40 hover:text-white">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <Textarea
+                className="flex-1 m-3 bg-white/5 border-white/10 text-white/90 text-sm placeholder:text-white/30 resize-none rounded-xl focus-visible:ring-blue-500/50"
+                placeholder={`Jot down key points from the ${subject} session…`}
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+              />
+              <p className="text-white/30 text-xs text-center pb-3">Notes are saved locally and shown after the call</p>
+            </div>
+          )}
+
+          {hasJoinedSession && (
+            <div className="pointer-events-auto">
+              <MeetingControlBar
+                isAudioMuted={isAudioMuted}
+                isVideoMuted={isVideoMuted}
+                isScreenSharing={isScreenSharing}
+                isHandRaised={isHandRaised}
+                isFullscreen={isFullscreen}
+                showNotes={showNotes}
+                hidden={controlsHidden}
+                onToggleAudio={toggleAudio}
+                onToggleVideo={toggleVideo}
+                onToggleScreenShare={toggleScreenShare}
+                onToggleHandRaise={toggleHandRaise}
+                onToggleFullscreen={toggleFullscreen}
+                onToggleNotes={() => setShowNotes((n) => !n)}
+                onEndCall={handleEndCall}
+              />
+            </div>
+          )}
+
+          {/* Tap anywhere to reveal controls when hidden */}
+          {hasJoinedSession && controlsHidden && (
+            <button className="absolute inset-0 z-20 cursor-default pointer-events-auto" onClick={resetHideTimer} aria-label="Show controls" />
+          )}
+        </div>
+      )}
+    </>
   );
 };
 

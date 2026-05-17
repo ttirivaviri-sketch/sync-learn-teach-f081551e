@@ -235,6 +235,7 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
           }),
           conceptsTested: q.conceptsTested || [],
           source: isPreviouslyIncorrect ? 'spaced-review' : 'ai-generated',
+          visual: q.visual ?? null,
         };
       });
 
@@ -291,7 +292,8 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
         conceptsTested: question.conceptsTested,
         commandWord: question.commandWord,
         difficulty: question.difficulty,
-        mode: state.mode === 'exam' ? 'exam-strict' : 'mark',
+        mode: 'mark',
+        examStrict: state.mode === 'exam',
         stream: false,
         // AI logic requirements
         evaluationInstructions: [
@@ -317,11 +319,14 @@ export function useRecallEngine({ subject, topic, mode = 'active-recall', questi
           whatWasMissing: result.missingConcepts?.join('. ') || result.feedback?.whatWasMissing || '',
           whatWasMisunderstood: result.misconceptions?.join('. ') || result.feedback?.whatWasMisunderstood || '',
           modelAnswer: question.modelAnswer,
-          lostMarksExplanation: result.feedback?.lostMarksExplanation || result.feedback || '',
+          lostMarksExplanation: result.feedback?.lostMarksExplanation || (typeof result.feedback === 'string' ? result.feedback : ''),
           reasoningErrors: result.reasoningErrors || result.mistakes || [],
         },
         markBreakdown: result.markBreakdown || [],
         improvementTips: result.improvementTips || [],
+        examinerComment: result.examinerComment || '',
+        improvementByCurriculum: result.improvementByCurriculum || [],
+        workingsFeedback: result.workingsFeedback || '',
       };
 
       // ── DATA LOOP: Record answer and update all systems ──────────────────

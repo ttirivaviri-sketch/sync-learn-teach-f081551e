@@ -10,6 +10,7 @@ import type { Curriculum } from "@/types/academicProfile";
 import { TutorialStatsGrid } from "@/components/tutor-creator/TutorialStatsGrid";
 import { TutorialCard, type Tutorial } from "@/components/tutor-creator/TutorialCard";
 import { TutorialFormDialog, type TutorialForm } from "@/components/tutor-creator/TutorialFormDialog";
+import { ContentComplianceModal, hasAcceptedCompliance } from "@/components/tutor-creator/ContentComplianceModal";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,9 @@ const EMPTY_FORM: TutorialForm = {
   curriculum: "ZIMSEC",
   videoUrl: "",
   durationLabel: "",
+  contentType: "video",
+  pdfUrl: "",
+  resourceCategory: "textbook",
 };
 
 interface TutorCreatorDashboardProps {
@@ -33,11 +37,40 @@ interface TutorCreatorDashboardProps {
 export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashboardProps) {
   const [tutorials, setTutorials] = useState<Tutorial[]>([]);
   const [showForm, setShowForm] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
   const [form, setForm] = useState<TutorialForm>(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loadingTutorials, setLoadingTutorials] = useState(true);
+  const [isOfficial, setIsOfficial] = useState(false);
+
+  // Detect official account
+  useEffect(() => {
+    if (!tutorId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select("is_official")
+        .eq("id", tutorId)
+        .maybeSingle();
+      setIsOfficial((data as any)?.is_official === true);
+    })();
+  }, [tutorId]);
+
+  const handleUploadClick = () => {
+    resetForm();
+    if (hasAcceptedCompliance()) {
+      setShowForm(true);
+    } else {
+      setShowCompliance(true);
+    }
+  };
+
+  const handleComplianceAccepted = () => {
+    setShowCompliance(false);
+    setShowForm(true);
+  };
 
   // ── Load tutorials from Supabase ────────────────────────────────────────
   useEffect(() => {
@@ -115,6 +148,9 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
       curriculum: tutorial.curriculum as Curriculum,
       videoUrl: "",
       durationLabel: "",
+      contentType: "video",
+      pdfUrl: "",
+      resourceCategory: "textbook",
     });
     setEditingId(tutorial.id);
     setShowForm(true);
@@ -125,10 +161,14 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
     if (!form.title.trim()) { setFormError("Title is required"); return; }
     if (!form.subject) { setFormError("Please select a subject"); return; }
     if (!form.topic.trim()) { setFormError("Topic is required"); return; }
+    if (form.contentType === "pdf" && !form.pdfUrl) {
+      setFormError("Please upload a PDF file");
+      return;
+    }
 
     setSaving(true);
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         tutor_id: tutorId,
         title: form.title.trim(),
         description: form.description.trim() || null,
@@ -137,9 +177,12 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         subtopic: form.subtopic.trim() || null,
         grade: form.grade || null,
         curriculum: form.curriculum,
-        video_url: form.videoUrl.trim() || null,
+        video_url: form.contentType === "video" ? (form.videoUrl.trim() || null) : null,
         duration_label: form.durationLabel.trim() || null,
         status: publishNow ? "published" : "draft",
+        content_type: form.contentType,
+        pdf_url: form.contentType === "pdf" ? form.pdfUrl : null,
+        resource_category: form.contentType === "pdf" ? form.resourceCategory : null,
         updated_at: new Date().toISOString(),
       };
 
@@ -224,7 +267,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
             Create tutorials · reach thousands of students
           </p>
         </div>
-        <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }}>
+        <Button size="sm" onClick={handleUploadClick}>
           <Plus className="h-4 w-4 mr-1" />
           Upload Tutorial
         </Button>
@@ -253,7 +296,7 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
                 Upload your first tutorial and get discovered by thousands of students across ZIMSEC, Cambridge &amp; more.
               </p>
             </div>
-            <Button onClick={() => { resetForm(); setShowForm(true); }}>
+            <Button onClick={handleUploadClick}>
               <Upload className="h-4 w-4 mr-2" />
               Upload Your First Tutorial
             </Button>
@@ -273,6 +316,13 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         </div>
       )}
 
+      {/* Compliance Modal */}
+      <ContentComplianceModal
+        open={showCompliance}
+        onAccept={handleComplianceAccepted}
+        onCancel={() => setShowCompliance(false)}
+      />
+
       {/* Form Dialog */}
       <TutorialFormDialog
         open={showForm}
@@ -280,6 +330,8 @@ export function TutorCreatorDashboard({ tutorId, tutorName }: TutorCreatorDashbo
         form={form}
         saving={saving}
         formError={formError}
+        tutorId={tutorId}
+        isOfficial={isOfficial}
         onOpenChange={setShowForm}
         onUpdateForm={updateForm}
         onSubmit={handleSubmit}

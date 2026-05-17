@@ -22,7 +22,11 @@ export const useNotifications = (userId?: string) => {
       return;
     }
 
-    const fetch = async () => {
+    let channel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+
+    const start = async () => {
+      if (cancelled) return;
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -30,45 +34,52 @@ export const useNotifications = (userId?: string) => {
         .order('created_at', { ascending: false })
         .limit(50);
 
-      if (!error && data) {
+      if (!error && data && !cancelled) {
         setNotifications(data as Notification[]);
       }
       setLoading(false);
+
+      if (cancelled) return;
+      channel = supabase
+        .channel('notifications-' + userId)
+        .on('postgres_changes', {
+          event: 'INSERT', schema: 'public', table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        }, (payload) => {
+          setNotifications(prev => [payload.new as Notification, ...prev]);
+        })
+        .on('postgres_changes', {
+          event: 'UPDATE', schema: 'public', table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        }, (payload) => {
+          setNotifications(prev =>
+            prev.map(n => n.id === (payload.new as Notification).id ? payload.new as Notification : n)
+          );
+        })
+        .on('postgres_changes', {
+          event: 'DELETE', schema: 'public', table: 'notifications',
+          filter: `user_id=eq.${userId}`,
+        }, (payload) => {
+          setNotifications(prev => prev.filter(n => n.id !== (payload.old as any).id));
+        })
+        .subscribe();
     };
 
-    fetch();
+    // Defer to idle so first paint isn't blocked by a network round-trip + realtime subscribe.
+    const idle = (window as any).requestIdleCallback as
+      | ((cb: () => void, opts?: { timeout: number }) => number)
+      | undefined;
+    const handle = idle ? idle(start, { timeout: 2000 }) : (setTimeout(start, 1500) as unknown as number);
 
-    const channel = supabase
-      .channel('notifications-' + userId)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, (payload) => {
-        setNotifications(prev => [payload.new as Notification, ...prev]);
-      })
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, (payload) => {
-        setNotifications(prev =>
-          prev.map(n => n.id === (payload.new as Notification).id ? payload.new as Notification : n)
-        );
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'notifications',
-        filter: `user_id=eq.${userId}`,
-      }, (payload) => {
-        setNotifications(prev => prev.filter(n => n.id !== (payload.old as any).id));
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      cancelled = true;
+      if (idle && (window as any).cancelIdleCallback) {
+        (window as any).cancelIdleCallback(handle);
+      } else {
+        clearTimeout(handle as unknown as ReturnType<typeof setTimeout>);
+      }
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [userId]);
 
   const markAsRead = async (id: string) => {
@@ -81,6 +92,7 @@ export const useNotifications = (userId?: string) => {
   };
 
   const removeNotification = async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
     await supabase.from('notifications').delete().eq('id', id);
   };
 

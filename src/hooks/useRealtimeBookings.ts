@@ -39,74 +39,15 @@ const bookingTransitions: Record<BookingRequest['status'], BookingRequest['statu
   canceled: [],
 };
 
-// ── Dev-mode mock bookings ──────────────────────────────────────────────────
-const isDevUserId = (id?: string) => id?.startsWith('dev-') ?? false;
-
-function buildDevBookings(userType: 'learner' | 'tutor', userId: string): BookingRequest[] {
-  const now = new Date();
-  // Confirmed session starting in 5 minutes (joinable)
-  const soonSession: BookingRequest = {
-    id: 'dev-booking-001',
-    learner_id: userType === 'learner' ? userId : 'dev-learner-peer',
-    tutor_id: userType === 'tutor' ? userId : 'dev-tutor-peer',
-    tutor_subject_id: 'dev-subject-math',
-    scheduled_at: new Date(now.getTime() + 5 * 60_000).toISOString(),
-    duration_minutes: 60,
-    status: 'confirmed',
-    price: 300,
-    created_at: new Date(now.getTime() - 86400_000).toISOString(),
-    updated_at: new Date(now.getTime() - 3600_000).toISOString(),
-    learner_profile: { full_name: 'Sipho Mokoena', email: 'sipho@test.co.za', study_level: 'O Level' },
-    tutor_profile: { full_name: 'Ms. Naledi Mbeki', email: 'naledi@test.co.za' },
-    tutor_subjects: { subject: 'Mathematics', level: 'O Level' },
-  };
-
-  // Requested session (pending acceptance)
-  const pendingSession: BookingRequest = {
-    id: 'dev-booking-002',
-    learner_id: userType === 'learner' ? userId : 'dev-learner-peer-2',
-    tutor_id: userType === 'tutor' ? userId : 'dev-tutor-peer-2',
-    tutor_subject_id: 'dev-subject-physics',
-    scheduled_at: new Date(now.getTime() + 86400_000).toISOString(),
-    duration_minutes: 45,
-    status: 'requested',
-    price: 200,
-    created_at: new Date(now.getTime() - 3600_000).toISOString(),
-    updated_at: new Date(now.getTime() - 3600_000).toISOString(),
-    learner_profile: { full_name: 'Amara Dlamini', email: 'amara@test.co.za', study_level: 'A Level' },
-    tutor_profile: { full_name: 'Mr. James Oduro', email: 'james@test.co.za' },
-    tutor_subjects: { subject: 'Physics', level: 'A Level' },
-  };
-
-  // Completed session (history)
-  const pastSession: BookingRequest = {
-    id: 'dev-booking-003',
-    learner_id: userType === 'learner' ? userId : 'dev-learner-peer-3',
-    tutor_id: userType === 'tutor' ? userId : 'dev-tutor-peer-3',
-    tutor_subject_id: 'dev-subject-english',
-    scheduled_at: new Date(now.getTime() - 86400_000).toISOString(),
-    duration_minutes: 60,
-    status: 'completed',
-    price: 250,
-    created_at: new Date(now.getTime() - 2 * 86400_000).toISOString(),
-    updated_at: new Date(now.getTime() - 86400_000).toISOString(),
-    learner_profile: { full_name: 'Lerato Khumalo', email: 'lerato@test.co.za', study_level: 'IGCSE' },
-    tutor_profile: { full_name: 'Dr. Priya Naidoo', email: 'priya@test.co.za' },
-    tutor_subjects: { subject: 'English Literature', level: 'IGCSE' },
-  };
-
-  return [soonSession, pendingSession, pastSession];
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: string) => {
   const [bookings, setBookings] = useState<BookingRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('connecting');
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
   const { toast } = useToast();
-  const devMode = isDevUserId(userId);
-  const devInitRef = useRef(false);
+  const failureCountRef = useRef(0);
+  const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const inFlightRef = useRef<AbortController | null>(null);
 
   const bookingSelect = `
     *,
@@ -118,11 +59,9 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   const mergeBooking = useCallback((booking: BookingRequest) => {
     setBookings((prev) => {
       const existingIndex = prev.findIndex((item) => item.id === booking.id);
-
       if (existingIndex === -1) {
         return [booking, ...prev];
       }
-
       const next = [...prev];
       next[existingIndex] = booking;
       return next;
@@ -147,10 +86,17 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   const loadBookings = useCallback(async () => {
     if (!userId) return;
 
-    try {
-      setSyncStatus('connecting');
+    // Cancel any in-flight request to avoid duplicate fetches racing each other
+    // (Safari aborts duplicates with "TypeError: Load failed").
+    if (inFlightRef.current) {
+      inFlightRef.current.abort();
+    }
+    const controller = new AbortController();
+    inFlightRef.current = controller;
 
-      // Validate session before loading sensitive data
+    try {
+      setSyncStatus((prev) => (prev === 'synced' ? 'synced' : 'connecting'));
+
       const validation = await security.validateSession();
       if (!validation.valid) {
         logger.error('Invalid session for booking access');
@@ -160,7 +106,8 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
       const query = supabase
         .from('bookings')
-        .select(bookingSelect);
+        .select(bookingSelect)
+        .abortSignal(controller.signal);
 
       if (userType === 'learner') {
         query.eq('learner_id', userId);
@@ -170,7 +117,32 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
+      if (controller.signal.aborted) return;
+
       if (error) {
+        const msg = (error.message || '').toLowerCase();
+        const isTransient =
+          msg.includes('load failed') ||
+          msg.includes('failed to fetch') ||
+          msg.includes('networkerror') ||
+          msg.includes('aborted') ||
+          msg.includes('timeout');
+
+        if (isTransient) {
+          failureCountRef.current += 1;
+          setSyncStatus('degraded');
+          // Silent retry once after a short backoff; don't spam a destructive toast.
+          if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+          if (failureCountRef.current <= 3) {
+            retryTimerRef.current = setTimeout(() => {
+              loadBookings();
+            }, 1500 * failureCountRef.current);
+          } else {
+            setSyncStatus('error');
+          }
+          return;
+        }
+
         logger.error('Error loading bookings:', error);
         toast({
           title: 'Error',
@@ -181,38 +153,37 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
         return;
       }
 
+      failureCountRef.current = 0;
       setBookings((data || []) as BookingRequest[]);
       setLastSyncedAt(new Date());
       setSyncStatus('synced');
     } catch (error) {
+      if (controller.signal.aborted) return;
       logger.error('Error in loadBookings:', error);
-      setSyncStatus('error');
+      setSyncStatus('degraded');
     } finally {
+      if (inFlightRef.current === controller) inFlightRef.current = null;
       setLoading(false);
     }
   }, [bookingSelect, toast, userId, userType]);
 
-  // ── Dev-mode: seed mock bookings once ────────────────────────────────────
+  // Cleanup retry timer on unmount
   useEffect(() => {
-    if (!devMode || !userId || devInitRef.current) return;
-    devInitRef.current = true;
-    setBookings(buildDevBookings(userType, userId));
-    setLoading(false);
-    setSyncStatus('synced');
-    setLastSyncedAt(new Date());
-    logger.info('[DEV] Seeded mock bookings for', userType, userId);
-  }, [devMode, userId, userType]);
+    return () => {
+      if (retryTimerRef.current) clearTimeout(retryTimerRef.current);
+      if (inFlightRef.current) inFlightRef.current.abort();
+    };
+  }, []);
 
-  // Load initial bookings (real mode only)
+  // Load initial bookings
   useEffect(() => {
-    if (!userId || devMode) return;
-
+    if (!userId) return;
     loadBookings();
-  }, [loadBookings, userId, devMode]);
+  }, [loadBookings, userId]);
 
-  // Set up real-time subscriptions with fallback resync (real mode only)
+  // Set up real-time subscriptions
   useEffect(() => {
-    if (!userId || devMode) return;
+    if (!userId) return;
 
     let reconnectAttempts = 0;
 
@@ -290,8 +261,6 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           reconnectAttempts += 1;
           setSyncStatus(reconnectAttempts >= 3 ? 'error' : 'degraded');
-
-          // Always trigger a reload, even if realtime is unstable.
           await loadBookings();
         }
       });
@@ -310,29 +279,6 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
   }) => {
     if (!userId) throw new Error('User not authenticated');
 
-    // Dev-mode: create a mock booking locally
-    if (devMode) {
-      const mockBooking: BookingRequest = {
-        id: `dev-booking-${Date.now()}`,
-        learner_id: userType === 'learner' ? userId : bookingData.tutor_id,
-        tutor_id: userType === 'tutor' ? userId : bookingData.tutor_id,
-        tutor_subject_id: bookingData.tutor_subject_id,
-        scheduled_at: bookingData.scheduled_at,
-        duration_minutes: bookingData.duration_minutes,
-        status: 'confirmed',
-        price: bookingData.price,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        tutor_profile: { full_name: 'Dev Tutor', email: 'dev@test.co.za' },
-        learner_profile: { full_name: 'Dev Learner', email: 'dev@test.co.za' },
-        tutor_subjects: { subject: 'Dev Subject', level: 'Test' },
-      };
-      setBookings((prev) => [mockBooking, ...prev]);
-      toast({ title: 'Dev Mode', description: 'Mock booking created (local only).' });
-      return mockBooking as unknown as Record<string, unknown>;
-    }
-
-    // Validate session and rate limit
     const validation = await security.validateSession();
     if (!validation.valid) {
       throw new Error('Authentication required');
@@ -342,7 +288,6 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       throw new Error('Too many booking requests. Please wait a moment.');
     }
 
-    // Generate unique room name for Jitsi session
     const roomName = `session-${crypto.randomUUID()}`;
     logger.info('🎯 Generated unique room name:', roomName);
 
@@ -377,15 +322,6 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
       }
     }
 
-    // Dev-mode: update locally only
-    if (devMode) {
-      setBookings((prev) =>
-        prev.map((b) => (b.id === bookingId ? { ...b, status, updated_at: new Date().toISOString() } : b)),
-      );
-      logger.info('[DEV] Booking status updated locally:', bookingId, status);
-      return;
-    }
-
     const { error } = await supabase
       .from('bookings')
       .update({ status })
@@ -403,26 +339,13 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
   const getUpcomingSessions = () => {
     const now = new Date();
-    const upcoming = bookings.filter((booking) => {
+    return bookings.filter((booking) => {
       const isConfirmed = booking.status === 'confirmed';
       const sessionTime = new Date(booking.scheduled_at);
-      const isUpcoming = sessionTime > now;
-
-      logger.info('📅 Session check:', {
-        id: booking.id,
-        scheduled_at: booking.scheduled_at,
-        sessionTime: sessionTime.toISOString(),
-        now: now.toISOString(),
-        isConfirmed,
-        isUpcoming,
-        willShow: isConfirmed && isUpcoming,
-      });
-
-      return isConfirmed && isUpcoming;
+      const sessionEnd = new Date(sessionTime.getTime() + booking.duration_minutes * 60 * 1000);
+      // Show sessions that haven't ended yet (including ones currently in progress)
+      return isConfirmed && sessionEnd > now;
     });
-
-    logger.info('📊 Total bookings:', bookings.length, 'Upcoming sessions:', upcoming.length);
-    return upcoming;
   };
 
   return {

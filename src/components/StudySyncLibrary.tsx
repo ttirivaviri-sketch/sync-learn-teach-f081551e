@@ -1,7 +1,7 @@
 import { useState, lazy, Suspense } from "react";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, GraduationCap, Sparkles, X,
+  Archive, Brain, Loader2, GraduationCap, Sparkles, X, Play,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,6 +20,10 @@ import { ContentRack } from "@/components/library/ContentRack";
 import { SearchResultsView } from "@/components/library/SearchResultsView";
 import { VideoPlayerOverlay } from "@/components/library/VideoPlayerOverlay";
 import { StuckPrompt } from "@/components/library/StuckPrompt";
+import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
+import { PosterCard } from "@/components/library/PosterCard";
+import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
+import { MatchExplanation } from "@/components/library/MatchExplanation";
 
 // Lazy-load Study Mode only when the toggle is activated
 const StudyModeWrapper = lazy(() =>
@@ -30,18 +34,24 @@ interface StudySyncLibraryProps {
   academicProfile?: AcademicProfile | null;
   onBookTutor?: (tutorId: string, tutorName: string) => void;
   onNeedHelp?: () => void;
+  onEditProfile?: () => void;
 }
 
 const StudySyncLibrary = ({
   academicProfile,
   onBookTutor,
   onNeedHelp,
+  onEditProfile,
 }: StudySyncLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [myLibraryItems, setMyLibraryItems] = useState<string[]>([]);
   const [studyModeActive, setStudyModeActive] = useState(false);
   const [activeCategory, setActiveCategory] = useState("all");
+  const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
+  const [activeDocument, setActiveDocument] = useState<{ resource: LibraryResource } | null>(null);
+  const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
+  const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
   const {
     allResources,
@@ -52,7 +62,51 @@ const StudySyncLibrary = ({
     searchResults,
     loading,
     search,
+    getMatchStatsFor,
   } = useLibraryResources(academicProfile);
+
+  // Strict personalization: only show content matching learner's syllabus + grade + subjects
+  const tutorialFeed = personalizedResources.filter((r) => r.isTutorial);
+
+  // Per-tab match diagnostics for empty-state explanations
+  const tutorialStats = getMatchStatsFor((r) => !!r.isTutorial);
+  const bookStats = getMatchStatsFor((r) => r.type === "book" || r.type === "guide");
+  const paperStats = getMatchStatsFor(
+    (r) => r.type === "pastpaper" || (r.category || "").toLowerCase().includes("past paper")
+  );
+
+  // Tabs handler: when user picks "tutorials", drop them straight into the carousel
+  const handleTabChange = (next: string) => {
+    if (next === "tutorials") {
+      if (tutorialFeed.length > 0) {
+        setReelsStartIndex(0);
+        setReelsFeedOpen(true);
+      } else {
+        // Build a precise reason string from match stats
+        let reason = "No clips have been uploaded yet — tutors are adding more weekly.";
+        if (academicProfile) {
+          if (tutorialStats.blockedBySubject > 0) {
+            reason = `${tutorialStats.blockedBySubject} clip${tutorialStats.blockedBySubject === 1 ? "" : "s"} exist for ${academicProfile.curriculum} ${academicProfile.grade}, but in subjects you haven't picked.`;
+          } else if (tutorialStats.blockedByGrade > 0) {
+            reason = `${tutorialStats.blockedByGrade} clip${tutorialStats.blockedByGrade === 1 ? "" : "s"} match your subjects but not grade "${academicProfile.grade}".`;
+          } else if (tutorialStats.blockedByCurriculum > 0) {
+            reason = `${tutorialStats.blockedByCurriculum} clip${tutorialStats.blockedByCurriculum === 1 ? "" : "s"} match your subjects but are tagged for a different curriculum.`;
+          } else {
+            reason = `No ${academicProfile.curriculum} ${academicProfile.grade} clips for your subjects yet.`;
+          }
+        } else {
+          reason = "Set your curriculum, grade and subjects to see clips for your syllabus.";
+        }
+        dispatchToast("No clips match your profile", reason);
+        // Also navigate to "all" so the inline MatchExplanation card is visible
+        setPreviousCategory(activeCategory);
+        setActiveCategory("all");
+      }
+      return;
+    }
+    setPreviousCategory(activeCategory);
+    setActiveCategory(next);
+  };
 
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
@@ -91,11 +145,26 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
+    // Documents (books, guides, past papers) open in the protected in-app viewer.
+    if (["book", "guide", "pastpaper", "pdf"].includes(resource.type)) {
+      const extra = resource as unknown as Record<string, unknown>;
+      const hasFile =
+        !!resource.videoUrl ||
+        typeof extra.pdf_url === "string" ||
+        typeof extra.url === "string";
+      if (hasFile && resource.pdfSource) {
+        setActiveDocument({ resource });
+        dispatchToast("Opening Resource", `Loading ${resource.title}...`);
+      } else {
+        dispatchToast("File not available", "This resource doesn't have an attached file yet.");
+      }
+      return;
+    }
+
     let videoUrl = resource.videoUrl;
     if (!videoUrl && resource.type === "video") {
       const videoUrlRegex =
         /https?:\/\/(?:(?:www\.)?youtube\.com\/(?:watch\?[^\s)"']*|shorts\/[^\s)"']*|embed\/[^\s)"']*|live\/[^\s)"']*)|youtu\.be\/[^\s)"']*|(?:www\.)?vimeo\.com\/[^\s)"']*|(?:www\.)?loom\.com\/share\/[^\s)"']*|[^\s)"']*supabase\.co[^\s)"']*\/storage\/[^\s)"']*|[^\s)"']*\.(?:mp4|webm|mov|m4v|ogg)(?:\?[^\s)"']*)?)/i;
-      // Search summary, title, and any extra string-valued fields for video URLs
       const extra = resource as unknown as Record<string, unknown>;
       const textsToSearch = [
         resource.summary,
@@ -109,14 +178,17 @@ const StudySyncLibrary = ({
       }
     }
     if (resource.type === "video" && videoUrl) {
-      setActiveVideoResource({ ...resource, videoUrl });
+      const idx = tutorialFeed.findIndex((r) => String(r.id) === String(resource.id));
+      if (idx >= 0 && tutorialFeed.length > 0) {
+        setReelsStartIndex(idx);
+        setReelsFeedOpen(true);
+      } else {
+        setActiveVideoResource({ ...resource, videoUrl });
+      }
       return;
     }
-    if (resource.type === "video") {
-      dispatchToast("No Video URL", "This tutorial doesn't have a playable link yet.");
-    } else {
-      dispatchToast("Opening Resource", `Opening ${resource.title}`);
-    }
+
+    dispatchToast("No Video URL", "This tutorial doesn't have a playable link yet.");
   };
 
   const handleBookTutor = (tutorId: string, tutorName: string) => {
@@ -275,7 +347,7 @@ const StudySyncLibrary = ({
       ) : (
         <>
           {/* ── Library Tabs ── */}
-          <Tabs value={activeCategory} onValueChange={setActiveCategory} className="w-full">
+          <Tabs value={activeCategory} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-5 text-xs">
               {categories.map((category) => (
                 <TabsTrigger key={category.id} value={category.id} className="text-xs">
@@ -310,75 +382,91 @@ const StudySyncLibrary = ({
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
             </TabsContent>
 
-            {/* Tutorials Tab */}
-            <TabsContent value="tutorials" className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Video Tutorials</h3>
-                <Badge variant="secondary">{recommendedTutorials.length} available</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {recommendedTutorials.map((r) => (
-                  <ResourceCard
-                    key={String(r.id)}
-                    resource={r}
-                    isInLibrary={myLibraryItems.includes(String(r.id))}
-                    {...cardActions}
-                  />
-                ))}
-              </div>
-              {recommendedTutorials.length === 0 && (
-                <Card className="bg-muted/30">
-                  <CardContent className="p-6 text-center">
-                    <Video className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">
-                      No tutorials yet. Tutors can upload videos from their dashboard.
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-              <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
+            {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel).
+                If empty, surface the inline match-reason card here too. */}
+            <TabsContent value="tutorials" className="mt-4">
+              <MatchExplanation
+                stats={tutorialStats}
+                profile={academicProfile}
+                resourceLabel="clips"
+                onEditProfile={onEditProfile}
+              />
             </TabsContent>
 
-            {/* Books Tab */}
-            <TabsContent value="books" className="space-y-4 mt-4">
-              <h3 className="font-semibold">Books &amp; Study Guides</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {allResources
-                  .filter((r) => r.type === "book" || r.type === "guide")
-                  .map((r) => (
-                    <ResourceCard
-                      key={String(r.id)}
-                      resource={r}
-                      isInLibrary={myLibraryItems.includes(String(r.id))}
-                      {...cardActions}
+            {/* Books Tab — Netflix-style poster racks (strict personalization) */}
+            <TabsContent value="books" className="space-y-5 mt-4">
+              {(() => {
+                const books = personalizedResources.filter(
+                  (r) => r.type === "book" || r.type === "guide"
+                );
+                if (!academicProfile || books.length === 0) {
+                  return (
+                    <MatchExplanation
+                      stats={bookStats}
+                      profile={academicProfile}
+                      resourceLabel="books"
+                      onEditProfile={onEditProfile}
                     />
-                  ))}
-              </div>
+                  );
+                }
+                // Group by subject for Netflix-style racks
+                const bySubject = books.reduce<Record<string, LibraryResource[]>>(
+                  (acc, b) => {
+                    const k = b.category || "General";
+                    (acc[k] ||= []).push(b);
+                    return acc;
+                  },
+                  {}
+                );
+                return Object.entries(bySubject).map(([subject, items]) => (
+                  <div key={subject} className="space-y-2">
+                    <h3 className="font-semibold text-sm">{subject}</h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                      {items.map((r) => (
+                        <PosterCard
+                          key={String(r.id)}
+                          resource={r}
+                          variant="portrait"
+                          onOpen={openResource}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
             </TabsContent>
 
-            {/* Past Papers Tab */}
-            <TabsContent value="papers" className="space-y-4 mt-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold">Past Exam Papers</h3>
-                <Badge variant="secondary">{pastPapers.length} papers</Badge>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {pastPapers.map((r) => (
-                  <ResourceCard
-                    key={String(r.id)}
-                    resource={r}
-                    isInLibrary={myLibraryItems.includes(String(r.id))}
-                    {...cardActions}
-                  />
-                ))}
-              </div>
-              {pastPapers.length === 0 && (
-                <Card className="bg-muted/30">
-                  <CardContent className="p-6 text-center">
-                    <FileText className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Past papers will appear here.</p>
-                  </CardContent>
-                </Card>
+            {/* Past Papers Tab — Netflix-style poster racks */}
+            <TabsContent value="papers" className="space-y-5 mt-4">
+              {!academicProfile || pastPapers.length === 0 ? (
+                <MatchExplanation
+                  stats={paperStats}
+                  profile={academicProfile}
+                  resourceLabel="past papers"
+                  onEditProfile={onEditProfile}
+                />
+              ) : (
+                Object.entries(
+                  pastPapers.reduce<Record<string, LibraryResource[]>>((acc, p) => {
+                    const k = p.category || "General";
+                    (acc[k] ||= []).push(p);
+                    return acc;
+                  }, {})
+                ).map(([subject, items]) => (
+                  <div key={subject} className="space-y-2">
+                    <h3 className="font-semibold text-sm">{subject}</h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                      {items.map((r) => (
+                        <PosterCard
+                          key={String(r.id)}
+                          resource={r}
+                          variant="landscape"
+                          onOpen={openResource}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
               )}
             </TabsContent>
 
@@ -428,6 +516,26 @@ const StudySyncLibrary = ({
           resource={activeVideoResource}
           onClose={() => setActiveVideoResource(null)}
           onBookTutor={handleBookTutor}
+        />
+      )}
+
+      {activeDocument && (
+        <DocumentViewerOverlay
+          resource={activeDocument.resource}
+          onClose={() => setActiveDocument(null)}
+        />
+      )}
+
+      {/* Study Clips Feed */}
+      {reelsFeedOpen && tutorialFeed.length > 0 && (
+        <StudyClipsFeed
+          videos={tutorialFeed}
+          startIndex={reelsStartIndex}
+          onClose={() => setReelsFeedOpen(false)}
+          onBookTutor={handleBookTutor}
+          onAddToLibrary={addToLibrary}
+          onRemoveFromLibrary={removeFromLibrary}
+          myLibraryItems={myLibraryItems}
         />
       )}
 

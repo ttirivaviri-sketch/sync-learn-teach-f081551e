@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LibraryResource, AcademicProfile } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
+import {
+  curriculumMatches as curriculumMatchesShared,
+  gradeMatches as gradeMatchesShared,
+  subjectMatches as subjectMatchesShared,
+} from "@/lib/personalization";
 
 /** Try to extract a video URL from a text string (description, summary, etc.) */
 const extractVideoUrl = (text: string | null | undefined): string | undefined => {
@@ -13,6 +18,14 @@ const extractVideoUrl = (text: string | null | undefined): string | undefined =>
   );
   return match ? match[0] : undefined;
 };
+
+// Re-exports from shared personalization library so callers within this
+// module can keep using the original local names.
+const curriculumMatches = curriculumMatchesShared;
+const gradeMatches = (resourceGrades: string[] | undefined, learnerGrade: string | null | undefined) =>
+  gradeMatchesShared(resourceGrades, learnerGrade);
+const subjectMatches = (resource: LibraryResource, subjects: string[] | null | undefined) =>
+  subjectMatchesShared(resource.tags?.subject || resource.category, subjects);
 
 // ─── Seed data (used when Supabase table doesn't have items yet) ──────────────
 // This mirrors the database structure and allows the UI to work offline/dev mode
@@ -197,6 +210,24 @@ const SEED_TUTORIALS: LibraryResource[] = [
   },
 ];
 
+export interface LibraryMatchStats {
+  total: number;
+  matchedAll: number;
+  matchedCurriculum: number;
+  matchedGrade: number;
+  matchedSubject: number;
+  // Counts of resources that match every filter EXCEPT the named one — these are
+  // the items the learner is "just missing" because of that single mismatch.
+  blockedByCurriculum: number;
+  blockedByGrade: number;
+  blockedBySubject: number;
+  // Distinct values seen on resources that already match curriculum+grade —
+  // useful to suggest "we have <subject>, but you didn't pick it".
+  availableSubjects: string[];
+  availableGrades: string[];
+  availableCurricula: string[];
+}
+
 interface UseLibraryResourcesReturn {
   allResources: LibraryResource[];
   personalizedResources: LibraryResource[];
@@ -208,6 +239,10 @@ interface UseLibraryResourcesReturn {
   search: (query: string) => void;
   getBySubject: (subject: string) => LibraryResource[];
   getByTopic: (topic: string) => LibraryResource[];
+  /** Per-filter match diagnostics for empty-state explanations. */
+  matchStats: LibraryMatchStats;
+  /** Same as matchStats, but scoped to a single resource type (book/pastpaper/video). */
+  getMatchStatsFor: (predicate: (r: LibraryResource) => boolean) => LibraryMatchStats;
 }
 
 export function useLibraryResources(
@@ -223,105 +258,98 @@ export function useLibraryResources(
     ? dbResources
     : SEED_TUTORIALS;
 
-  // Fetch tutor-uploaded tutorials from Supabase
+  // Fetch tutor-uploaded tutorials AND PDFs from Supabase
   useEffect(() => {
-    const fetchTutorials = async () => {
+    const fetchLibraryResources = async () => {
       setLoading(true);
       try {
-        // ── Primary path: RPC that returns flat fields ──────────────────────
-        const { data: rpcData, error: rpcError } = await supabase.rpc(
-          "get_published_tutorials",
-          {
-            p_curriculum: academicProfile?.curriculum ?? null,
-            p_subject: null,
-          }
-        );
-
-        if (!rpcError && rpcData && (rpcData as any[]).length > 0) {
-          const mapped: LibraryResource[] = (rpcData as any[]).map((row: any) => ({
-            id: row.id,
-            title: row.title,
-            // RPC returns flat columns, not a nested object
-            author: row.tutor_full_name || row.tutor_profile?.full_name || "Tutor",
-            type: "video" as const,
-            category: row.subject,
-            gradeLevel: row.grade || "All Grades",
-            summary: row.description || "",
-            rating: row.rating || 0,
-            reviews: row.review_count || 0,
-            thumbnail: row.thumbnail_url || "/placeholder.svg",
-            isOffline: false,
-            duration: row.duration_label || "Video",
-            isTutorial: true,
-            watchCount: row.watch_count || 0,
-            completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || extractVideoUrl(row.description) || extractVideoUrl(row.title) || undefined,
-            tags: {
-              subject: row.subject,
-              topic: row.topic,
-              subtopic: row.subtopic,
-              grade: row.grade,
-              curriculum: row.curriculum,
-            },
-            tutor: {
-              id: row.tutor_id,
-              name: row.tutor_full_name || row.tutor_profile?.full_name || "Tutor",
-              avatar_url: row.tutor_avatar_url || row.tutor_profile?.avatar_url,
-              rating: row.rating || 0,
-              reviews: row.review_count || 0,
-            },
-          }));
-
-          logger.info("[useLibraryResources] RPC tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
-          setDbResources(mapped);
-          setDbFetched(true);
-          return;
-        }
-
-        // ── Fallback: direct query to tutor_tutorials ───────────────────────
-        if (rpcError) {
-          logger.warn(
-            "get_published_tutorials RPC unavailable, falling back to direct query:",
-            rpcError.message
-          );
-        }
-
-        const { data: directData, error: directError } = await supabase
-          .from("tutor_tutorials")
+        const [tutorialsResult, systemResourcesResult] = await Promise.all([
+          supabase
+            .from("tutor_tutorials")
           .select(
             `id, title, subject, topic, subtopic, grade, curriculum,
              description, rating, review_count, thumbnail_url,
              duration_label, video_url, watch_count, completion_rate,
-             tutor_id,
-             tutor_profile:profiles!tutor_id(id, full_name, avatar_url)`
+             tutor_id, content_type, pdf_url, resource_category`
           )
           .eq("status", "published")
-          .order("created_at", { ascending: false });
+            .order("created_at", { ascending: false }),
+          supabase
+            .from("library_system_resources")
+            .select(
+              `id, title, subject, curriculum, grade_levels, topic,
+               kind, description, pages, thumbnail_url, pdf_url, view_count`
+            )
+            .order("created_at", { ascending: false }),
+        ]);
 
-        if (directError) {
+        const { data: directData, error: directError } = tutorialsResult;
+        const { data: systemData, error: systemError } = systemResourcesResult;
+
+        if (directError && systemError) {
           logger.warn("tutor_tutorials direct query failed:", directError.message);
+          logger.warn("library_system_resources query failed:", systemError.message);
           setDbFetched(true);
           return;
         }
 
-        const mapped: LibraryResource[] = ((directData as any[]) || []).map(
-          (row) => ({
+        // Fetch all tutor profiles in one query for author display
+        const tutorIds = Array.from(
+          new Set((directData as any[] | null)?.map((r) => r.tutor_id).filter(Boolean) ?? [])
+        );
+        let profilesById: Record<string, { full_name: string | null; avatar_url: string | null; is_official: boolean }> = {};
+        if (tutorIds.length > 0) {
+          const { data: profilesData } = await supabase
+            .from("profiles")
+            .select("id, full_name, avatar_url, is_official")
+            .in("id", tutorIds);
+          (profilesData as any[] | null)?.forEach((p) => {
+            profilesById[p.id] = {
+              full_name: p.full_name,
+              avatar_url: p.avatar_url,
+              is_official: p.is_official === true,
+            };
+          });
+        }
+
+        const mappedTutorials: LibraryResource[] = ((directData as any[]) || []).map((row) => {
+          const profile = profilesById[row.tutor_id];
+          const isOfficial = profile?.is_official === true;
+          const displayName = isOfficial
+            ? "studysyncofficial"
+            : profile?.full_name || "Unknown";
+          const isPdf = row.content_type === "pdf";
+          const resourceType: LibraryResource["type"] = isPdf
+            ? row.resource_category === "past_paper"
+              ? "pastpaper"
+              : row.resource_category === "notes"
+              ? "guide"
+              : "book"
+            : "video";
+
+          return {
             id: row.id,
             title: row.title,
-            author: (row.tutor_profile as any)?.full_name || "Tutor",
-            type: "video" as const,
-            category: row.subject || row.category || "General",
+            author: displayName,
+            type: resourceType,
+            category: row.subject || "General",
             gradeLevel: row.grade || "All Grades",
             summary: row.description || "",
             rating: row.rating || 0,
             reviews: row.review_count || 0,
             thumbnail: row.thumbnail_url || "/placeholder.svg",
             isOffline: false,
-            duration: row.duration_label || "Video",
-            isTutorial: true,
+            duration: row.duration_label || (isPdf ? "PDF" : "Video"),
+            isTutorial: !isPdf,
             watchCount: row.watch_count || 0,
             completionRate: row.completion_rate || 0,
-            videoUrl: row.video_url || extractVideoUrl(row.description) || extractVideoUrl(row.title) || undefined,
+            videoUrl: isPdf
+              ? row.pdf_url || undefined
+              : row.video_url ||
+                extractVideoUrl(row.description) ||
+                extractVideoUrl(row.title) ||
+                undefined,
+            pdfSource: isPdf ? "tutorial" : undefined,
             tags: {
               subject: row.subject,
               topic: row.topic,
@@ -329,28 +357,68 @@ export function useLibraryResources(
               grade: row.grade,
               curriculum: row.curriculum,
             },
-            tutor: {
-              id: row.tutor_id,
-              name: (row.tutor_profile as any)?.full_name || "Tutor",
-              avatar_url: (row.tutor_profile as any)?.avatar_url,
-              rating: row.rating || 0,
-              reviews: row.review_count || 0,
-            },
-          })
-        );
+            tutor: isPdf
+              ? undefined
+              : {
+                  id: row.tutor_id,
+                  name: displayName,
+                  avatar_url: profile?.avatar_url || undefined,
+                  rating: row.rating || 0,
+                  reviews: row.review_count || 0,
+                },
+          };
+        });
 
-        logger.info("[useLibraryResources] Direct query tutorials:", mapped.length, "items, videos with URLs:", mapped.filter(r => r.videoUrl).length);
+        const mappedSystemResources: LibraryResource[] = ((systemData as any[]) || []).map((row) => {
+          const isPastPaper = row.kind === "past_paper";
+          const gradeLevels = Array.isArray(row.grade_levels) ? row.grade_levels : [];
+
+          return {
+            id: row.id,
+            title: row.title,
+            author: row.curriculum,
+            type: isPastPaper ? "pastpaper" : "book",
+            category: row.subject || "General",
+            gradeLevel: gradeLevels.join(" • ") || "All Grades",
+            summary: row.description || "",
+            rating: 0,
+            reviews: row.view_count || 0,
+            thumbnail: row.thumbnail_url || "/placeholder.svg",
+            isOffline: false,
+            duration: row.pages ? `${row.pages} pages` : "PDF",
+            isTutorial: false,
+            videoUrl: row.pdf_url,
+            pdfSource: "system",
+            tags: {
+              subject: row.subject || "General",
+              topic: row.topic || "All Topics",
+              grade: gradeLevels[0] || "All Grades",
+              curriculum: row.curriculum,
+            },
+          };
+        });
+
+        const mapped = [...mappedTutorials, ...mappedSystemResources];
+
+        logger.info(
+          "[useLibraryResources] Library resources:",
+          mapped.length,
+          "videos:",
+          mapped.filter((r) => r.type === "video").length,
+          "documents:",
+          mapped.filter((r) => r.type !== "video").length
+        );
         setDbResources(mapped);
         setDbFetched(true);
       } catch (err) {
         logger.warn("Tutorial fetch error (non-critical):", err);
-        setDbFetched(true); // Mark as fetched so we show empty state, not seed data
+        setDbFetched(true);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchTutorials();
+    fetchLibraryResources();
 
     const channel = supabase
       .channel("library-tutorials-sync")
@@ -358,7 +426,14 @@ export function useLibraryResources(
         "postgres_changes",
         { event: "*", schema: "public", table: "tutor_tutorials" },
         () => {
-          fetchTutorials();
+          fetchLibraryResources();
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "library_system_resources" },
+        () => {
+          fetchLibraryResources();
         }
       )
       .subscribe();
@@ -370,33 +445,108 @@ export function useLibraryResources(
 
   // ── Personalization logic ─────────────────────────────────────────────────
 
+  // Strict personalization: only show resources matching learner's curriculum,
+  // grade, and subjects. No soft fallback — empty tabs get explicit copy in UI.
   const personalizedResources = academicProfile
     ? allResources.filter((r) => {
-        if (!r.tags) return true;
-        const matchSubject = academicProfile.subjects.some((s) =>
-          r.tags!.subject.toLowerCase().includes(s.toLowerCase()) ||
-          s.toLowerCase().includes(r.tags!.subject.toLowerCase())
-        );
-        const matchCurriculum =
-          !r.tags.curriculum || r.tags.curriculum === academicProfile.curriculum;
-        return matchSubject || matchCurriculum;
+        if (!r.tags) return false;
+        const matchCurriculum = curriculumMatches(r.tags.curriculum, academicProfile.curriculum);
+        const gradePool = [
+          r.tags?.grade,
+          ...(r.gradeLevel ? r.gradeLevel.split(/[•·]/) : []),
+        ]
+          .map((g) => (g || "").trim())
+          .filter(Boolean) as string[];
+        const matchGrade = gradeMatches(gradePool, academicProfile.grade);
+        const matchSubject = subjectMatches(r, academicProfile.subjects);
+        return matchCurriculum && matchGrade && matchSubject;
       })
-    : allResources;
+    : [];
 
-  const recommendedTutorials = allResources.filter((r) => r.isTutorial);
+  const visibleResources = personalizedResources;
 
-  const pastPapers = allResources.filter(
-    (r) => r.type === "pastpaper" || r.category.toLowerCase().includes("past paper")
+  const recommendedTutorials = visibleResources.filter((r) => r.isTutorial);
+
+  const pastPapers = visibleResources.filter(
+    (r) =>
+      r.type === "pastpaper" ||
+      (r.category || "").toLowerCase().includes("past paper")
   );
 
-  const topTutors = allResources
+  const topTutors = visibleResources
     .filter((r) => r.isTutorial && r.tutor)
     .sort((a, b) => (b.tutor?.rating || 0) - (a.tutor?.rating || 0));
 
-  // ── Search ────────────────────────────────────────────────────────────────
+  // ── Match diagnostics ─────────────────────────────────────────────────────
+  const computeStats = useCallback(
+    (predicate?: (r: LibraryResource) => boolean): LibraryMatchStats => {
+      const pool = predicate ? allResources.filter(predicate) : allResources;
+      const empty: LibraryMatchStats = {
+        total: pool.length,
+        matchedAll: 0,
+        matchedCurriculum: 0,
+        matchedGrade: 0,
+        matchedSubject: 0,
+        blockedByCurriculum: 0,
+        blockedByGrade: 0,
+        blockedBySubject: 0,
+        availableSubjects: [],
+        availableGrades: [],
+        availableCurricula: [],
+      };
+      if (!academicProfile) return empty;
+
+      const subjects = new Set<string>();
+      const grades = new Set<string>();
+      const curricula = new Set<string>();
+
+      for (const r of pool) {
+        if (!r.tags) continue;
+        const cur = curriculumMatches(r.tags.curriculum, academicProfile.curriculum);
+        const gradePool = [
+          r.tags?.grade,
+          ...(r.gradeLevel ? r.gradeLevel.split(/[•·]/) : []),
+        ]
+          .map((g) => (g || "").trim())
+          .filter(Boolean) as string[];
+        const grd = gradeMatches(gradePool, academicProfile.grade);
+        const sub = subjectMatches(r, academicProfile.subjects);
+
+        if (cur) empty.matchedCurriculum++;
+        if (grd) empty.matchedGrade++;
+        if (sub) empty.matchedSubject++;
+        if (cur && grd && sub) empty.matchedAll++;
+        if (!cur && grd && sub) empty.blockedByCurriculum++;
+        if (cur && !grd && sub) empty.blockedByGrade++;
+        if (cur && grd && !sub) empty.blockedBySubject++;
+
+        // Collect what's available within learner's curriculum+grade scope
+        if (cur && grd) {
+          const s = (r.tags?.subject || r.category || "").trim();
+          if (s) subjects.add(s);
+        }
+        if (cur) gradePool.forEach((g) => grades.add(g));
+        if (r.tags?.curriculum) curricula.add(r.tags.curriculum);
+      }
+
+      empty.availableSubjects = [...subjects].sort();
+      empty.availableGrades = [...grades].sort();
+      empty.availableCurricula = [...curricula].sort();
+      return empty;
+    },
+    [allResources, academicProfile]
+  );
+
+  const matchStats = computeStats();
+  const getMatchStatsFor = useCallback(
+    (predicate: (r: LibraryResource) => boolean) => computeStats(predicate),
+    [computeStats]
+  );
+
+
 
   const searchResults = searchQuery.trim()
-    ? allResources.filter((r) => {
+    ? personalizedResources.filter((r) => {
         const q = searchQuery.toLowerCase();
         return (
           r.title.toLowerCase().includes(q) ||
@@ -442,5 +592,7 @@ export function useLibraryResources(
     search: setSearchQuery,
     getBySubject,
     getByTopic,
+    matchStats,
+    getMatchStatsFor,
   };
 }

@@ -14,6 +14,7 @@ import './studymode.css';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from "@/utils/logger";
+import { useSeedSubjectsFromProfile } from './hooks/useSeedSubjectsFromProfile';
 
 // ── Lazy import of the heavy StudyMode component ──────────────────────────────
 const StudyModeInner = lazy(() =>
@@ -98,7 +99,7 @@ class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
         />
       );
     }
-    return <React.Fragment key={this.state.key}>{this.props.children}</React.Fragment>;
+    return <div key={this.state.key}>{this.props.children}</div>;
   }
 }
 
@@ -111,6 +112,7 @@ interface StudyModeWrapperProps {
 }
 
 export function StudyModeWrapper({ onDeactivate, onNeedHelp, onBrowseLibrary, academicProfile }: StudyModeWrapperProps) {
+  useSeedSubjectsFromProfile();
   return (
     <div className="studymode-root">
       <StudyModeErrorBoundary onDeactivate={onDeactivate}>

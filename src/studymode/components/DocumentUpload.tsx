@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { logger } from "@/utils/logger";
+import { extractTextFromFile, chunkText } from '../lib/pdfExtractor';
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -139,14 +140,17 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
           idx === i ? { ...f, status: 'processing' } : f
         ));
 
-        // Read file content for parsing
-        const fileContent = await uploadedFile.file.text();
+        // Extract real text from PDF (or read plain text for other files)
+        const fullText = await extractTextFromFile(uploadedFile.file);
+        const chunks = chunkText(fullText, 80_000);
 
         // Parse using backend edge function first, then local proxy fallback
         try {
           const parsePayload = {
             documentId: docData.id,
-            content: fileContent.substring(0, 50000), // Limit content size
+            content: fullText,         // full extracted text (no truncation)
+            chunks,                    // pre-split chunks for the edge function
+            totalChunks: chunks.length,
             documentType,
             subject: subject.trim(),
           };
@@ -186,12 +190,9 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
             // For syllabi: also upsert into subjects table so StudyMode can use topics
             if (documentType === 'syllabus' && parsedPayload.topics?.length) {
               const subjectName = parsedPayload.subject_name || subject.trim();
-              const { data: existingSubject } = await supabase
-                .from('subjects')
-                .select('id')
-                .eq('user_id', user.id)
-                .ilike('name', subjectName)
-                .maybeSingle();
+              // Match by canonical name (strips "(IGCSE)" etc.) so we don't create duplicates.
+              const { findExistingSubjectId } = await import('@/lib/subjectName');
+              const existingSubjectId = await findExistingSubjectId(supabase, user.id, subjectName);
 
               const topicsJson = (parsedPayload.topics as any[]).map((t: any, idx: number) => ({
                 id: String(t.id || `topic-${idx + 1}`),
@@ -203,11 +204,11 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
                 prerequisites: Array.isArray(t.prerequisites) ? t.prerequisites.map(String) : [],
               })) as any;
 
-              if (existingSubject?.id) {
+              if (existingSubjectId) {
                 await supabase
                   .from('subjects')
                   .update({ topics: topicsJson as any, syllabus_code: parsedPayload.syllabus_code || null })
-                  .eq('id', existingSubject.id);
+                  .eq('id', existingSubjectId);
               } else {
                 await supabase.from('subjects').insert({
                   user_id: user.id,

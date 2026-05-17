@@ -24,6 +24,9 @@ const PaymentSuccess = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const bookingId = searchParams.get("booking");
+  const provider = searchParams.get("provider"); // "paystack" | null (PayFast default)
+  const paystackRef = searchParams.get("reference") || searchParams.get("trxref");
+  const isSetup = searchParams.get("setup") === "1";
   const [status, setStatus] = useState<VerificationStatus>("verifying");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<string>("pending");
@@ -32,15 +35,25 @@ const PaymentSuccess = () => {
     document.title = "Payment Successful | StudySync";
   }, []);
 
+  // Paystack setup-mode: no booking, just confirm card was saved
+  useEffect(() => {
+    if (provider === "paystack" && isSetup && !bookingId) {
+      // Webhook persists the card; show confirmed immediately
+      setStatus("confirmed");
+      setPaymentStatus("succeeded");
+    }
+  }, [provider, isSetup, bookingId]);
+
   // Poll for payment verification
   useEffect(() => {
     if (!bookingId) {
+      if (provider === "paystack" && isSetup) return; // handled above
       setStatus("failed");
       return;
     }
 
     let attempts = 0;
-    const maxAttempts = 20; // 20 attempts x 3s = 60s max
+    const maxAttempts = 20;
     let timeoutId: ReturnType<typeof setTimeout>;
 
     const checkPayment = async () => {
@@ -136,7 +149,7 @@ const PaymentSuccess = () => {
     if (status === "confirmed") {
       return (
         <>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-scale-in">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <CardTitle className="text-2xl">Payment Confirmed!</CardTitle>
@@ -150,7 +163,7 @@ const PaymentSuccess = () => {
     if (status === "pending") {
       return (
         <>
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900 animate-scale-in">
             <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
           </div>
           <CardTitle className="text-2xl">Payment Submitted!</CardTitle>
@@ -254,12 +267,15 @@ const PaymentSuccess = () => {
           </p>
 
           <div className="flex flex-col gap-2">
-            <Button onClick={() => navigate("/learner")} className="w-full">
-              Go to My Sessions
+            <Button
+              onClick={() => navigate(searchParams.get("next") || "/learner")}
+              className="w-full"
+            >
+              {searchParams.get("next") ? "Continue setup" : "Go to My Sessions"}
             </Button>
-            {status === "failed" && (
-              <Button variant="outline" onClick={() => navigate(-1)} className="w-full">
-                Try Again
+            {status === "failed" && bookingId && (
+              <Button variant="destructive" onClick={() => navigate(`/learner?retryPayment=${bookingId}`)} className="w-full">
+                Retry Payment
               </Button>
             )}
             <Button variant="ghost" onClick={() => navigate("/")} className="w-full">

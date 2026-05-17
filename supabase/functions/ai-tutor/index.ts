@@ -22,6 +22,8 @@ import {
   corsHeaders,
   errorResponse,
   streamResponse,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req) => {
@@ -29,7 +31,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const ai = getAIConfig();
+    const quota = await enforceQuota(req, "tutor");
+    if (!quota.allowed) return quotaExceededResponse("tutor", quota.used, quota.limit);
+    const ai = getAIConfig("standard");
     const body = await req.json();
 
     const {
@@ -53,8 +57,9 @@ serve(async (req) => {
       );
     }
 
-    // ── Try to fetch syllabus context from Supabase ─────────────────────
+    // ── Try to fetch syllabus + exam-board metadata from Supabase ───────
     let syllabusContext = clientSyllabusContext || "";
+    let examBoardContext = "";
     try {
       const authHeader = req.headers.get("authorization");
       if (authHeader && subject) {
@@ -70,7 +75,7 @@ serve(async (req) => {
         if (user) {
           const { data: subjectData } = await supabase
             .from("subjects")
-            .select("topics, exam_patterns")
+            .select("topics, exam_patterns, exam_board_meta, syllabus_code")
             .eq("user_id", user.id)
             .ilike("name", `%${subject}%`)
             .maybeSingle();
@@ -94,6 +99,54 @@ serve(async (req) => {
                   : "");
             }
           }
+
+          // Build exam-board context (command words, AOs, paper structure)
+          const meta = (subjectData?.exam_board_meta || {}) as any;
+          const parts: string[] = [];
+          if (meta.exam_board) parts.push(`Exam board: ${meta.exam_board}`);
+          if (subjectData?.syllabus_code) parts.push(`Syllabus code: ${subjectData.syllabus_code}`);
+
+          if (Array.isArray(meta.assessment_objectives) && meta.assessment_objectives.length) {
+            parts.push(
+              "Assessment Objectives:\n" +
+                meta.assessment_objectives
+                  .map((ao: any) =>
+                    `  • ${ao.code}${ao.weight_percent ? ` (${ao.weight_percent}%)` : ""}: ${ao.description || ao.name || ""}`
+                  )
+                  .join("\n")
+            );
+          }
+
+          if (Array.isArray(meta.paper_structure) && meta.paper_structure.length) {
+            parts.push(
+              "Paper Structure:\n" +
+                meta.paper_structure
+                  .map((p: any) => {
+                    const bits = [p.paper];
+                    if (p.name) bits.push(p.name);
+                    if (p.duration_minutes) bits.push(`${p.duration_minutes} min`);
+                    if (p.total_marks) bits.push(`${p.total_marks} marks`);
+                    if (p.weight_percent) bits.push(`${p.weight_percent}%`);
+                    if (Array.isArray(p.question_types) && p.question_types.length)
+                      bits.push(p.question_types.join("/"));
+                    return `  • ${bits.join(" — ")}`;
+                  })
+                  .join("\n")
+            );
+          }
+
+          if (Array.isArray(meta.command_words) && meta.command_words.length) {
+            // keep this compact — just the words and one-line definitions
+            const top = meta.command_words.slice(0, 30);
+            parts.push(
+              "Command Words (use the examiner-defined meaning when interpreting questions):\n" +
+                top
+                  .map((cw: any) => `  • ${cw.word}: ${cw.definition}`)
+                  .join("\n")
+            );
+          }
+
+          if (parts.length) examBoardContext = parts.join("\n\n");
         }
       }
     } catch (ctxErr) {
@@ -120,6 +173,7 @@ Return ONLY clean, structured study content using markdown. Do NOT return HTML, 
 CONTEXT:
 ${context || "No specific context provided — adapt to what the student asks."}
 
+${examBoardContext ? `EXAM BOARD METADATA (use this to teach exam strategy, not just the topic):\n${examBoardContext}\n` : ""}
 MATHEMATICAL NOTATION (CRITICAL):
 - ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs.
 - Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sum_{i=1}^{n}$
@@ -128,19 +182,42 @@ MATHEMATICAL NOTATION (CRITICAL):
 - Fractions: $\\frac{numerator}{denominator}$, not "a/b".
 - Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$.
 
-TEACHING STYLE:
+TEACHING STYLE — TEACH LIKE AN EXAMINER, NOT A TEXTBOOK:
 - Be encouraging but direct — students need confidence AND accuracy.
 - Use simple language with precise academic terminology.
 - Give real-life examples that make concepts stick.
-- Highlight common exam mistakes and how to avoid them.
 - Use markdown formatting for clarity (headers, bold, lists).
+
+EXAM-STRATEGY RULES (CRITICAL — you are coaching for the actual exam):
+1. **Command words matter.** When you give a practice question OR interpret one the student asks about, ALWAYS state the command word and what the examiner expects:
+   - "state" → one-line factual recall, no explanation needed.
+   - "describe" → say WHAT happens or WHAT it looks like — observation only, no reasoning.
+   - "explain" → give the REASON / mechanism, link cause to effect using "because" / "so that" / "this means".
+   - "suggest" → apply known principles to an unfamiliar context.
+   - "compare" → both similarities AND differences in the same sentence ("whereas", "but").
+   - "calculate" → show working AND units; no working = lose method marks.
+   - "evaluate" → both sides + a reasoned conclusion.
+   If the EXAM BOARD METADATA above defines the command word differently, use that definition verbatim.
+
+2. **Assessment Objectives.** When you give a practice question, label which AO it targets (AO1 recall, AO2 application, AO3 analysis/evaluation). This trains students to recognise what skill the examiner wants.
+
+3. **Mark-scheme keywords.** Use the exact words examiners reward — name organelles fully, name forces precisely, write equations with the conventional symbols. Tell the student which words are "marking points" (MP1, MP2…) where applicable.
+
+4. **End every concept explanation with a "🎯 How this is examined" mini-block:**
+   - Typical mark allocation (e.g. "usually 4–6 marks")
+   - Typical command words used for this topic
+   - Which paper(s) it appears in (use Paper Structure above if available)
+   - One common student mistake to avoid
+
+5. **Practice question format.** When you give a practice question, write it the way the actual paper does:
+   \`[3] Explain why...\` (marks in square brackets at the start, then the command word).
 
 WHEN A STUDENT ASKS ABOUT A TOPIC:
 1. Explain the concept clearly with examples.
-2. Show how it might appear in an exam (with mark allocation).
-3. Mention related topics they should also review.
+2. Show how it appears in their exam using the rules above.
+3. Mention related topics worth reviewing.
 4. If they're struggling, break it down further.
-5. If they're confident, challenge them with harder applications.`;
+5. If they're confident, challenge them with an AO2/AO3-style application question.`;
 
     // ── Stream response ─────────────────────────────────────────────────
     const response = await fetch(ai.url, {
@@ -156,6 +233,7 @@ WHEN A STUDENT ASKS ABOUT A TOPIC:
           ...messages,
         ],
         stream: true,
+        max_tokens: 700,
       }),
     });
 

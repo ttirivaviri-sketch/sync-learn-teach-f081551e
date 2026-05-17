@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.get_published_tutorials(text, text) TO anon, authenticated;

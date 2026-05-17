@@ -262,10 +262,25 @@ export const PLAN_FEATURES: Record<SubscriptionPlan, SubscriptionFeatures> = {
 export const PLAN_PRICING: Record<SubscriptionPlan, { monthly: number; annually: number; currency: string }> = {
   free: { monthly: 0, annually: 0, currency: 'ZAR' },
   trial: { monthly: 0, annually: 0, currency: 'ZAR' },
-  basic: { monthly: 49, annually: 470, currency: 'ZAR' },
-  premium: { monthly: 99, annually: 950, currency: 'ZAR' },
-  enterprise: { monthly: 199, annually: 1900, currency: 'ZAR' },
+  basic: { monthly: 250, annually: 2500, currency: 'ZAR' },     // AI Moderate
+  premium: { monthly: 500, annually: 5000, currency: 'ZAR' },   // AI Premium
+  enterprise: { monthly: 999, annually: 9990, currency: 'ZAR' },
 };
+
+/**
+ * StudySync product pricing (ZAR).
+ * - AI Moderate / Premium standalone monthly cost
+ * - AI combo cost (discounted when bundled with ≥4 tutor sessions/month)
+ * - Tutor sessions billed per session
+ */
+export const PRICING = {
+  ai_moderate:        { monthly: 250,    usd: 15 },
+  ai_premium:         { monthly: 500,    usd: 30 },
+  ai_moderate_combo:  { monthly: 179.99, usd: 11 },
+  ai_premium_combo:   { monthly: 399.99, usd: 24 },
+  tutor: { perSession: 300, currency: 'ZAR' },
+  combo_min_sessions_per_month: 4, // minimum 1/week to unlock AI discount
+} as const;
 
 export const TRIAL_DURATION_DAYS = 7;
 

@@ -1,8 +1,10 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useDebouncedCallback } from '@/hooks/useDebouncedCallback';
 import { analytics } from '@/utils/analytics';
 import { logger } from "@/utils/logger";
+import { gradeMatches as gradeMatchesShared, curriculumMatches, subjectOverlapCount, subjectMatches } from '@/lib/personalization';
 
 export interface TutorSubject {
   id: string;
@@ -34,13 +36,23 @@ export interface TutorProfile {
   totalReviews: number;
   distance?: string;
   confirmedBookingsCount: number;
+  curriculums?: string[];
+  grades?: string[];
+  profileIncomplete?: boolean;
 }
 
 interface UseTutorDataOptions {
   subjectFilter?: string;
+  /** Should already be debounced by the caller (use useDebouncedValue). */
   searchQuery?: string;
   studyLevel?: string;
   maxActiveBookings?: number;
+  /** Learner's selected subjects from academic profile */
+  subjects?: string[];
+  /** Learner's grade (e.g., "Form 4", "Grade 12", "A-Level") */
+  grade?: string;
+  /** Learner's curriculum (ZIMSEC, CAPS, IEB, Cambridge) */
+  curriculum?: string;
 }
 
 export const useTutorData = (
@@ -54,16 +66,26 @@ export const useTutorData = (
 
   const maxActive = options?.maxActiveBookings ?? 10;
 
-  const fetchTutors = async () => {
+  // Tracks the in-flight fetch so we can abort it if a new one starts or the
+  // component unmounts. Avoids stale `setTutors` calls and racey overlapping fetches.
+  const abortRef = useRef<AbortController | null>(null);
+  const mountedRef = useRef(true);
+
+  const fetchTutors = useCallback(async () => {
+    // Cancel any in-flight fetch
+    if (abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       setLoading(true);
 
-      // Fetch tutor profiles
+      // Use directory RPC — never exposes email/phone of other tutors.
       const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_type', 'tutor');
+        .rpc('get_tutor_directory')
+        .abortSignal(controller.signal);
 
+      if (controller.signal.aborted) return;
       if (profilesError) {
         logger.error('Error fetching tutors:', profilesError);
         throw profilesError;
@@ -71,29 +93,38 @@ export const useTutorData = (
 
       const tutorsData = profilesData || [];
 
-      // Fetch subjects, reviews, and active booking counts in parallel
       const { data: { session } } = await supabase.auth.getSession();
+      if (controller.signal.aborted) return;
 
-      const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult] = await Promise.all([
-        supabase.from('tutor_subjects').select('*'),
-        supabase.from('reviews').select('reviewed_id, rating'),
+      const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult, teachingResult] = await Promise.all([
+        supabase.from('tutor_subjects').select('*').abortSignal(controller.signal),
+        supabase.from('reviews').select('reviewed_id, rating').abortSignal(controller.signal),
         supabase
           .from('bookings')
           .select('tutor_id')
-          .in('status', ['requested', 'confirmed']),
-        supabase.from('qualifications').select('id, user_id, qualification_type, institution, year_obtained'),
+          .in('status', ['requested', 'confirmed'])
+          .abortSignal(controller.signal),
+        supabase
+          .from('qualifications')
+          .select('id, user_id, qualification_type, institution, year_obtained')
+          .abortSignal(controller.signal),
+        supabase
+          .from('tutor_teaching_profile')
+          .select('user_id, curriculums, grades')
+          .abortSignal(controller.signal),
       ]);
+
+      if (controller.signal.aborted) return;
 
       const subjectsData = subjectsResult.data || [];
       const reviewsData = reviewsResult.data || [];
       const activeBookingsData = activeBookingsResult.data || [];
       const qualificationsData = qualificationsResult.data || [];
+      const teachingData = teachingResult.data || [];
 
-      // Build unique subjects list
       const uniqueSubjects = [...new Set(subjectsData.map(s => s.subject))].sort();
-      setAllSubjects(uniqueSubjects);
+      if (mountedRef.current) setAllSubjects(uniqueSubjects);
 
-      // Build ratings map: tutor_id -> { total, count }
       const ratingsMap = new Map<string, { total: number; count: number }>();
       for (const review of reviewsData) {
         const existing = ratingsMap.get(review.reviewed_id) || { total: 0, count: 0 };
@@ -102,13 +133,16 @@ export const useTutorData = (
         ratingsMap.set(review.reviewed_id, existing);
       }
 
-      // Build active bookings count map
       const bookingsCountMap = new Map<string, number>();
       for (const booking of activeBookingsData) {
         bookingsCountMap.set(booking.tutor_id, (bookingsCountMap.get(booking.tutor_id) || 0) + 1);
       }
 
-      // Transform tutor data
+      const teachingMap = new Map<string, { curriculums: string[]; grades: string[] }>();
+      for (const t of teachingData) {
+        teachingMap.set(t.user_id, { curriculums: t.curriculums || [], grades: t.grades || [] });
+      }
+
       const tutorsWithSubjects = tutorsData.map(tutor => {
         const tutorSubjects = subjectsData.filter(s => s.user_id === tutor.id);
         const tutorQualifications = qualificationsData.filter(q => q.user_id === tutor.id);
@@ -116,6 +150,7 @@ export const useTutorData = (
         const avgRating = ratingInfo ? Math.round((ratingInfo.total / ratingInfo.count) * 10) / 10 : 0;
         const totalReviews = ratingInfo?.count || 0;
         const confirmedBookingsCount = bookingsCountMap.get(tutor.id) || 0;
+        const teaching = teachingMap.get(tutor.id);
 
         const distance = userLocation && tutor.location_lat && tutor.location_lng
           ? calculateRealDistance(tutor.location_lat, tutor.location_lng, userLocation)
@@ -124,7 +159,7 @@ export const useTutorData = (
         return {
           id: tutor.id,
           full_name: tutor.full_name || 'Anonymous',
-          email: session?.user ? tutor.email : '',
+          email: '', // intentionally hidden — never exposed in tutor directory
           online_status: tutor.online_status || false,
           last_seen: tutor.last_seen || new Date().toISOString(),
           bio: tutor.bio,
@@ -136,75 +171,136 @@ export const useTutorData = (
           rating: avgRating,
           totalReviews,
           confirmedBookingsCount,
+          curriculums: teaching?.curriculums || [],
+          grades: teaching?.grades || [],
+          profileIncomplete: tutorSubjects.length === 0,
           distance: distance ? `${distance.toFixed(1)}km` : 'Unknown',
           distanceValue: distance,
         };
       });
 
-      // Filter: only tutors who have at least one subject
-      let filtered = tutorsWithSubjects.filter(t => t.subjects.length > 0);
+      // Score-and-rank: keep tutors who match on subject, grade, or curriculum.
+      // Tutors with incomplete profiles can still surface when grade+curriculum align.
+      const learnerSubjects = options?.subjects && options.subjects.length > 0
+        ? options.subjects
+        : (options?.subjectFilter ? [options.subjectFilter] : []);
+      const learnerGrade = options?.grade;
+      const learnerCurriculum = options?.curriculum;
+      const queryLower = options?.searchQuery?.toLowerCase().trim();
 
-      // Filter: exclude overbooked tutors
-      filtered = filtered.filter(t => t.confirmedBookingsCount < maxActive);
+      const scored = tutorsWithSubjects.map(t => {
+        const tutorSubjectNames = t.subjects.map(s => s.subject);
+        const subjectScore = learnerSubjects.length
+          ? subjectOverlapCount(tutorSubjectNames, learnerSubjects)
+          : (t.subjects.length > 0 ? 1 : 0);
 
-      // Filter by subject if provided
-      if (options?.subjectFilter) {
-        const subjectLower = options.subjectFilter.toLowerCase();
-        filtered = filtered.filter(t =>
-          t.subjects.some(s => s.subject.toLowerCase().includes(subjectLower))
-        );
-      }
+        const gradeLabels = [
+          ...t.subjects.map(s => s.level),
+          ...(t.grades || []),
+        ];
+        const gradeScore = learnerGrade
+          ? (gradeMatchesShared(gradeLabels, learnerGrade) ? 1 : 0)
+          : 1;
 
-      // Filter by study level — only show tutors who teach at the learner's level
-      if (options?.studyLevel) {
-        const levelLower = options.studyLevel.toLowerCase();
-        filtered = filtered.filter(t =>
-          t.subjects.some(s => s.level.toLowerCase().includes(levelLower))
-        );
-      }
+        const curriculumScore = learnerCurriculum && t.curriculums.length
+          ? (t.curriculums.some(c => curriculumMatches(c, learnerCurriculum)) ? 1 : 0)
+          : 1;
 
-      // Filter by search query (name or subject)
-      if (options?.searchQuery) {
-        const queryLower = options.searchQuery.toLowerCase();
-        filtered = filtered.filter(t =>
-          t.full_name.toLowerCase().includes(queryLower) ||
-          t.subjects.some(s => s.subject.toLowerCase().includes(queryLower))
-        );
-      }
+        const queryScore = queryLower
+          ? ((t.full_name.toLowerCase().includes(queryLower) ||
+              tutorSubjectNames.some(s => s.toLowerCase().includes(queryLower)) ||
+              (t.bio || '').toLowerCase().includes(queryLower)) ? 1 : 0)
+          : 1;
 
-      // Sort: highest rating first, then by distance
+        return { tutor: t, subjectScore, gradeScore, curriculumScore, queryScore };
+      });
+
+      const filtered = scored
+        .filter(s => s.queryScore > 0)
+        .filter(s => {
+          if (!learnerSubjects.length) return true;
+          if (s.subjectScore > 0) return true;
+          // Profile-incomplete tutors slip through when grade+curriculum align.
+          return s.tutor.profileIncomplete && s.gradeScore > 0 && s.curriculumScore > 0;
+        });
+
       filtered.sort((a, b) => {
-        // Primary: rating descending
-        if (b.rating !== a.rating) return b.rating - a.rating;
-        // Secondary: distance ascending (if available)
+        const ascore =
+          a.subjectScore * 10 + a.gradeScore * 3 + a.curriculumScore * 2 +
+          (a.tutor.profileIncomplete ? 0 : 1);
+        const bscore =
+          b.subjectScore * 10 + b.gradeScore * 3 + b.curriculumScore * 2 +
+          (b.tutor.profileIncomplete ? 0 : 1);
+        if (bscore !== ascore) return bscore - ascore;
+        if (b.tutor.rating !== a.tutor.rating) return b.tutor.rating - a.tutor.rating;
         if (userLocation) {
-          if (a.distanceValue === null) return 1;
-          if (b.distanceValue === null) return -1;
-          return a.distanceValue - b.distanceValue;
+          if (a.tutor.distanceValue === null) return 1;
+          if (b.tutor.distanceValue === null) return -1;
+          return (a.tutor.distanceValue ?? 0) - (b.tutor.distanceValue ?? 0);
         }
         return 0;
       });
 
-      setTutors(filtered);
+      const finalTutors = filtered.map(s => s.tutor);
+
+      if (controller.signal.aborted || !mountedRef.current) return;
+      setTutors(finalTutors);
 
       analytics.track('tutors_loaded', {
-        count: filtered.length,
+        count: finalTutors.length,
         hasLocation: !!userLocation,
         authenticated: !!session?.user,
         subjectFilter: options?.subjectFilter || null,
       });
-    } catch (error) {
+    } catch (error: any) {
+      // Aborts surface as DOMException / "AbortError" — silently ignore.
+      if (controller.signal.aborted || error?.name === 'AbortError') return;
+
+      // Safari over flaky networks throws "TypeError: Load failed" for any
+      // dropped fetch. Treat these as transient: retry quietly, do not toast.
+      const msg = (error?.message || '').toLowerCase();
+      const isTransient =
+        msg.includes('load failed') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('networkerror') ||
+        msg.includes('network request failed') ||
+        msg.includes('timeout');
+
+      if (isTransient) {
+        logger.warn('Transient network error fetching tutors, will retry:', error?.message);
+        if (mountedRef.current) {
+          // Single silent retry after a short backoff.
+          setTimeout(() => {
+            if (mountedRef.current) fetchTutors();
+          }, 2500);
+        }
+        return;
+      }
+
       logger.error('Error fetching tutors:', error);
       analytics.error(error as Error, 'fetch_tutors_failed');
-      toast({
-        title: 'Error',
-        description: 'Failed to load tutors. Please try again.',
-        variant: 'destructive',
-      });
+      if (mountedRef.current) {
+        toast({
+          title: 'Error',
+          description: 'Failed to load tutors. Please try again.',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted && mountedRef.current) setLoading(false);
     }
-  };
+  }, [
+    userLocation?.latitude,
+    userLocation?.longitude,
+    maxActive,
+    options?.subjectFilter,
+    options?.searchQuery,
+    options?.studyLevel,
+    options?.grade,
+    options?.curriculum,
+    JSON.stringify(options?.subjects || []),
+    toast,
+  ]);
 
   const calculateRealDistance = (
     lat: number, lng: number,
@@ -221,14 +317,11 @@ export const useTutorData = (
     return R * c;
   };
 
-  // Debounced wrapper — collapses multiple rapid realtime events into one fetch
-  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const debouncedFetch = () => {
-    if (debounceTimer.current) clearTimeout(debounceTimer.current);
-    debounceTimer.current = setTimeout(() => { fetchTutors(); }, 800);
-  };
+  // Shared debounce — always calls the latest fetchTutors (no stale closures).
+  const [debouncedFetch] = useDebouncedCallback(fetchTutors, 800);
 
   useEffect(() => {
+    mountedRef.current = true;
     fetchTutors();
 
     const channel = supabase
@@ -246,10 +339,12 @@ export const useTutorData = (
       .subscribe();
 
     return () => {
-      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      mountedRef.current = false;
+      if (abortRef.current) abortRef.current.abort();
       supabase.removeChannel(channel);
     };
-  }, [options?.subjectFilter, options?.searchQuery, options?.studyLevel]);
+    // fetchTutors and debouncedFetch are stable wrt the right deps via useCallback.
+  }, [fetchTutors, debouncedFetch]);
 
   return {
     tutors,

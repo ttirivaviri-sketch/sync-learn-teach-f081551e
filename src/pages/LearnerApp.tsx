@@ -5,14 +5,12 @@
  *       header, bottom nav, and cross-cutting modals.
  * Delegates each tab's UI to a focused sub-component.
  */
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
-import { useDevMode } from "@/contexts/DevModeContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
-import StudySyncLibrary from "@/components/StudySyncLibrary";
 import LaunchScreen from "@/components/LaunchScreen";
 import ChatInterface from "@/components/ChatInterface";
 import ReviewModal from "@/components/ReviewModal";
@@ -29,20 +27,25 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { analytics } from "@/utils/analytics";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useBookingPayments } from "@/hooks/useBookingPayments";
 import { useAcademicProfile } from "@/hooks/useAcademicProfile";
 
-// ── Tab sub-components ──────────────────────────────────────────────────────
-import { LearnerHomeTab } from "./learner/LearnerHomeTab";
-import { LearnerLibraryTab } from "./learner/LearnerLibraryTab";
-import { LearnerActivityTab } from "./learner/LearnerActivityTab";
-import { LearnerProfileTab } from "./learner/LearnerProfileTab";
+// ── Tab sub-components (lazy-loaded so only the active tab mounts its hook tree) ──
+const LearnerHomeTab = lazy(() => import("./learner/LearnerHomeTab").then(m => ({ default: m.LearnerHomeTab })));
+const LearnerLibraryTab = lazy(() => import("./learner/LearnerLibraryTab").then(m => ({ default: m.LearnerLibraryTab })));
+const LearnerActivityTab = lazy(() => import("./learner/LearnerActivityTab").then(m => ({ default: m.LearnerActivityTab })));
+const LearnerProfileTab = lazy(() => import("./learner/LearnerProfileTab").then(m => ({ default: m.LearnerProfileTab })));
 import { logger } from "@/utils/logger";
 import { PaymentMethodsModal } from "@/components/learner-modals/PaymentMethodsModal";
 import { PaymentHistoryModal } from "@/components/learner-modals/PaymentHistoryModal";
 import { AcademicSetupModal } from "@/components/learner-modals/AcademicSetupModal";
+
+const TabFallback = () => (
+  <div className="flex items-center justify-center py-20 text-muted-foreground text-sm">Loading…</div>
+);
 
 // ── Types ───────────────────────────────────────────────────────────────────
 interface UserProfile {
@@ -52,6 +55,7 @@ interface UserProfile {
   user_type?: string;
   study_level?: string;
   avatar_url?: string;
+  onboarding_completed_at?: string | null;
 }
 
 interface VideoMeetingData {
@@ -62,24 +66,12 @@ interface VideoMeetingData {
 
 // ─────────────────────────────────────────────────────────────────────────────
 const LearnerApp = () => {
-  const {
-    isDevMode, devRole, devUserName,
-    bypassPayments, bypassSchedule,
-    devSessionActive, setDevSessionActive, launchDevSession,
-  } = useDevMode();
-
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isOnline } = useNetworkStatus();
 
   // ── Auth ────────────────────────────────────────────────────────────────
-  // In dev-mode we skip the shared hook and provide synthetic state instead.
-  const auth = useAuth(isDevMode && devRole === "learner" ? {} : { redirectTo: "/learner/auth" });
-  const [devLoading, setDevLoading] = useState(true);
-
-  // Effective session / loading (dev-mode aware)
-  const session = isDevMode && devRole === "learner" ? null : auth.session;
-  const loading = isDevMode && devRole === "learner" ? devLoading : auth.loading;
+  const { session, loading } = useAuth({ redirectTo: "/learner/auth" });
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("home");
@@ -87,6 +79,7 @@ const LearnerApp = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
 
   // Full-screen overlays
   const [showVideoMeeting, setShowVideoMeeting] = useState(false);
@@ -118,7 +111,7 @@ const LearnerApp = () => {
   } | null>(null);
 
   // ── Data hooks ──────────────────────────────────────────────────────────
-  const userId = session?.user?.id || (isDevMode ? "dev-user" : undefined);
+  const userId = session?.user?.id;
 
   const {
     bookings, loading: bookingsLoading,
@@ -126,17 +119,22 @@ const LearnerApp = () => {
   } = useRealtimeBookings("learner", userId);
 
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
-  const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
-    subjectFilter: selectedSubject,
-    searchQuery,
-    studyLevel: profile?.study_level || undefined,
-  });
-  const { isUserOnline } = usePresenceTracking(session);
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
 
   const {
     profile: academicProfile, loading: academicProfileLoading,
     saving: academicProfileSaving, saveProfile: saveAcademicProfile,
   } = useAcademicProfile(userId);
+
+  const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
+    subjectFilter: selectedSubject,
+    searchQuery: debouncedSearchQuery,
+    studyLevel: profile?.study_level || undefined,
+    subjects: academicProfile?.subjects || undefined,
+    grade: academicProfile?.grade || undefined,
+    curriculum: academicProfile?.curriculum || undefined,
+  });
+  const { isUserOnline } = usePresenceTracking(session);
 
   const confirmedBookingIds = useMemo(
     () => bookings.filter((b) => b.status === "confirmed").map((b) => b.id),
@@ -148,52 +146,28 @@ const LearnerApp = () => {
     [bookings, needsPayment],
   );
 
-  // ── Dev mode: synthetic bootstrap ──────────────────────────────────────
-  useEffect(() => {
-    if (isDevMode && devRole === "learner") {
-      setDevLoading(false);
-      setShowLaunchScreen(false);
-      setProfile({ id: "dev-user", full_name: devUserName, user_type: "learner", study_level: "senior_high" });
-    }
-  }, [isDevMode, devRole, devUserName]);
-
-  // Dev session launch
-  useEffect(() => {
-    if (isDevMode && devRole === "learner" && devSessionActive) {
-      setVideoMeetingData({
-        partnerName: "Dev Tutor",
-        subject: "Dev Test Session",
-        booking: {
-          id: "dev-booking-001",
-          room_name: "StudySync-Dev-Test-Room",
-          duration_minutes: 60,
-          scheduled_at: new Date().toISOString(),
-          tutor_profile: { full_name: "Dev Tutor" },
-          tutor_subjects: { subject: "Dev Test Session" },
-        },
-      });
-      setShowVideoMeeting(true);
-      setDevSessionActive(false);
-    }
-  }, [devSessionActive, isDevMode, devRole, setDevSessionActive]);
-
   // ── Profile & analytics ────────────────────────────────────────────────
   useEffect(() => { analytics.pageView("learner-app"); }, []);
 
   useEffect(() => {
     if (session?.user) {
       loadUserProfile();
-      getCurrentLocation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
 
+  // Redirect users who haven't completed onboarding (academic profile + flag).
+  // Wait for BOTH academic profile + base profile loads to avoid races.
+  const redirectedToOnboardingRef = useRef(false);
   useEffect(() => {
-    if (!academicProfileLoading && !academicProfile && !profileSetupDismissed && (session?.user || isDevMode)) {
-      const timer = setTimeout(() => setShowAcademicSetup(true), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [academicProfileLoading, academicProfile, profileSetupDismissed, session?.user, isDevMode]);
+    if (redirectedToOnboardingRef.current) return;
+    if (loading || academicProfileLoading || !profileLoaded) return;
+    if (!session?.user) return;
+    if (profile?.onboarding_completed_at) return;
+    if (academicProfile) return;
+    redirectedToOnboardingRef.current = true;
+    navigate("/learner/onboarding", { replace: true });
+  }, [loading, academicProfileLoading, profileLoaded, academicProfile, session?.user, navigate, profile]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
@@ -219,6 +193,7 @@ const LearnerApp = () => {
         navigate("/learner/choose-level");
       }
     } catch (err) { logger.error("Profile load error:", err); }
+    finally { setProfileLoaded(true); }
   };
 
   const handleSignOut = () => setShowSignOutConfirm(true);
@@ -242,7 +217,7 @@ const LearnerApp = () => {
       toast({ title: "No connection", description: "Please check your internet connection to book sessions.", variant: "destructive" });
       return;
     }
-    if (!session?.user && !isDevMode) {
+    if (!session?.user) {
       toast({ title: "Authentication required", description: "Please sign in to book sessions.", variant: "destructive" });
       navigate("/learner/auth");
       return;
@@ -314,12 +289,10 @@ const LearnerApp = () => {
   };
 
   const handlePayNow = (booking: unknown) => {
-    if (bypassPayments) { toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." }); return; }
     setCheckoutBooking(booking);
   };
 
   const handleStartCheckout = (booking: any) => {
-    if (bypassPayments) { toast({ title: "Dev Mode", description: "Payment bypassed — booking marked as paid." }); return; }
     setCheckoutBooking(booking);
   };
 
@@ -331,15 +304,35 @@ const LearnerApp = () => {
 
   // ── Early returns ──────────────────────────────────────────────────────
   if (loading) return <LoadingScreen message="Loading your account..." />;
-  if (!isDevMode && !session?.user) return null;
-  if (showLaunchScreen && !isDevMode) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
+  if (!session?.user) return null;
+  if (showLaunchScreen) return <LaunchScreen onComplete={() => setShowLaunchScreen(false)} />;
 
   if (checkoutBooking) {
-    return (
+     return (
       <PaymentCheckout
         booking={checkoutBooking}
         onBack={() => setCheckoutBooking(null)}
-        onPaymentInitiated={() => {}}
+        onPaymentInitiated={(booking) => {
+          setCheckoutBooking(null);
+          const now = Date.now();
+          const startTime = new Date(booking.scheduled_at).getTime();
+          const endTime = startTime + booking.duration_minutes * 60000;
+          const joinWindowStart = startTime - 15 * 60000;
+
+          if (now >= joinWindowStart && now < endTime) {
+            setVideoMeetingData({
+              partnerName: booking.tutor_profile?.full_name || "Tutor",
+              subject: booking.tutor_subjects?.subject || "Study Session",
+              booking: booking as unknown as Record<string, unknown>,
+            });
+            setShowVideoMeeting(true);
+          } else {
+            toast({
+              title: "Payment confirmed!",
+              description: "Your session will be available to join closer to the scheduled time.",
+            });
+          }
+        }}
       />
     );
   }
@@ -394,66 +387,87 @@ const LearnerApp = () => {
       {/* ── Main Content ── */}
       <div className="pt-16 pb-20">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsContent value="home">
-            <LearnerHomeTab
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              allSubjects={allSubjects}
-              selectedSubject={selectedSubject}
-              onSelectSubject={setSelectedSubject}
-              userGeoLocation={userGeoLocation ? { lat: userGeoLocation.latitude, lng: userGeoLocation.longitude } : null}
-              locationLoading={locationLoading}
-              onUpdateLocation={getCurrentLocation}
-              tutors={tutors}
-              tutorsLoading={tutorsLoading}
-              onRefreshTutors={refreshTutors}
-              onBookTutor={handleBookTutor}
-              onStartChat={handleStartChat}
-              isUserOnline={isUserOnline}
-            />
+          <TabsContent value="home" forceMount={activeTab === "home" ? true : undefined} hidden={activeTab !== "home"}>
+            {activeTab === "home" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerHomeTab
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  allSubjects={allSubjects}
+                  selectedSubject={selectedSubject}
+                  onSelectSubject={setSelectedSubject}
+                  userGeoLocation={userGeoLocation ? { lat: userGeoLocation.latitude, lng: userGeoLocation.longitude } : null}
+                  locationLoading={locationLoading}
+                  onUpdateLocation={getCurrentLocation}
+                  tutors={tutors}
+                  tutorsLoading={tutorsLoading}
+                  onRefreshTutors={refreshTutors}
+                  onBookTutor={handleBookTutor}
+                  onStartChat={handleStartChat}
+                  isUserOnline={isUserOnline}
+                  upcomingBookings={bookings.filter((b) => (b.status === "confirmed" || b.status === "requested") && (new Date(b.scheduled_at).getTime() + b.duration_minutes * 60000) > Date.now())}
+                  needsPayment={needsPayment}
+                  onJoinVideoSession={handleJoinVideoSession}
+                  onPayNow={handlePayNow}
+                  onStartCheckout={handleStartCheckout}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
-          <TabsContent value="library">
-            <LearnerLibraryTab
-              academicProfile={academicProfile}
-              onShowAcademicSetup={() => setShowAcademicSetup(true)}
-              onBookTutor={handleLibraryBookTutor}
-              onNeedHelp={() => setActiveTab("home")}
-            />
+          <TabsContent value="library" hidden={activeTab !== "library"}>
+            {activeTab === "library" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerLibraryTab
+                  academicProfile={academicProfile}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+                  onBookTutor={handleLibraryBookTutor}
+                  onNeedHelp={() => setActiveTab("home")}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
-          <TabsContent value="activity">
-            <LearnerActivityTab
-              bookings={bookings}
-              bookingsLoading={bookingsLoading}
-              bookingsNeedingPayment={bookingsNeedingPayment}
-              needsPayment={needsPayment}
-              onJoinVideoSession={handleJoinVideoSession}
-              onPayNow={handlePayNow}
-              onStartCheckout={handleStartCheckout}
-              onStartChat={(booking) => {
-                setChatWithUserId(booking.tutor_id);
-                setChatWithUserName("Tutor");
-                setShowChat(true);
-              }}
-              onReview={(data) => { setReviewData(data); setShowReviewModal(true); }}
-            />
+          <TabsContent value="activity" hidden={activeTab !== "activity"}>
+            {activeTab === "activity" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerActivityTab
+                  bookings={bookings}
+                  bookingsLoading={bookingsLoading}
+                  bookingsNeedingPayment={bookingsNeedingPayment}
+                  needsPayment={needsPayment}
+                  onJoinVideoSession={handleJoinVideoSession}
+                  onPayNow={handlePayNow}
+                  onStartCheckout={handleStartCheckout}
+                  onStartChat={(booking) => {
+                    setChatWithUserId(booking.tutor_id);
+                    setChatWithUserName("Tutor");
+                    setShowChat(true);
+                  }}
+                  onReview={(data) => { setReviewData(data); setShowReviewModal(true); }}
+                />
+              </Suspense>
+            )}
           </TabsContent>
 
-          <TabsContent value="profile">
-            <LearnerProfileTab
-              session={session}
-              profile={profile}
-              academicProfile={academicProfile}
-              bookings={bookings}
-              onRefreshProfile={loadUserProfile}
-              onShowAcademicSetup={() => setShowAcademicSetup(true)}
-              onShowPaymentMethods={() => setShowPaymentMethods(true)}
-              onShowAllPayments={() => setShowAllPayments(true)}
-              onNavigateTab={setActiveTab}
-              onSignOut={handleSignOut}
-              onNavigate={navigate}
-            />
+          <TabsContent value="profile" hidden={activeTab !== "profile"}>
+            {activeTab === "profile" && (
+              <Suspense fallback={<TabFallback />}>
+                <LearnerProfileTab
+                  session={session}
+                  profile={profile}
+                  academicProfile={academicProfile}
+                  bookings={bookings}
+                  onRefreshProfile={loadUserProfile}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+                  onShowPaymentMethods={() => setShowPaymentMethods(true)}
+                  onShowAllPayments={() => setShowAllPayments(true)}
+                  onNavigateTab={setActiveTab}
+                  onSignOut={handleSignOut}
+                  onNavigate={navigate}
+                />
+              </Suspense>
+            )}
           </TabsContent>
         </Tabs>
 
@@ -505,7 +519,6 @@ const LearnerApp = () => {
       <PaymentMethodsModal
         open={showPaymentMethods}
         onClose={() => setShowPaymentMethods(false)}
-        bypassPayments={bypassPayments}
       />
 
       {session?.user?.id && (
@@ -519,7 +532,7 @@ const LearnerApp = () => {
       <AcademicSetupModal
         open={showAcademicSetup}
         onClose={() => { setShowAcademicSetup(false); setProfileSetupDismissed(true); }}
-        userId={session?.user?.id || "dev-user"}
+        userId={session?.user?.id || ""}
         academicProfile={academicProfile}
         saving={academicProfileSaving}
         onSave={async (data) => {

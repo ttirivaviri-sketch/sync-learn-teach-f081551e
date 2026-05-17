@@ -1,18 +1,23 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock } from 'lucide-react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
 import { SubjectDetail } from './SubjectDetail';
-import { StudyCalendar } from './StudyCalendar';
-import { ExamCountdownWidget } from './ExamCountdownWidget';
-import { ExamSetupCard } from './ExamSetupCard';
-import { MultiExamCountdown } from './MultiExamCountdown';
-import { SpacedRepetitionWidget } from './SpacedRepetitionWidget';
-import { ProgressCharts } from './ProgressCharts';
-import { AIProgressInsights } from './AIProgressInsights';
-import { AIWeakTopicAlerts } from './AIWeakTopicAlerts';
-import { DailySummary } from './DailySummary';
-import { AdaptivePlanBanner } from './AdaptivePlanBanner';
+import { Leaderboard } from './Leaderboard';
+import { TopicPicker } from './TopicPicker';
+import { TopicSessionRunner } from './TopicSessionRunner';
+// Heavy tab contents — lazy so the default Subjects tab paints first.
+const StudyCalendar = lazy(() => import('./StudyCalendar').then(m => ({ default: m.StudyCalendar })));
+const ExamSetupCard = lazy(() => import('./ExamSetupCard').then(m => ({ default: m.ExamSetupCard })));
+const MultiExamCountdown = lazy(() => import('./MultiExamCountdown').then(m => ({ default: m.MultiExamCountdown })));
+const SpacedRepetitionWidget = lazy(() => import('./SpacedRepetitionWidget').then(m => ({ default: m.SpacedRepetitionWidget })));
+const ProgressCharts = lazy(() => import('./ProgressCharts').then(m => ({ default: m.ProgressCharts })));
+const AIProgressInsights = lazy(() => import('./AIProgressInsights').then(m => ({ default: m.AIProgressInsights })));
+const AIWeakTopicAlerts = lazy(() => import('./AIWeakTopicAlerts').then(m => ({ default: m.AIWeakTopicAlerts })));
+const DailySummary = lazy(() => import('./DailySummary').then(m => ({ default: m.DailySummary })));
+const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => ({ default: m.AdaptivePlanBanner })));
+const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '@/lib/utils';
@@ -35,6 +40,7 @@ import { RiskLevelSummary, buildSubjectRisks } from '@/components/RiskLevelIndic
 import { useAIStudyIntelligence } from '../hooks/useAIStudyIntelligence';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { useStudyActivity } from '@/hooks/useStudyActivity';
+import { useSubjectXP } from '../hooks/useSubjectXP';
 import { logger } from "@/utils/logger";
 
 interface DashboardProps {
@@ -48,10 +54,16 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'review' | 'progress'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'setup'>('subjects');
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
+  const [showQuizHistory, setShowQuizHistory] = useState(false);
+  const [showGlobalLeaderboard, setShowGlobalLeaderboard] = useState(false);
+  const [showTopicPicker, setShowTopicPicker] = useState(false);
+  const [topicStart, setTopicStart] = useState<{ subject: string; topic: string; subtopic?: string; subjectId?: string; curriculum: string } | null>(null);
   const { data: dbSubjects, isLoading: subjectsLoading } = useSubjects();
+  const { awardXP } = useSubjectXP();
+  const curriculum = academicProfile?.curriculum || 'ZIMSEC';
   
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
   const { exams: subjectExams, addExam, deleteExam, getNextExam } = useSubjectExams();
@@ -107,7 +119,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const hasSubjects = subjects.length > 0;
   
   // Task persistence — enhanced with AI context
-  const { getTasksForSubject } = useDailyTasks(subjects, aiContextPayload);
+  const { getTasksForSubject, completeTask, ensureTasks, addBonusTask, yesterdayIncomplete, todayIncomplete, isLoading: tasksLoading, tasksCount } = useDailyTasks(subjects, aiContextPayload);
+
+  // Seed today's tasks — only after the query has settled and no tasks exist
+  useEffect(() => {
+    if (subjects.length > 0 && !tasksLoading && tasksCount === 0) {
+      ensureTasks.mutate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subjects.length, tasksLoading, tasksCount]);
+
+  // Streak reminder state
+  const [reminderDismissed, setReminderDismissed] = useState(false);
+  const currentHour = new Date().getHours();
   
   // Badge earning — auto-checks on progress changes
   useBadgeEarning();
@@ -135,7 +159,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           (s) => s.name.toLowerCase() === ed.subject.toLowerCase()
         );
         if (matchingSubject) {
-          // Check if this exact exam date already exists (by subject_id AND date)
           const existing = subjectExams.find(
             (se) => se.subject_id === matchingSubject.id && se.exam_date === ed.date
           );
@@ -205,6 +228,12 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           tasks={dynamicTasks}
           onBack={() => setSelectedSubject(null)}
           onOpenChat={onOpenChat}
+          curriculum={curriculum}
+          onCompleteTask={(taskId) => {
+            completeTask.mutate(taskId);
+            awardXP.mutate({ subject: selectedSubject.name, curriculum, amount: 10 });
+          }}
+          onAddBonusTask={() => addBonusTask.mutate(selectedSubject.id)}
         />
       </div>
     );
@@ -213,138 +242,31 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   return (
     <div className="container max-w-4xl mx-auto px-4 py-6 space-y-6">
       {/* Daily Summary Modal */}
-      {showSummary && <DailySummary onClose={() => setShowSummary(false)} />}
-
-      {/* Academic Profile Card with AI Intelligence Status */}
-      {academicProfile ? (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
-          <CardContent className="p-4 space-y-2">
-            <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2">
-                <GraduationCap className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-sm text-foreground">Your Academic Profile</h3>
-              </div>
-              {/* AI Intelligence Status Indicator */}
-              <div className="flex items-center gap-1.5">
-                {aiIntelligence.isEnriching ? (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 animate-pulse border-primary/50">
-                    <Brain className="h-3 w-3 mr-0.5 text-primary" />
-                    AI Syncing...
-                  </Badge>
-                ) : aiIntelligence.syllabusIntelligence ? (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/50 text-green-600">
-                    <Brain className="h-3 w-3 mr-0.5" />
-                    AI Active
-                  </Badge>
-                ) : null}
-              </div>
-            </div>
-            <div className="grid grid-cols-3 gap-2 text-xs">
-              <div>
-                <span className="text-muted-foreground">Curriculum</span>
-                <p className="font-medium text-foreground">{academicProfile.curriculum || '—'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Grade</span>
-                <p className="font-medium text-foreground">{academicProfile.grade || '—'}</p>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Exam Year</span>
-                <p className="font-medium text-foreground">{academicProfile.exam_year || '—'}</p>
-              </div>
-            </div>
-            {academicProfile.subjects && academicProfile.subjects.length > 0 && (
-              <div className="flex flex-wrap gap-1 pt-1">
-                {academicProfile.subjects.map((s) => (
-                  <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s}</Badge>
-                ))}
-              </div>
-            )}
-            {/* Risk Level Indicators */}
-            {subjectRisks.length > 0 && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <RiskLevelSummary risks={subjectRisks} />
-              </div>
-            )}
-            {/* Exam dates shown in Calendar tab MultiExamCountdown — removed here to avoid duplicates */}
-            {/* AI Learning Profile Summary */}
-            {aiIntelligence.learningProfile && (
-              <div className="mt-2 pt-2 border-t border-border/50">
-                <div className="grid grid-cols-4 gap-2 text-xs text-center">
-                  <div>
-                    <p className="font-bold text-primary">{aiIntelligence.learningProfile.overallUnderstanding}%</p>
-                    <p className="text-[10px] text-muted-foreground">Understanding</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-accent capitalize">{aiIntelligence.learningProfile.learningPace}</p>
-                    <p className="text-[10px] text-muted-foreground">Pace</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-warning capitalize">{aiIntelligence.learningProfile.recommendedDifficulty}</p>
-                    <p className="text-[10px] text-muted-foreground">Level</p>
-                  </div>
-                  <div>
-                    <p className="font-bold text-destructive">
-                      {aiIntelligence.learningProfile.daysUntilExam !== null
-                        ? `${aiIntelligence.learningProfile.daysUntilExam}d`
-                        : '—'}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground">To Exam</p>
-                  </div>
-                </div>
-                {aiIntelligence.learningProfile.persistentWeakAreas.length > 0 && (
-                  <div className="mt-1.5">
-                    <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Areas:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {aiIntelligence.learningProfile.persistentWeakAreas.slice(0, 4).map((t) => (
-                        <Badge key={t} variant="destructive" className="text-[9px] px-1 py-0">{t}</Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Card className="border-warning/30 bg-warning/5">
-          <CardContent className="p-4 text-center">
-            <AlertCircle className="h-8 w-8 mx-auto text-warning mb-2" />
-            <h3 className="font-semibold text-sm mb-1">Academic Profile Not Set</h3>
-            <p className="text-xs text-muted-foreground mb-3">
-              Go to your Profile tab to set your curriculum, grade, and subjects first.
-            </p>
-          </CardContent>
-        </Card>
+      {showSummary && (
+        <Suspense fallback={null}>
+          <DailySummary onClose={() => setShowSummary(false)} />
+        </Suspense>
       )}
 
-      {/* Syllabus & Paper Codes Setup Gate */}
-      {userId && (
-        <SyllabusSetupGate
-          userId={userId}
-          academicProfile={academicProfile}
-          onSetupComplete={() => setSyllabusSetupDone(true)}
-          onUploadDocuments={onUploadClick}
-        />
-      )}
+      <Leaderboard
+        open={showGlobalLeaderboard}
+        onOpenChange={setShowGlobalLeaderboard}
+        curriculum={curriculum}
+        title="Global Leaderboard"
+      />
 
-      {/* Document upload gate — show when no documents uploaded (regardless of syllabus state) */}
-      {hasDocuments === false && (
-        <Card className="border-accent/30 bg-accent/5">
-          <CardContent className="p-5 text-center">
-            <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
-            <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
-              Task generation is disabled until you upload at least one document.
-            </p>
-            <Button className="gradient-primary" onClick={onUploadClick}>
-              <Upload className="mr-2 h-4 w-4" />
-              Upload Documents
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <TopicPicker
+        open={showTopicPicker}
+        onOpenChange={setShowTopicPicker}
+        curriculum={curriculum}
+        onPick={(args) => setTopicStart({ ...args, curriculum })}
+      />
+
+      <TopicSessionRunner
+        open={!!topicStart}
+        onOpenChange={(o) => { if (!o) setTopicStart(null); }}
+        start={topicStart}
+      />
 
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
@@ -354,85 +276,37 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </p>
       </div>
 
-       {/* Exam Countdowns — moved to Calendar tab only to avoid duplicates */}
-       {hasSubjects && subjectExams.length === 0 && (
-          <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
-            <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
-            <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
-            <p className="text-sm text-muted-foreground mb-3">
-              Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.
-            </p>
-            <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')}>
-              <Calendar className="mr-2 h-4 w-4" />
-              Go to Calendar
-            </Button>
-          </div>
-       )}
- 
-      {!hasSubjects && !subjectsLoading && !syllabusSetupDone && (
-        <div className="p-6 rounded-2xl bg-warning/10 border border-warning/30 text-center">
-          <Upload className="h-12 w-12 mx-auto text-warning mb-3" />
-          <h3 className="text-lg font-bold text-foreground mb-2">Set Up Your Syllabi</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            Add your subjects with syllabus codes and paper codes above, or upload your official syllabi to get started.
-          </p>
-          <Button className="gradient-primary" onClick={onUploadClick}>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Documents
-          </Button>
-        </div>
-      )}
-
-      {/* Quick Actions */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        <Button variant="outline" size="sm" className="shrink-0" onClick={onUploadClick}>
-          <Upload className="mr-2 h-4 w-4" />
-          Upload Documents
-        </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('calendar')} disabled={hasDocuments === false}>
-          <BookOpen className="mr-2 h-4 w-4" />
-          Past Papers
-        </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setShowSummary(true)} disabled={hasDocuments === false}>
-          <Trophy className="mr-2 h-4 w-4" />
-          Daily Summary
-        </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('progress')} disabled={hasDocuments === false}>
-          <BarChart3 className="mr-2 h-4 w-4" />
-          Progress
-        </Button>
-        <Button variant="outline" size="sm" className="shrink-0" onClick={() => setActiveTab('review')} disabled={hasDocuments === false}>
-          <Settings className="mr-2 h-4 w-4" />
-          Review
-        </Button>
-      </div>
-
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="subjects">
-            <BookOpen className="mr-1.5 h-4 w-4" />
-            <span className="hidden sm:inline">Subjects</span>
+            <BookOpen className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Subjects</span>
           </TabsTrigger>
           <TabsTrigger value="progress">
-            <TrendingUp className="mr-1.5 h-4 w-4" />
-            <span className="hidden sm:inline">Progress</span>
+            <TrendingUp className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Progress</span>
           </TabsTrigger>
           <TabsTrigger value="calendar">
-            <Calendar className="mr-1.5 h-4 w-4" />
-            <span className="hidden sm:inline">Calendar</span>
+            <Calendar className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Calendar</span>
           </TabsTrigger>
-          <TabsTrigger value="review" className="relative">
-            <Brain className="mr-1.5 h-4 w-4" />
-            <span className="hidden sm:inline">Review</span>
+          <TabsTrigger value="exams" className="relative">
+            <Trophy className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Exams</span>
             {(topicsDueToday.length > 0 || strugglingTopics.length > 0) && (
               <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] text-destructive-foreground font-bold">
                 {topicsDueToday.length + strugglingTopics.length}
               </span>
             )}
           </TabsTrigger>
+          <TabsTrigger value="setup">
+            <Settings className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Setup</span>
+          </TabsTrigger>
         </TabsList>
 
+        {/* ===== TAB 1: SUBJECTS (clean, subjects only) ===== */}
         <TabsContent value="subjects" className="mt-4">
           {subjectsLoading ? (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -442,9 +316,63 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             </div>
           ) : (
             <>
+              {/* Streak & Missed Task Reminders */}
+              {!reminderDismissed && hasSubjects && (
+                <>
+                  {yesterdayIncomplete.length > 0 && (
+                    <div className="mb-4 p-3 rounded-xl bg-warning/10 border border-warning/30 flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-warning shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          You left {yesterdayIncomplete.length} task{yesterdayIncomplete.length > 1 ? 's' : ''} unfinished yesterday.
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Complete today's tasks to keep your streak going!
+                        </p>
+                      </div>
+                      <button onClick={() => setReminderDismissed(true)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+                    </div>
+                  )}
+                  {currentHour >= 20 && todayIncomplete.length > 0 && yesterdayIncomplete.length === 0 && (
+                    <div className="mb-4 p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-start gap-3">
+                      <Clock className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-foreground">
+                          Don't forget to finish today's {todayIncomplete.length} remaining task{todayIncomplete.length > 1 ? 's' : ''} before midnight!
+                        </p>
+                      </div>
+                      <button onClick={() => setReminderDismissed(true)} className="text-muted-foreground hover:text-foreground text-xs shrink-0">✕</button>
+                    </div>
+                  )}
+                </>
+              )}
+              {/* Exam Readiness moved to Progress tab; Mock Exams moved to Exams tab */}
               {hasSubjects ? (
                 <>
-                  <h2 className="text-xl font-bold text-foreground mb-1">Your Subjects</h2>
+                  <div className="flex items-center justify-between mb-1 gap-2">
+                    <h2 className="text-xl font-bold text-foreground">Your Subjects</h2>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowTopicPicker(true)}
+                        className="gap-1.5 border-primary/40 hover:bg-primary/10"
+                      >
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        <span className="hidden sm:inline">Start by Topic</span>
+                        <span className="sm:hidden">Topic</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowGlobalLeaderboard(true)}
+                        className="gap-1.5 border-accent/40 hover:bg-accent/10"
+                      >
+                        <Trophy className="h-4 w-4 text-accent" />
+                        <span className="hidden sm:inline">Global</span>
+                      </Button>
+                    </div>
+                  </div>
                   {profileExamDates.length > 0 && (
                     <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
                   )}
@@ -485,7 +413,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                             tasksCount={4}
                             onClick={() => {
                               if (hasDocuments === false) {
-                                // Gate: don't allow task generation without documents
                                 window.dispatchEvent(
                                   new CustomEvent('show-toast', {
                                     detail: {
@@ -519,64 +446,70 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           )}
         </TabsContent>
 
+        {/* ===== TAB 2: PROGRESS ===== */}
         <TabsContent value="progress" className="mt-4 space-y-6">
-          <AIProgressInsights
-            subjects={subjects.map(s => ({
-              name: s.name,
-              currentTopic: s.currentTopic.name,
-              mastery: s.currentTopic.mastery,
-            }))}
-            dailyStats={dailyStats}
-            streak={progress?.streak || 0}
-            xp={progress?.xp || 0}
-            quizHistory={topicStats.map(s => ({
-              topic_name: s.topic_name,
-              accuracy: s.accuracy,
-              total_attempts: s.total_attempts,
-              due_for_review: s.due_for_review,
-            }))}
-            masteryData={[]}
-          />
-          <ProgressCharts />
+          <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
+            <AIProgressInsights
+              subjects={subjects.map(s => ({
+                name: s.name,
+                currentTopic: s.currentTopic.name,
+                mastery: s.currentTopic.mastery,
+              }))}
+              dailyStats={dailyStats}
+              streak={progress?.streak || 0}
+              xp={progress?.xp || 0}
+              quizHistory={topicStats.map(s => ({
+                topic_name: s.topic_name,
+                accuracy: s.accuracy,
+                total_attempts: s.total_attempts,
+                due_for_review: s.due_for_review,
+              }))}
+              masteryData={[]}
+            />
+            <ProgressCharts />
+          </Suspense>
         </TabsContent>
 
+        {/* ===== TAB 3: CALENDAR ===== */}
         <TabsContent value="calendar" className="mt-4 space-y-4">
-          {/* Per-Subject Exam Dates */}
-          {hasSubjects && (
-            <MultiExamCountdown
-              exams={subjectExams}
+          <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
+            {hasSubjects && (
+              <MultiExamCountdown
+                exams={subjectExams}
+                subjects={subjects}
+                onAddExam={(exam) => addExam.mutate(exam)}
+                onDeleteExam={(id) => deleteExam.mutate(id)}
+                isAdding={addExam.isPending}
+              />
+            )}
+
+            {!hasSubjects && (
+              <ExamSetupCard
+                currentExamName={examSettings?.exam_name}
+                currentExamDate={examSettings?.exam_date ? new Date(examSettings.exam_date) : undefined}
+                onSave={async (name, date) => {
+                  const success = await saveSettings(name, date);
+                  return !!success;
+                }}
+                isSaving={examSettingsSaving}
+              />
+            )}
+
+            <AdaptivePlanBanner />
+
+            <StudyCalendar
               subjects={subjects}
-              onAddExam={(exam) => addExam.mutate(exam)}
-              onDeleteExam={(id) => deleteExam.mutate(id)}
-              isAdding={addExam.isPending}
+              examDate={getNextExam()?.exam_date ? new Date(getNextExam()!.exam_date) : examDate}
+              subjectExams={subjectExams}
             />
-          )}
-
-          {/* Fallback: Global Exam Date */}
-          {!hasSubjects && (
-            <ExamSetupCard
-              currentExamName={examSettings?.exam_name}
-              currentExamDate={examSettings?.exam_date ? new Date(examSettings.exam_date) : undefined}
-              onSave={async (name, date) => {
-                const success = await saveSettings(name, date);
-                return !!success;
-              }}
-              isSaving={examSettingsSaving}
-            />
-          )}
-
-          <AdaptivePlanBanner />
-
-          <StudyCalendar 
-            subjects={subjects} 
-            examDate={getNextExam()?.exam_date ? new Date(getNextExam()!.exam_date) : examDate}
-            subjectExams={subjectExams}
-          />
-
+          </Suspense>
         </TabsContent>
 
-        <TabsContent value="review" className="mt-4">
+        {/* ===== TAB 4: EXAMS (Spaced Repetition + Mock Exams) ===== */}
+        <TabsContent value="exams" className="mt-4">
+         <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
           <div className="space-y-4">
+            <MockExamSection />
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-foreground">Spaced Repetition</h2>
               <span className="text-xs text-muted-foreground">
@@ -586,7 +519,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             <p className="text-sm text-muted-foreground">
               Smart review system that automatically re-quizzes you on topics you're struggling with.
             </p>
-            {/* AI Weak Topic Alerts */}
             <AIWeakTopicAlerts
               topicStats={topicStats}
               subjects={subjects.map(s => ({
@@ -603,7 +535,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               }}
             />
 
-            {/* Stuck → Get Help prompt (shows if weak topics exist) */}
             {strugglingTopics.length > 1 && (
               <StuckHelpPrompt
                 topic={strugglingTopics[0]?.topic_name}
@@ -663,39 +594,160 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               </div>
             )}
           </div>
+         </Suspense>
+        </TabsContent>
+
+        {/* ===== TAB 5: PROFILE (academic profile, syllabus, documents, daily progress) ===== */}
+        <TabsContent value="setup" className="mt-4 space-y-4">
+          {/* Academic Profile Card */}
+          {academicProfile ? (
+            <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-5 w-5 text-primary" />
+                    <h3 className="font-semibold text-sm text-foreground">Your Academic Profile</h3>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {aiIntelligence.isEnriching ? (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 animate-pulse border-primary/50">
+                        <Brain className="h-3 w-3 mr-0.5 text-primary" />
+                        AI Syncing...
+                      </Badge>
+                    ) : aiIntelligence.syllabusIntelligence ? (
+                      <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-green-500/50 text-green-600">
+                        <Brain className="h-3 w-3 mr-0.5" />
+                        AI Active
+                      </Badge>
+                    ) : null}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Curriculum</span>
+                    <p className="font-medium text-foreground">{academicProfile.curriculum || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Grade</span>
+                    <p className="font-medium text-foreground">{academicProfile.grade || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Exam Year</span>
+                    <p className="font-medium text-foreground">{academicProfile.exam_year || '—'}</p>
+                  </div>
+                </div>
+                {academicProfile.subjects && academicProfile.subjects.length > 0 && (
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {academicProfile.subjects.map((s) => (
+                      <Badge key={s} variant="secondary" className="text-[10px] px-1.5 py-0">{s}</Badge>
+                    ))}
+                  </div>
+                )}
+                {subjectRisks.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <RiskLevelSummary risks={subjectRisks} />
+                  </div>
+                )}
+                {aiIntelligence.learningProfile && (
+                  <div className="mt-2 pt-2 border-t border-border/50">
+                    <div className="grid grid-cols-4 gap-2 text-xs text-center">
+                      <div>
+                        <p className="font-bold text-primary">{aiIntelligence.learningProfile.overallUnderstanding}%</p>
+                        <p className="text-[10px] text-muted-foreground">Understanding</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-accent capitalize">{aiIntelligence.learningProfile.learningPace}</p>
+                        <p className="text-[10px] text-muted-foreground">Pace</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-warning capitalize">{aiIntelligence.learningProfile.recommendedDifficulty}</p>
+                        <p className="text-[10px] text-muted-foreground">Level</p>
+                      </div>
+                      <div>
+                        <p className="font-bold text-destructive">
+                          {aiIntelligence.learningProfile.daysUntilExam !== null
+                            ? `${aiIntelligence.learningProfile.daysUntilExam}d`
+                            : '—'}
+                        </p>
+                        <p className="text-[10px] text-muted-foreground">To Exam</p>
+                      </div>
+                    </div>
+                    {aiIntelligence.learningProfile.persistentWeakAreas.length > 0 && (
+                      <div className="mt-1.5">
+                        <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Areas:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {aiIntelligence.learningProfile.persistentWeakAreas.slice(0, 4).map((t) => (
+                            <Badge key={t} variant="destructive" className="text-[9px] px-1 py-0">{t}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Card className="border-warning/30 bg-warning/5">
+              <CardContent className="p-4 text-center">
+                <AlertCircle className="h-8 w-8 mx-auto text-warning mb-2" />
+                <h3 className="font-semibold text-sm mb-1">Academic Profile Not Set</h3>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Go to your Profile tab to set your curriculum, grade, and subjects first.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Syllabus & Paper Codes Setup Gate */}
+          {userId && (
+            <SyllabusSetupGate
+              userId={userId}
+              academicProfile={academicProfile}
+              onSetupComplete={() => setSyllabusSetupDone(true)}
+              onUploadDocuments={onUploadClick}
+            />
+          )}
+
+          {/* Document upload card */}
+          {hasDocuments === false && (
+            <Card className="border-accent/30 bg-accent/5">
+              <CardContent className="p-5 text-center">
+                <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
+                <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
+                </p>
+                <Button className="gradient-primary" onClick={onUploadClick}>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Documents
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Compact summary trigger only — full daily stats live on Home tab */}
+          <Button variant="outline" size="sm" onClick={() => setShowSummary(true)} className="w-full">
+            <Trophy className="mr-2 h-4 w-4" />
+            View Today's Summary
+          </Button>
+
+          {/* Exam date prompt if no exams set */}
+          {hasSubjects && subjectExams.length === 0 && (
+            <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
+              <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
+              <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.
+              </p>
+              <Button variant="outline" size="sm" onClick={() => setActiveTab('calendar')}>
+                <Calendar className="mr-2 h-4 w-4" />
+                Go to Calendar
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
       </Tabs>
-
-      {/* Daily Progress Summary */}
-      <div className="p-5 rounded-2xl bg-card border border-border">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-bold text-foreground">Today's Progress</h3>
-          <Button variant="ghost" size="sm" onClick={() => setShowSummary(true)} className="text-accent">
-            View Summary
-          </Button>
-        </div>
-        <div className="grid grid-cols-4 gap-4 text-center">
-          <div>
-            <p className="text-2xl font-bold text-accent">
-              {dailyStats.tasksCompletedToday}/{dailyStats.totalTasksToday || subjects.length * 4}
-            </p>
-            <p className="text-xs text-muted-foreground">Tasks Done</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-success">{dailyStats.examQuestionsToday}</p>
-            <p className="text-xs text-muted-foreground">Exam Qs</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-warning">+{dailyStats.xpToday}</p>
-            <p className="text-xs text-muted-foreground">XP Today</p>
-          </div>
-          <div>
-            <p className="text-2xl font-bold text-primary">🔥 {progress?.streak || 0}</p>
-            <p className="text-xs text-muted-foreground">Day Streak</p>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -6,7 +6,6 @@ export type Curriculum =
   | "CAMB"
   | "IEB"
   | "NSC"
-  | "IGCSE"
   | "OTHER";
 
 export type GradeLevel =
@@ -15,7 +14,7 @@ export type GradeLevel =
   | "Grade 8" | "Grade 9"
   | "Grade 10" | "Grade 11" | "Grade 12"
   | "Form 1" | "Form 2" | "Form 3" | "Form 4" | "Form 5" | "Form 6"
-  | "A-Level" | "O-Level"
+  | "IGCSE" | "A-Level" | "O-Level"
   | "Year 1" | "Year 2" | "Year 3" | "Year 4";
 
 /**
@@ -108,6 +107,8 @@ export interface LibraryResource {
   watchCount?: number;
   completionRate?: number;
   videoUrl?: string;
+  /** Origin table for protected PDF streaming. */
+  pdfSource?: "system" | "tutorial";
 }
 
 // ─── Tutor Ranking ────────────────────────────────────────────────────────────
@@ -120,21 +121,32 @@ export interface TopicTutorRanking {
   topic: string;
   topicRating: number;
   totalReviews: number;
-  completionRate: number;  // % of sessions on this topic completed
-  successRate: number;     // % of students who improved
+  completionRate: number;
+  successRate: number;
 }
 
 // ─── Curriculum subject maps ──────────────────────────────────────────────────
+// NOTE: IGCSE / O-Level / A-Level are LEVELS within the Cambridge (CAMB)
+// curriculum, not curricula themselves.
 
 export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
   ZIMSEC: [
     "Mathematics",
+    "English",
+    "English Language",
+    "English Literature",
+    "Shona",
+    "Ndebele",
+    "Environmental Science",
+    "Social Studies",
+    "Religious & Moral Education",
+    "ICT",
+    "Physical Education",
+    "Visual & Performing Arts",
     "Physics",
     "Chemistry",
     "Biology",
     "Combined Science",
-    "English Language",
-    "English Literature",
     "History",
     "Geography",
     "Accounts",
@@ -142,8 +154,6 @@ export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
     "Economics",
     "Computer Science",
     "Agriculture",
-    "Shona",
-    "Ndebele",
     "Art & Design",
     "Music",
   ],
@@ -154,6 +164,7 @@ export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
     "Chemistry",
     "Biology",
     "English Language",
+    "English as a Second Language",
     "English Literature",
     "History",
     "Geography",
@@ -197,21 +208,6 @@ export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
     "Life Orientation",
     "Tourism",
   ],
-  IGCSE: [
-    "Mathematics",
-    "Additional Mathematics",
-    "Physics",
-    "Chemistry",
-    "Biology",
-    "English as a Second Language",
-    "English Literature",
-    "History",
-    "Geography",
-    "Accounting",
-    "Business Studies",
-    "Economics",
-    "Computer Science",
-  ],
   OTHER: [
     "Mathematics",
     "English",
@@ -230,19 +226,17 @@ export const CURRICULUM_SUBJECTS: Record<Curriculum, string[]> = {
 
 export const GRADE_LEVELS_BY_CURRICULUM: Record<Curriculum, GradeLevel[]> = {
   ZIMSEC: [
+    "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7",
     "Form 1", "Form 2", "Form 3", "Form 4", "Form 5", "Form 6",
   ],
   CAMB: [
-    "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12", "A-Level",
+    "Grade 8", "Grade 9", "IGCSE", "O-Level", "A-Level",
   ],
   IEB: [
     "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12",
   ],
   NSC: [
     "Grade 8", "Grade 9", "Grade 10", "Grade 11", "Grade 12",
-  ],
-  IGCSE: [
-    "Grade 8", "Grade 9", "O-Level", "A-Level",
   ],
   OTHER: [
     "Grade 1", "Grade 2", "Grade 3", "Grade 4",

@@ -1,10 +1,11 @@
-import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight, Layers, FileText, ClipboardList } from 'lucide-react';
+import { Check, Lock, BookOpen, Brain, FileQuestion, RotateCcw, ChevronRight, Layers, FileText, ClipboardList, Clock } from 'lucide-react';
 import { DailyTask } from '../types/study';
 import { cn } from '@/lib/utils';
 
 interface TaskListProps {
   tasks: DailyTask[];
   onTaskClick: (task: DailyTask) => void;
+  onAddBonusTask?: () => void;
 }
 
 const taskIcons: Record<string, typeof BookOpen> = {
@@ -27,22 +28,38 @@ const taskColors: Record<string, string> = {
   'revision-checklist': 'from-pink-500 to-rose-600',
 };
 
-export function TaskList({ tasks, onTaskClick }: TaskListProps) {
+const taskDurations: Record<string, string> = {
+  'micro-revision': '3 min',
+  'concept-learning': '8 min',
+  'active-recall': '10 min',
+  'exam-question': '15 min',
+  'flashcards': '5 min',
+  'summary': '6 min',
+  'revision-checklist': '4 min',
+};
+
+export function TaskList({ tasks, onTaskClick, onAddBonusTask }: TaskListProps) {
+  const allCompleted = tasks.length > 0 && tasks.every(t => t.isCompleted);
+
   return (
     <div className="space-y-3">
       {tasks.map((task, index) => {
         const Icon = taskIcons[task.type];
         const colorClass = taskColors[task.type];
+        const duration = taskDurations[task.type];
+        // When all daily tasks are complete, force-unlock any remaining locked tiles
+        const effectiveLocked = task.isLocked && !allCompleted;
+        const clickable = !effectiveLocked; // completed tasks are replayable
 
         return (
           <div
             key={task.id}
-            onClick={() => !task.isLocked && onTaskClick(task)}
+            onClick={() => clickable && onTaskClick(task)}
             className={cn(
               "relative flex items-center gap-4 p-4 rounded-xl border transition-all duration-200",
               task.isCompleted 
-                ? "bg-success/10 border-success/30"
-                : task.isLocked
+                ? "bg-success/10 border-success/30 hover:border-success/50 hover:shadow-md cursor-pointer"
+                : effectiveLocked
                 ? "bg-muted/50 border-border cursor-not-allowed opacity-60"
                 : "bg-card border-border hover:border-accent/50 hover:shadow-md cursor-pointer"
             )}
@@ -53,13 +70,13 @@ export function TaskList({ tasks, onTaskClick }: TaskListProps) {
               "flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold shrink-0",
               task.isCompleted 
                 ? "bg-success text-success-foreground"
-                : task.isLocked
+                : effectiveLocked
                 ? "bg-muted text-muted-foreground"
                 : `bg-gradient-to-br ${colorClass} text-white`
             )}>
               {task.isCompleted ? (
                 <Check className="h-5 w-5" />
-              ) : task.isLocked ? (
+              ) : effectiveLocked ? (
                 <Lock className="h-4 w-4" />
               ) : (
                 index + 1
@@ -71,34 +88,57 @@ export function TaskList({ tasks, onTaskClick }: TaskListProps) {
               <div className="flex items-center gap-2 mb-0.5">
                 <Icon className={cn(
                   "h-4 w-4",
-                  task.isCompleted ? "text-success" : task.isLocked ? "text-muted-foreground" : "text-accent"
+                  task.isCompleted ? "text-success" : effectiveLocked ? "text-muted-foreground" : "text-accent"
                 )} />
                 <h4 className={cn(
                   "font-semibold",
-                  task.isCompleted ? "text-success" : task.isLocked ? "text-muted-foreground" : "text-foreground"
+                  task.isCompleted ? "text-success" : effectiveLocked ? "text-muted-foreground" : "text-foreground"
                 )}>
                   {task.title}
                 </h4>
               </div>
-              <p className="text-sm text-muted-foreground truncate">
-                {task.description}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground truncate flex-1">
+                  {task.description}
+                </p>
+                {duration && (
+                  <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground shrink-0 bg-muted/50 px-1.5 py-0.5 rounded-full">
+                    <Clock className="h-2.5 w-2.5" />
+                    {duration}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Arrow */}
-            {!task.isLocked && !task.isCompleted && (
+            {!effectiveLocked && !task.isCompleted && (
               <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
             )}
 
-            {/* Completed Badge */}
+            {/* Completed Badge — tappable replay hint */}
             {task.isCompleted && (
-              <span className="text-xs font-medium text-success bg-success/20 px-2 py-0.5 rounded-full">
-                Done
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-xs font-medium text-success bg-success/20 px-2 py-0.5 rounded-full">
+                  Done
+                </span>
+                <span className="text-[10px] text-muted-foreground hidden sm:inline">Replay</span>
+                <ChevronRight className="h-4 w-4 text-success/70" />
+              </div>
             )}
           </div>
         );
       })}
+
+      {/* Practice More button when all tasks completed */}
+      {allCompleted && onAddBonusTask && (
+        <button
+          onClick={onAddBonusTask}
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent font-semibold"
+        >
+          <RotateCcw className="h-4 w-4" />
+          Practice More — Add Another Task
+        </button>
+      )}
     </div>
   );
 }

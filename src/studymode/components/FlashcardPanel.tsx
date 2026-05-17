@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send, MinusCircle } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send, MinusCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +12,7 @@ import { useConceptMastery } from '../hooks/useConceptMastery';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSpacedRepetition } from '../hooks/useSpacedRepetition';
 import { supabase } from '../../integrations/supabase/client';
+import { aiRequest } from '../lib/aiClient';
 import { cn } from '@/lib/utils';
 import { logger } from "@/utils/logger";
 
@@ -41,6 +42,8 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
   const [userAnswer, setUserAnswer] = useState('');
   const [hasAttempted, setHasAttempted] = useState(false);
   const [skipped, setSkipped] = useState(false);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -49,13 +52,68 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
     setUserAnswer('');
     setHasAttempted(false);
     setSkipped(false);
+    setFeedback(null);
+    setFeedbackLoading(false);
   }, [index]);
+
+  const fetchFeedback = useCallback(async (studentAnswer: string, correctAnswer: string) => {
+    setFeedbackLoading(true);
+    try {
+      const response = await aiRequest('explain-answer', {
+        question: card.front,
+        studentAnswer,
+        modelAnswer: correctAnswer,
+        topic: card.tags?.[0] || 'General',
+        subject: 'Flashcard Review',
+        briefMode: true,
+      });
+      if (!response.ok) throw new Error('Failed');
+      if (!response.body) throw new Error('No body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let result = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (!line.startsWith('data: ')) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              result += content;
+              setFeedback(result);
+            }
+          } catch { break; }
+        }
+      }
+    } catch {
+      setFeedback(null);
+    } finally {
+      setFeedbackLoading(false);
+    }
+  }, [card.front, card.tags]);
 
   const handleSubmitAnswer = () => {
     setHasAttempted(true);
     setSkipped(false);
     setFlipped(true);
     onResult(true, false);
+    // Fetch AI feedback comparing student answer to correct answer
+    if (userAnswer.trim()) {
+      fetchFeedback(userAnswer.trim(), card.back);
+    }
   };
 
   const handleSkip = () => {
@@ -157,6 +215,26 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
               </p>
             )}
           </div>
+
+          {/* What you missed — AI feedback */}
+          {!skipped && userAnswer.trim() && (feedbackLoading || feedback) && (
+            <div className="w-full rounded-xl border border-warning/30 p-4 bg-warning/5">
+              <div className="flex items-center gap-2 mb-2">
+                <XCircle className="h-4 w-4 text-warning shrink-0" />
+                <p className="text-xs font-semibold text-warning uppercase tracking-wide">What You Missed</p>
+              </div>
+              {feedbackLoading && !feedback ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Analysing your answer...</span>
+                </div>
+              ) : feedback ? (
+                <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
+                  <MathMarkdown>{feedback}</MathMarkdown>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
 

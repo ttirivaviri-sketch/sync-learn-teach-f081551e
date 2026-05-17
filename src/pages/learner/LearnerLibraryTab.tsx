@@ -33,14 +33,20 @@ export const LearnerLibraryTab = ({
   onShowAcademicSetup,
   onBookTutor,
   onNeedHelp,
-}: LearnerLibraryTabProps) => (
-  <div className="space-y-4 p-4 mt-0">
-    <div className="flex items-center justify-between mb-2">
-      <div className="flex items-center gap-2">
-        <ShoppingBag className="h-5 w-5 text-primary" />
-        <h3 className="font-semibold">StudySync Library</h3>
-      </div>
-      {!academicProfile && (
+}: LearnerLibraryTabProps) => {
+  // Signature changes → StudySyncLibrary remounts and tabs (Clips/Books/Past Papers)
+  // refetch + re-personalise instantly after the learner edits their profile.
+  const profileKey = academicProfile
+    ? `${academicProfile.curriculum ?? ""}|${academicProfile.grade ?? ""}|${(academicProfile.subjects ?? []).slice().sort().join(",")}`
+    : "no-profile";
+
+  return (
+    <div className="space-y-4 p-4 mt-0">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <ShoppingBag className="h-5 w-5 text-primary" />
+          <h3 className="font-semibold">StudySync Library</h3>
+        </div>
         <Button
           variant="outline"
           size="sm"
@@ -48,14 +54,22 @@ export const LearnerLibraryTab = ({
           onClick={onShowAcademicSetup}
         >
           <GraduationCap className="h-3.5 w-3.5 mr-1" />
-          Set Profile
+          {academicProfile ? "Edit Profile" : "Set Profile"}
         </Button>
+      </div>
+      {academicProfile && (
+        <p className="text-xs text-muted-foreground -mt-2">
+          Showing {academicProfile.curriculum} · {academicProfile.grade}
+          {academicProfile.subjects?.length ? ` · ${academicProfile.subjects.length} subjects` : ""}
+        </p>
       )}
+      <StudySyncLibrary
+        key={profileKey}
+        academicProfile={academicProfile as any}
+        onBookTutor={onBookTutor}
+        onNeedHelp={onNeedHelp}
+        onEditProfile={onShowAcademicSetup}
+      />
     </div>
-    <StudySyncLibrary
-      academicProfile={academicProfile as any}
-      onBookTutor={onBookTutor}
-      onNeedHelp={onNeedHelp}
-    />
-  </div>
-);
+  );
+};

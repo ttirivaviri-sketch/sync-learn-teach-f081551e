@@ -107,6 +107,7 @@ export function BookingFormPanel({
             onSelectSlot={onSlotSelect}
             selectedDate={selectedDate || undefined}
             selectedTime={selectedTime}
+            durationMinutes={parseInt(duration)}
           />
         </div>
 

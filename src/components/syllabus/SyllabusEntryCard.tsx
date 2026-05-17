@@ -1,5 +1,5 @@
 import {
-  X, Edit2, Save, BookOpen, Plus, Loader2, Trash2,
+  X, Edit2, Save, BookOpen, Plus, Loader2, Trash2, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ interface SyllabusEntryCardProps {
   entry: SyllabusEntry;
   isEditing: boolean;
   saving: boolean;
+  reparsing?: boolean;
   editSyllabusCode: string;
   editPaperCode: string;
   editPaperCodes: string[];
@@ -18,6 +19,7 @@ interface SyllabusEntryCardProps {
   onCancelEdit: () => void;
   onSaveEdit: (entry: SyllabusEntry) => void;
   onDelete: (entry: SyllabusEntry) => void;
+  onReparse?: (entry: SyllabusEntry) => void;
   onEditSyllabusCodeChange: (value: string) => void;
   onEditPaperCodeChange: (value: string) => void;
   onAddEditPaperCode: () => void;
@@ -28,6 +30,7 @@ export function SyllabusEntryCard({
   entry,
   isEditing,
   saving,
+  reparsing,
   editSyllabusCode,
   editPaperCode,
   editPaperCodes,
@@ -35,6 +38,7 @@ export function SyllabusEntryCard({
   onCancelEdit,
   onSaveEdit,
   onDelete,
+  onReparse,
   onEditSyllabusCodeChange,
   onEditPaperCodeChange,
   onAddEditPaperCode,
@@ -140,6 +144,22 @@ export function SyllabusEntryCard({
           </div>
         </div>
         <div className="flex gap-1">
+          {onReparse && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 w-7 p-0"
+              onClick={() => onReparse(entry)}
+              disabled={reparsing}
+              title="Re-parse uploaded syllabus PDF"
+            >
+              {reparsing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+            </Button>
+          )}
           <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => onStartEdit(entry)}>
             <Edit2 className="h-3.5 w-3.5" />
           </Button>

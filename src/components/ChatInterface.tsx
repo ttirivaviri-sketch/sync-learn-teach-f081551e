@@ -4,9 +4,6 @@
  * Takes over the entire viewport when open. On mobile the conversation
  * sidebar is hidden behind a toggle; on desktop it's a fixed column.
  * Theme choice is persisted in localStorage.
- *
- * **Dev-mode aware**: when `session` is null (dev mode) the component
- * renders with mock conversations & messages so the full UI is exercisable.
  */
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -53,77 +50,6 @@ function formatTime(timestamp: string) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
-// ── Dev-mode mock data ─────────────────────────────────────────────────────
-const DEV_USER_ID = "dev-user";
-const DEV_TUTOR_USER_ID = "dev-tutor";
-
-function buildDevConversations(userType: "tutor" | "learner"): Conversation[] {
-  const now = new Date();
-  const peers =
-    userType === "learner"
-      ? [
-          { name: "Ms. Naledi Mbeki", id: "dev-tutor-1" },
-          { name: "Mr. James Oduro", id: "dev-tutor-2" },
-          { name: "Dr. Priya Naidoo", id: "dev-tutor-3" },
-        ]
-      : [
-          { name: "Sipho Mokoena", id: "dev-learner-1" },
-          { name: "Amara Dlamini", id: "dev-learner-2" },
-          { name: "Lerato Khumalo", id: "dev-learner-3" },
-        ];
-
-  return peers.map((peer, i) => ({
-    id: `dev-conv-${i + 1}`,
-    tutor_id: userType === "tutor" ? DEV_TUTOR_USER_ID : peer.id,
-    learner_id: userType === "learner" ? DEV_USER_ID : peer.id,
-    last_message_at: new Date(now.getTime() - i * 3600_000).toISOString(),
-    other_user_name: peer.name,
-    unread_count: i === 0 ? 2 : 0,
-  }));
-}
-
-function buildDevMessages(
-  conversationId: string,
-  currentUserId: string,
-  otherName: string,
-): Message[] {
-  const now = new Date();
-  const scripts: Record<string, Array<[boolean, string]>> = {
-    "dev-conv-1": [
-      [false, `Hi there! Ready for our session on quadratics?`],
-      [true, `Yes! I've been practising the homework problems.`],
-      [false, `Great, let's review the factoring method first.`],
-      [true, `Sounds good. I got stuck on question 4.`],
-      [false, `That's a common one — we'll tackle it together. See you at 3pm!`],
-    ],
-    "dev-conv-2": [
-      [false, `Your essay draft looks much better!`],
-      [true, `Thanks! I rewrote the introduction like you suggested.`],
-      [false, `I'll send detailed feedback by tomorrow morning.`],
-    ],
-    "dev-conv-3": [
-      [false, `Don't forget — exam prep starts next week.`],
-      [true, `I'll be ready. Should I review past papers?`],
-      [false, `Yes, focus on the 2024 and 2025 papers first.`],
-      [true, `Got it, thank you!`],
-    ],
-  };
-
-  const lines = scripts[conversationId] ?? [
-    [false, "Hey, how's your studying going?"],
-    [true, "Pretty well, thanks!"],
-  ];
-
-  return lines.map(([isSelf, content], i) => ({
-    id: `dev-msg-${conversationId}-${i}`,
-    content: content as string,
-    sender_id: isSelf ? currentUserId : `other-${conversationId}`,
-    conversation_id: conversationId,
-    created_at: new Date(now.getTime() - (lines.length - i) * 60_000).toISOString(),
-    sender_name: isSelf ? "You" : otherName,
-  }));
-}
-
 // ── Component ──────────────────────────────────────────────────────────────
 const ChatInterface = ({
   session,
@@ -134,8 +60,6 @@ const ChatInterface = ({
   otherUserId,
   otherUserName,
 }: ChatInterfaceProps) => {
-  const isDevMode = !session?.user;
-
   /* ── State ──────────────────────────────────────────────────── */
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(
@@ -147,8 +71,7 @@ const ChatInterface = ({
   const [mobileSidebar, setMobileSidebar] = useState(true);
   const { toast } = useToast();
 
-  // Effective user id (real or dev)
-  const currentUserId = session?.user?.id ?? (userType === "tutor" ? DEV_TUTOR_USER_ID : DEV_USER_ID);
+  const currentUserId = session?.user?.id;
 
   // Theme (persisted)
   const [theme, setTheme] = useState<ChatTheme>(() => {
@@ -168,57 +91,6 @@ const ChatInterface = ({
       /* noop */
     }
   }, []);
-
-  // ═════════════════════════════════════════════════════════════
-  // Dev-mode helpers (local-only, no Supabase)
-  // ═════════════════════════════════════════════════════════════
-  const loadDevConversations = useCallback(() => {
-    setConversations(buildDevConversations(userType));
-  }, [userType]);
-
-  const loadDevMessages = useCallback(
-    (conversationId: string) => {
-      const conv = conversations.find((c) => c.id === conversationId);
-      const name = conv?.other_user_name ?? "Dev Peer";
-      setMessages(buildDevMessages(conversationId, currentUserId, name));
-    },
-    [conversations, currentUserId],
-  );
-
-  const sendDevMessage = useCallback(() => {
-    if (!newMessage.trim() || !activeConversation) return;
-    const msg: Message = {
-      id: `dev-msg-${Date.now()}`,
-      content: newMessage.trim(),
-      sender_id: currentUserId,
-      conversation_id: activeConversation,
-      created_at: new Date().toISOString(),
-      sender_name: "You",
-    };
-    setMessages((prev) => [...prev, msg]);
-    setNewMessage("");
-
-    // Simulate a reply after a short delay
-    setTimeout(() => {
-      const conv = conversations.find((c) => c.id === activeConversation);
-      const replies = [
-        "That makes sense!",
-        "Let me think about that...",
-        "Good question — let's discuss it in our next session.",
-        "I agree, keep up the great work!",
-        "Can you elaborate a bit more?",
-      ];
-      const reply: Message = {
-        id: `dev-msg-reply-${Date.now()}`,
-        content: replies[Math.floor(Math.random() * replies.length)],
-        sender_id: `other-${activeConversation}`,
-        conversation_id: activeConversation,
-        created_at: new Date().toISOString(),
-        sender_name: conv?.other_user_name ?? "Dev Peer",
-      };
-      setMessages((prev) => [...prev, reply]);
-    }, 1200);
-  }, [newMessage, activeConversation, currentUserId, conversations]);
 
   // ═════════════════════════════════════════════════════════════
   // Real-mode helpers (Supabase)
@@ -372,20 +244,16 @@ const ChatInterface = ({
   };
 
   // ═════════════════════════════════════════════════════════════
-  // Effects — branch on dev vs real mode
+  // Effects
   // ═════════════════════════════════════════════════════════════
 
   // Load conversations on open
   useEffect(() => {
-    if (!isOpen) return;
-    if (isDevMode) {
-      loadDevConversations();
-    } else {
-      loadConversations();
-    }
-  }, [isOpen, isDevMode, loadDevConversations, loadConversations]);
+    if (!isOpen || !session?.user) return;
+    loadConversations();
+  }, [isOpen, session?.user, loadConversations]);
 
-  // Real-time channels (real mode only)
+  // Real-time channels
   useEffect(() => {
     if (!isOpen || !session?.user) return;
     const conversationChannel = supabase
@@ -431,49 +299,15 @@ const ChatInterface = ({
 
   // Load messages when active conversation changes
   useEffect(() => {
-    if (!activeConversation) return;
-    if (isDevMode) {
-      loadDevMessages(activeConversation);
-    } else {
-      loadMessages(activeConversation);
-    }
-  }, [activeConversation, isDevMode, loadDevMessages, loadMessages]);
+    if (!activeConversation || !session?.user) return;
+    loadMessages(activeConversation);
+  }, [activeConversation, session?.user, loadMessages]);
 
   // Auto-open / create conversation when otherUserId is provided
   useEffect(() => {
-    if (!otherUserId || !otherUserName || activeConversation) return;
-    if (isDevMode) {
-      // In dev mode, find or create a mock conversation for this user
-      const existing = conversations.find(
-        (c) => c.other_user_name === otherUserName,
-      );
-      if (existing) {
-        setActiveConversation(existing.id);
-      } else {
-        const newConv: Conversation = {
-          id: `dev-conv-custom-${Date.now()}`,
-          tutor_id: userType === "tutor" ? currentUserId : otherUserId,
-          learner_id: userType === "learner" ? currentUserId : otherUserId,
-          last_message_at: new Date().toISOString(),
-          other_user_name: otherUserName,
-          unread_count: 0,
-        };
-        setConversations((prev) => [newConv, ...prev]);
-        setActiveConversation(newConv.id);
-      }
-    } else {
-      createOrGetConversation(otherUserId, otherUserName);
-    }
-  }, [
-    otherUserId,
-    otherUserName,
-    activeConversation,
-    isDevMode,
-    conversations,
-    userType,
-    currentUserId,
-    createOrGetConversation,
-  ]);
+    if (!otherUserId || !otherUserName || activeConversation || !session?.user) return;
+    createOrGetConversation(otherUserId, otherUserName);
+  }, [otherUserId, otherUserName, activeConversation, session?.user, createOrGetConversation]);
 
   // ── Interaction handlers ────────────────────────────────────
   const handleSelectConversation = (id: string) => {
@@ -481,58 +315,61 @@ const ChatInterface = ({
     setMobileSidebar(false);
   };
 
-  const handleSendMessage = isDevMode ? sendDevMessage : sendMessage;
+  const handleSendMessage = sendMessage;
 
-  // ── Render ─────────────────────────────────────────────────
   if (!isOpen) return null;
+  if (!session?.user) return null;
 
-  const activeConvName =
-    conversations.find((c) => c.id === activeConversation)?.other_user_name ||
-    otherUserName ||
-    "User";
+  const activeConversationData = conversations.find(
+    (c) => c.id === activeConversation,
+  );
 
   return (
-    <div className="fixed inset-0 z-50 flex h-screen w-screen overflow-hidden">
-      {/* Mobile backdrop when sidebar is open */}
-      {mobileSidebar && (
-        <div
-          className="fixed inset-0 bg-black/30 z-40 md:hidden"
-          onClick={() => setMobileSidebar(false)}
-        />
-      )}
-
+    <div
+      className="fixed inset-0 z-50 flex bg-background"
+    >
       {/* Sidebar */}
-      <ConversationList
-        conversations={conversations}
-        activeConversationId={activeConversation}
-        onSelect={handleSelectConversation}
-        onClose={onClose}
-        formatTime={formatTime}
-        theme={theme}
-        onThemeChange={handleThemeChange}
-        isMobileOpen={mobileSidebar}
-      />
+      <div
+        className={`${
+          mobileSidebar ? "flex" : "hidden"
+        } md:flex flex-col w-full md:w-80 border-r border-border/30 bg-background/95 backdrop-blur-lg`}
+      >
+        <ConversationList
+          conversations={conversations}
+          activeConversationId={activeConversation}
+          onSelect={handleSelectConversation}
+          onClose={onClose}
+          formatTime={formatTime}
+          theme={theme}
+          onThemeChange={handleThemeChange}
+          isMobileOpen={mobileSidebar}
+        />
+      </div>
 
-      {/* Main chat area */}
-      <div className="flex-1 flex flex-col min-w-0 h-full">
-        {activeConversation ? (
+      {/* Chat Area */}
+      <div
+        className={`${
+          mobileSidebar ? "hidden" : "flex"
+        } md:flex flex-1 flex-col`}
+      >
+        {activeConversation && activeConversationData ? (
           <ChatArea
             messages={messages}
-            loading={loading}
             newMessage={newMessage}
-            currentUserId={currentUserId}
-            otherUserName={activeConvName}
-            userType={userType}
-            onNewMessageChange={setNewMessage}
+            onNewMessageChange={(v) => setNewMessage(v)}
             onSendMessage={handleSendMessage}
-            formatTime={formatTime}
+            currentUserId={currentUserId || ""}
+            otherUserName={activeConversationData.other_user_name || "User"}
+            userType="learner"
+            loading={loading}
             theme={theme}
-            onToggleSidebar={() => setMobileSidebar((v) => !v)}
+            onToggleSidebar={() => setMobileSidebar(true)}
+            formatTime={formatTime}
           />
         ) : (
           <EmptyChatArea
             theme={theme}
-            onToggleSidebar={() => setMobileSidebar((v) => !v)}
+            onToggleSidebar={() => setMobileSidebar(true)}
           />
         )}
       </div>
@@ -541,4 +378,3 @@ const ChatInterface = ({
 };
 
 export default ChatInterface;
-export { ChatInterface };

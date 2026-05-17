@@ -32,5 +32,12 @@ export default defineConfig(({ mode }) => ({
     minify: 'esbuild',
     sourcemap: false,
     chunkSizeWarningLimit: 2000,
+    target: 'esnext',
+  },
+  optimizeDeps: {
+    exclude: ['pdfjs-dist'],
+    esbuildOptions: {
+      target: 'esnext',
+    },
   },
 }));

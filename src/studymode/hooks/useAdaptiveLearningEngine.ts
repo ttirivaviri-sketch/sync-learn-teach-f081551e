@@ -22,6 +22,7 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { supabase } from '../../integrations/supabase/client';
 import { aiRequestJSON } from '../lib/aiClient';
 import type { AIContextPayload } from './useAIStudyIntelligence';
@@ -363,10 +364,19 @@ export function useAdaptiveLearningEngine(aiContext?: AIContextPayload | null) {
         }));
 
         queryClient.invalidateQueries({ queryKey: ['study-schedule'] });
+        queryClient.invalidateQueries({ queryKey: ['daily-tasks'] });
+
+        const savedCount = (result as any)?.saved ?? (result as any)?.plan?.length ?? 0;
+        toast.success(
+          savedCount > 0
+            ? `Plan saved · ${savedCount} task${savedCount === 1 ? '' : 's'} added to your calendar`
+            : 'Study plan generated'
+        );
         return result;
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err);
         setState((prev) => ({ ...prev, isGeneratingPlan: false, error: msg }));
+        toast.error(`Couldn't generate plan: ${msg}`);
         throw err;
       }
     },

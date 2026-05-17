@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, CreditCard, Shield, Trash2, CheckCircle } from "lucide-react";
+import { Loader2, CreditCard, Shield, Trash2, CheckCircle, FlaskConical } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useDevMode } from "@/contexts/DevModeContext";
 import { logger } from "@/utils/logger";
 
 interface SavedMethod {
@@ -33,18 +33,10 @@ export const PayFastPayment = ({
   const [savedMethods, setSavedMethods] = useState<SavedMethod[]>([]);
   const [loadingMethods, setLoadingMethods] = useState(true);
   const { toast } = useToast();
-  const { isDevMode, config } = useDevMode();
-
-  // ── Dev Mode: instant simulated success ──────────────────────────────
-  const devBypass = isDevMode && config.bypassPayments;
 
   useEffect(() => {
-    if (devBypass) {
-      setLoadingMethods(false);
-      return;
-    }
     fetchSavedMethods();
-  }, [devBypass]);
+  }, []);
 
   const fetchSavedMethods = async () => {
     try {
@@ -61,17 +53,48 @@ export const PayFastPayment = ({
     }
   };
 
-  const handleDevPay = () => {
+  const handleDevCardPayment = async () => {
     setLoading(true);
-    // Simulate brief processing
-    setTimeout(() => {
-      toast({
-        title: "✅ Dev Mode — Payment Simulated",
-        description: `R${amount.toFixed(2)} marked as paid (no real charge).`,
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData?.session?.user) throw new Error("Please log in to make a payment");
+
+      // Simulate processing delay
+      await new Promise((r) => setTimeout(r, 1500));
+
+      // Insert a real payment record
+      const { error: paymentError } = await supabase.from("payments").insert({
+        booking_id: bookingId,
+        payer_id: sessionData.session.user.id,
+        amount,
+        status: "succeeded" as any,
+        provider: "devcard",
+        currency: "ZAR",
       });
-      setLoading(false);
+
+      if (paymentError) throw paymentError;
+
+      // Update booking status to confirmed
+      await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", bookingId);
+
+      toast({
+        title: "Payment confirmed!",
+        description: `R${amount.toFixed(2)} paid with DevCard. Your session is now secured.`,
+      });
       onSuccess?.();
-    }, 600);
+    } catch (error) {
+      logger.error("DevCard payment error:", error);
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Failed to process test payment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSavedCardPayment = async (method: SavedMethod) => {
@@ -165,68 +188,6 @@ export const PayFastPayment = ({
     }
   };
 
-  // ── Dev Mode UI ──────────────────────────────────────────────────────
-  if (devBypass) {
-    return (
-      <Card className="w-full max-w-md border-2" style={{ borderColor: "hsl(48 96% 53% / 0.5)" }}>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Payment (Dev Mode)
-          </CardTitle>
-          <CardDescription>Payments bypassed — instant confirmation</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-lg p-4" style={{ backgroundColor: "hsl(48 100% 95%)" }}>
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Session:</span>
-              <span className="font-medium">{itemName}</span>
-            </div>
-            <div className="flex justify-between items-center mt-2">
-              <span className="text-muted-foreground">Amount:</span>
-              <span className="text-2xl font-bold">R{amount.toFixed(2)}</span>
-            </div>
-          </div>
-
-          <Button
-            className="w-full gap-2"
-            style={{ backgroundColor: "hsl(48 96% 45%)", color: "hsl(40 80% 10%)" }}
-            onClick={handleDevPay}
-            disabled={loading}
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <CheckCircle className="h-4 w-4" />
-            )}
-            {loading ? "Processing..." : "Simulate Payment Success"}
-          </Button>
-
-          {config.simulateFailures && (
-            <Button
-              variant="destructive"
-              className="w-full gap-2 text-xs"
-              onClick={() => {
-                toast({ title: "❌ Dev Mode — Payment Failed", description: "Simulated failure for testing.", variant: "destructive" });
-              }}
-            >
-              Simulate Payment Failure
-            </Button>
-          )}
-
-          <Button variant="outline" className="w-full" onClick={onCancel}>
-            Cancel
-          </Button>
-
-          <p className="text-[10px] text-center" style={{ color: "hsl(40 40% 50%)" }}>
-            🧪 Dev Mode — no real payment will be processed
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // ── Real Payment UI ──────────────────────────────────────────────────
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
@@ -234,7 +195,7 @@ export const PayFastPayment = ({
           <CreditCard className="h-5 w-5" />
           Secure Payment
         </CardTitle>
-        <CardDescription>Pay securely with PayFast</CardDescription>
+        <CardDescription>Pay securely with PayFast or DevCard</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="rounded-lg bg-muted p-4">
@@ -246,6 +207,25 @@ export const PayFastPayment = ({
             <span className="text-muted-foreground">Amount:</span>
             <span className="text-2xl font-bold">R{amount.toFixed(2)}</span>
           </div>
+        </div>
+
+        {/* DevCard — test payment */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-muted-foreground">Test Payment</p>
+          <Button
+            className="w-full justify-start gap-2"
+            variant="outline"
+            onClick={handleDevCardPayment}
+            disabled={loading}
+          >
+            <FlaskConical className="h-4 w-4 text-amber-600" />
+            <span className="flex-1 text-left">DevCard (Test)</span>
+            <Badge variant="outline" className="text-xs border-amber-400 text-amber-700">Test</Badge>
+            <span className="text-muted-foreground">R{amount.toFixed(2)}</span>
+          </Button>
+          <p className="text-[10px] text-muted-foreground pl-1">
+            Simulates payment — no real money charged
+          </p>
         </div>
 
         {/* Saved cards */}

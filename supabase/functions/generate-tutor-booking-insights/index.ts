@@ -41,6 +41,24 @@ function calculateRiskLevel(daysUntilExam: number | null, avgScore: number, comp
 
 serve(async (req) => {
   try {
+    // ── AUTH: require valid JWT and verify caller is the tutor in the booking
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { "Content-Type": "application/json" },
+      });
+    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const { data: userData, error: authErr } = await supabase.auth.getUser(
+      authHeader.replace("Bearer ", "")
+    );
+    if (authErr || !userData?.user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { "Content-Type": "application/json" },
+      });
+    }
+    const callerId = userData.user.id;
+
     const body: InsightRequest = await req.json();
     const { booking_id, student_id, tutor_id, subject } = body;
 
@@ -51,7 +69,17 @@ serve(async (req) => {
       );
     }
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    // Verify caller is the tutor on this booking
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("tutor_id, learner_id, status")
+      .eq("id", booking_id)
+      .maybeSingle();
+    if (!booking || booking.tutor_id !== callerId || booking.tutor_id !== tutor_id || booking.learner_id !== student_id) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { "Content-Type": "application/json" },
+      });
+    }
 
     // 1. Get student's academic profile (only curriculum/grade/subjects/exam_dates — NOT emails)
     const { data: profile } = await supabase

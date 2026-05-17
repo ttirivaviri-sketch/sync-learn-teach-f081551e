@@ -59,6 +59,13 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   // Guardian & tutor insight functions
   'send-guardian-report':        'send-guardian-report',
   'generate-tutor-booking-insights': 'generate-tutor-booking-insights',
+  // Topic Mode (flexible non-linear learning)
+  'map-question-concepts':       'map-question-concepts',
+  'generate-topic-session':      'generate-topic-session',
+  'generate-concept-review':     'generate-concept-review',
+  'evaluate-topic-answer':       'evaluate-topic-answer',
+  // Syllabus-grounded structured daily task
+  'generate-daily-task':         'generate-daily-task',
 };
 
 /**
@@ -174,10 +181,16 @@ export async function aiRequestJSON<T = unknown>(
 ): Promise<T> {
   const resp = await aiRequest(endpointPath, body);
   if (!resp.ok) {
-    const errData = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
-    throw new Error(
-      (errData as any).error || `AI request failed with status ${resp.status}`,
-    );
+    const errData: any = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
+    if (resp.status === 429 && errData?.error === 'daily_limit_reached') {
+      const err: any = new Error(errData.message || "You've used today's free AI. It resets at midnight, or upgrade to Premium.");
+      err.code = 'daily_limit_reached';
+      err.bucket = errData.bucket;
+      err.used = errData.used;
+      err.limit = errData.limit;
+      throw err;
+    }
+    throw new Error(errData.error || `AI request failed with status ${resp.status}`);
   }
   return resp.json() as Promise<T>;
 }
