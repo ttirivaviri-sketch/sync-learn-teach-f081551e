@@ -553,6 +553,46 @@ const StudySyncLibrary = ({
           </CardContent>
         </Card>
       )}
+
+      {/* ── Library Copyright & Disclaimer Footer ──────────────────────────── */}
+      <div className="mt-6 rounded-lg border border-border/60 bg-muted/30 px-4 py-4 text-center space-y-1.5">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+          Copyright &amp; Content Policy
+        </p>
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+          StudySync does <strong>not</strong> sell, license, or claim ownership of any third-party
+          educational material published in this Library. All resources — including past papers,
+          syllabi, textbooks and reference guides — remain the intellectual property of their
+          respective authors and publishers. This material is made available{" "}
+          <strong>free of charge, for educational purposes only</strong>, under fair-dealing
+          provisions for private study and research. No subscription fee paid to StudySync
+          constitutes payment for any publisher's work.
+        </p>
+        <p className="text-xs text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+          Rights holders who wish to request a takedown or attribution change may contact{" "}
+          <a
+            href="mailto:supportstudysync@gmail.com"
+            className="text-primary underline hover:text-primary/80"
+          >
+            supportstudysync@gmail.com
+          </a>
+          . See our full{" "}
+          <a
+            href="/legal/library"
+            className="text-primary underline hover:text-primary/80"
+          >
+            Library Disclaimer
+          </a>{" "}
+          and{" "}
+          <a
+            href="/legal/copyright"
+            className="text-primary underline hover:text-primary/80"
+          >
+            Copyright &amp; Takedown Policy
+          </a>{" "}
+          for details.
+        </p>
+      </div>
     </div>
   );
 };
