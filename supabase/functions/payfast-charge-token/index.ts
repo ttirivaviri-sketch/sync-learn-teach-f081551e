@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { crypto as stdCrypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +35,9 @@ serve(async (req) => {
     const { data: { user }, error: authError } = await supabase.auth.getUser(token);
     if (authError || !user) throw new Error("Invalid authentication token");
 
-    const { bookingId, savedMethodId } = await req.json();
+    const body = await req.json();
+    const bookingId = body.bookingId;
+    const savedMethodId = body.savedMethodId ?? body.paymentMethodId;
     if (!bookingId || !savedMethodId) throw new Error("Missing bookingId or savedMethodId");
 
     // Fetch saved payment method
@@ -110,7 +113,7 @@ serve(async (req) => {
       : paramString;
 
     const encoder = new TextEncoder();
-    const hashBuffer = await crypto.subtle.digest("MD5", encoder.encode(sigInput));
+    const hashBuffer = await stdCrypto.subtle.digest("MD5", encoder.encode(sigInput));
     const signature = Array.from(new Uint8Array(hashBuffer))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("");
