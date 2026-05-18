@@ -2075,6 +2075,180 @@ export type Database = {
         }
         Relationships: []
       }
+      study_memory_daily: {
+        Row: {
+          avg_score_pct: number | null
+          exam_count: number
+          flashcard_count: number
+          id: string
+          quiz_correct: number
+          quiz_count: number
+          study_date: string
+          subject_name: string
+          subtopics_studied: string[]
+          topics_studied: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_score_pct?: number | null
+          exam_count?: number
+          flashcard_count?: number
+          id?: string
+          quiz_correct?: number
+          quiz_count?: number
+          study_date: string
+          subject_name: string
+          subtopics_studied?: string[]
+          topics_studied?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_score_pct?: number | null
+          exam_count?: number
+          flashcard_count?: number
+          id?: string
+          quiz_correct?: number
+          quiz_count?: number
+          study_date?: string
+          subject_name?: string
+          subtopics_studied?: string[]
+          topics_studied?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      study_memory_events: {
+        Row: {
+          command_word: string | null
+          concepts_tested: string[] | null
+          created_at: string
+          curriculum: string | null
+          difficulty: string | null
+          ease_factor: number | null
+          event_type: string
+          id: string
+          metadata: Json
+          question_text: string | null
+          score_max: number | null
+          score_raw: number | null
+          subject_id: string | null
+          subject_name: string
+          subtopic_name: string | null
+          topic_name: string
+          user_id: string
+          was_correct: boolean | null
+        }
+        Insert: {
+          command_word?: string | null
+          concepts_tested?: string[] | null
+          created_at?: string
+          curriculum?: string | null
+          difficulty?: string | null
+          ease_factor?: number | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          question_text?: string | null
+          score_max?: number | null
+          score_raw?: number | null
+          subject_id?: string | null
+          subject_name: string
+          subtopic_name?: string | null
+          topic_name: string
+          user_id: string
+          was_correct?: boolean | null
+        }
+        Update: {
+          command_word?: string | null
+          concepts_tested?: string[] | null
+          created_at?: string
+          curriculum?: string | null
+          difficulty?: string | null
+          ease_factor?: number | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          question_text?: string | null
+          score_max?: number | null
+          score_raw?: number | null
+          subject_id?: string | null
+          subject_name?: string
+          subtopic_name?: string | null
+          topic_name?: string
+          user_id?: string
+          was_correct?: boolean | null
+        }
+        Relationships: []
+      }
+      study_memory_summary: {
+        Row: {
+          avg_score_pct: number | null
+          best_score_pct: number | null
+          command_words_used: string[]
+          concepts_covered: string[]
+          concepts_mastered: string[]
+          concepts_weak: string[]
+          id: string
+          last_activity_at: string
+          last_score_pct: number | null
+          needs_reinforcement: boolean
+          questions_seen: string[]
+          quiz_attempts: number
+          quiz_correct: number
+          subject_name: string
+          subtopics_covered: string[]
+          topic_complete: boolean
+          topic_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avg_score_pct?: number | null
+          best_score_pct?: number | null
+          command_words_used?: string[]
+          concepts_covered?: string[]
+          concepts_mastered?: string[]
+          concepts_weak?: string[]
+          id?: string
+          last_activity_at?: string
+          last_score_pct?: number | null
+          needs_reinforcement?: boolean
+          questions_seen?: string[]
+          quiz_attempts?: number
+          quiz_correct?: number
+          subject_name: string
+          subtopics_covered?: string[]
+          topic_complete?: boolean
+          topic_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avg_score_pct?: number | null
+          best_score_pct?: number | null
+          command_words_used?: string[]
+          concepts_covered?: string[]
+          concepts_mastered?: string[]
+          concepts_weak?: string[]
+          id?: string
+          last_activity_at?: string
+          last_score_pct?: number | null
+          needs_reinforcement?: boolean
+          questions_seen?: string[]
+          quiz_attempts?: number
+          quiz_correct?: number
+          subject_name?: string
+          subtopics_covered?: string[]
+          topic_complete?: boolean
+          topic_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_schedule: {
         Row: {
           completed: boolean | null
