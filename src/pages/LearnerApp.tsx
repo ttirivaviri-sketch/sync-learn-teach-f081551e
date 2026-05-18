@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { AppShell } from "@/components/layout/AppShell";
 import VideoMeeting from "@/components/VideoMeeting";
 import LaunchScreen from "@/components/LaunchScreen";
 import ChatInterface from "@/components/ChatInterface";
@@ -349,43 +350,42 @@ const LearnerApp = () => {
     );
   }
 
+  // ── Nav items ────────────────────────────────────────────────────────────
+  const navItems = [
+    { id: "home",     label: "Home",     icon: <Home     className="h-5 w-5" /> },
+    { id: "library",  label: "Library",  icon: <BookOpen className="h-5 w-5" /> },
+    { id: "activity", label: "Activity", icon: <Activity className="h-5 w-5" /> },
+    { id: "profile",  label: "Profile",  icon: <User     className="h-5 w-5" /> },
+  ];
+
   // ── Render (shell: header + tabs + bottom nav + modals) ────────────────
   return (
-    <div className="min-h-screen bg-background bg-mesh">
-      {/* ── Header ── */}
-      <header
-        className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
-        style={{ background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)" }}
-      >
-        <div className="mx-auto flex min-h-[64px] items-center justify-between gap-3 px-4 sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <img
-              src="/lovable-uploads/studysync-logo.png"
-              alt="StudySync"
-              className="h-[42px] sm:h-[48px] w-auto shrink-0 object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
-            />
-            <p
-              className="hidden sm:block truncate text-[10px] font-medium uppercase tracking-[0.12em]"
-              style={{ color: "rgba(255,255,255,0.82)" }}
-            >
-              Education, in sync with your future
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <NotificationCenter />
-            <Button variant="ghost" size="sm" onClick={() => setShowChat(true)} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Open Chat">
-              <MessageCircle className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setActiveTab("profile")} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Profile">
-              <User className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Main Content ── */}
-      <div className="pt-16 pb-20">
+    <AppShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      navItems={navItems}
+      headerLeft={
+        <p
+          className="hidden sm:block truncate text-[10px] font-medium uppercase tracking-[0.12em]"
+          style={{ color: "rgba(255,255,255,0.82)" }}
+        >
+          Education, in sync with your future
+        </p>
+      }
+      headerRight={
+        <>
+          <NotificationCenter />
+          <Button variant="ghost" size="sm" onClick={() => setShowChat(true)} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Open Chat">
+            <MessageCircle className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setActiveTab("profile")} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15 lg:hidden" aria-label="Profile">
+            <User className="h-5 w-5" />
+          </Button>
+        </>
+      }
+    >
+      {/* ── Content: max-width container for desktop ── */}
+      <div className="lg:max-w-screen-xl lg:mx-auto lg:px-6">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsContent value="home" forceMount={activeTab === "home" ? true : undefined} hidden={activeTab !== "home"}>
             {activeTab === "home" && (
@@ -470,26 +470,9 @@ const LearnerApp = () => {
             )}
           </TabsContent>
         </Tabs>
-
-        {/* ── Bottom Navigation ── */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border/50 shadow-xl z-40">
-          <div className="grid grid-cols-4 gap-1 p-2 max-w-lg mx-auto">
-            {[
-              { id: "home", label: "Home", Icon: Home },
-              { id: "library", label: "Library", Icon: BookOpen },
-              { id: "activity", label: "Activity", Icon: Activity },
-              { id: "profile", label: "Profile", Icon: User },
-            ].map(({ id, label, Icon }) => (
-              <button key={id} className={`nav-pill ${activeTab === id ? "nav-pill-active" : ""}`} onClick={() => setActiveTab(id)}>
-                <Icon className="h-5 w-5" />
-                <span className="text-[11px]">{label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* ── Modals & Overlays ── */}
+      {/* ── Modals & Overlays (rendered inside shell wrapper so theme applies) ── */}
       <ConfirmDialog
         open={showSignOutConfirm}
         onOpenChange={setShowSignOutConfirm}
@@ -572,7 +555,7 @@ const LearnerApp = () => {
           onSubmit={createBooking}
         />
       )}
-    </div>
+    </AppShell>
   );
 };
 

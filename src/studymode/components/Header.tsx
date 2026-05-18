@@ -1,19 +1,17 @@
-import { Flame, Zap, Trophy, Calendar, Sun, Moon } from 'lucide-react';
+import { Flame, Zap, Trophy, Calendar } from 'lucide-react';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useExamSettings } from '../hooks/useExamSettings';
 import { useSubjectExams } from '../hooks/useSubjectExams';
 import { useAIGreeting } from '../hooks/useAIGreeting';
 import { NotificationBell } from './NotificationBell';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { useTheme } from 'next-themes';
+import { CompactThemeToggle } from '@/components/ThemeToggle';
 
 export function Header() {
   const { progress } = useUserProgress();
   const { getDaysUntilExam } = useExamSettings();
   const { getNextExam } = useSubjectExams();
   const { greeting, isLoading: greetingLoading } = useAIGreeting();
-  const { theme, setTheme } = useTheme();
   
   // Prefer subject-specific exam dates from calendar, fallback to global
   const nextExam = getNextExam();
@@ -53,16 +51,7 @@ export function Header() {
 
           <NotificationBell />
 
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="h-9 w-9 rounded-full"
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
+          <CompactThemeToggle />
 
           <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-warning/10 border border-warning/20">
             <Flame className="h-4 w-4 text-warning" />

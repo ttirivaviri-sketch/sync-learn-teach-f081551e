@@ -163,19 +163,41 @@ export const AuthForm = ({
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // Build the post-OAuth redirect URL.
+      // Must exactly match one of the "Redirect URLs" configured in
+      // Supabase → Authentication → URL Configuration → Redirect URLs.
+      // e.g. https://your-app.com/learner  or  https://your-app.com/tutor
+      const redirectUrl = `${window.location.origin}${redirectTo}`;
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}${redirectTo}`,
-          queryParams: { user_type: userType },
+          redirectTo: redirectUrl,
+          // Pass user_type so the auth callback can route to the right profile
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+          // Store user_type in state so it survives the redirect
+          scopes: "email profile",
         },
       });
+
       if (error) {
-        toast({ title: "Google sign-in failed", description: error.message, variant: "destructive" });
+        toast({
+          title: "Google sign-in failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        setLoading(false);
       }
-    } catch {
-      toast({ title: "Error", description: "Could not start Google sign-in.", variant: "destructive" });
-    } finally {
+      // On success Supabase redirects the browser — no further action needed.
+    } catch (err) {
+      toast({
+        title: "Could not start Google sign-in",
+        description: "Please try again or use email/password.",
+        variant: "destructive",
+      });
       setLoading(false);
     }
   };

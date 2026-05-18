@@ -252,61 +252,58 @@ const TutorApp = () => {
     rating: formattedStats.averageRating || 0,
   };
 
+  // ── Nav items ──────────────────────────────────────────────────────────
+  const pendingCount = bookings.filter(b => b.status === "requested").length;
+  const navItems = [
+    { id: "home",      label: "Home",      icon: <Home     className="h-5 w-5" /> },
+    { id: "tutorials", label: "Tutorials", icon: <BookOpen className="h-5 w-5" /> },
+    { id: "activity",  label: "Activity",  icon: <Activity className="h-5 w-5" />, badge: pendingCount },
+    { id: "profile",   label: "Profile",   icon: <User     className="h-5 w-5" /> },
+  ];
+
+  const onlineBanner = isOnline ? (
+    <div className="bg-emerald-500 text-white px-5 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
+      <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
+      You're online and available for booking requests
+      {onlineUsers.length > 1 && (
+        <span className="opacity-80 text-xs">
+          • {onlineUsers.length - 1} other user{onlineUsers.length - 1 !== 1 ? "s" : ""} online
+        </span>
+      )}
+    </div>
+  ) : undefined;
+
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-background bg-mesh">
-      {/* ── Header ── */}
-      <header
-        className="fixed top-0 left-0 right-0 z-40 text-white shadow-md"
-        style={{ background: "linear-gradient(135deg, #1a3fc4 0%, #2d52e0 50%, #3b63f5 100%)" }}
-      >
-        <div className="mx-auto flex min-h-[64px] items-center justify-between gap-3 px-4 sm:px-5">
-          <div className="flex min-w-0 items-center gap-3">
-            <img
-              src="/lovable-uploads/studysync-logo.png"
-              alt="StudySync"
-              className="h-[52px] w-[150px] shrink-0 object-contain"
-              style={{ filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.25))", mixBlendMode: "screen" }}
-            />
-            <p className="hidden sm:block truncate text-[10px] font-medium uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.82)" }}>
-              Education, in sync with your future
-            </p>
+    <AppShell
+      activeTab={activeTab}
+      onTabChange={setActiveTab}
+      navItems={navItems}
+      banner={onlineBanner}
+      headerLeft={
+        <p className="hidden sm:block truncate text-[10px] font-medium uppercase tracking-[0.12em]" style={{ color: "rgba(255,255,255,0.82)" }}>
+          Education, in sync with your future
+        </p>
+      }
+      headerRight={
+        <>
+          {/* Online toggle */}
+          <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1">
+            <div className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-400" : "bg-gray-400"}`} />
+            <span className="text-xs font-medium text-white hidden sm:block">{isOnline ? "Online" : "Offline"}</span>
+            <Switch checked={isOnline} onCheckedChange={handleOnlineToggle} className="scale-75" />
           </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Online toggle */}
-            <div className="flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1">
-              <div className={`h-2 w-2 rounded-full ${isOnline ? "bg-green-400" : "bg-gray-400"}`} />
-              <span className="text-xs font-medium text-white">{isOnline ? "Online" : "Offline"}</span>
-              <Switch checked={isOnline} onCheckedChange={handleOnlineToggle} className="scale-75" />
-            </div>
-            <NotificationCenter />
-            <Button variant="ghost" size="sm" onClick={() => setShowChat(true)} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Open Chat">
-              <MessageCircle className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Sign Out">
-              <LogOut className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Status Banner */}
-      <div className="pt-16" />
-      {isOnline && (
-        <div className="bg-emerald-500 text-white px-5 py-2 text-center text-sm font-medium flex items-center justify-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-white animate-pulse" />
-          You're online and available for booking requests
-          {onlineUsers.length > 1 && (
-            <span className="opacity-80 text-xs">
-              • {onlineUsers.length - 1} other user{onlineUsers.length - 1 !== 1 ? "s" : ""} online
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* ── Main Content (tab panels) ── */}
-      <div className="p-4 pb-20">
+          <NotificationCenter />
+          <Button variant="ghost" size="sm" onClick={() => setShowChat(true)} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Open Chat">
+            <MessageCircle className="h-5 w-5" />
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Sign Out">
+            <LogOut className="h-5 w-5" />
+          </Button>
+        </>
+      }
+    >
+      <div className="lg:max-w-screen-xl lg:mx-auto lg:px-6 p-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsContent value="home">
             <TutorHomeTab
@@ -314,7 +311,7 @@ const TutorApp = () => {
               statsLoading={statsLoading}
               bookingsLoading={bookingsLoading}
               upcomingSessions={getUpcomingSessions()}
-              pendingCount={bookings.filter(b => b.status === "requested").length}
+              pendingCount={pendingCount}
               tutorName={session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "Tutor"}
               mySubjects={mySubjects as any}
               tutorId={userId}
@@ -361,26 +358,6 @@ const TutorApp = () => {
             />
           </TabsContent>
         </Tabs>
-
-        {/* ── Bottom Navigation ── */}
-        <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur-lg border-t border-border/50 shadow-xl z-40">
-          <div className="grid grid-cols-4 gap-1 p-2 max-w-lg mx-auto">
-            {[
-              { id: "home", label: "Home", Icon: Home },
-              { id: "tutorials", label: "Tutorials", Icon: BookOpen },
-              { id: "activity", label: "Activity", Icon: Activity, badge: bookings.filter(b => b.status === "requested").length },
-              { id: "profile", label: "Profile", Icon: User },
-            ].map(({ id, label, Icon, badge }) => (
-              <button key={id} className={`nav-pill ${activeTab === id ? "nav-pill-active" : ""} relative`} onClick={() => setActiveTab(id)}>
-                <Icon className="h-5 w-5" />
-                <span className="text-[11px]">{label}</span>
-                {badge ? (
-                  <span className="absolute top-0.5 right-1/4 h-2.5 w-2.5 rounded-full bg-red-500 border-2 border-background" />
-                ) : null}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* ── Chat Overlay ── */}
@@ -392,7 +369,7 @@ const TutorApp = () => {
         otherUserId={chatWithUserId || undefined}
         otherUserName={chatWithUserName || undefined}
       />
-    </div>
+    </AppShell>
   );
 };
 
