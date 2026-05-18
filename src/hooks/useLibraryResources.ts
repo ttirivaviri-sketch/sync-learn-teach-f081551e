@@ -432,15 +432,14 @@ export function useLibraryResources(
   // Study-skills seeds are ALWAYS merged in (deduplicated by id) so the rack is visible
   // even before the DB migration has run on the remote instance.
   const allResources: LibraryResource[] = (() => {
-    const base = dbFetched ? dbResources : SEED_TUTORIALS;
-    // Deduplicate: DB rows that match a seed id take precedence (they have more data).
-    // Seed rows whose id doesn't appear in the DB are appended.
-    const dbIds = new Set(base.map((r) => r.id));
-    const seedExtras = SEED_STUDY_SKILLS.filter((s) => !dbIds.has(s.id));
-    // Also filter out DB rows whose subject is "Study Skills" but came back from DB
-    // so we don't double-count if migration DID run (DB rows get different UUIDs).
-    return [...base, ...seedExtras];
+    if (dbFetched) {
+      // DB is the source of truth — Study Skills books now seeded in DB with real UUIDs.
+      return dbResources;
+    }
+    // Pre-fetch placeholders only (seeds have non-UUID ids and can't be streamed).
+    return [...SEED_TUTORIALS, ...SEED_STUDY_SKILLS];
   })();
+
 
   // Fetch tutor-uploaded tutorials AND PDFs from Supabase
   useEffect(() => {
