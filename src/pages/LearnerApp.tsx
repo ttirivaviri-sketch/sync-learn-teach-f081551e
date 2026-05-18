@@ -158,13 +158,16 @@ const LearnerApp = () => {
   }, [session?.user?.id]);
 
   // Redirect users who haven't completed onboarding (academic profile + flag).
-  // Wait for BOTH academic profile + base profile loads to avoid races.
+  // IMPORTANT: only redirect when we have a *successful* profile load — a
+  // transient network error leaves `profile`/`academicProfile` null and would
+  // otherwise wrongly bounce a fully-onboarded user back to /learner/onboarding.
   const redirectedToOnboardingRef = useRef(false);
   useEffect(() => {
     if (redirectedToOnboardingRef.current) return;
     if (loading || academicProfileLoading || !profileLoaded) return;
     if (!session?.user) return;
-    if (profile?.onboarding_completed_at) return;
+    if (!profile) return; // profile fetch failed — don't act on a stale null
+    if (profile.onboarding_completed_at) return;
     if (academicProfile) return;
     redirectedToOnboardingRef.current = true;
     navigate("/learner/onboarding", { replace: true });
