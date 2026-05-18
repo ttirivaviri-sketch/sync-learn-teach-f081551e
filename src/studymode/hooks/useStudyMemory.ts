@@ -20,6 +20,7 @@
 
 import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { logger } from '@/utils/logger';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -57,7 +58,7 @@ export interface LogMemoryEventParams {
   /** SM-2 ease factor (flashcards only) */
   easeFactor?: number;
   /** Any extra structured data (exam paper id, flashcard id, etc.) */
-  metadata?: Record<string, unknown>;
+  metadata?: Json;
 }
 
 export interface TopicMemorySummary {
@@ -141,7 +142,7 @@ export function useStudyMemory() {
         score_max: params.scoreMax ?? null,
         difficulty: params.difficulty ?? null,
         ease_factor: params.easeFactor ?? null,
-        metadata: (params.metadata ?? {}) as any,
+        metadata: params.metadata ?? {},
       });
 
       if (error) {
