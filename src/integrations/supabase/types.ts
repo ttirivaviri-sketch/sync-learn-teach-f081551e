@@ -3413,6 +3413,15 @@ export type Database = {
           watch_count: number
         }[]
       }
+      get_study_memory_context: {
+        Args: {
+          p_days_back?: number
+          p_subject: string
+          p_topic?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_subject_context: {
         Args: { p_subject_id: string; p_topic_name: string }
         Returns: Json
