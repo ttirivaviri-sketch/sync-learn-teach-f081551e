@@ -58,7 +58,7 @@ export interface LogMemoryEventParams {
   /** SM-2 ease factor (flashcards only) */
   easeFactor?: number;
   /** Any extra structured data (exam paper id, flashcard id, etc.) */
-  metadata?: Record<string, unknown>;
+  metadata?: Json;
 }
 
 export interface TopicMemorySummary {
