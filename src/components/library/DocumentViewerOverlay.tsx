@@ -41,7 +41,8 @@ export function DocumentViewerOverlay({
 
   // ── No pdfSource means it's a legacy/fallback seed with a direct URL.
   // Open it immediately in a new tab instead of trying the edge function.
-  if (!resource.pdfSource && resource.videoUrl) {
+  const isUuid = /^[0-9a-f-]{36}$/i.test(String(resource.id));
+  if ((!resource.pdfSource || !isUuid) && resource.videoUrl) {
     window.open(resource.videoUrl, "_blank", "noopener,noreferrer");
     onClose();
     return null;
