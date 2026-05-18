@@ -141,7 +141,7 @@ export function useStudyMemory() {
         score_max: params.scoreMax ?? null,
         difficulty: params.difficulty ?? null,
         ease_factor: params.easeFactor ?? null,
-        metadata: params.metadata ?? {},
+        metadata: (params.metadata ?? {}) as any,
       });
 
       if (error) {

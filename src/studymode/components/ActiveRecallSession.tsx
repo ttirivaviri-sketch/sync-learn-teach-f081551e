@@ -89,7 +89,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
         scoreRaw: result.marksAwarded,
         scoreMax: result.totalMarks,
         difficulty: q?.difficulty,
-        metadata: { timeTakenSecs: timeTaken, masteryClass: result.classification },
+        metadata: { timeTakenSecs: timeTaken },
       });
     } else {
       // Fallback if evaluation failed

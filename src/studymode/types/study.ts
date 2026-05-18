@@ -6,6 +6,7 @@ export interface Subject {
   currentTopic: Topic;
   topics: Topic[];
   overallMastery: number;
+  curriculum?: string;
 }
 
 export interface Topic {
