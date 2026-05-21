@@ -161,17 +161,55 @@ const LearnerApp = () => {
   // IMPORTANT: only redirect when we have a *successful* profile load — a
   // transient network error leaves `profile`/`academicProfile` null and would
   // otherwise wrongly bounce a fully-onboarded user back to /learner/onboarding.
+  // We also persist the last known onboarding-completed timestamp per user so
+  // a failed fetch on a returning user does not trigger a false redirect.
+  const onboardingCacheKey = session?.user?.id
+    ? `learner_onboarding_completed_at:${session.user.id}`
+    : null;
   const redirectedToOnboardingRef = useRef(false);
   useEffect(() => {
     if (redirectedToOnboardingRef.current) return;
     if (loading || academicProfileLoading || !profileLoaded) return;
     if (!session?.user) return;
-    if (!profile) return; // profile fetch failed — don't act on a stale null
-    if (profile.onboarding_completed_at) return;
-    if (academicProfile) return;
+
+    const cachedCompletedAt = onboardingCacheKey
+      ? localStorage.getItem(onboardingCacheKey)
+      : null;
+
+    const guardOutcome = {
+      profileLoaded,
+      profileFetched: !!profile,
+      onboarding_completed_at: profile?.onboarding_completed_at ?? null,
+      cachedCompletedAt,
+      academicProfileLoaded: !academicProfileLoading,
+      academicProfilePresent: !!academicProfile,
+    };
+
+    // Profile fetch failed — fall back to cached onboarding flag if present.
+    if (!profile) {
+      const decision = cachedCompletedAt ? "skip_cached_completed" : "skip_no_profile";
+      analytics.track("learner_redirect_guard", { ...guardOutcome, decision });
+      logger.info("[LearnerApp] Redirect guard:", decision, guardOutcome);
+      return;
+    }
+
+    if (profile.onboarding_completed_at) {
+      if (onboardingCacheKey) {
+        localStorage.setItem(onboardingCacheKey, profile.onboarding_completed_at);
+      }
+      analytics.track("learner_redirect_guard", { ...guardOutcome, decision: "skip_completed" });
+      return;
+    }
+    if (academicProfile) {
+      analytics.track("learner_redirect_guard", { ...guardOutcome, decision: "skip_has_academic" });
+      return;
+    }
+
+    analytics.track("learner_redirect_guard", { ...guardOutcome, decision: "redirect_to_onboarding" });
+    logger.warn("[LearnerApp] Redirecting to onboarding", guardOutcome);
     redirectedToOnboardingRef.current = true;
     navigate("/learner/onboarding", { replace: true });
-  }, [loading, academicProfileLoading, profileLoaded, academicProfile, session?.user, navigate, profile]);
+  }, [loading, academicProfileLoading, profileLoaded, academicProfile, session?.user, navigate, profile, onboardingCacheKey]);
 
   // Listen for custom toast events from StudySyncLibrary
   useEffect(() => {
@@ -185,19 +223,56 @@ const LearnerApp = () => {
   useEffect(() => { analytics.track("tab_changed", { tab: activeTab }); }, [activeTab]);
 
   // ── Handlers ────────────────────────────────────────────────────────────
+  // Retry profile load with exponential backoff so we only mark profileLoaded
+  // after a successful fetch (or after exhausting retries on a real failure).
   const loadUserProfile = async () => {
     if (!session?.user?.id) return;
-    try {
-      const { data, error } = await supabase
-        .from("profiles").select("*").eq("id", session.user.id).single();
-      if (error && error.code !== "PGRST116") { logger.error("Error loading profile:", error); return; }
-      setProfile(data);
-      if (!data?.study_level) {
-        toast({ title: "Select your study level", description: "Choose your level to personalize your search." });
-        navigate("/learner/choose-level");
+    const userIdLocal = session.user.id;
+    const maxAttempts = 4;
+    let lastError: unknown = null;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const { data, error } = await supabase
+          .from("profiles").select("*").eq("id", userIdLocal).single();
+
+        if (error && error.code !== "PGRST116") throw error;
+
+        setProfile(data);
+        setProfileLoaded(true);
+
+        if (data?.onboarding_completed_at) {
+          localStorage.setItem(
+            `learner_onboarding_completed_at:${userIdLocal}`,
+            data.onboarding_completed_at,
+          );
+        }
+
+        analytics.track("learner_profile_loaded", {
+          attempt,
+          onboarding_completed_at: data?.onboarding_completed_at ?? null,
+          study_level: data?.study_level ?? null,
+        });
+
+        if (!data?.study_level) {
+          toast({ title: "Select your study level", description: "Choose your level to personalize your search." });
+          navigate("/learner/choose-level");
+        }
+        return;
+      } catch (err) {
+        lastError = err;
+        logger.warn(`[LearnerApp] Profile load attempt ${attempt}/${maxAttempts} failed:`, err);
+        if (attempt < maxAttempts) {
+          await new Promise((r) => setTimeout(r, 400 * Math.pow(2, attempt - 1)));
+        }
       }
-    } catch (err) { logger.error("Profile load error:", err); }
-    finally { setProfileLoaded(true); }
+    }
+
+    logger.error("[LearnerApp] Profile load failed after retries:", lastError);
+    analytics.track("learner_profile_load_failed", { attempts: maxAttempts });
+    // Mark loaded so the UI proceeds; the redirect guard will fall back to
+    // the cached onboarding flag (if any) rather than bouncing the user.
+    setProfileLoaded(true);
   };
 
   const handleSignOut = () => setShowSignOutConfirm(true);
