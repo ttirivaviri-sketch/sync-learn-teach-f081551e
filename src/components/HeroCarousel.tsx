@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { openWhatsAppAdmin, WHATSAPP_ADMIN_URL } from "@/lib/whatsapp";
 import { track } from "@/utils/landingAnalytics";
+import heroTutorMarketplace from "@/assets/hero-tutor-marketplace.jpg";
+import heroSmartLibrary from "@/assets/hero-smart-library.jpg";
+import heroStudyPlanner from "@/assets/hero-study-planner.jpg";
 
 /* ─────────────────────────────────────────────────────────
    Floating badge chip used in slide 1
@@ -327,8 +330,8 @@ const HeroCarousel = () => {
         track("cta_click", { id: "hero_find_tutor", slide: 2 });
         navigate("/learner/auth");
       }}
-      image="/images/girl-phone.png"
-      imageAlt="Student booking a tutor on phone"
+      image={heroTutorMarketplace}
+      imageAlt="Verified online tutor"
       accent="amber"
     />,
     <FeatureSlide
@@ -347,8 +350,8 @@ const HeroCarousel = () => {
         track("cta_click", { id: "hero_explore_library", slide: 3 });
         navigate("/learner/auth");
       }}
-      image="/images/screenshot-studymode.jpeg"
-      imageAlt="StudySync Smart Learning Library"
+      image={heroSmartLibrary}
+      imageAlt="Smart learning library of books and videos"
       accent="purple"
     />,
     <FeatureSlide
@@ -360,15 +363,15 @@ const HeroCarousel = () => {
       bullets={[
         "Adaptive daily tasks",
         "Auto-marked quizzes",
-        "7-day free trial, cancel anytime",
+        "Cancel anytime",
       ]}
-      ctaLabel="Start 7-day free trial"
+      ctaLabel="Start learning today"
       onCta={() => {
-        track("cta_click", { id: "hero_start_trial", slide: 4 });
+        track("cta_click", { id: "hero_start_learning", slide: 4 });
         navigate("/learner/auth");
       }}
-      image="/images/boy-videocall.png"
-      imageAlt="Student in a tutor video call"
+      image={heroStudyPlanner}
+      imageAlt="Study planner with calendar and progress"
       accent="emerald"
     />,
   ];
