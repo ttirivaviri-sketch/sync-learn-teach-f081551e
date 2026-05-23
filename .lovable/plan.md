@@ -1,71 +1,79 @@
 
-## Goal
+## Problems to fix
 
-Replace the current landing hero with a **full-screen, horizontally swipeable hero carousel** (4 slides, one per main feature) that closely matches the uploaded reference (~4/5 faithfulness). Users swipe left/right between slides and scroll down for the rest of the page. The "Contact our admin" CTA opens WhatsApp.
+1. **Repeated images on the landing page** — three carousel slides reuse images that appear again in sections below:
+   - `girl-phone.png` → slide 2 **and** `AppShowcase`
+   - `screenshot-studymode.jpeg` → slide 3 **and** `StudyModeSection`
+   - `boy-videocall.png` → slide 4 **and** `HowItWorksSection`
+   - (slide 1 `students-group.png` is unique — keep it)
 
-## Hero — full-screen carousel
+2. **"7-day free trial" wording on landing** — appears in:
+   - `HeroCarousel.tsx` slide 4 (bullet + CTA label)
+   - `HeroSection.tsx` mobile menu CTA button
+   - (SubscriptionFlow inside the app is unrelated to the landing — leave it alone)
 
-Create `src/components/HeroCarousel.tsx` using `embla-carousel-react` (already common in shadcn stack; install if missing).
+3. **Runtime error** ("Importing a module script failed") — stale Vite chunk from the previous hero refactor; resolved by a dev-server restart after the new files settle.
 
-- Container: `h-[100svh] w-full` so it fills the viewport. Below it, the page continues normally (scroll down for rest).
-- Navbar stays overlaid at the top (transparent over hero, white on scroll).
-- 4 horizontal slides, snap-scroll, touch swipe + arrow buttons + numbered pagination (`01 02 03 04`) bottom-left, prev/next circular arrows bottom-right — matching reference.
-- Each slide: 2-column on desktop (text left, image/illustration right), stacked on mobile.
+## Fix
 
-### Slides
+### A. Give the carousel its own dedicated imagery
 
-1. **AI Study Mode** — "Learn smarter. Pass faster." + 4-item checklist + yellow WhatsApp CTA "Contact our admin now and let's build your child's study plan" + 2K+ avatars trust strip. Image: `students-group.png` with floating feature badges (AI Study Assistant, Expert Tutors, Smart Library, Study Planner) like the reference.
-2. **Tutor Marketplace** — "Verified tutors, on your schedule." + bullets + "Find a tutor" CTA. Image: `girl-phone.png`.
-3. **Smart Learning Library** — "Videos, notes, past papers." + bullets + "Explore library" CTA. Image: existing library/showcase image from `/public/images` (reuse what's there; fallback to `students-group.png` cropped).
-4. **Study Planner & Practice** — "Plan, practice, progress." + bullets + "Start free trial" CTA. Image: reuse `girl-phone.png` or existing planner screenshot.
+Generate 3 new hero illustrations sized 1024×1024, brand-consistent (clean, light, white-dominant, blue accent — matching the landing-page design memory). Save to `src/assets/` so they're bundled and ES6-imported.
 
-Floating badge chips (Brain/GraduationCap/BookOpen/Calendar icons) animate in on slide 1 only, matching reference layout.
+| Slide | New asset | Prompt direction |
+|---|---|---|
+| 2 — Tutors | `hero-tutor-marketplace.jpg` | Friendly female tutor smiling at laptop with a chat bubble of "Math" notation, soft pastel background, no text overlay |
+| 3 — Library | `hero-smart-library.jpg` | Floating stack of books / tablet showing notes & a play button, soft purple gradient background, illustrative |
+| 4 — Planner | `hero-study-planner.jpg` | Calendar + checklist + progress ring composition on a soft emerald background, illustrative |
 
-## WhatsApp CTA
+These are visually distinct from the existing photographs (`girl-phone`, `boy-videocall`) and screenshots used in the sections below, so nothing repeats.
 
-Single helper `openWhatsAppAdmin()` in `src/lib/whatsapp.ts`:
-```ts
-export const WHATSAPP_ADMIN_URL =
-  "https://wa.me/27686523995?text=" +
-  encodeURIComponent("Hi StudySync, I'd like to build my child's study plan");
+Update `HeroCarousel.tsx` slides 2-4 to import these new assets and drop the `/images/*` paths.
+
+### B. Remove "7-day free trial" wording from landing
+
+- `HeroCarousel.tsx` slide 4:
+  - bullet `"7-day free trial, cancel anytime"` → `"Cancel anytime"`
+  - CTA label `"Start 7-day free trial"` → `"Start learning today"`
+- `HeroSection.tsx` mobile menu: `"Start free trial"` → `"Get Started"`
+
+Internal `SubscriptionFlow.tsx` keeps its trial copy — it's product UI, not landing.
+
+### C. Coherent landing flow (after fixes)
+
 ```
-Yellow pill button in hero slide 1 opens this URL in a new tab. Track `cta_click` via existing `landingAnalytics`.
+[Hero Carousel — 4 swipe slides, all unique imagery]
+   ↓ scroll
+AppShowcase          (girl-phone.png — student lifestyle shot)
+HowItWorksSection    (boy-videocall.png — process visual)
+FeaturesSection      (icon grid, no photos)
+StudyModeSection     (studymode + tutor-matching screenshots — product proof)
+TestimonialSection
+TrustSection
+ContactStrip
+Footer
+```
 
-## Rest of the page (below hero)
-
-Keep existing sections but reorder/light-touch to match reference flow:
-1. `FeaturesSection` ("Everything They Need, All in One Place" — 2×4 grid) — already exists, keep.
-2. `AppShowcase` — keep, ensure it uses `girl-phone.png` (already does).
-3. `StudyModeSection` / `HowItWorksSection` — keep.
-4. `TestimonialSection`, `TrustSection`, `ContactStrip`, `Footer` — keep.
-
-No structural changes to these components beyond what's needed to avoid duplicate hero copy.
+No image appears twice on the page. Carousel uses illustrative hero art; sections below use real photos + product screenshots — clear visual hierarchy.
 
 ## Files
 
-**New**
-- `src/components/HeroCarousel.tsx` — full-screen carousel + 4 slide subcomponents
-- `src/lib/whatsapp.ts` — WhatsApp URL helper
+**New (generated)**
+- `src/assets/hero-tutor-marketplace.jpg`
+- `src/assets/hero-smart-library.jpg`
+- `src/assets/hero-study-planner.jpg`
 
 **Edited**
-- `src/components/HeroSection.tsx` — replace hero body with `<HeroCarousel />`; keep `Navbar` export (or move Navbar into its own file and import in both places)
-- `src/pages/Index.tsx` — no change (still renders `HeroSection`), or swap to render Navbar + HeroCarousel directly
-- `index.html` — no change
+- `src/components/HeroCarousel.tsx` — import 3 new assets, swap slide 2-4 images, retitle slide 4 CTA + bullet
+- `src/components/HeroSection.tsx` — relabel mobile CTA button
 
 **Unchanged**
-- All other landing sections, routes, auth flows, app shell
-
-## Technical notes
-
-- Use `embla-carousel-react` with `loop: false`, `align: "start"`, `dragFree: false`. Add `embla-carousel-autoplay` only if user later wants auto-advance (not in this plan).
-- `h-[100svh]` for accurate mobile viewport (avoids URL bar jump).
-- Navbar: change from `fixed` white bg to `fixed` transparent over hero, switches to white after scrolling past hero (existing `scrolled` state already handles this — just adjust initial bg to transparent when at top AND on landing route).
-- All colors via existing semantic tokens; yellow CTA keeps current `hsl(45,100%,51%)`.
-- Lazy-load slide 2-4 images with `loading="lazy"`.
-- Accessibility: arrow keys navigate slides, `aria-roledescription="carousel"`, slide count announced.
+- `AppShowcase`, `HowItWorksSection`, `StudyModeSection`, `FeaturesSection`, all other sections
+- `SubscriptionFlow` (internal app)
+- Routes, auth, backend
 
 ## Out of scope
 
-- No new image generation — only reuses existing `/public/images/*` and `/lovable-uploads/*`.
-- No backend / DB / auth changes.
-- No changes to internal app routes (`/learner/*`, `/tutor/*`).
+- No layout overhaul of below-the-fold sections (already coherent).
+- No copy changes outside the trial wording.
+- No new dependencies.
