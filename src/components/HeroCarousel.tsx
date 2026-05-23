@@ -15,6 +15,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { openWhatsAppAdmin, WHATSAPP_ADMIN_URL } from "@/lib/whatsapp";
 import { track } from "@/utils/landingAnalytics";
+import heroTutorMarketplace from "@/assets/hero-tutor-marketplace.jpg";
+import heroSmartLibrary from "@/assets/hero-smart-library.jpg";
+import heroStudyPlanner from "@/assets/hero-study-planner.jpg";
 
 /* ─────────────────────────────────────────────────────────
    Floating badge chip used in slide 1
