@@ -104,7 +104,7 @@ const Navbar = () => {
               className="flex-1 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-semibold rounded-full"
               onClick={() => openTrialFlow("learner")}
             >
-              Start free trial
+              Get Started
             </Button>
             <Button
               variant="outline"
