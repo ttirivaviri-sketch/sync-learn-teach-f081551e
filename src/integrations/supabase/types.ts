@@ -3537,6 +3537,10 @@ export type Database = {
         Returns: string
       }
       mark_learner_onboarding_complete: { Args: never; Returns: undefined }
+      notify_allocation_event: {
+        Args: { p_allocation_id: string; p_event: string; p_extra?: string }
+        Returns: undefined
+      }
       request_tutor_withdrawal: {
         Args: {
           _amount: number
