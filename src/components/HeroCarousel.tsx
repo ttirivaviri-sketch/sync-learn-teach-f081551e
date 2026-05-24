@@ -83,7 +83,7 @@ const Slide1 = () => {
     <SlideShell
       left={
         <div className="text-center lg:text-left animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 leading-[1.05] mb-5">
+          <h1 className="text-[clamp(2rem,8vw,4rem)] font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4 max-w-[16ch] mx-auto lg:mx-0">
             Learn <span className="text-gray-900">smarter.</span>
             <br />
             Pass <span className="text-[hsl(45,100%,45%)]">faster.</span>
@@ -93,14 +93,14 @@ const Slide1 = () => {
             in one place to help you master your subjects.
           </p>
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-6 max-w-md mx-auto lg:mx-0">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 mb-6 max-w-md mx-auto lg:mx-0">
             {checks.map((c) => (
-              <div key={c} className="flex items-center gap-2">
+              <li key={c} className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
                 <span className="text-sm text-gray-700">{c}</span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
 
           <a
             href={WHATSAPP_ADMIN_URL}
@@ -110,11 +110,11 @@ const Slide1 = () => {
               e.preventDefault();
               handleWhatsApp();
             }}
-            className="inline-flex items-center gap-3 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold rounded-2xl px-6 py-4 shadow-md transition-colors max-w-md w-full lg:w-auto"
+            className="inline-flex items-center gap-3 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold rounded-2xl px-5 py-3.5 shadow-md transition-colors max-w-md w-full lg:w-auto"
           >
             <MessageCircle className="h-5 w-5 shrink-0" />
-            <span className="text-left leading-tight flex-1">
-              Contact our admin now and let's build your child's study plan
+            <span className="text-left text-sm sm:text-base leading-tight flex-1">
+              Contact our admin and build your child's study plan
             </span>
             <ArrowRight className="h-5 w-5 shrink-0" />
           </a>
