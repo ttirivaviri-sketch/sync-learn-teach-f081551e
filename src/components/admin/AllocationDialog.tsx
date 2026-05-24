@@ -50,7 +50,8 @@ export const AllocationDialog = ({ open, onOpenChange, onCreated }: Props) => {
 
   const [learners, setLearners] = useState<Array<{ id: string; full_name: string | null; email: string | null }>>([]);
   const [tutors, setTutors] = useState<Array<{ id: string; full_name: string | null; email: string | null }>>([]);
-  const [subjects, setSubjects] = useState<Array<{ id: string; subject: string; level: string; price_per_hour: number | null }>>([]);
+  const [subjects, setSubjects] = useState<Array<{ id: string; subject: string; level: string; hourly_rate: number | null }>>([]);
+  const [subjectsLoading, setSubjectsLoading] = useState(false);
 
   const [learnerId, setLearnerId] = useState<string>("");
   const [tutorId, setTutorId] = useState<string>("");
@@ -83,13 +84,16 @@ export const AllocationDialog = ({ open, onOpenChange, onCreated }: Props) => {
       setSubjectId("");
       return;
     }
+    setSubjectsLoading(true);
     (async () => {
-      const { data } = await (supabase as any)
+      const { data, error } = await (supabase as any)
         .from("tutor_subjects")
-        .select("id,subject,level,price_per_hour")
-        .eq("tutor_id", tutorId);
+        .select("id,subject,level,hourly_rate")
+        .eq("user_id", tutorId);
+      if (error) logger.error("Load tutor subjects failed", error);
       setSubjects((data as any) || []);
       setSubjectId("");
+      setSubjectsLoading(false);
     })();
   }, [tutorId]);
 
@@ -193,18 +197,33 @@ export const AllocationDialog = ({ open, onOpenChange, onCreated }: Props) => {
 
           <div>
             <Label>Subject</Label>
-            <Select value={subjectId} onValueChange={setSubjectId} disabled={!tutorId}>
+            <Select value={subjectId} onValueChange={setSubjectId} disabled={!tutorId || subjectsLoading}>
               <SelectTrigger>
-                <SelectValue placeholder={tutorId ? "Select subject" : "Pick a tutor first"} />
+                <SelectValue
+                  placeholder={
+                    !tutorId
+                      ? "Pick a tutor first"
+                      : subjectsLoading
+                        ? "Loading subjects…"
+                        : subjects.length === 0
+                          ? "This tutor has no subjects set up"
+                          : "Select subject"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((s) => (
                   <SelectItem key={s.id} value={s.id}>
-                    {s.subject} ({s.level})
+                    {s.subject} ({s.level}){s.hourly_rate ? ` · R${s.hourly_rate}/hr` : ""}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {tutorId && !subjectsLoading && subjects.length === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Ask this tutor to add subjects in their profile before allocating.
+              </p>
+            )}
           </div>
 
           <div>
