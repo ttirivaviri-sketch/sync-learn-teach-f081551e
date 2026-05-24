@@ -32,6 +32,7 @@ const items = [
   { title: "Verifications", url: "/admin/verifications", icon: FileCheck },
   { title: "Curriculum Templates", url: "/admin/curriculum-templates", icon: BookOpen },
   { title: "Library", url: "/admin/library", icon: BookOpen },
+  { title: "Allocations", url: "/admin/allocations", icon: CalendarCheck2 },
   { title: "Bookings", url: "/admin/bookings", icon: CalendarCheck2 },
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
   { title: "Support", url: "/admin/support", icon: LifeBuoy },
