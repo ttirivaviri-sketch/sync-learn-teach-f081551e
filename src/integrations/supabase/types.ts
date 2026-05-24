@@ -169,6 +169,7 @@ export type Database = {
       }
       bookings: {
         Row: {
+          allocation_id: string | null
           created_at: string
           duration_minutes: number
           id: string
@@ -176,12 +177,14 @@ export type Database = {
           price: number
           room_name: string | null
           scheduled_at: string
+          source: string
           status: Database["public"]["Enums"]["booking_status"]
           tutor_id: string
           tutor_subject_id: string
           updated_at: string
         }
         Insert: {
+          allocation_id?: string | null
           created_at?: string
           duration_minutes: number
           id?: string
@@ -189,12 +192,14 @@ export type Database = {
           price: number
           room_name?: string | null
           scheduled_at: string
+          source?: string
           status?: Database["public"]["Enums"]["booking_status"]
           tutor_id: string
           tutor_subject_id: string
           updated_at?: string
         }
         Update: {
+          allocation_id?: string | null
           created_at?: string
           duration_minutes?: number
           id?: string
@@ -202,12 +207,20 @@ export type Database = {
           price?: number
           room_name?: string | null
           scheduled_at?: string
+          source?: string
           status?: Database["public"]["Enums"]["booking_status"]
           tutor_id?: string
           tutor_subject_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "bookings_allocation_id_fkey"
+            columns: ["allocation_id"]
+            isOneToOne: false
+            referencedRelation: "tutor_allocations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "bookings_learner_id_fkey"
             columns: ["learner_id"]
@@ -2811,6 +2824,60 @@ export type Database = {
           },
         ]
       }
+      tutor_allocations: {
+        Row: {
+          created_at: string
+          created_by: string
+          duration_minutes: number
+          end_date: string
+          external_payment_reference: string | null
+          id: string
+          learner_id: string
+          notes: string | null
+          price_per_session: number
+          start_date: string
+          status: string
+          tutor_id: string
+          tutor_subject_id: string
+          updated_at: string
+          weekly_schedule: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          duration_minutes?: number
+          end_date: string
+          external_payment_reference?: string | null
+          id?: string
+          learner_id: string
+          notes?: string | null
+          price_per_session?: number
+          start_date: string
+          status?: string
+          tutor_id: string
+          tutor_subject_id: string
+          updated_at?: string
+          weekly_schedule?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          duration_minutes?: number
+          end_date?: string
+          external_payment_reference?: string | null
+          id?: string
+          learner_id?: string
+          notes?: string | null
+          price_per_session?: number
+          start_date?: string
+          status?: string
+          tutor_id?: string
+          tutor_subject_id?: string
+          updated_at?: string
+          weekly_schedule?: Json
+        }
+        Relationships: []
+      }
       tutor_availability: {
         Row: {
           created_at: string
@@ -3380,6 +3447,10 @@ export type Database = {
         Returns: Json
       }
       expire_stale_topic_sessions: { Args: never; Returns: number }
+      generate_allocation_bookings: {
+        Args: { p_allocation_id: string }
+        Returns: number
+      }
       get_ai_usage_today: { Args: never; Returns: Json }
       get_exam_readiness: {
         Args: { p_paper_code: string; p_subject_id: string }
