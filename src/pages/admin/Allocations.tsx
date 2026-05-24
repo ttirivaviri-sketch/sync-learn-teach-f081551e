@@ -164,14 +164,20 @@ const Allocations = () => {
         canceled = await cancelFutureBookings(id, true);
       }
 
+      const event = status === "paused" ? "paused" : status === "ended" ? "ended" : "resumed";
+      await supabase.rpc("notify_allocation_event" as any, {
+        p_allocation_id: id,
+        p_event: event,
+      });
+
       toast({
         title: "Updated",
         description:
           status === "paused"
-            ? `Paused. Canceled ${canceled} pending future session${canceled === 1 ? "" : "s"}.`
+            ? `Paused. Canceled ${canceled} pending future session${canceled === 1 ? "" : "s"}. Tutor & learner notified.`
             : status === "ended"
-              ? `Ended. Canceled ${canceled} future session${canceled === 1 ? "" : "s"}.`
-              : "Resumed. Use Regenerate to recreate canceled sessions.",
+              ? `Ended. Canceled ${canceled} future session${canceled === 1 ? "" : "s"}. Tutor & learner notified.`
+              : "Resumed. Use Regenerate to recreate canceled sessions. Tutor & learner notified.",
       });
       await load();
     } catch (e: any) {
@@ -188,9 +194,17 @@ const Allocations = () => {
         p_allocation_id: id,
       });
       if (error) throw error;
+      const count = (data as number) ?? 0;
+      if (count > 0) {
+        await supabase.rpc("notify_allocation_event" as any, {
+          p_allocation_id: id,
+          p_event: "regenerated",
+          p_extra: String(count),
+        });
+      }
       toast({
         title: "Generated",
-        description: `Created ${data ?? 0} new session${data === 1 ? "" : "s"}.`,
+        description: `Created ${count} new session${count === 1 ? "" : "s"}.`,
       });
       await load();
     } catch (e: any) {
