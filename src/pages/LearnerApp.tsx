@@ -143,7 +143,13 @@ const LearnerApp = () => {
   );
   const { needsPayment } = useBookingPayments(confirmedBookingIds);
   const bookingsNeedingPayment = useMemo(
-    () => bookings.filter((b) => b.status === "confirmed" && needsPayment(b.id)),
+    () =>
+      bookings.filter(
+        (b) =>
+          b.status === "confirmed" &&
+          (b as any).source !== "admin_allocated" &&
+          needsPayment(b.id)
+      ),
     [bookings, needsPayment],
   );
 
