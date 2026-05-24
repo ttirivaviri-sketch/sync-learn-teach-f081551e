@@ -84,7 +84,7 @@ export const AllocationDialog = ({ open, onOpenChange, onCreated }: Props) => {
       return;
     }
     (async () => {
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("tutor_subjects")
         .select("id,subject,level,price_per_hour")
         .eq("tutor_id", tutorId);
