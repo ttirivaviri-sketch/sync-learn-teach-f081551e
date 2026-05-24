@@ -51,9 +51,9 @@ const SlideShell = ({
   left: React.ReactNode;
   right: React.ReactNode;
 }) => (
-  <div className="flex-[0_0_100%] min-w-0 h-full">
-    <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-28 lg:pt-28">
-      <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+  <div className="flex-[0_0_100%] min-w-0 h-full overflow-y-auto">
+    <div className="min-h-full max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-20 pb-32 lg:pt-28 lg:pb-28">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
         <div className="order-2 lg:order-1">{left}</div>
         <div className="order-1 lg:order-2 flex justify-center items-center">
           {right}
