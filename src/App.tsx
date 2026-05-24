@@ -38,6 +38,7 @@ const AdminSAIL = lazy(() => import("./pages/admin/SAIL"));
 const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemplates"));
 const AdminLibrary = lazy(() => import("./pages/admin/Library"));
+const AdminAllocations = lazy(() => import("./pages/admin/Allocations"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
@@ -102,6 +103,7 @@ const App = () => (
                 <Route path="verifications" element={<AdminVerifications />} />
                 <Route path="curriculum-templates" element={<AdminCurriculumTemplates />} />
                 <Route path="library" element={<AdminLibrary />} />
+                <Route path="allocations" element={<AdminAllocations />} />
               </Route>
 
               {/* Legal */}

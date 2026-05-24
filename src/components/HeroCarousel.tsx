@@ -51,9 +51,9 @@ const SlideShell = ({
   left: React.ReactNode;
   right: React.ReactNode;
 }) => (
-  <div className="flex-[0_0_100%] min-w-0 h-full">
-    <div className="h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-28 lg:pt-28">
-      <div className="h-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+  <div className="flex-[0_0_100%] min-w-0 h-full overflow-y-auto">
+    <div className="min-h-full max-w-7xl mx-auto px-5 sm:px-6 lg:px-8 pt-20 pb-32 lg:pt-28 lg:pb-28">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-12 items-center">
         <div className="order-2 lg:order-1">{left}</div>
         <div className="order-1 lg:order-2 flex justify-center items-center">
           {right}
@@ -83,7 +83,7 @@ const Slide1 = () => {
     <SlideShell
       left={
         <div className="text-center lg:text-left animate-fade-in">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 leading-[1.05] mb-5">
+          <h1 className="text-[clamp(2rem,8vw,4rem)] font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4 max-w-[16ch] mx-auto lg:mx-0">
             Learn <span className="text-gray-900">smarter.</span>
             <br />
             Pass <span className="text-[hsl(45,100%,45%)]">faster.</span>
@@ -93,14 +93,14 @@ const Slide1 = () => {
             in one place to help you master your subjects.
           </p>
 
-          <div className="grid grid-cols-2 gap-x-6 gap-y-3 mb-6 max-w-md mx-auto lg:mx-0">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 mb-6 max-w-md mx-auto lg:mx-0">
             {checks.map((c) => (
-              <div key={c} className="flex items-center gap-2">
+              <li key={c} className="flex items-center gap-2">
                 <CheckCircle className="h-5 w-5 text-emerald-500 shrink-0" />
                 <span className="text-sm text-gray-700">{c}</span>
-              </div>
+              </li>
             ))}
-          </div>
+          </ul>
 
           <a
             href={WHATSAPP_ADMIN_URL}
@@ -110,11 +110,11 @@ const Slide1 = () => {
               e.preventDefault();
               handleWhatsApp();
             }}
-            className="inline-flex items-center gap-3 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold rounded-2xl px-6 py-4 shadow-md transition-colors max-w-md w-full lg:w-auto"
+            className="inline-flex items-center gap-3 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold rounded-2xl px-5 py-3.5 shadow-md transition-colors max-w-md w-full lg:w-auto"
           >
             <MessageCircle className="h-5 w-5 shrink-0" />
-            <span className="text-left leading-tight flex-1">
-              Contact our admin now and let's build your child's study plan
+            <span className="text-left text-sm sm:text-base leading-tight flex-1">
+              Contact our admin and build your child's study plan
             </span>
             <ArrowRight className="h-5 w-5 shrink-0" />
           </a>
@@ -230,7 +230,7 @@ const FeatureSlide = ({
           >
             {eyebrow}
           </span>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 leading-[1.05] mb-5">
+          <h2 className="text-[clamp(2rem,7vw,3.75rem)] font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4 max-w-[16ch] mx-auto lg:mx-0">
             {title} <span className="text-blue-600">{highlight}</span>
           </h2>
           <p className="text-base md:text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0">
@@ -387,38 +387,40 @@ const HeroCarousel = () => {
         <div className="flex h-full">{slides}</div>
       </div>
 
-      {/* Pagination — bottom left */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0 flex items-center gap-4">
-        {Array.from({ length: snapCount }).map((_, i) => {
-          const active = i === selected;
-          return (
-            <button
-              key={i}
-              onClick={() => scrollTo(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className="flex flex-col items-center gap-1 group"
-            >
-              <span
-                className={`text-base font-bold tabular-nums ${
-                  active ? "text-blue-600" : "text-gray-400"
-                }`}
+      {/* Pagination — bottom center, simple dots on mobile */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-5 lg:bottom-8 flex items-center justify-center lg:justify-start lg:px-8 gap-3">
+        <div className="pointer-events-auto flex items-center gap-2 lg:gap-4 bg-white/70 backdrop-blur rounded-full px-4 py-2 shadow-sm border border-gray-200/70">
+          {Array.from({ length: snapCount }).map((_, i) => {
+            const active = i === selected;
+            return (
+              <button
+                key={i}
+                onClick={() => scrollTo(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className="flex items-center gap-2 group"
               >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span
-                className={`h-0.5 transition-all ${
-                  active
-                    ? "w-10 bg-blue-600"
-                    : "w-6 bg-gray-300 group-hover:bg-gray-400"
-                }`}
-              />
-            </button>
-          );
-        })}
+                <span
+                  className={`hidden lg:inline text-sm font-bold tabular-nums ${
+                    active ? "text-blue-600" : "text-gray-400"
+                  }`}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span
+                  className={`block rounded-full transition-all ${
+                    active
+                      ? "w-6 h-2 bg-blue-600"
+                      : "w-2 h-2 bg-gray-300 group-hover:bg-gray-400"
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Prev / Next — bottom right */}
-      <div className="absolute bottom-6 right-4 lg:right-8 flex items-center gap-3">
+      {/* Prev / Next — desktop only */}
+      <div className="hidden lg:flex absolute bottom-8 right-8 items-center gap-3">
         <button
           onClick={scrollPrev}
           disabled={selected === 0}
