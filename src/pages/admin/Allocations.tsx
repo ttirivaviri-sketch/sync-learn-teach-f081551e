@@ -134,7 +134,9 @@ const Allocations = () => {
 
   /** Cancel future bookings for an allocation. Past sessions are left untouched. */
   const cancelFutureBookings = async (allocationId: string, includeConfirmed: boolean) => {
-    const statuses = includeConfirmed ? ["requested", "confirmed"] : ["requested"];
+    const statuses: Array<"requested" | "confirmed"> = includeConfirmed
+      ? ["requested", "confirmed"]
+      : ["requested"];
     const { data, error } = await supabase
       .from("bookings")
       .update({ status: "canceled" })
