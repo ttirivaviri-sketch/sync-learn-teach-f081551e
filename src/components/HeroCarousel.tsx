@@ -387,38 +387,40 @@ const HeroCarousel = () => {
         <div className="flex h-full">{slides}</div>
       </div>
 
-      {/* Pagination — bottom left */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0 flex items-center gap-4">
-        {Array.from({ length: snapCount }).map((_, i) => {
-          const active = i === selected;
-          return (
-            <button
-              key={i}
-              onClick={() => scrollTo(i)}
-              aria-label={`Go to slide ${i + 1}`}
-              className="flex flex-col items-center gap-1 group"
-            >
-              <span
-                className={`text-base font-bold tabular-nums ${
-                  active ? "text-blue-600" : "text-gray-400"
-                }`}
+      {/* Pagination — bottom center, simple dots on mobile */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-5 lg:bottom-8 flex items-center justify-center lg:justify-start lg:px-8 gap-3">
+        <div className="pointer-events-auto flex items-center gap-2 lg:gap-4 bg-white/70 backdrop-blur rounded-full px-4 py-2 shadow-sm border border-gray-200/70">
+          {Array.from({ length: snapCount }).map((_, i) => {
+            const active = i === selected;
+            return (
+              <button
+                key={i}
+                onClick={() => scrollTo(i)}
+                aria-label={`Go to slide ${i + 1}`}
+                className="flex items-center gap-2 group"
               >
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span
-                className={`h-0.5 transition-all ${
-                  active
-                    ? "w-10 bg-blue-600"
-                    : "w-6 bg-gray-300 group-hover:bg-gray-400"
-                }`}
-              />
-            </button>
-          );
-        })}
+                <span
+                  className={`hidden lg:inline text-sm font-bold tabular-nums ${
+                    active ? "text-blue-600" : "text-gray-400"
+                  }`}
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span
+                  className={`block rounded-full transition-all ${
+                    active
+                      ? "w-6 h-2 bg-blue-600"
+                      : "w-2 h-2 bg-gray-300 group-hover:bg-gray-400"
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Prev / Next — bottom right */}
-      <div className="absolute bottom-6 right-4 lg:right-8 flex items-center gap-3">
+      {/* Prev / Next — desktop only */}
+      <div className="hidden lg:flex absolute bottom-8 right-8 items-center gap-3">
         <button
           onClick={scrollPrev}
           disabled={selected === 0}
