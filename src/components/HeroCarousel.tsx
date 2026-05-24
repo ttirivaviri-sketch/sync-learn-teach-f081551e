@@ -230,7 +230,7 @@ const FeatureSlide = ({
           >
             {eyebrow}
           </span>
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-gray-900 leading-[1.05] mb-5">
+          <h2 className="text-[clamp(2rem,7vw,3.75rem)] font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4 max-w-[16ch] mx-auto lg:mx-0">
             {title} <span className="text-blue-600">{highlight}</span>
           </h2>
           <p className="text-base md:text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0">
