@@ -166,10 +166,22 @@ export function useStructuredDailyTask(args: Args) {
 
       // 5. Persist bundle to daily_tasks for caching/idempotency
       try {
-        const { data: upserted } = await supabase
-          .from('daily_tasks')
-          .upsert(
-            {
+        if (dailyTaskRowId) {
+          await supabase
+            .from('daily_tasks')
+            .update({
+              task_payload: result.task as any,
+              selection_reason: result.selection_reason,
+              concepts_covered: result.task.concepts ?? [],
+              title: `Daily Task — ${result.task.topic || topic}`,
+              description: result.task.subtopic || null,
+            })
+            .eq('id', dailyTaskRowId)
+            .eq('user_id', user.id);
+        } else {
+          const { data: inserted } = await supabase
+            .from('daily_tasks')
+            .insert({
               user_id: user.id,
               subject_id: subjectId,
               task_date: today,
@@ -180,15 +192,15 @@ export function useStructuredDailyTask(args: Args) {
               selection_reason: result.selection_reason,
               concepts_covered: result.task.concepts ?? [],
               is_locked: false,
-            },
-            { onConflict: 'user_id,subject_id,task_date', ignoreDuplicates: false }
-          )
-          .select('id')
-          .single();
-        if (upserted?.id) setDailyTaskRowId(upserted.id);
+            })
+            .select('id')
+            .single();
+          if (inserted?.id) setDailyTaskRowId(inserted.id);
+        }
       } catch (e) {
         logger.warn('Failed to cache structured bundle', e);
       }
+
 
       // 6. Record concept coverage (trigger bumps last_covered_at/coverage_count)
       if (result.task?.concepts?.length) {
