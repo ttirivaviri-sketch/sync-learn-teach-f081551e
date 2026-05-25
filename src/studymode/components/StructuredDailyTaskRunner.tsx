@@ -27,11 +27,12 @@ const EXAM_XP_REPLAY = 5;
 export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum, onComplete, onBack }: Props) {
   const { addXp, updateStreak } = useUserProgress();
   const { awardXP } = useSubjectXP();
+  const { logAttempt } = useDailyTaskAttempts();
   const isReplay = !!dailyTask.isCompleted;
   const xpMap = isReplay ? DIFFICULTY_XP_REPLAY : DIFFICULTY_XP;
   const examXp = isReplay ? EXAM_XP_REPLAY : EXAM_XP;
 
-  const { task, isLoading, error, coverageWarnings, regenerate } = useStructuredDailyTask({
+  const { task, isLoading, error, coverageWarnings, regenerate, dailyTaskRowId } = useStructuredDailyTask({
     subjectId: subject.id,
     subjectName: subject.name,
     topic: subject.currentTopic.name,
