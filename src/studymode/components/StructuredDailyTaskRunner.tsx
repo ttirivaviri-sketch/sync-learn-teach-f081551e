@@ -7,6 +7,7 @@ import { MathMarkdown } from './MathMarkdown';
 import { useStructuredDailyTask, PracticeQuestion } from '../hooks/useStructuredDailyTask';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
+import { useDailyTaskAttempts } from '../hooks/useDailyTaskAttempts';
 import { DailyTask, Subject } from '../types/study';
 import { cn } from '@/lib/utils';
 
