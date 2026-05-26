@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy, Play } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
-import { TaskList } from './TaskList';
+import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
 import { ExamQuestionPanel } from './ExamQuestionPanel';
 import { TaskContentPanel } from './TaskContentPanel';
 import { FlashcardPanel } from './FlashcardPanel';
@@ -16,6 +16,7 @@ import { Leaderboard } from './Leaderboard';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
+import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
 
 interface SubjectDetailProps {
