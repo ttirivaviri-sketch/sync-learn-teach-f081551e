@@ -178,7 +178,13 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
             </span>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={regenerate} title="Regenerate">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={regenerate}
+          disabled={regenExhausted}
+          title={regenExhausted ? `Daily limit reached (${maxRegen}/day)` : `Regenerate (${regenCount}/${maxRegen})`}
+        >
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
