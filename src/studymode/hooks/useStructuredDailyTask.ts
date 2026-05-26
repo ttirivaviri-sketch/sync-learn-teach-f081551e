@@ -262,6 +262,8 @@ export function useStructuredDailyTask(args: Args) {
     coverageWarnings,
     selectionReason,
     dailyTaskRowId,
+    regenCount,
+    maxRegen: MAX_REGEN_PER_DAY,
     regenerate: () => generate({ force: true }),
   };
 }
