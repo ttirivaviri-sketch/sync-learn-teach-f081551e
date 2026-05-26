@@ -462,21 +462,135 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
         </Button>
       </div>
 
-      {/* Task List */}
+      {/* Today's Plan — single bundle launcher (collapses 5 tiles into 1 canonical task) */}
       <div>
-         <div className="flex items-center justify-between mb-4">
-           <h3 className="text-lg font-bold text-foreground">Today's Tasks</h3>
-           <span className="text-xs text-muted-foreground flex items-center gap-1">
-             <Sparkles className="h-3 w-3" />
-             AI-powered content
-           </span>
-         </div>
-        <TaskList 
-          tasks={currentTasks} 
-          onTaskClick={setSelectedTask}
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold text-foreground">Today's Plan</h3>
+          <span className="text-xs text-muted-foreground flex items-center gap-1">
+            <Sparkles className="h-3 w-3" />
+            AI-powered, syllabus-grounded
+          </span>
+        </div>
+        <BundleLauncher
+          subject={subject}
+          curriculum={curriculum}
           onAddBonusTask={onAddBonusTask}
         />
       </div>
+    </div>
+  );
+}
+
+interface BundleLauncherProps {
+  subject: Subject;
+  curriculum?: string | null;
+  onAddBonusTask?: () => void;
+}
+
+function BundleLauncher({ subject, curriculum, onAddBonusTask }: BundleLauncherProps) {
+  const [open, setOpen] = useState(false);
+  const [completedToday, setCompletedToday] = useState(false);
+  const [bundleRowId, setBundleRowId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      const { data: userData } = await supabase.auth.getUser();
+      const user = userData.user;
+      if (!user) return;
+      const today = new Date().toISOString().split('T')[0];
+      const { data } = await supabase
+        .from('daily_tasks')
+        .select('id, is_completed')
+        .eq('user_id', user.id)
+        .eq('subject_id', subject.id)
+        .eq('task_date', today)
+        .eq('task_type', 'structured-bundle')
+        .maybeSingle();
+      if (!active) return;
+      if (data) {
+        setBundleRowId(data.id);
+        setCompletedToday(!!data.is_completed);
+      }
+    })();
+    return () => { active = false; };
+  }, [subject.id]);
+
+  const handleComplete = async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (user && bundleRowId) {
+      await supabase
+        .from('daily_tasks')
+        .update({ is_completed: true, completed_at: new Date().toISOString() })
+        .eq('id', bundleRowId)
+        .eq('user_id', user.id);
+    }
+    setCompletedToday(true);
+    setOpen(false);
+  };
+
+  if (open) {
+    // Synthetic DailyTask just to satisfy the runner's props
+    const syntheticTask: DailyTask = {
+      id: bundleRowId ?? `${subject.id}-bundle`,
+      type: 'concept-learning',
+      title: "Today's Plan",
+      description: subject.currentTopic.name,
+      isCompleted: completedToday,
+      isLocked: false,
+      subjectId: subject.id,
+    };
+    return (
+      <StructuredDailyTaskRunner
+        task={syntheticTask}
+        subject={subject}
+        curriculum={curriculum ?? undefined}
+        onComplete={handleComplete}
+        onBack={() => setOpen(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <button
+        onClick={() => setOpen(true)}
+        className={cn(
+          'w-full text-left p-5 rounded-2xl border transition-all duration-200 group',
+          completedToday
+            ? 'bg-success/10 border-success/30 hover:border-success/50'
+            : 'bg-card border-border hover:border-accent/50 hover:shadow-md'
+        )}
+      >
+        <div className="flex items-center gap-4">
+          <div className={cn(
+            'flex h-12 w-12 items-center justify-center rounded-xl shrink-0',
+            completedToday ? 'bg-success/20 text-success' : 'gradient-primary text-white'
+          )}>
+            {completedToday ? <Trophy className="h-6 w-6" /> : <Play className="h-6 w-6" />}
+          </div>
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-foreground">
+              {completedToday ? 'Plan complete — replay anytime' : 'Start Today\u2019s Plan'}
+            </h4>
+            <p className="text-sm text-muted-foreground truncate">
+              Concept · Quick review · Practice · Exam question
+            </p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </div>
+      </button>
+
+      {completedToday && onAddBonusTask && (
+        <button
+          onClick={onAddBonusTask}
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent font-semibold"
+        >
+          <Sparkles className="h-4 w-4" />
+          Practice More — Bonus Task
+        </button>
+      )}
     </div>
   );
 }
