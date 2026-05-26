@@ -175,6 +175,13 @@ export function useStructuredDailyTask(args: Args) {
         past_paper_patterns: pastPaperPatterns,
       });
 
+      const nextRegen = opts?.force ? existingRegen + 1 : existingRegen;
+      setRegenCount(nextRegen);
+      const payloadWithMeta = {
+        ...result.task,
+        __meta: { regen_count: nextRegen, generated_at: new Date().toISOString() },
+      };
+
       setTask(result.task);
       setSelectionReason(result.selection_reason);
       setCoverageWarnings(result.coverage_warnings ?? []);
@@ -185,7 +192,7 @@ export function useStructuredDailyTask(args: Args) {
           await supabase
             .from('daily_tasks')
             .update({
-              task_payload: result.task as any,
+              task_payload: payloadWithMeta as any,
               selection_reason: result.selection_reason,
               concepts_covered: result.task.concepts ?? [],
               title: `Daily Task — ${result.task.topic || topic}`,
@@ -203,7 +210,7 @@ export function useStructuredDailyTask(args: Args) {
               task_type: 'structured-bundle',
               title: `Daily Task — ${result.task.topic || topic}`,
               description: result.task.subtopic || null,
-              task_payload: result.task as any,
+              task_payload: payloadWithMeta as any,
               selection_reason: result.selection_reason,
               concepts_covered: result.task.concepts ?? [],
               is_locked: false,
