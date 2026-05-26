@@ -321,66 +321,6 @@ export type Database = {
         }
         Relationships: []
       }
-      daily_task_attempts: {
-        Row: {
-          block: string
-          concept: string | null
-          created_at: string
-          daily_task_id: string | null
-          difficulty: string | null
-          id: string
-          marks_awarded: number
-          marks_possible: number
-          model_answer: string | null
-          question: string
-          subject_id: string | null
-          subject_name: string
-          time_spent_seconds: number | null
-          topic: string
-          user_answer: string | null
-          user_id: string
-          was_correct: boolean
-        }
-        Insert: {
-          block: string
-          concept?: string | null
-          created_at?: string
-          daily_task_id?: string | null
-          difficulty?: string | null
-          id?: string
-          marks_awarded?: number
-          marks_possible?: number
-          model_answer?: string | null
-          question: string
-          subject_id?: string | null
-          subject_name: string
-          time_spent_seconds?: number | null
-          topic: string
-          user_answer?: string | null
-          user_id: string
-          was_correct?: boolean
-        }
-        Update: {
-          block?: string
-          concept?: string | null
-          created_at?: string
-          daily_task_id?: string | null
-          difficulty?: string | null
-          id?: string
-          marks_awarded?: number
-          marks_possible?: number
-          model_answer?: string | null
-          question?: string
-          subject_id?: string | null
-          subject_name?: string
-          time_spent_seconds?: number | null
-          topic?: string
-          user_answer?: string | null
-          user_id?: string
-          was_correct?: boolean
-        }
-        Relationships: []
-      }
       daily_task_concepts: {
         Row: {
           concept: string

@@ -34,37 +34,17 @@ const Users = () => {
     try {
       let query = supabase
         .from('profiles')
-        .select('*')
+        .select('*, user_roles(role)')
         .order('created_at', { ascending: false });
 
       if (userType !== 'all') {
         query = query.eq('user_type', userType);
       }
 
-      const { data: profiles, error } = await query;
+      const { data, error } = await query;
+
       if (error) throw error;
-
-      // Fetch roles separately — no FK exists between profiles and user_roles,
-      // so PostgREST embedding fails and returns no rows.
-      const ids = (profiles ?? []).map((p: any) => p.id);
-      let rolesByUser: Record<string, { role: string }[]> = {};
-      if (ids.length > 0) {
-        const { data: roles, error: rolesErr } = await supabase
-          .from('user_roles')
-          .select('user_id, role')
-          .in('user_id', ids);
-        if (rolesErr) {
-          logger.warn('Could not load user roles:', rolesErr.message);
-        } else {
-          for (const r of (roles ?? []) as { user_id: string; role: string }[]) {
-            (rolesByUser[r.user_id] ||= []).push({ role: r.role });
-          }
-        }
-      }
-
-      setUsers(
-        (profiles ?? []).map((p: any) => ({ ...p, user_roles: rolesByUser[p.id] ?? [] }))
-      );
+      setUsers(data || []);
     } catch (error) {
       logger.error('Error loading users:', error);
       toast({

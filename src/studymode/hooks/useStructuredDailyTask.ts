@@ -49,15 +49,6 @@ interface Args {
   cachedTask?: StructuredTaskBundle | null;
 }
 
-// Mastery-driven decay window — concepts re-enter the "uncovered" pool after
-// this many days, scaled by current topic mastery. Lower mastery = shorter window.
-function decayWindowDays(masteryPct: number): number {
-  if (masteryPct >= 80) return 60;
-  if (masteryPct >= 60) return 21;
-  if (masteryPct >= 30) return 7;
-  return 3;
-}
-
 export function useStructuredDailyTask(args: Args) {
   const { subjectId, subjectName, curriculum, topic, subtopics, availableConcepts, cachedTask } = args;
 
@@ -66,9 +57,8 @@ export function useStructuredDailyTask(args: Args) {
   const [error, setError] = useState<string | null>(null);
   const [coverageWarnings, setCoverageWarnings] = useState<string[]>([]);
   const [selectionReason, setSelectionReason] = useState<string | null>(null);
-  const [dailyTaskRowId, setDailyTaskRowId] = useState<string | null>(null);
 
-  const generate = useCallback(async (opts?: { force?: boolean }) => {
+  const generate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     setCoverageWarnings([]);
@@ -78,32 +68,9 @@ export function useStructuredDailyTask(args: Args) {
       const user = userData.user;
       if (!user) throw new Error('Not authenticated');
 
-      const today = new Date().toISOString().split('T')[0];
-
-      // 1. Try cached bundle for today first (kills 60-80% of AI calls)
-      if (!opts?.force && subjectId) {
-        const { data: existingRows } = await supabase
-          .from('daily_tasks')
-          .select('id, task_payload, selection_reason')
-          .eq('user_id', user.id)
-          .eq('subject_id', subjectId)
-          .eq('task_date', today)
-          .eq('task_type', 'structured-bundle')
-          .limit(1);
-        const existing = existingRows?.[0];
-        if (existing?.task_payload) {
-          setTask(existing.task_payload as unknown as StructuredTaskBundle);
-          setSelectionReason((existing.selection_reason as string) ?? null);
-          setDailyTaskRowId(existing.id);
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // 2. Fetch topic mastery for decay + AI input
-      const conceptMastery: Record<string, number> = {};
-      const weakConcepts: string[] = [];
-      const masteryByTopic: Record<string, number> = {};
+      // Fetch concept mastery (from topic_mastery for this subject, if any)
+      let conceptMastery: Record<string, number> = {};
+      let weakConcepts: string[] = [];
       if (subjectId) {
         const { data: masteryRows } = await supabase
           .from('topic_mastery')
@@ -111,30 +78,20 @@ export function useStructuredDailyTask(args: Args) {
           .eq('user_id', user.id)
           .eq('subject_id', subjectId);
         (masteryRows ?? []).forEach((r: any) => {
-          const pct = Number(r.mastery_percentage) || 0;
-          conceptMastery[r.topic_name] = pct;
-          masteryByTopic[(r.topic_name || '').toLowerCase()] = pct;
-          if (pct < 60) weakConcepts.push(r.topic_name);
+          conceptMastery[r.topic_name] = Number(r.mastery_percentage) || 0;
+          if ((Number(r.mastery_percentage) || 0) < 60) weakConcepts.push(r.topic_name);
         });
       }
 
-      // 3. Apply mastery-driven decay to "covered" concepts
+      // Fetch already-covered concepts for this subject
       const { data: coverage } = await supabase
         .from('daily_task_concepts')
-        .select('concept, topic, last_covered_at')
+        .select('concept')
         .eq('user_id', user.id)
         .eq('subject_name', subjectName);
-      const now = Date.now();
-      const completedConcepts = (coverage ?? [])
-        .filter((c: any) => {
-          const pct = masteryByTopic[(c.topic || '').toLowerCase()] ?? 0;
-          const windowMs = decayWindowDays(pct) * 86400000;
-          const last = new Date(c.last_covered_at).getTime();
-          return now - last < windowMs;
-        })
-        .map((c: any) => c.concept);
+      const completedConcepts = (coverage ?? []).map((c: any) => c.concept);
 
-      // 4. Past paper patterns
+      // Fetch past paper patterns
       let pastPaperPatterns: any[] = [];
       if (subjectId) {
         const { data: patterns } = await supabase
@@ -164,45 +121,7 @@ export function useStructuredDailyTask(args: Args) {
       setSelectionReason(result.selection_reason);
       setCoverageWarnings(result.coverage_warnings ?? []);
 
-      // 5. Persist bundle to daily_tasks for caching/idempotency
-      try {
-        if (dailyTaskRowId) {
-          await supabase
-            .from('daily_tasks')
-            .update({
-              task_payload: result.task as any,
-              selection_reason: result.selection_reason,
-              concepts_covered: result.task.concepts ?? [],
-              title: `Daily Task — ${result.task.topic || topic}`,
-              description: result.task.subtopic || null,
-            })
-            .eq('id', dailyTaskRowId)
-            .eq('user_id', user.id);
-        } else {
-          const { data: inserted } = await supabase
-            .from('daily_tasks')
-            .insert({
-              user_id: user.id,
-              subject_id: subjectId,
-              task_date: today,
-              task_type: 'structured-bundle',
-              title: `Daily Task — ${result.task.topic || topic}`,
-              description: result.task.subtopic || null,
-              task_payload: result.task as any,
-              selection_reason: result.selection_reason,
-              concepts_covered: result.task.concepts ?? [],
-              is_locked: false,
-            })
-            .select('id')
-            .single();
-          if (inserted?.id) setDailyTaskRowId(inserted.id);
-        }
-      } catch (e) {
-        logger.warn('Failed to cache structured bundle', e);
-      }
-
-
-      // 6. Record concept coverage (trigger bumps last_covered_at/coverage_count)
+      // Record concept coverage
       if (result.task?.concepts?.length) {
         const rows = result.task.concepts.map((concept) => ({
           user_id: user.id,
@@ -239,7 +158,6 @@ export function useStructuredDailyTask(args: Args) {
     error,
     coverageWarnings,
     selectionReason,
-    dailyTaskRowId,
-    regenerate: () => generate({ force: true }),
+    regenerate: generate,
   };
 }

@@ -7,7 +7,6 @@ import { MathMarkdown } from './MathMarkdown';
 import { useStructuredDailyTask, PracticeQuestion } from '../hooks/useStructuredDailyTask';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
-import { useDailyTaskAttempts } from '../hooks/useDailyTaskAttempts';
 import { DailyTask, Subject } from '../types/study';
 import { cn } from '@/lib/utils';
 
@@ -27,12 +26,11 @@ const EXAM_XP_REPLAY = 5;
 export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum, onComplete, onBack }: Props) {
   const { addXp, updateStreak } = useUserProgress();
   const { awardXP } = useSubjectXP();
-  const { logAttempt } = useDailyTaskAttempts();
   const isReplay = !!dailyTask.isCompleted;
   const xpMap = isReplay ? DIFFICULTY_XP_REPLAY : DIFFICULTY_XP;
   const examXp = isReplay ? EXAM_XP_REPLAY : EXAM_XP;
 
-  const { task, isLoading, error, coverageWarnings, regenerate, dailyTaskRowId } = useStructuredDailyTask({
+  const { task, isLoading, error, coverageWarnings, regenerate } = useStructuredDailyTask({
     subjectId: subject.id,
     subjectName: subject.name,
     topic: subject.currentTopic.name,
@@ -87,43 +85,11 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
       awardXP.mutate({ subject: subject.name, curriculum, amount: xp });
       if (!isReplay) updateStreak.mutate();
     }
-    logAttempt({
-      dailyTaskId: dailyTaskRowId,
-      subjectId: subject.id,
-      subjectName: subject.name,
-      topic: task?.topic || subject.currentTopic.name,
-      concept: currentQ.concept,
-      question: currentQ.question,
-      userAnswer: practiceAnswers[practiceIdx] ?? '',
-      modelAnswer: currentQ.answer,
-      wasCorrect: correct,
-      marksAwarded: correct ? currentQ.marks : 0,
-      marksPossible: currentQ.marks,
-      difficulty: currentQ.difficulty,
-      block: 'practice',
-    });
   };
 
   const revealPractice = () => {
     setPracticeRevealed((p) => ({ ...p, [practiceIdx]: true }));
     setPracticeCorrect((p) => ({ ...p, [practiceIdx]: false }));
-    if (currentQ) {
-      logAttempt({
-        dailyTaskId: dailyTaskRowId,
-        subjectId: subject.id,
-        subjectName: subject.name,
-        topic: task?.topic || subject.currentTopic.name,
-        concept: currentQ.concept,
-        question: currentQ.question,
-        userAnswer: practiceAnswers[practiceIdx] ?? '',
-        modelAnswer: currentQ.answer,
-        wasCorrect: false,
-        marksAwarded: 0,
-        marksPossible: currentQ.marks,
-        difficulty: currentQ.difficulty,
-        block: 'practice',
-      });
-    }
   };
 
   const nextPractice = () => {
@@ -136,23 +102,6 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
     addXp.mutate(examXp);
     awardXP.mutate({ subject: subject.name, curriculum, amount: examXp });
     if (!isReplay) updateStreak.mutate();
-    if (task) {
-      logAttempt({
-        dailyTaskId: dailyTaskRowId,
-        subjectId: subject.id,
-        subjectName: subject.name,
-        topic: task.topic || subject.currentTopic.name,
-        concept: (task.blocks.exam_question.concepts ?? []).join(', ') || null,
-        question: task.blocks.exam_question.question,
-        userAnswer: examAnswer,
-        modelAnswer: (task.blocks.exam_question.expected_steps ?? []).join('\n'),
-        wasCorrect: false, // graded by checkbox steps after reveal
-        marksAwarded: 0,
-        marksPossible: task.blocks.exam_question.marks,
-        difficulty: 'hard',
-        block: 'exam',
-      });
-    }
   };
 
   const allExamStepsChecked =
