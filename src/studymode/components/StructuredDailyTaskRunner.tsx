@@ -32,13 +32,14 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
   const xpMap = isReplay ? DIFFICULTY_XP_REPLAY : DIFFICULTY_XP;
   const examXp = isReplay ? EXAM_XP_REPLAY : EXAM_XP;
 
-  const { task, isLoading, error, coverageWarnings, regenerate, dailyTaskRowId } = useStructuredDailyTask({
+  const { task, isLoading, error, coverageWarnings, regenerate, regenCount, maxRegen, dailyTaskRowId } = useStructuredDailyTask({
     subjectId: subject.id,
     subjectName: subject.name,
     topic: subject.currentTopic.name,
     subtopics: subject.currentTopic.subtopics,
     availableConcepts: subject.currentTopic.subtopics,
   });
+  const regenExhausted = regenCount >= maxRegen;
 
   const [step, setStep] = useState<'learn' | 'review' | 'practice' | 'exam'>('learn');
   const [practiceIdx, setPracticeIdx] = useState(0);
