@@ -58,6 +58,8 @@ function decayWindowDays(masteryPct: number): number {
   return 3;
 }
 
+const MAX_REGEN_PER_DAY = 3;
+
 export function useStructuredDailyTask(args: Args) {
   const { subjectId, subjectName, curriculum, topic, subtopics, availableConcepts, cachedTask } = args;
 
@@ -67,6 +69,7 @@ export function useStructuredDailyTask(args: Args) {
   const [coverageWarnings, setCoverageWarnings] = useState<string[]>([]);
   const [selectionReason, setSelectionReason] = useState<string | null>(null);
   const [dailyTaskRowId, setDailyTaskRowId] = useState<string | null>(null);
+  const [regenCount, setRegenCount] = useState(0);
 
   const generate = useCallback(async (opts?: { force?: boolean }) => {
     setIsLoading(true);
