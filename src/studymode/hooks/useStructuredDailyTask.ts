@@ -84,7 +84,8 @@ export function useStructuredDailyTask(args: Args) {
       const today = new Date().toISOString().split('T')[0];
 
       // 1. Try cached bundle for today first (kills 60-80% of AI calls)
-      if (!opts?.force && subjectId) {
+      let existingRegen = 0;
+      if (subjectId) {
         const { data: existingRows } = await supabase
           .from('daily_tasks')
           .select('id, task_payload, selection_reason')
@@ -94,10 +95,21 @@ export function useStructuredDailyTask(args: Args) {
           .eq('task_type', 'structured-bundle')
           .limit(1);
         const existing = existingRows?.[0];
-        if (existing?.task_payload) {
-          setTask(existing.task_payload as unknown as StructuredTaskBundle);
-          setSelectionReason((existing.selection_reason as string) ?? null);
-          setDailyTaskRowId(existing.id);
+        const payload = (existing?.task_payload as any) ?? null;
+        existingRegen = Number(payload?.__meta?.regen_count ?? 0);
+        if (existing?.id) setDailyTaskRowId(existing.id);
+        setRegenCount(existingRegen);
+
+        if (!opts?.force && payload) {
+          setTask(payload as unknown as StructuredTaskBundle);
+          setSelectionReason((existing?.selection_reason as string) ?? null);
+          setIsLoading(false);
+          return;
+        }
+
+        // Throttle: max N regenerations per subject per day
+        if (opts?.force && existingRegen >= MAX_REGEN_PER_DAY) {
+          setError(`Daily regenerate limit reached (${MAX_REGEN_PER_DAY}/day). Try again tomorrow.`);
           setIsLoading(false);
           return;
         }
