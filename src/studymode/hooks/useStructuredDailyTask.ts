@@ -149,7 +149,7 @@ export function useStructuredDailyTask(args: Args) {
         })
         .map((c: any) => c.concept);
 
-      // 4. Past paper patterns
+      // 4. Past paper patterns — user-scoped first, fall back to global patterns for this topic
       let pastPaperPatterns: any[] = [];
       if (subjectId) {
         const { data: patterns } = await supabase
@@ -159,6 +159,14 @@ export function useStructuredDailyTask(args: Args) {
           .eq('subject_id', subjectId)
           .limit(10);
         pastPaperPatterns = patterns ?? [];
+      }
+      if (pastPaperPatterns.length === 0) {
+        const { data: globalPatterns } = await supabase
+          .from('exam_patterns')
+          .select('topic_name, question_types, avg_marks, difficulty_level')
+          .ilike('topic_name', `%${topic}%`)
+          .limit(10);
+        pastPaperPatterns = globalPatterns ?? [];
       }
 
       const result = await aiRequestJSON<GenerateResponse>('generate-daily-task', {
