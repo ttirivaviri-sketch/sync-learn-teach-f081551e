@@ -48,6 +48,26 @@ export function useDailyTaskAttempts() {
         time_spent_seconds: input.timeSpentSeconds ?? null,
       });
 
+      // Mirror into quiz_attempts so the unified mastery/spaced-rep pipeline
+      // (used by the Quiz feature) sees these answers too.
+      try {
+        await supabase.from('quiz_attempts').insert({
+          user_id: user.id,
+          subject_id: input.subjectId ?? null,
+          topic_name: input.topic,
+          question: input.question,
+          user_answer: input.userAnswer,
+          model_answer: input.modelAnswer,
+          was_correct: input.wasCorrect,
+          marks_awarded: input.marksAwarded,
+          marks_possible: input.marksPossible,
+          concepts_tested: input.concept ? [input.concept] : null,
+          difficulty_rating: input.difficulty === 'easy' ? 1 : input.difficulty === 'hard' ? 3 : 2,
+        });
+      } catch (e) {
+        logger.warn('quiz_attempts mirror failed', e);
+      }
+
       // Bump topic_mastery — recompute from last 20 attempts on this topic
       if (input.subjectId) {
         const { data: recent } = await supabase

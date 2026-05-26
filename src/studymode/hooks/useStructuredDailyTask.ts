@@ -58,6 +58,8 @@ function decayWindowDays(masteryPct: number): number {
   return 3;
 }
 
+const MAX_REGEN_PER_DAY = 3;
+
 export function useStructuredDailyTask(args: Args) {
   const { subjectId, subjectName, curriculum, topic, subtopics, availableConcepts, cachedTask } = args;
 
@@ -67,6 +69,7 @@ export function useStructuredDailyTask(args: Args) {
   const [coverageWarnings, setCoverageWarnings] = useState<string[]>([]);
   const [selectionReason, setSelectionReason] = useState<string | null>(null);
   const [dailyTaskRowId, setDailyTaskRowId] = useState<string | null>(null);
+  const [regenCount, setRegenCount] = useState(0);
 
   const generate = useCallback(async (opts?: { force?: boolean }) => {
     setIsLoading(true);
@@ -81,7 +84,8 @@ export function useStructuredDailyTask(args: Args) {
       const today = new Date().toISOString().split('T')[0];
 
       // 1. Try cached bundle for today first (kills 60-80% of AI calls)
-      if (!opts?.force && subjectId) {
+      let existingRegen = 0;
+      if (subjectId) {
         const { data: existingRows } = await supabase
           .from('daily_tasks')
           .select('id, task_payload, selection_reason')
@@ -91,10 +95,21 @@ export function useStructuredDailyTask(args: Args) {
           .eq('task_type', 'structured-bundle')
           .limit(1);
         const existing = existingRows?.[0];
-        if (existing?.task_payload) {
-          setTask(existing.task_payload as unknown as StructuredTaskBundle);
-          setSelectionReason((existing.selection_reason as string) ?? null);
-          setDailyTaskRowId(existing.id);
+        const payload = (existing?.task_payload as any) ?? null;
+        existingRegen = Number(payload?.__meta?.regen_count ?? 0);
+        if (existing?.id) setDailyTaskRowId(existing.id);
+        setRegenCount(existingRegen);
+
+        if (!opts?.force && payload) {
+          setTask(payload as unknown as StructuredTaskBundle);
+          setSelectionReason((existing?.selection_reason as string) ?? null);
+          setIsLoading(false);
+          return;
+        }
+
+        // Throttle: max N regenerations per subject per day
+        if (opts?.force && existingRegen >= MAX_REGEN_PER_DAY) {
+          setError(`Daily regenerate limit reached (${MAX_REGEN_PER_DAY}/day). Try again tomorrow.`);
           setIsLoading(false);
           return;
         }
@@ -134,7 +149,7 @@ export function useStructuredDailyTask(args: Args) {
         })
         .map((c: any) => c.concept);
 
-      // 4. Past paper patterns
+      // 4. Past paper patterns — user-scoped first, fall back to global patterns for this topic
       let pastPaperPatterns: any[] = [];
       if (subjectId) {
         const { data: patterns } = await supabase
@@ -144,6 +159,14 @@ export function useStructuredDailyTask(args: Args) {
           .eq('subject_id', subjectId)
           .limit(10);
         pastPaperPatterns = patterns ?? [];
+      }
+      if (pastPaperPatterns.length === 0) {
+        const { data: globalPatterns } = await supabase
+          .from('exam_patterns')
+          .select('topic_name, question_types, avg_marks, difficulty_level')
+          .ilike('topic_name', `%${topic}%`)
+          .limit(10);
+        pastPaperPatterns = globalPatterns ?? [];
       }
 
       const result = await aiRequestJSON<GenerateResponse>('generate-daily-task', {
@@ -160,6 +183,13 @@ export function useStructuredDailyTask(args: Args) {
         past_paper_patterns: pastPaperPatterns,
       });
 
+      const nextRegen = opts?.force ? existingRegen + 1 : existingRegen;
+      setRegenCount(nextRegen);
+      const payloadWithMeta = {
+        ...result.task,
+        __meta: { regen_count: nextRegen, generated_at: new Date().toISOString() },
+      };
+
       setTask(result.task);
       setSelectionReason(result.selection_reason);
       setCoverageWarnings(result.coverage_warnings ?? []);
@@ -170,7 +200,7 @@ export function useStructuredDailyTask(args: Args) {
           await supabase
             .from('daily_tasks')
             .update({
-              task_payload: result.task as any,
+              task_payload: payloadWithMeta as any,
               selection_reason: result.selection_reason,
               concepts_covered: result.task.concepts ?? [],
               title: `Daily Task — ${result.task.topic || topic}`,
@@ -188,7 +218,7 @@ export function useStructuredDailyTask(args: Args) {
               task_type: 'structured-bundle',
               title: `Daily Task — ${result.task.topic || topic}`,
               description: result.task.subtopic || null,
-              task_payload: result.task as any,
+              task_payload: payloadWithMeta as any,
               selection_reason: result.selection_reason,
               concepts_covered: result.task.concepts ?? [],
               is_locked: false,
@@ -240,6 +270,8 @@ export function useStructuredDailyTask(args: Args) {
     coverageWarnings,
     selectionReason,
     dailyTaskRowId,
+    regenCount,
+    maxRegen: MAX_REGEN_PER_DAY,
     regenerate: () => generate({ force: true }),
   };
 }

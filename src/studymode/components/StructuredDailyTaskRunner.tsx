@@ -32,13 +32,14 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
   const xpMap = isReplay ? DIFFICULTY_XP_REPLAY : DIFFICULTY_XP;
   const examXp = isReplay ? EXAM_XP_REPLAY : EXAM_XP;
 
-  const { task, isLoading, error, coverageWarnings, regenerate, dailyTaskRowId } = useStructuredDailyTask({
+  const { task, isLoading, error, coverageWarnings, regenerate, regenCount, maxRegen, dailyTaskRowId } = useStructuredDailyTask({
     subjectId: subject.id,
     subjectName: subject.name,
     topic: subject.currentTopic.name,
     subtopics: subject.currentTopic.subtopics,
     availableConcepts: subject.currentTopic.subtopics,
   });
+  const regenExhausted = regenCount >= maxRegen;
 
   const [step, setStep] = useState<'learn' | 'review' | 'practice' | 'exam'>('learn');
   const [practiceIdx, setPracticeIdx] = useState(0);
@@ -177,7 +178,13 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
             </span>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={regenerate} title="Regenerate">
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={regenerate}
+          disabled={regenExhausted}
+          title={regenExhausted ? `Daily limit reached (${maxRegen}/day)` : `Regenerate (${regenCount}/${maxRegen})`}
+        >
           <RefreshCw className="h-4 w-4" />
         </Button>
       </div>
