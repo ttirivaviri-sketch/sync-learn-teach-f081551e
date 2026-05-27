@@ -3493,6 +3493,38 @@ export type Database = {
       }
     }
     Functions: {
+      admin_study_completion_rate: {
+        Args: { p_days?: number }
+        Returns: {
+          completed: number
+          completion_rate: number
+          subject_id: string
+          subject_name: string
+          total: number
+        }[]
+      }
+      admin_study_mastery_progression: {
+        Args: never
+        Returns: {
+          avg_mastery: number
+          avg_mastery_7d_ago: number
+          delta: number
+          learners: number
+          subject_id: string
+          subject_name: string
+        }[]
+      }
+      admin_study_regen_usage: {
+        Args: { p_days?: number }
+        Returns: {
+          avg_regens: number
+          max_regens: number
+          subject_id: string
+          subject_name: string
+          tasks_with_regen: number
+          total_regens: number
+        }[]
+      }
       check_and_increment_ai_usage: {
         Args: {
           _amount?: number
