@@ -198,7 +198,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
         <Button
           variant="ghost"
           size="icon"
-          onClick={regenerate}
+          onClick={handleRegenerate}
           disabled={regenExhausted}
           title={regenExhausted ? `Daily limit reached (${maxRegen}/day)` : `Regenerate (${regenCount}/${maxRegen})`}
         >
@@ -228,20 +228,26 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
 
       {/* Step indicator */}
       <div className="flex gap-1">
-        {(['learn', 'review', 'practice', 'exam'] as const).map((s, i) => (
+        {(['learn', 'review', 'flashcards', 'practice', 'exam'] as const).map((s, i) => (
           <div
             key={s}
             className={cn(
               'flex-1 h-1.5 rounded-full transition-colors',
               step === s
                 ? 'bg-primary'
-                : (['learn', 'review', 'practice', 'exam'] as const).indexOf(step) > i
+                : (['learn', 'review', 'flashcards', 'practice', 'exam'] as const).indexOf(step) > i
                 ? 'bg-success'
                 : 'bg-muted',
             )}
           />
         ))}
       </div>
+
+      {regenExhausted && (
+        <p className="text-xs text-muted-foreground -mt-1">
+          Daily regenerate limit reached ({maxRegen}/{maxRegen}). Resets at midnight.
+        </p>
+      )}
 
       {/* Block 1: Concept Learning */}
       {step === 'learn' && (
@@ -267,10 +273,87 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStep('learn')} className="flex-1">Back</Button>
-            <Button onClick={() => setStep('practice')} className="flex-1">Start Practice</Button>
+            <Button onClick={() => setStep((task.blocks.flashcards?.length ?? 0) > 0 ? 'flashcards' : 'practice')} className="flex-1">
+              {(task.blocks.flashcards?.length ?? 0) > 0 ? 'Continue to Flashcards' : 'Start Practice'}
+            </Button>
           </div>
         </div>
       )}
+
+      {/* Block 2.5: Flashcards (feeds quiz_attempts spaced-repetition) */}
+      {step === 'flashcards' && (task.blocks.flashcards?.length ?? 0) > 0 && (() => {
+        const cards = task.blocks.flashcards ?? [];
+        const card: FlashcardItem = cards[flashIdx];
+        const flipped = !!flashFlipped[flashIdx];
+        const graded = flashGraded[flashIdx];
+        const gradeCard = (knew: boolean) => {
+          setFlashGraded((p) => ({ ...p, [flashIdx]: knew ? 'correct' : 'wrong' }));
+          const xp = knew ? (isReplay ? 1 : 2) : 0;
+          if (xp > 0) {
+            addXp.mutate(xp);
+            awardXP.mutate({ subject: subject.name, curriculum, amount: xp });
+          }
+          logAttempt({
+            dailyTaskId: dailyTaskRowId,
+            subjectId: subject.id,
+            subjectName: subject.name,
+            topic: task.topic || subject.currentTopic.name,
+            concept: card.concept ?? null,
+            question: card.front,
+            userAnswer: knew ? '(self-graded: knew it)' : '(self-graded: did not know)',
+            modelAnswer: card.back,
+            wasCorrect: knew,
+            marksAwarded: knew ? 1 : 0,
+            marksPossible: 1,
+            difficulty: 'easy',
+            block: 'flashcard',
+          });
+        };
+        const nextCard = () => {
+          if (flashIdx < cards.length - 1) setFlashIdx(flashIdx + 1);
+          else setStep('practice');
+        };
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className="flex items-center gap-1"><Layers className="h-3.5 w-3.5" /> Flashcard {flashIdx + 1} of {cards.length}</span>
+              {card.concept && <span className="px-2 py-0.5 rounded-full bg-muted">{card.concept}</span>}
+            </div>
+            <div
+              className={cn(
+                'p-6 rounded-2xl border min-h-[160px] flex items-center justify-center text-center cursor-pointer transition-all',
+                flipped ? 'bg-accent/10 border-accent/40' : 'bg-card border-border hover:border-accent/30',
+              )}
+              onClick={() => setFlashFlipped((p) => ({ ...p, [flashIdx]: !p[flashIdx] }))}
+            >
+              <div className="prose prose-sm dark:prose-invert max-w-none">
+                <MathMarkdown>{flipped ? card.back : card.front}</MathMarkdown>
+              </div>
+            </div>
+            {card.hint && !flipped && (
+              <p className="text-xs text-muted-foreground text-center">💡 {card.hint}</p>
+            )}
+            {!flipped ? (
+              <Button variant="outline" className="w-full" onClick={() => setFlashFlipped((p) => ({ ...p, [flashIdx]: true }))}>
+                <RotateCw className="mr-2 h-4 w-4" />Flip card
+              </Button>
+            ) : !graded ? (
+              <div className="flex gap-2">
+                <Button variant="outline" className="flex-1" onClick={() => gradeCard(false)}>
+                  <ThumbsDown className="mr-2 h-4 w-4" />Didn't know
+                </Button>
+                <Button className="flex-1" onClick={() => gradeCard(true)}>
+                  <ThumbsUp className="mr-2 h-4 w-4" />I knew it
+                </Button>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={nextCard}>
+                {flashIdx < cards.length - 1 ? 'Next card' : 'Continue to Practice'}
+              </Button>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Block 3: Practice Questions */}
       {step === 'practice' && currentQ && (
