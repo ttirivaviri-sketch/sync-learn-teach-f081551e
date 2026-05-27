@@ -30,6 +30,13 @@ interface ExamQuestion {
   expected_steps: string[];
 }
 
+interface FlashcardItem {
+  front: string;
+  back: string;
+  concept?: string;
+  hint?: string;
+}
+
 interface TaskBundle {
   topic: string;
   subtopic: string;
@@ -39,6 +46,7 @@ interface TaskBundle {
     quick_review: string;
     practice_questions: PracticeQuestion[];
     exam_question: ExamQuestion;
+    flashcards: FlashcardItem[];
   };
 }
 
@@ -101,8 +109,25 @@ const TASK_TOOL = {
               },
               required: ['question', 'concepts', 'marks', 'expected_steps'],
             },
+            flashcards: {
+              type: 'array',
+              minItems: 4,
+              maxItems: 6,
+              description: 'Self-testable atomic recall cards covering the SELECTED CONCEPTS. Front = a question/cue, back = a concise answer.',
+              items: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                  front: { type: 'string' },
+                  back: { type: 'string' },
+                  concept: { type: 'string' },
+                  hint: { type: 'string' },
+                },
+                required: ['front', 'back', 'concept'],
+              },
+            },
           },
-          required: ['concept_learning', 'quick_review', 'practice_questions', 'exam_question'],
+          required: ['concept_learning', 'quick_review', 'practice_questions', 'exam_question', 'flashcards'],
         },
       },
       required: ['topic', 'subtopic', 'concepts', 'blocks'],
@@ -265,6 +290,7 @@ function normalize(bundle: TaskBundle): TaskBundle {
       exam_question: bundle.blocks?.exam_question ?? {
         question: '', concepts: [], marks: 0, expected_steps: [],
       },
+      flashcards: Array.isArray(bundle.blocks?.flashcards) ? bundle.blocks.flashcards : [],
     },
   };
 }
