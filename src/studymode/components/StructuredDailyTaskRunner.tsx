@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RefreshCw, Eye, Send } from 'lucide-react';
+import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RefreshCw, Eye, Send, Layers, RotateCw, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MathMarkdown } from './MathMarkdown';
-import { useStructuredDailyTask, PracticeQuestion } from '../hooks/useStructuredDailyTask';
+import { useStructuredDailyTask, PracticeQuestion, FlashcardItem } from '../hooks/useStructuredDailyTask';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
 import { useDailyTaskAttempts } from '../hooks/useDailyTaskAttempts';
@@ -41,7 +42,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
   });
   const regenExhausted = regenCount >= maxRegen;
 
-  const [step, setStep] = useState<'learn' | 'review' | 'practice' | 'exam'>('learn');
+  const [step, setStep] = useState<'learn' | 'review' | 'flashcards' | 'practice' | 'exam'>('learn');
   const [practiceIdx, setPracticeIdx] = useState(0);
   const [practiceAnswers, setPracticeAnswers] = useState<Record<number, string>>({});
   const [practiceRevealed, setPracticeRevealed] = useState<Record<number, boolean>>({});
@@ -49,6 +50,22 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
   const [examAnswer, setExamAnswer] = useState('');
   const [examRevealed, setExamRevealed] = useState(false);
   const [examChecks, setExamChecks] = useState<Record<number, boolean>>({});
+  const [flashIdx, setFlashIdx] = useState(0);
+  const [flashFlipped, setFlashFlipped] = useState<Record<number, boolean>>({});
+  const [flashGraded, setFlashGraded] = useState<Record<number, 'correct' | 'wrong'>>({});
+
+  const handleRegenerate = async () => {
+    const result = await regenerate();
+    if (result?.ok) {
+      toast.success(`New task generated (${result.regenCount}/${maxRegen} today)`);
+    } else if ((result as any)?.limited) {
+      toast.error('Daily regenerate limit reached', {
+        description: `You've used all ${maxRegen} regenerations for today. Try again tomorrow.`,
+      });
+    } else if ((result as any)?.message) {
+      toast.error('Regeneration failed', { description: (result as any).message });
+    }
+  };
 
   if (isLoading || (!task && !error)) {
     return (
@@ -66,7 +83,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
         <p className="text-sm text-destructive">{error ?? 'No task could be generated.'}</p>
         <div className="flex gap-2">
           <Button variant="outline" onClick={onBack}>Back</Button>
-          <Button onClick={regenerate}><RefreshCw className="mr-2 h-4 w-4" />Retry</Button>
+          <Button onClick={handleRegenerate}><RefreshCw className="mr-2 h-4 w-4" />Retry</Button>
         </div>
       </div>
     );
