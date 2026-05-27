@@ -1,96 +1,60 @@
-# Study Mode task generation — audit & gaps
+Six tracked items. Grouping by surface area so you can approve in one pass.
 
-The pipeline today has two parallel layers that don't fully talk to each other, plus several feedback loops that aren't wired up. Nothing is catastrophically broken — but a lot of work the AI does is thrown away, and "mastery" doesn't really learn from task answers.
+## 1. Admin Analytics — Study Mode tab
+New page `src/pages/admin/StudyAnalytics.tsx`, linked from `AdminLayout`. Three panels driven by Supabase RPCs (added in a migration):
 
-## How it works today (quick map)
+- **Completion rate per subject** — `daily_tasks` grouped by `subject_id`, `is_completed` over last 30d.
+- **Regen usage** — count of `daily_tasks` where `task_payload->__meta->>regen_count > 0`, plus avg/max per subject.
+- **Mastery progression** — average `mastery_percentage` from `topic_mastery` per subject, with 7d delta sparkline (uses existing `useMasteryHistory` pattern).
 
-```text
-useDailyTasks (client)            useStructuredDailyTask (client)
-   │ seeds 5 templated tiles         │ calls generate-daily-task
-   │ into daily_tasks                │ (4-block bundle: learn / review
-   │ (micro-revision, concept,       │  / practice / exam) every mount
-   │  flashcards, recall, exam)      │
-   ▼                                  ▼
-TaskList tile click ──► TaskContentPanel ──► generate-task-content (stream)
-                                       OR ──► StructuredDailyTaskRunner
-                                              (regenerates bundle)
-                                              awards XP, never writes
-                                              quiz_attempts / topic_mastery
-```
+Recharts for visuals; cards follow the glassmorphism theme. Admin-only via existing `has_role` gate.
 
-## What's still missing
+## 2. Regen toasts
+In `StructuredDailyTaskRunner.tsx`, wire `sonner` toasts:
+- Success: `toast.success("New task generated (X/3 today)")`
+- Limit reached: `toast.error("Daily regenerate limit reached — try again tomorrow")` plus inline disabled state with helper text under the button.
+- Triggered from the `regenerate()` promise in the hook; hook already returns `error` + `regenCount`.
 
-### 1. The AI bundle is never cached
+## 3. Verify quiz mastery reads from `quiz_attempts`
+Audit-only — read `useSpacedRepetition`, `useTopicPerformance`, `useConceptMastery`, `useWeakConcepts`, `useRecallEngine`. Confirm each queries `quiz_attempts`. Report findings inline; patch any hook still pointing at the old source.
 
-`daily_tasks` already has `task_payload jsonb`, `selection_reason`, `concepts_covered` columns — none are written. `useStructuredDailyTask` ignores its own `cachedTask` arg and regenerates on every mount, topic switch, and Regenerate click. Every Reveal / replay costs another AI call.
+## 4. Backfill `quiz_attempts` from `daily_task_attempts`
+One-time migration that inserts a `quiz_attempts` row for every existing `daily_task_attempts` row missing a mirror (matched on `user_id + question + created_at` to avoid double-mirroring rows created after the mirror change). Default SR fields: `ease_factor=2.5`, `interval_days=1`, `review_count=0`, `next_review_date=created_at::date`.
 
-### 2. Task completion doesn't move mastery
+## 5. Flashcard tile in the bundle
+Add a 5th block to the structured bundle:
+- Extend `generate-daily-task` edge function prompt + response schema to include `blocks.flashcards: Array<{front, back, concept, hint?}>` (4–6 cards).
+- Update `StructuredTaskBundle` type and `StructuredDailyTaskRunner` to render a flashcard step (reuse `FlashcardPanel` styling).
+- On flip+self-grade, persist via existing `flashcards` table (so it joins spaced repetition) AND mirror to `quiz_attempts` via `useDailyTaskAttempts` with `block='flashcard'`, so mastery picks it up.
 
-`submitPractice` / `submitExam` award XP and update streak, but don't insert into `quiz_attempts` and don't bump `topic_mastery.mastery_percentage`. Result: the AI's `weak_concepts` / `concept_mastery` inputs only reflect the standalone Quiz feature, never the daily-task answers.
+## 6. Per-app auth sessions (learner / tutor / admin)
+Today a single Supabase client uses `localStorage` with one key, so login bleeds across surfaces. Fix:
 
-### 3. Concept "covered" is permanent
+- Replace the singleton in `src/integrations/supabase/client.ts` with a **scoped storage adapter** that prefixes every key by app surface: `sb-learner-…`, `sb-tutor-…`, `sb-admin-…`.
+- Surface is detected from the URL path on client init (`/tutor` → tutor, `/admin` → admin, else learner) and locked in for the page lifetime.
+- Each app's `AuthProvider` (`useAuth`) reads only its own scoped session. Signing in on `/tutor-auth` writes only the tutor-scoped key; visiting `/admin` shows logged-out unless an admin session exists under the admin key.
+- `signOut()` clears only the current scope.
+- Migration shim on first load: if legacy `sb-…-auth-token` exists, copy it to the **learner** scope only and remove the original (prevents existing users getting logged out everywhere unexpectedly; tutor/admin stay logged out until they re-auth on those surfaces).
 
-`daily_task_concepts` tracks lifetime coverage with no time window. Once a concept appears once, `selectTargets` drops it from `uncovered` forever — no decay, no spaced repetition. After ~2 weeks every learner ends up stuck in the "syllabus-order" fallback branch.
+Note: this is session-scoping, not separate accounts. The same email can hold learner + tutor + admin roles; the user simply has to authenticate each surface independently per browser. This matches the requested behaviour.
 
-### 4. The two task systems aren't reconciled
+## Technical details
 
-- Finishing the 4-block Runner doesn't mark the 5 templated tiles complete or unlock the next tile.
-- `useDailyTasks.completeTask` unlocks "next in array order" instead of next in `TASK_ORDER`, so order drift in DB can desync the gating.
-- New subjects added mid-day don't get tiles seeded until tomorrow (`ensureTasks` only seeds when `dbTasks.length === 0`).
+**New migration files:**
+- `..._study_admin_rpcs.sql` — three `security definer` RPCs gated by `has_role('admin')` returning JSON.
+- `..._backfill_quiz_attempts.sql` — idempotent backfill.
 
-### 5. Concepts ≠ subtopics, but treated as such
+**Files touched:**
+- `src/integrations/supabase/client.ts` — scoped storage adapter
+- `src/hooks/useAuth.ts` — scope-aware initialisation
+- `src/pages/admin/AdminLayout.tsx` — nav link
+- `src/pages/admin/StudyAnalytics.tsx` — new
+- `src/studymode/components/StructuredDailyTaskRunner.tsx` — toasts + flashcard step
+- `src/studymode/hooks/useStructuredDailyTask.ts` — surface success/limit signals
+- `src/studymode/hooks/useDailyTaskAttempts.ts` — flashcard block mirroring
+- `supabase/functions/generate-daily-task/index.ts` — flashcard block in schema
+- Audit-only reads: `useSpacedRepetition.ts`, `useTopicPerformance.ts`, `useConceptMastery.ts`, `useWeakConcepts.ts`, `useRecallEngine.ts`
 
-Runner passes `subject.currentTopic.subtopics` as both `subtopics` and `availableConcepts`. The edge function's "≥1 question per concept" guarantee then operates on subtopic names. We need actual concept lists from `get_subject_context` / syllabus.
-
-### 6. Past-paper patterns silently absent
-
-`generate-daily-task` accepts `past_paper_patterns` but the query filters strictly on `subject_id` and `user_id`. If the learner hasn't uploaded a past paper, the array is empty — no warning, no fallback to global patterns from `paper_blueprints`. Exam-style framing degrades silently.
-
-### 7. No exam-readiness signal feeds task selection
-
-`get_exam_readiness` / `paper_blueprints` already score weak topics by exam weight, but `selectTargets` ignores them. Daily tasks should bias toward blueprint-weighted weak topics, not just whatever's uncovered.
-
-### 8. Validation warnings are cosmetic
-
-The edge function retries once on coverage gaps then emits `coverage_warnings` and proceeds. XP is still awarded in full. There's no telemetry on how often we ship partial-coverage bundles, and no penalty/regen-hint in the UI.
-
-### 9. No regeneration throttle
-
-The Regenerate button (and topic switching) calls the AI with no rate limit, no `check_and_increment_ai_usage`, no last-generated-at check. Cost / abuse vector.
-
-### 10. Bonus tasks are not syllabus-grounded
-
-`addBonusTask` picks a random task_type and builds a static title + `"Extra practice on {topic}"` description. No AI grounding, no concept selection, doesn't share the structured bundle path.
-
-### 11. Empty-state UX
-
-When a subject has no concepts/subtopics, the edge function returns 400 and the runner shows "Failed to generate task". Should route the learner to the syllabus-setup gate instead.
-
-### 12. Auto-advance of `currentTopic`
-
-When all concepts in the current topic reach mastery, `currentTopic` isn't advanced to the next syllabus topic — tasks keep targeting a mastered topic and hit the syllabus-order fallback.
-
-### 13. Generation isn't per-user-day-deduped
-
-Two devices, two tabs, or React StrictMode can trigger concurrent `generate-daily-task` calls for the same `(user, subject, date)`. There's no server-side idempotency.
-
-## Suggested order of fixes (highest leverage first)
-
-1. **Persist the bundle** into `daily_tasks.task_payload` and pass it back as `cachedTask` → kills 60–80% of AI calls and fixes #1, #9, #13 in one move.
-2. **Write `quiz_attempts` + bump `topic_mastery**` from practice/exam submissions → closes the mastery feedback loop (#2) and makes #7 viable.
-3. **Add a decay window** to `daily_task_concepts` (e.g. concepts re-enter the "uncovered" pool after 14 days, or after mastery drops) → fixes #3.
-4. **Reconcile the two task layers** — either retire the 5 templated tiles in favour of the 4-block bundle, or treat the bundle as "today's recommended path" that auto-completes the corresponding tiles (#4).
-5. **Pull real concept lists** from `get_subject_context` instead of reusing subtopics (#5), and fall back to blueprint patterns when user-specific past-paper data is empty (#6, #7).
-6. **Auto-advance current topic** when mastery threshold reached (#12); route empty-syllabus subjects to the setup gate (#11).
-7. **Throttle / quota** regeneration via `check_and_increment_ai_usage` with a `daily_task_gen` bucket (#9).
-8. Lower priority: bonus-task grounding (#10), warning telemetry (#8).
-
-## Decision points before building
-
-- Do we keep the 5 templated tiles, or collapse to the single 4-block bundle as the canonical "daily task"? (Ans:Templated)
-- Spaced-repetition window for concept coverage — fixed 14 days, or driven by mastery score?(ans:driven by mastery)
-- Should daily-task practice answers go into the *same* `quiz_attempts` table the Quiz feature uses, or a separate `daily_task_attempts` so analytics stay clean?(analytics must stay clean
-
-Confirm the three above and I'll plan the implementation pass.
-
-Also fix all log in (learner, tutor,admin) admin  doesn't show users
+**Risks:**
+- Scoped-storage change requires re-login on tutor and admin surfaces for existing users. Acceptable per the request.
+- Backfill could be large; runs once at migration time inside a single statement with `INSERT … SELECT … WHERE NOT EXISTS`.
