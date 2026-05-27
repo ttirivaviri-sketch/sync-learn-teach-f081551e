@@ -5,12 +5,72 @@ import type { Database } from './types';
 const SUPABASE_URL = "https://uynoykcratwbcdzmsxfw.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InV5bm95a2NyYXR3YmNkem1zeGZ3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQwNDYwMTksImV4cCI6MjA2OTYyMjAxOX0.bjshrxxGsSJNUndDl7WCvqMpN9ewEXiTVX6g5PlbXGc";
 
+// --------------------------------------------------------------------------
+// Per-app session scoping
+// --------------------------------------------------------------------------
+// Each app surface (learner / tutor / admin) keeps its own auth session in
+// localStorage by prefixing every Supabase storage key. Logging in on one
+// surface does NOT sign the user into the others — they must authenticate
+// each surface independently, even with the same account.
+//
+// Scope is detected from the URL at page-load time and is fixed for the page
+// lifetime. Soft navigations between surfaces within a single tab will keep
+// the scope they loaded with; we use full-page redirects when switching apps.
+// --------------------------------------------------------------------------
+
+export type AppScope = 'learner' | 'tutor' | 'admin';
+
+function detectScope(): AppScope {
+  if (typeof window === 'undefined') return 'learner';
+  const p = window.location.pathname || '/';
+  if (p.startsWith('/admin')) return 'admin';
+  if (p.startsWith('/tutor')) return 'tutor';
+  return 'learner';
+}
+
+export const APP_SCOPE: AppScope = detectScope();
+const STORAGE_PREFIX = `sb-scoped-${APP_SCOPE}-`;
+
+const scopedStorage: Storage | undefined =
+  typeof window === 'undefined'
+    ? undefined
+    : {
+        getItem: (key: string) => window.localStorage.getItem(STORAGE_PREFIX + key),
+        setItem: (key: string, value: string) => window.localStorage.setItem(STORAGE_PREFIX + key, value),
+        removeItem: (key: string) => window.localStorage.removeItem(STORAGE_PREFIX + key),
+        clear: () => {
+          for (let i = window.localStorage.length - 1; i >= 0; i--) {
+            const k = window.localStorage.key(i);
+            if (k && k.startsWith(STORAGE_PREFIX)) window.localStorage.removeItem(k);
+          }
+        },
+        key: (i: number) => window.localStorage.key(i),
+        get length() { return window.localStorage.length; },
+      };
+
+// One-time migration: legacy unscoped sessions get adopted by the LEARNER
+// scope only, so existing learner logins keep working while tutor / admin
+// surfaces remain logged-out until re-authenticated.
+if (typeof window !== 'undefined') {
+  try {
+    const LEGACY_KEY = 'sb-uynoykcratwbcdzmsxfw-auth-token';
+    const LEARNER_KEY = `sb-scoped-learner-${LEGACY_KEY}`;
+    const legacy = window.localStorage.getItem(LEGACY_KEY);
+    if (legacy && !window.localStorage.getItem(LEARNER_KEY)) {
+      window.localStorage.setItem(LEARNER_KEY, legacy);
+    }
+    if (legacy) window.localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    // ignore storage access errors (private browsing, etc.)
+  }
+}
+
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
-    storage: localStorage,
+    storage: scopedStorage ?? (typeof window !== 'undefined' ? window.localStorage : undefined),
     persistSession: true,
     autoRefreshToken: true,
   }

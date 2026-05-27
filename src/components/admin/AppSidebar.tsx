@@ -37,6 +37,7 @@ const items = [
   { title: "Payments", url: "/admin/payments", icon: CreditCard },
   { title: "Support", url: "/admin/support", icon: LifeBuoy },
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
+  { title: "Study Analytics", url: "/admin/study-analytics", icon: BarChart3 },
   { title: "Roles", url: "/admin/roles", icon: ShieldCheck },
   { title: "Security", url: "/admin/security", icon: Shield },
   { title: "Refunds", url: "/admin/refunds", icon: RotateCcw },

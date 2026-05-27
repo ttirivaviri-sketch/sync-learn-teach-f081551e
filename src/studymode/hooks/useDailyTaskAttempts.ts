@@ -15,7 +15,7 @@ export interface AttemptInput {
   marksAwarded: number;
   marksPossible: number;
   difficulty?: string | null;
-  block: 'practice' | 'exam';
+  block: 'practice' | 'exam' | 'flashcard';
   timeSpentSeconds?: number;
 }
 
