@@ -19,6 +19,13 @@ export interface ExamQuestion {
   expected_steps: string[];
 }
 
+export interface FlashcardItem {
+  front: string;
+  back: string;
+  concept?: string;
+  hint?: string;
+}
+
 export interface StructuredTaskBundle {
   topic: string;
   subtopic: string;
@@ -28,6 +35,7 @@ export interface StructuredTaskBundle {
     quick_review: string;
     practice_questions: PracticeQuestion[];
     exam_question: ExamQuestion;
+    flashcards?: FlashcardItem[];
   };
 }
 
@@ -109,9 +117,10 @@ export function useStructuredDailyTask(args: Args) {
 
         // Throttle: max N regenerations per subject per day
         if (opts?.force && existingRegen >= MAX_REGEN_PER_DAY) {
-          setError(`Daily regenerate limit reached (${MAX_REGEN_PER_DAY}/day). Try again tomorrow.`);
+          const msg = `Daily regenerate limit reached (${MAX_REGEN_PER_DAY}/day). Try again tomorrow.`;
+          setError(msg);
           setIsLoading(false);
-          return;
+          return { limited: true, message: msg } as const;
         }
       }
 
@@ -246,9 +255,12 @@ export function useStructuredDailyTask(args: Args) {
           .from('daily_task_concepts')
           .upsert(rows, { onConflict: 'user_id,subject_name,concept', ignoreDuplicates: false });
       }
+      return { ok: true, regenCount: opts?.force ? existingRegen + 1 : existingRegen } as const;
     } catch (e) {
       logger.error('useStructuredDailyTask.generate failed', e);
-      setError(e instanceof Error ? e.message : 'Failed to generate task');
+      const msg = e instanceof Error ? e.message : 'Failed to generate task';
+      setError(msg);
+      return { ok: false, message: msg } as const;
     } finally {
       setIsLoading(false);
     }
