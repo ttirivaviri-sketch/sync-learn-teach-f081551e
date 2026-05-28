@@ -39,6 +39,7 @@ const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
 const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemplates"));
 const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 const AdminAllocations = lazy(() => import("./pages/admin/Allocations"));
+const AdminStudyAnalytics = lazy(() => import("./pages/admin/StudyAnalytics"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
