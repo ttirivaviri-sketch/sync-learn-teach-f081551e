@@ -105,6 +105,7 @@ const App = () => (
                 <Route path="curriculum-templates" element={<AdminCurriculumTemplates />} />
                 <Route path="library" element={<AdminLibrary />} />
                 <Route path="allocations" element={<AdminAllocations />} />
+                <Route path="study-analytics" element={<AdminStudyAnalytics />} />
               </Route>
 
               {/* Legal */}
