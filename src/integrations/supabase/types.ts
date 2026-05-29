@@ -3610,6 +3610,10 @@ export type Database = {
           user_type: string
         }[]
       }
+      has_conversation_access: {
+        Args: { _conversation_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
