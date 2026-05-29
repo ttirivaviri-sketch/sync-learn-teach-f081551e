@@ -15,9 +15,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { openWhatsAppAdmin, WHATSAPP_ADMIN_URL } from "@/lib/whatsapp";
 import { track } from "@/utils/landingAnalytics";
-import heroTutorMarketplace from "@/assets/hero-tutor-marketplace.jpg";
-import heroSmartLibrary from "@/assets/hero-smart-library.jpg";
-import heroStudyPlanner from "@/assets/hero-study-planner.jpg";
+import heroTutorMarketplace from "@/assets/hero-tutor-marketplace.webp";
+import heroSmartLibrary from "@/assets/hero-smart-library.webp";
+import heroStudyPlanner from "@/assets/hero-study-planner.webp";
 
 /* ─────────────────────────────────────────────────────────
    Floating badge chip used in slide 1
@@ -151,8 +151,12 @@ const Slide1 = () => {
         <div className="relative w-full max-w-lg">
           <div className="absolute inset-0 -z-10 bg-blue-100/40 rounded-full blur-3xl" />
           <img
-            src="/images/students-group.png"
+            src="/images/students-group.webp"
             alt="Students learning with StudySync"
+            width={640}
+            height={640}
+            fetchPriority="high"
+            decoding="async"
             className="w-full rounded-3xl object-cover"
           />
 
