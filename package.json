@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "node tests/suite.mjs",
     "test:types": "tsc --noEmit --skipLibCheck",
-    "sandbox": "vite --host 0.0.0.0 --port 4173 --strictPort"
+    "sandbox": "vite --host 0.0.0.0 --port 4173 --strictPort",
+    "audit:images": "node scripts/audit-images.mjs"
   },
   "overrides": {
     "zod": "^3.23.8"

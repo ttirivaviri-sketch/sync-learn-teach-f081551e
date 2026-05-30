@@ -63,7 +63,7 @@ const HowItWorksSection = () => {
           {/* Left -- video call photo */}
           <div className="w-full lg:w-[380px] shrink-0">
             <img
-              src="/images/boy-videocall.png"
+              src="/images/boy-videocall.webp"
               alt="Student on video call with tutor"
               className="w-full rounded-2xl object-cover shadow-lg"
             />

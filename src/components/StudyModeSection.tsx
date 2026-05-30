@@ -27,7 +27,7 @@ const StudyModeSection = () => {
               {/* Phone frame */}
               <div className="rounded-[2.5rem] border-[6px] border-gray-800 bg-gray-800 overflow-hidden shadow-2xl">
                 <img
-                  src="/images/screenshot-studymode.jpeg"
+                  src="/images/screenshot-studymode.webp"
                   alt="StudyMode - AI study plan interface"
                   className="w-full object-cover"
                 />
@@ -45,7 +45,7 @@ const StudyModeSection = () => {
               {/* Phone frame */}
               <div className="rounded-[2.5rem] border-[6px] border-gray-800 bg-gray-800 overflow-hidden shadow-2xl">
                 <img
-                  src="/images/screenshot-tutor-matching.jpeg"
+                  src="/images/screenshot-tutor-matching.webp"
                   alt="Tutor Matching - find and book tutors"
                   className="w-full object-cover"
                 />
