@@ -15,7 +15,7 @@ const AppShowcase = () => {
           {/* Left -- photo */}
           <div className="flex-1 flex justify-center">
             <img
-              src="/images/girl-phone.png"
+              src="/images/girl-phone.webp"
               alt="Student using StudySync on phone"
               loading="lazy"
               decoding="async"
