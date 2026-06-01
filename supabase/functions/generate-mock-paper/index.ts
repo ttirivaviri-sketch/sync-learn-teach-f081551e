@@ -211,6 +211,16 @@ Generate now. Return JSON only.`;
         parsed.instructions ||
         `Answer ALL questions. Time allowed: ${duration} minutes. Total: ${computedTotal} marks.`,
       questions: normalised,
+      generation_meta: buildProvenance({
+        fn_name: "generate-mock-paper",
+        fn_version: "2",
+        model: ai.model,
+        prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
+        subject: bp.subject_name,
+        paper_blueprint_id: bp.id,
+        past_paper_style_source: paper_code,
+        novelty_reason: "unverified",
+      }),
     });
   } catch (e) {
     console.error("generate-mock-paper error:", e);
