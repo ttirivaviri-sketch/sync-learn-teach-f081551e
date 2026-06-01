@@ -40,6 +40,7 @@ import {
   getCached,
   setCached,
 } from "../_shared/ai-config.ts";
+import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
