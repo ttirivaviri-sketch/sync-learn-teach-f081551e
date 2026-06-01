@@ -1,6 +1,8 @@
 // generate-daily-task: Syllabus-grounded structured daily task generator.
 // Returns a single bundle with 4 mandatory blocks, syllabus-locked, coverage-validated.
 
+import { buildProvenance, hashPrompt, attachMeta } from '../_shared/provenance.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
