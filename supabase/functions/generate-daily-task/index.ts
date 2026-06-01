@@ -374,12 +374,30 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const promptHash = await hashPrompt(JSON.stringify(messages));
+    const meta = buildProvenance({
+      fn_name: 'generate-daily-task',
+      fn_version: '2',
+      model: MODEL,
+      prompt_hash: promptHash,
+      curriculum: (body as any)?.curriculum,
+      subject: (body as any)?.subject,
+      topic: (body as any)?.topic,
+      concept_labels: selected,
+      weak_area_triggers: Array.isArray((body as any)?.weak_concepts) ? (body as any).weak_concepts : [],
+      validator_warnings: validation.warnings,
+      novelty_reason: 'unverified',
+      selection_reason: reason,
+    });
+    const taskWithMeta = attachMeta(bundle as Record<string, unknown>, meta);
+
     return new Response(
       JSON.stringify({
-        task: bundle,
+        task: taskWithMeta,
         selection_reason: reason,
         selected_concepts: selected,
         coverage_warnings: validation.warnings,
+        generation_meta: meta,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 },
     );
