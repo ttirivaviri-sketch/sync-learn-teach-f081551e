@@ -41,6 +41,7 @@ import {
   enforceQuota,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
+import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -257,6 +258,17 @@ IMPORTANT:
       totalMarks: parsed.totalMarks || totalMarks,
       suggestedTime:
         parsed.suggestedTime || `${Math.round(totalMarks * 1.5)} minutes`,
+      generation_meta: buildProvenance({
+        fn_name: "generate-exam-questions",
+        fn_version: "2",
+        model: ai.model,
+        prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
+        curriculum,
+        subject,
+        topic,
+        weak_area_triggers: Array.isArray(weakAreas) ? weakAreas : weakAreas ? [String(weakAreas)] : [],
+        novelty_reason: "unverified",
+      }),
     });
   } catch (e) {
     console.error("generate-exam-questions error:", e);

@@ -40,6 +40,7 @@ import {
   getCached,
   setCached,
 } from "../_shared/ai-config.ts";
+import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -312,6 +313,19 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       response.syllabusLinks = q.syllabusLinks;
     }
 
+    response.generation_meta = buildProvenance({
+      fn_name: "generate-quiz",
+      fn_version: "2",
+      model: ai.model,
+      prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
+      curriculum,
+      subject,
+      topic,
+      weak_area_triggers: Array.isArray(weakAreas) ? weakAreas : weakAreas ? [String(weakAreas)] : [],
+      past_paper_style_source: pastPaperStyleNotes ? "past_paper_exemplars" : undefined,
+      paper_blueprint_id: paperBlueprint?.id,
+      novelty_reason: "unverified",
+    });
     return jsonResponse(response);
   } catch (e) {
     console.error("generate-quiz error:", e);
