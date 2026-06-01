@@ -258,6 +258,110 @@ export type Database = {
           },
         ]
       }
+      concept_attempts: {
+        Row: {
+          concept_id: string | null
+          concept_label: string
+          created_at: string
+          id: string
+          marks_awarded: number
+          marks_possible: number
+          source_id: string | null
+          source_table: string | null
+          subject_name: string
+          surface: string
+          topic: string | null
+          user_id: string
+          was_correct: boolean
+        }
+        Insert: {
+          concept_id?: string | null
+          concept_label: string
+          created_at?: string
+          id?: string
+          marks_awarded?: number
+          marks_possible?: number
+          source_id?: string | null
+          source_table?: string | null
+          subject_name: string
+          surface: string
+          topic?: string | null
+          user_id: string
+          was_correct?: boolean
+        }
+        Update: {
+          concept_id?: string | null
+          concept_label?: string
+          created_at?: string
+          id?: string
+          marks_awarded?: number
+          marks_possible?: number
+          source_id?: string | null
+          source_table?: string | null
+          subject_name?: string
+          surface?: string
+          topic?: string | null
+          user_id?: string
+          was_correct?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_attempts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      concepts: {
+        Row: {
+          created_at: string
+          curriculum: string
+          description: string | null
+          grade: string | null
+          id: string
+          label: string
+          slug: string
+          subject_id: string | null
+          subject_name: string
+          subtopic: string | null
+          syllabus_ref: string | null
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          curriculum: string
+          description?: string | null
+          grade?: string | null
+          id?: string
+          label: string
+          slug: string
+          subject_id?: string | null
+          subject_name: string
+          subtopic?: string | null
+          syllabus_ref?: string | null
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          curriculum?: string
+          description?: string | null
+          grade?: string | null
+          id?: string
+          label?: string
+          slug?: string
+          subject_id?: string | null
+          subject_name?: string
+          subtopic?: string | null
+          syllabus_ref?: string | null
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversations: {
         Row: {
           created_at: string
@@ -384,6 +488,7 @@ export type Database = {
       daily_task_concepts: {
         Row: {
           concept: string
+          concept_id: string | null
           coverage_count: number
           created_at: string
           id: string
@@ -397,6 +502,7 @@ export type Database = {
         }
         Insert: {
           concept: string
+          concept_id?: string | null
           coverage_count?: number
           created_at?: string
           id?: string
@@ -410,6 +516,7 @@ export type Database = {
         }
         Update: {
           concept?: string
+          concept_id?: string | null
           coverage_count?: number
           created_at?: string
           id?: string
@@ -421,7 +528,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "daily_task_concepts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_tasks: {
         Row: {
@@ -429,6 +544,7 @@ export type Database = {
           concepts_covered: string[] | null
           created_at: string
           description: string | null
+          generation_meta: Json | null
           id: string
           is_completed: boolean
           is_locked: boolean
@@ -446,6 +562,7 @@ export type Database = {
           concepts_covered?: string[] | null
           created_at?: string
           description?: string | null
+          generation_meta?: Json | null
           id?: string
           is_completed?: boolean
           is_locked?: boolean
@@ -463,6 +580,7 @@ export type Database = {
           concepts_covered?: string[] | null
           created_at?: string
           description?: string | null
+          generation_meta?: Json | null
           id?: string
           is_completed?: boolean
           is_locked?: boolean
@@ -624,6 +742,7 @@ export type Database = {
           difficulty: string | null
           ease_factor: number | null
           front: string
+          generation_meta: Json | null
           hint: string | null
           id: string
           interval_days: number | null
@@ -643,6 +762,7 @@ export type Database = {
           difficulty?: string | null
           ease_factor?: number | null
           front: string
+          generation_meta?: Json | null
           hint?: string | null
           id?: string
           interval_days?: number | null
@@ -662,6 +782,7 @@ export type Database = {
           difficulty?: string | null
           ease_factor?: number | null
           front?: string
+          generation_meta?: Json | null
           hint?: string | null
           id?: string
           interval_days?: number | null
@@ -1018,6 +1139,7 @@ export type Database = {
           answers_json: Json
           created_at: string
           duration_minutes: number | null
+          generation_meta: Json | null
           grade_band: string | null
           grading_json: Json
           id: string
@@ -1039,6 +1161,7 @@ export type Database = {
           answers_json?: Json
           created_at?: string
           duration_minutes?: number | null
+          generation_meta?: Json | null
           grade_band?: string | null
           grading_json?: Json
           id?: string
@@ -1060,6 +1183,7 @@ export type Database = {
           answers_json?: Json
           created_at?: string
           duration_minutes?: number | null
+          generation_meta?: Json | null
           grade_band?: string | null
           grading_json?: Json
           id?: string
@@ -1540,6 +1664,42 @@ export type Database = {
         }
         Relationships: []
       }
+      question_fingerprints: {
+        Row: {
+          embedding: string | null
+          fingerprint: string
+          id: string
+          seen_at: string
+          stem_preview: string | null
+          subject_id: string | null
+          subject_name: string | null
+          surface: string
+          user_id: string
+        }
+        Insert: {
+          embedding?: string | null
+          fingerprint: string
+          id?: string
+          seen_at?: string
+          stem_preview?: string | null
+          subject_id?: string | null
+          subject_name?: string | null
+          surface: string
+          user_id: string
+        }
+        Update: {
+          embedding?: string | null
+          fingerprint?: string
+          id?: string
+          seen_at?: string
+          stem_preview?: string | null
+          subject_id?: string | null
+          subject_name?: string | null
+          surface?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       quiz_attempts: {
         Row: {
           command_word: string | null
@@ -1547,6 +1707,7 @@ export type Database = {
           created_at: string | null
           difficulty_rating: number | null
           ease_factor: number | null
+          generation_meta: Json | null
           id: string
           interval_days: number | null
           marks_awarded: number | null
@@ -1567,6 +1728,7 @@ export type Database = {
           created_at?: string | null
           difficulty_rating?: number | null
           ease_factor?: number | null
+          generation_meta?: Json | null
           id?: string
           interval_days?: number | null
           marks_awarded?: number | null
@@ -1587,6 +1749,7 @@ export type Database = {
           created_at?: string | null
           difficulty_rating?: number | null
           ease_factor?: number | null
+          generation_meta?: Json | null
           id?: string
           interval_days?: number | null
           marks_awarded?: number | null
@@ -2713,6 +2876,7 @@ export type Database = {
           created_at: string
           expected_answer: string | null
           expression_score: number | null
+          generation_meta: Json | null
           id: string
           improvement_needed: boolean | null
           level: string | null
@@ -2730,6 +2894,7 @@ export type Database = {
           created_at?: string
           expected_answer?: string | null
           expression_score?: number | null
+          generation_meta?: Json | null
           id?: string
           improvement_needed?: boolean | null
           level?: string | null
@@ -2747,6 +2912,7 @@ export type Database = {
           created_at?: string
           expected_answer?: string | null
           expression_score?: number | null
+          generation_meta?: Json | null
           id?: string
           improvement_needed?: boolean | null
           level?: string | null
@@ -3417,6 +3583,7 @@ export type Database = {
       weak_concepts: {
         Row: {
           concept: string
+          concept_id: string | null
           created_at: string
           curriculum: string
           id: string
@@ -3428,6 +3595,7 @@ export type Database = {
         }
         Insert: {
           concept: string
+          concept_id?: string | null
           created_at?: string
           curriculum?: string
           id?: string
@@ -3439,6 +3607,7 @@ export type Database = {
         }
         Update: {
           concept?: string
+          concept_id?: string | null
           created_at?: string
           curriculum?: string
           id?: string
@@ -3448,7 +3617,15 @@ export type Database = {
           user_id?: string
           weakness_score?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "weak_concepts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
