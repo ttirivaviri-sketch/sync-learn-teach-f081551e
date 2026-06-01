@@ -181,6 +181,17 @@ ${weakAreas ? `- Extra focus on weak areas: ${Array.isArray(weakAreas) ? weakAre
       flashcards,
       count: flashcards.length,
       weak_area_focus: normalizeArray(parsed.weak_area_focus),
+      generation_meta: buildProvenance({
+        fn_name: "generate-flashcards",
+        fn_version: "2",
+        model: ai.model,
+        prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
+        curriculum,
+        subject,
+        topic,
+        weak_area_triggers: Array.isArray(weakAreas) ? weakAreas : weakAreas ? [String(weakAreas)] : [],
+        novelty_reason: "unverified",
+      }),
     });
   } catch (err: unknown) {
     console.error("[generate-flashcards]", err);
