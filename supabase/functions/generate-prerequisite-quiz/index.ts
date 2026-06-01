@@ -100,7 +100,19 @@ Generate ${count} foundation-level MCQs now.`;
       throw new Error("AI returned no valid questions");
     }
 
-    return jsonResponse({ questions });
+    return jsonResponse({
+      questions,
+      generation_meta: buildProvenance({
+        fn_name: "generate-prerequisite-quiz",
+        fn_version: "2",
+        model: ai.model,
+        prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
+        curriculum,
+        subject,
+        topic,
+        novelty_reason: "unverified",
+      }),
+    });
   } catch (e) {
     console.error("generate-prerequisite-quiz error:", e);
     return errorResponse(e);
