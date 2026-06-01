@@ -38,6 +38,7 @@ import {
   enforceQuota,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
+import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS")
