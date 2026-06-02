@@ -41,6 +41,7 @@ import {
   setCached,
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
+import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -294,15 +295,24 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       throw new Error("Generated quiz payload is incomplete");
     }
 
+    // ── Post-process: validators + novelty engine ───────────────────────────
+    const userId = await resolveUserId(req);
+    const pp = await postProcessQuestions({
+      questions: valid as any[],
+      surface: "quiz",
+      userId,
+      subjectId: body.subject_id ?? null,
+    });
+
     // ── For backward compat: if count === 1, also flatten top-level fields ─
     const response: Record<string, unknown> = {
-      quiz: valid,
+      quiz: pp.questions,
       weak_area_focus: normalizeArray(parsed.weak_area_focus),
     };
 
     // Backward-compat: flatten first question's fields at top level
-    if (valid.length === 1) {
-      const q = valid[0] as any;
+    if (pp.questions.length === 1) {
+      const q = pp.questions[0] as any;
       response.question = q.question;
       response.marks = q.marks;
       response.modelAnswer = q.modelAnswer;
@@ -315,7 +325,7 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
 
     response.generation_meta = buildProvenance({
       fn_name: "generate-quiz",
-      fn_version: "2",
+      fn_version: "3",
       model: ai.model,
       prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
       curriculum,
@@ -324,7 +334,10 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       weak_area_triggers: Array.isArray(weakAreas) ? weakAreas : weakAreas ? [String(weakAreas)] : [],
       past_paper_style_source: pastPaperStyleNotes ? "past_paper_exemplars" : undefined,
       paper_blueprint_id: paperBlueprint?.id,
-      novelty_reason: "unverified",
+      novelty_reason: pp.meta.novelty.enabled ? "fresh" : "unverified",
+      validator_warnings: pp.meta.validator.warnings,
+      validator_errors: pp.meta.validator.blocking_errors,
+      fingerprints: pp.meta.novelty.fingerprints,
     });
     return jsonResponse(response);
   } catch (e) {

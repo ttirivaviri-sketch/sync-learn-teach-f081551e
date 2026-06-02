@@ -19,6 +19,7 @@ import {
   jsonResponse,
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
+import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -100,17 +101,27 @@ Generate ${count} foundation-level MCQs now.`;
       throw new Error("AI returned no valid questions");
     }
 
+    const userId = await resolveUserId(req);
+    const pp = await postProcessQuestions({
+      questions: questions as any[],
+      surface: "prerequisite_quiz",
+      userId,
+    });
+
     return jsonResponse({
-      questions,
+      questions: pp.questions,
       generation_meta: buildProvenance({
         fn_name: "generate-prerequisite-quiz",
-        fn_version: "2",
+        fn_version: "3",
         model: ai.model,
         prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
         curriculum,
         subject,
         topic,
-        novelty_reason: "unverified",
+        novelty_reason: pp.meta.novelty.enabled ? "fresh" : "unverified",
+        validator_warnings: pp.meta.validator.warnings,
+        validator_errors: pp.meta.validator.blocking_errors,
+        fingerprints: pp.meta.novelty.fingerprints,
       }),
     });
   } catch (e) {

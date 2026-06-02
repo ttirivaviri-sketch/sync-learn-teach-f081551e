@@ -39,6 +39,7 @@ import {
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
+import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS")
@@ -177,20 +178,34 @@ ${weakAreas ? `- Extra focus on weak areas: ${Array.isArray(weakAreas) ? weakAre
     // Filter out empty cards
     flashcards = flashcards.filter((c: any) => c.front && c.back);
 
+    // Run post-processor on flashcard fronts as the "stem".
+    const userId = await resolveUserId(req);
+    const ppInput = flashcards.map((c) => ({ ...c, question: c.front }));
+    const pp = await postProcessQuestions({
+      questions: ppInput as any[],
+      surface: "flashcards",
+      userId,
+      subjectId: body.subject_id ?? null,
+    });
+    const finalCards = pp.questions.map(({ question: _q, ...rest }: any) => rest);
+
     return jsonResponse({
-      flashcards,
-      count: flashcards.length,
+      flashcards: finalCards,
+      count: finalCards.length,
       weak_area_focus: normalizeArray(parsed.weak_area_focus),
       generation_meta: buildProvenance({
         fn_name: "generate-flashcards",
-        fn_version: "2",
+        fn_version: "3",
         model: ai.model,
         prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
         curriculum,
         subject,
         topic,
         weak_area_triggers: Array.isArray(weakAreas) ? weakAreas : weakAreas ? [String(weakAreas)] : [],
-        novelty_reason: "unverified",
+        novelty_reason: pp.meta.novelty.enabled ? "fresh" : "unverified",
+        validator_warnings: pp.meta.validator.warnings,
+        validator_errors: pp.meta.validator.blocking_errors,
+        fingerprints: pp.meta.novelty.fingerprints,
       }),
     });
   } catch (err: unknown) {
