@@ -19,6 +19,7 @@ import {
   jsonResponse,
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
+import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
