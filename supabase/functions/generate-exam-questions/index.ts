@@ -251,8 +251,16 @@ IMPORTANT:
       0
     );
 
+    const userId = await resolveUserId(req);
+    const pp = await postProcessQuestions({
+      questions: normalised as any[],
+      surface: "exam_questions",
+      userId,
+      subjectId: body.subject_id ?? null,
+    });
+
     return jsonResponse({
-      exam_questions: normalised,
+      exam_questions: pp.questions,
       solutions,
       explanations,
       weak_area_focus: normalizeArray(parsed.weak_area_focus),
@@ -261,14 +269,17 @@ IMPORTANT:
         parsed.suggestedTime || `${Math.round(totalMarks * 1.5)} minutes`,
       generation_meta: buildProvenance({
         fn_name: "generate-exam-questions",
-        fn_version: "2",
+        fn_version: "3",
         model: ai.model,
         prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
         curriculum,
         subject,
         topic,
         weak_area_triggers: Array.isArray(weakAreas) ? weakAreas : weakAreas ? [String(weakAreas)] : [],
-        novelty_reason: "unverified",
+        novelty_reason: pp.meta.novelty.enabled ? "fresh" : "unverified",
+        validator_warnings: pp.meta.validator.warnings,
+        validator_errors: pp.meta.validator.blocking_errors,
+        fingerprints: pp.meta.novelty.fingerprints,
       }),
     });
   } catch (e) {
