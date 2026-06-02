@@ -202,6 +202,15 @@ Generate now. Return JSON only.`;
 
     const computedTotal = normalised.reduce((s: number, q: any) => s + q.marks, 0);
 
+    const userId = await resolveUserId(req);
+    const pp = await postProcessQuestions({
+      questions: normalised as any[],
+      surface: "mock_paper",
+      userId,
+      subjectId: subject_id,
+      paperTotalMarks: parsed.total_marks || computedTotal,
+    });
+
     return jsonResponse({
       paper_code,
       subject: bp.subject_name,
@@ -211,16 +220,19 @@ Generate now. Return JSON only.`;
       instructions:
         parsed.instructions ||
         `Answer ALL questions. Time allowed: ${duration} minutes. Total: ${computedTotal} marks.`,
-      questions: normalised,
+      questions: pp.questions,
       generation_meta: buildProvenance({
         fn_name: "generate-mock-paper",
-        fn_version: "2",
+        fn_version: "3",
         model: ai.model,
         prompt_hash: await hashPrompt(`${systemPrompt}\n${userPrompt}`),
         subject: bp.subject_name,
         paper_blueprint_id: bp.id,
         past_paper_style_source: paper_code,
-        novelty_reason: "unverified",
+        novelty_reason: pp.meta.novelty.enabled ? "fresh" : "unverified",
+        validator_warnings: pp.meta.validator.warnings,
+        validator_errors: pp.meta.validator.blocking_errors,
+        fingerprints: pp.meta.novelty.fingerprints,
       }),
     });
   } catch (e) {
