@@ -1,14 +1,10 @@
 /**
- * useTopicPerformance
+ * useTopicPerformance — Phase 5
  *
- * Tracks a student's per-topic performance and exposes:
- *   - accuracy (correct / total attempts)
- *   - repeated mistake patterns (wrong concepts)
- *   - adaptive difficulty recommendation (easy / medium / hard)
- *   - mastery status (mastered / needs-practice / not-started)
- *   - whether a topic test should be triggered
- *
- * All logic lives in-memory from quiz_attempts data in Supabase.
+ * Replaces the old "keyword-extraction from wrong questions" path with a
+ * direct read against `concept_mastery_v` (an EWMA over the last 10
+ * `concept_attempts`). Falls back to `quiz_attempts` for the per-topic
+ * accuracy headline so existing UI keeps working.
  */
 
 import { useState, useEffect, useCallback } from 'react';
@@ -27,34 +23,20 @@ export interface TopicPerformanceData {
   accuracy: number; // 0–1
   masteryStatus: MasteryStatus;
   recommendedDifficulty: DifficultyLevel;
-  /** Should a topic test be triggered? */
   shouldTriggerTopicTest: boolean;
-  /** Question texts the student got wrong more than once */
   repeatedMistakes: string[];
-  /** Concept names that appear repeatedly in failed attempts */
+  /** Concept labels with mastery_score < 0.6. */
   weakConcepts: string[];
-  /** Average response time (if tracked) in seconds */
   avgResponseTimeSecs: number | null;
-}
-
-export interface PerformanceRecord {
-  topic_name: string;
-  question: string;
-  was_correct: boolean;
-  difficulty_rating: number;
-  created_at: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-/** How many attempts before triggering a topic test */
 const ATTEMPTS_FOR_TOPIC_TEST = 5;
-/** Accuracy threshold for "mastered" */
 const MASTERY_THRESHOLD = 0.70;
-/** Accuracy threshold for "struggling" → show easier questions */
 const STRUGGLING_THRESHOLD = 0.50;
-/** Accuracy threshold for "performing well" → increase difficulty */
 const PERFORMING_WELL_THRESHOLD = 0.80;
+const WEAK_CONCEPT_THRESHOLD = 0.6; // mastery_score < this → weak
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
@@ -70,7 +52,7 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch all attempts for this topic
+      // ── Headline accuracy from quiz_attempts ──────────────────────────────
       const { data: attempts } = await supabase
         .from('quiz_attempts')
         .select('topic_name, question, was_correct, difficulty_rating, created_at')
@@ -96,24 +78,19 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         return;
       }
 
-      const total = (attempts as any[]).length;
-      const correct = (attempts as any[]).filter((a: any) => a.was_correct).length;
+      const total = attempts.length;
+      const correct = (attempts as any[]).filter((a) => a.was_correct).length;
       const accuracy = total > 0 ? correct / total : 0;
 
-      // Mastery status
       let masteryStatus: MasteryStatus = 'needs-practice';
-      if (total === 0) masteryStatus = 'not-started';
-      else if (accuracy >= MASTERY_THRESHOLD) masteryStatus = 'mastered';
-      else masteryStatus = 'needs-practice';
+      if (accuracy >= MASTERY_THRESHOLD) masteryStatus = 'mastered';
 
-      // Adaptive difficulty
       let recommendedDifficulty: DifficultyLevel = 'medium';
       if (accuracy >= PERFORMING_WELL_THRESHOLD) recommendedDifficulty = 'hard';
       else if (accuracy < STRUGGLING_THRESHOLD) recommendedDifficulty = 'easy';
 
-      // Find repeated mistakes: questions answered incorrectly 2+ times
       const incorrectQuestions: Record<string, number> = {};
-      (attempts as any[]).filter((a: any) => !a.was_correct).forEach((a: any) => {
+      (attempts as any[]).filter((a) => !a.was_correct).forEach((a) => {
         const q = a.question?.substring(0, 100) || '';
         incorrectQuestions[q] = (incorrectQuestions[q] || 0) + 1;
       });
@@ -122,12 +99,25 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
         .map(([q]) => q)
         .slice(0, 5);
 
-      // Weak concepts: simple keyword extraction from wrong questions
-      const wrongTexts = (attempts as any[]).filter((a: any) => !a.was_correct).map((a: any) => a.question || '').join(' ');
-      const conceptKeywords = extractConceptKeywords(wrongTexts, topicName);
-      const weakConcepts = conceptKeywords.slice(0, 4);
+      // ── Weak concepts: query concept_mastery_v directly ───────────────────
+      let weakConcepts: string[] = [];
+      try {
+        const { data: mastery } = await supabase
+          .from('concept_mastery_v' as any)
+          .select('concept_label, mastery_score, topic')
+          .eq('user_id', user.id)
+          .ilike('topic', `%${topicName}%`)
+          .order('mastery_score', { ascending: true })
+          .limit(6);
 
-      // Topic test trigger: after N attempts with consistent results
+        weakConcepts = ((mastery ?? []) as any[])
+          .filter((m) => typeof m.mastery_score === 'number' && m.mastery_score < WEAK_CONCEPT_THRESHOLD)
+          .map((m) => String(m.concept_label))
+          .slice(0, 4);
+      } catch (err) {
+        logger.warn('[useTopicPerformance] concept_mastery_v read failed', err);
+      }
+
       const recentAttempts = (attempts as any[]).slice(0, ATTEMPTS_FOR_TOPIC_TEST);
       const shouldTriggerTopicTest =
         total >= ATTEMPTS_FOR_TOPIC_TEST &&
@@ -157,39 +147,4 @@ export function useTopicPerformance(subjectId: string | undefined, topicName: st
   }, [fetchPerformance]);
 
   return { performance, isLoading, refresh: fetchPerformance };
-}
-
-// ─── Keyword extraction (lightweight, no NLP dependency) ──────────────────────
-
-function extractConceptKeywords(text: string, topicName: string): string[] {
-  if (!text) return [];
-
-  // Remove common stop words and extract meaningful terms
-  const stopWords = new Set([
-    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
-    'of', 'with', 'by', 'from', 'is', 'are', 'was', 'were', 'be', 'been',
-    'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could',
-    'should', 'may', 'might', 'this', 'that', 'these', 'those', 'it', 'its',
-    'you', 'your', 'how', 'what', 'when', 'which', 'who', 'where', 'why',
-    'calculate', 'explain', 'describe', 'state', 'define', 'evaluate', 'show',
-    'find', 'determine', 'given', 'following', 'using', 'marks', 'question',
-  ]);
-
-  const words = text.toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(w => w.length > 4 && !stopWords.has(w));
-
-  // Count frequency
-  const freq: Record<string, number> = {};
-  words.forEach(w => { freq[w] = (freq[w] || 0) + 1; });
-
-  // Filter out the topic name itself
-  const topicWords = new Set(topicName.toLowerCase().split(/\s+/));
-
-  return Object.entries(freq)
-    .filter(([w]) => !topicWords.has(w))
-    .sort((a, b) => b[1] - a[1])
-    .map(([w]) => w)
-    .slice(0, 6);
 }

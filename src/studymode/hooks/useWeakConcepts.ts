@@ -9,8 +9,10 @@ export interface WeakConcept {
 }
 
 /**
- * Reads + updates rolling weak-concept memory for a user/subject/curriculum.
- * Used to bias generate-topic-session toward known gaps.
+ * Phase 5: weak-concept reads now flow from `concept_mastery_v` (EWMA over
+ * the last 10 attempts). The legacy `weak_concepts` table is still written
+ * by `recordWeakness` for backward compatibility, but reads prefer the view
+ * and fall back to the table if the view is unavailable.
  */
 export function useWeakConcepts(subject?: string, curriculum: string = 'ZIMSEC') {
   const qc = useQueryClient();
@@ -21,6 +23,29 @@ export function useWeakConcepts(subject?: string, curriculum: string = 'ZIMSEC')
     queryFn: async (): Promise<WeakConcept[]> => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user || !subject) return [];
+
+      // Preferred: concept_mastery_v (always-fresh EWMA)
+      try {
+        const { data: mastery } = await supabase
+          .from('concept_mastery_v' as any)
+          .select('concept_label, topic, weakness_score')
+          .eq('user_id', user.id)
+          .eq('subject_name', subject)
+          .order('weakness_score', { ascending: false })
+          .limit(10);
+
+        if (mastery && mastery.length > 0) {
+          return (mastery as any[]).map((m) => ({
+            concept: String(m.concept_label),
+            topic: m.topic ?? null,
+            weakness_score: Number(m.weakness_score ?? 0),
+          }));
+        }
+      } catch (err) {
+        logger.warn('[useWeakConcepts] view read failed, falling back', err);
+      }
+
+      // Fallback: legacy weak_concepts table
       const { data, error } = await supabase
         .from('weak_concepts' as any)
         .select('concept, topic, weakness_score')
@@ -30,7 +55,7 @@ export function useWeakConcepts(subject?: string, curriculum: string = 'ZIMSEC')
         .order('weakness_score', { ascending: false })
         .limit(10);
       if (error) {
-        logger.warn('[useWeakConcepts] read failed', error.message);
+        logger.warn('[useWeakConcepts] legacy read failed', error.message);
         return [];
       }
       return (data ?? []) as unknown as WeakConcept[];
@@ -47,8 +72,9 @@ export function useWeakConcepts(subject?: string, curriculum: string = 'ZIMSEC')
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Kept for backward compat — the canonical write path now goes through
+      // `concept_attempts` + the `sync_weak_concepts_from_attempt` trigger.
       for (const concept of concepts) {
-        // Read existing
         const { data: existing } = await supabase
           .from('weak_concepts' as any)
           .select('weakness_score')
