@@ -332,9 +332,9 @@ export function PrerequisiteRemediationFlow({
         </div>
 
         <div className="mb-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            {currentQuestion.question}
-          </h3>
+          <div className="text-lg font-semibold text-foreground mb-4">
+            <MathMarkdown>{currentQuestion.question}</MathMarkdown>
+          </div>
 
           <div className="space-y-3">
             {currentQuestion.options.map((option: string, index: number) => (
@@ -348,7 +348,9 @@ export function PrerequisiteRemediationFlow({
                     : 'border-border hover:border-primary/50'
                 )}
               >
-                <span className="font-medium text-foreground">{option}</span>
+                <span className="font-medium text-foreground">
+                  <MathMarkdown className="inline [&_p]:inline [&_p]:my-0">{option}</MathMarkdown>
+                </span>
               </button>
             ))}
           </div>
