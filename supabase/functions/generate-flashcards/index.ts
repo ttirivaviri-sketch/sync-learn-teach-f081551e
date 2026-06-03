@@ -40,6 +40,7 @@ import {
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS")

@@ -23,6 +23,7 @@ import {
   corsHeaders,
   errorResponse,
 } from "../_shared/ai-config.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 // ─── Task-specific prompt extensions ─────────────────────────────────────────
 

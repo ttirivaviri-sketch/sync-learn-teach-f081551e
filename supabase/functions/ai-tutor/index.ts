@@ -25,6 +25,7 @@ import {
   enforceQuota,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
