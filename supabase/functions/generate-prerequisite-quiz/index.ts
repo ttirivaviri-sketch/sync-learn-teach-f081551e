@@ -20,6 +20,7 @@ import {
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -52,7 +53,7 @@ RULES:
 • Foundational, no trick questions — they only test that the prerequisite is solid.
 • 4 options per question. Exactly one correct answer.
 • "correctAnswer" is the ZERO-BASED INDEX (0–3) of the correct option.
-• All maths in LaTeX wrapped in $...$.
+• ${KATEX_RULES}
 • Mirror ${curriculum}${grade ? ` ${grade}` : ""} command words at foundation level.
 • Each explanation: 1–2 sentences explaining why the correct option is right.
 

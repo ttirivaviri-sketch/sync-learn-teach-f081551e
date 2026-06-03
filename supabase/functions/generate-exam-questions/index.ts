@@ -43,6 +43,7 @@ import {
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -97,14 +98,7 @@ Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, 
 
 These questions must look and feel like they came from an actual exam paper — correct structure, mark allocation, command words, and formatting.
 
-MATHEMATICAL NOTATION (CRITICAL):
-- ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs.
-- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sum_{i=1}^{n}$
-- Display math: $$E = mc^2$$
-- NEVER write plain text like "x squared" or "x^2" — always use $x^2$.
-- Fractions: $\\frac{numerator}{denominator}$, not "a/b".
-- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$.
-- Use proper notation in questions, model answers, and step-by-step solutions.
+${KATEX_RULES}
 
 PAPER FORMAT: ${paperFormat === "section_a" ? "Section A (short structured, 2-6 marks each)" : paperFormat === "section_b" ? "Section B (extended response, 8-25 marks each)" : "Mixed (include both short and extended questions)"}
 

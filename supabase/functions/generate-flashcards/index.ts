@@ -40,6 +40,7 @@ import {
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req: Request) => {
   if (req.method === "OPTIONS")
@@ -108,14 +109,7 @@ RULES:
 7. If weak areas are specified, create extra cards targeting those concepts.
 8. No vague or generic cards — every card must test specific examinable knowledge.
 
-MATHEMATICAL NOTATION:
-- ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs.
-- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sum_{i=1}^{n}$
-- Display math (for complex equations): $$E = mc^2$$
-- NEVER write plain text like "x squared" or "x^2" — always use $x^2$.
-- Fractions must use $\\frac{numerator}{denominator}$, not "a/b".
-- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$, etc.
-- Subscripts: $x_1$, $a_n$. Superscripts: $x^2$, $e^{-x}$.
+${KATEX_RULES}
 
 Return ONLY valid JSON:
 {

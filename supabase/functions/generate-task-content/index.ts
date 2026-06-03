@@ -23,6 +23,7 @@ import {
   corsHeaders,
   errorResponse,
 } from "../_shared/ai-config.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 // ─── Task-specific prompt extensions ─────────────────────────────────────────
 
@@ -33,15 +34,7 @@ Always align to the provided syllabus context and past-paper patterns.
 - Keep output practical, exam-focused, and age/level appropriate.
 - If weak areas are mentioned, prioritise those in your output.
 
-MATHEMATICAL NOTATION:
-- For ALL mathematical expressions, use LaTeX notation wrapped in dollar signs.
-- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sin\\theta$
-- Display math (for important equations): $$y = mx + c$$
-- NEVER write x^2, x_1, sqrt(x) in plain text — always use LaTeX: $x^2$, $x_1$, $\\sqrt{x}$
-- Use proper symbols: $\\times$ not x, $\\div$ not /, $\\leq$ not <=, $\\geq$ not >=, $\\neq$ not !=
-- Fractions: $\\frac{numerator}{denominator}$ not numerator/denominator
-- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$, $\\Delta$
-- Subscripts/superscripts: $x_1$, $x^2$, $a_{n+1}$
+${KATEX_RULES}
 
 OUTPUT FORMAT:
 - Return ONLY clean, structured study content using markdown.

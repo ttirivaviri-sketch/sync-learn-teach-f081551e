@@ -31,6 +31,7 @@ import {
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -130,7 +131,7 @@ RULES:
 4. Use the same command words at similar frequency.
 5. Each question MUST have: question text (with [marks] in brackets), model_answer, marking_scheme[] (mark-by-mark), topic, command_word, question_type, marks.
 6. For MCQs include 4 options A–D and the correct letter.
-7. Use LaTeX for any maths ($x^2$, $\\frac{a}{b}$).
+7. ${KATEX_RULES}
 8. Difficulty should ramp up across the paper.
 9. Include data/stimulus where appropriate (tables, scenarios).
 

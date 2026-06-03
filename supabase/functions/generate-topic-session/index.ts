@@ -1,4 +1,5 @@
 import { enforceQuota, quotaExceededResponse } from "../_shared/ai-config.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
         model: 'google/gemini-3-flash-preview',
         max_tokens: 2500,
         messages: [
-          { role: 'system', content: `You are a ${curriculum || 'ZIMSEC'} ${subject} content engine. Generate exam-aligned learning content. Use LaTeX for any math. Be concise, specific, exam-focused. Never generic.` },
+          { role: 'system', content: `You are a ${curriculum || 'ZIMSEC'} ${subject} content engine. Generate exam-aligned learning content. Be concise, specific, exam-focused. Never generic.\n\n${KATEX_RULES}` },
           { role: 'user', content: `Topic: ${topic}${subtopic ? `\nSubtopic: ${subtopic}` : ''}${weakHint}\n\nGenerate a focused mini-session: concept overview, quick review bullets, 6 practice questions (mix of difficulty), and 4 flashcards. Each question must include its concept_map (topic, subtopic, concepts, difficulty, exam_expectation).` },
         ],
         tools: [{

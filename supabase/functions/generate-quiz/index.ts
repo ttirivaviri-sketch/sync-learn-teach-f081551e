@@ -42,6 +42,7 @@ import {
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -105,14 +106,7 @@ serve(async (req) => {
 YOUR TASK: Generate ${questionCount} high-quality, exam-style quiz question(s) for ${subject} — ${topic}.
 Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
-MATHEMATICAL NOTATION (CRITICAL):
-- For ALL mathematical expressions, use LaTeX notation wrapped in dollar signs.
-- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sin\\theta$
-- Display math: $$y = mx + c$$
-- NEVER write x^2, x_1, sqrt(x) in plain text — always use LaTeX.
-- Use proper symbols: $\\times$, $\\div$, $\\leq$, $\\geq$, $\\neq$
-- Fractions: $\\frac{numerator}{denominator}$
-- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$
+${KATEX_RULES}
 
 QUESTION TYPES TO MIX:
 • multiple_choice — REQUIRED format: exactly 4 options as a string array WITHOUT "A)" / "B)" prefixes (the UI adds the letters). "correctOption" MUST be one of "A","B","C","D" indexed by position (A=options[0], B=options[1], C=options[2], D=options[3]). Always include "explanation" describing why the correct option is right and why distractors are wrong. Marks are usually 1.

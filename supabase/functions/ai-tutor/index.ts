@@ -25,6 +25,7 @@ import {
   enforceQuota,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
+import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -174,13 +175,7 @@ CONTEXT:
 ${context || "No specific context provided — adapt to what the student asks."}
 
 ${examBoardContext ? `EXAM BOARD METADATA (use this to teach exam strategy, not just the topic):\n${examBoardContext}\n` : ""}
-MATHEMATICAL NOTATION (CRITICAL):
-- ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs.
-- Inline math: $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$, $\\sum_{i=1}^{n}$
-- Display math for complex equations: $$E = mc^2$$
-- NEVER write plain text like "x squared" or "x^2" — always use $x^2$.
-- Fractions: $\\frac{numerator}{denominator}$, not "a/b".
-- Greek letters: $\\alpha$, $\\beta$, $\\theta$, $\\pi$.
+${KATEX_RULES}
 
 TEACHING STYLE — TEACH LIKE AN EXAMINER, NOT A TEXTBOOK:
 - Be encouraging but direct — students need confidence AND accuracy.
