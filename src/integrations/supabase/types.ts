@@ -3629,6 +3629,28 @@ export type Database = {
       }
     }
     Views: {
+      concept_mastery_v: {
+        Row: {
+          attempts: number | null
+          concept_id: string | null
+          concept_label: string | null
+          last_seen_at: string | null
+          mastery_score: number | null
+          subject_name: string | null
+          topic: string | null
+          user_id: string | null
+          weakness_score: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "concept_attempts_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "concepts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tutors_public: {
         Row: {
           avatar_url: string | null
