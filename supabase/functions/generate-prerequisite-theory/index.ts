@@ -48,7 +48,7 @@ YOUR TASK: Write a concise, exam-focused REFRESHER on the prerequisite topic "${
 
 RULES:
 • Pure markdown only. No HTML. No code fences around the whole answer.
-• All maths in LaTeX wrapped in $...$ (inline) or $$...$$ (display) for KaTeX.
+• ${KATEX_RULES}
 • Structure: short intro → 2–4 key rules/definitions → ONE worked mini-example with steps → a one-line "why this matters for ${parentTopic ?? "the next topic"}".
 • Aim for 180–320 words. Be specific, not generic.
 • Tailor to ${curriculum}${grade ? ` ${grade}` : ""} level.`;

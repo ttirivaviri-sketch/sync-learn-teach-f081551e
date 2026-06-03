@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You generate pre-answer concept review tailored to a SPECIFIC question. NEVER produce generic textbook content. Every bullet, formula, definition, example, and common mistake must directly help the student answer THIS exact question. Use LaTeX (\\( ... \\) or $$ ... $$) for math. Be concise and exam-focused.`,
+            content: `You generate pre-answer concept review tailored to a SPECIFIC question. NEVER produce generic textbook content. Every bullet, formula, definition, example, and common mistake must directly help the student answer THIS exact question. Be concise and exam-focused.\n\n${KATEX_RULES}`,
           },
           {
             role: 'user',

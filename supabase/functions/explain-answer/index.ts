@@ -135,7 +135,7 @@ NEVER fall back to a single generic feedback paragraph. The student paid for exa
 YOUR TASK: Mark and score the student's answer against the marking criteria.
 Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
-MATHEMATICAL NOTATION: ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs (e.g. $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$). NEVER write plain text math. Use display math $$...$$ for complex equations.
+${KATEX_RULES}
 
 You are an experienced examiner. Be fair but rigorous:
 1. Compare the student's answer point-by-point against the marking scheme.
@@ -244,7 +244,7 @@ Score this answer out of ${totalMarks || "the available marks"}.`;
 You are a supportive expert tutor helping a student understand where they went wrong on an exam question.
 Return ONLY clean, structured study content using markdown. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
-MATHEMATICAL NOTATION: ALL mathematical expressions MUST use LaTeX notation wrapped in dollar signs (e.g. $x^2$, $\\frac{a}{b}$, $\\sqrt{x}$). NEVER write plain text math. Use display math $$...$$ for complex equations.
+${KATEX_RULES}
 
 Your explanation MUST:
 1. Acknowledge what the student got right (if anything).

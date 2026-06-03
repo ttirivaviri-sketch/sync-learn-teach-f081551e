@@ -52,7 +52,7 @@ RULES:
 • Foundational, no trick questions — they only test that the prerequisite is solid.
 • 4 options per question. Exactly one correct answer.
 • "correctAnswer" is the ZERO-BASED INDEX (0–3) of the correct option.
-• All maths in LaTeX wrapped in $...$.
+• ${KATEX_RULES}
 • Mirror ${curriculum}${grade ? ` ${grade}` : ""} command words at foundation level.
 • Each explanation: 1–2 sentences explaining why the correct option is right.
 
