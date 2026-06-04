@@ -213,6 +213,11 @@ export const LearnerActivityTab = ({
                         </div>
                       </div>
                     </CardContent>
+                    {pastBooking.status === "completed" && (
+                      <div className="px-4 pb-3">
+                        <LessonNotesCard bookingId={pastBooking.id} audience="learner" />
+                      </div>
+                    )}
                   </Card>
                 ))}
                 {pastBookings.length > 2 && (
