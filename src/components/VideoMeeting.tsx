@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Video, X, PenLine, AlertCircle } from "lucide-react";
+import { Video, X, PenLine, AlertCircle, Captions } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveLessonTranscript } from "@/hooks/useLiveLessonTranscript";
+import { LiveCaptionsOverlay } from "@/components/lesson/LiveCaptionsOverlay";
 
 // Sub-components
 import { PreCallScreen } from "@/components/video-meeting/PreCallScreen";
