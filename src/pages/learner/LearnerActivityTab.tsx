@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
+import { LessonNotesCard } from "@/components/lesson/LessonNotesCard";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface ReviewData {
