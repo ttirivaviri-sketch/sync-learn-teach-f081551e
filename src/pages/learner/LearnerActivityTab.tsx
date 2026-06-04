@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
+import { LessonNotesCard } from "@/components/lesson/LessonNotesCard";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface ReviewData {
@@ -212,6 +213,11 @@ export const LearnerActivityTab = ({
                         </div>
                       </div>
                     </CardContent>
+                    {pastBooking.status === "completed" && (
+                      <div className="px-4 pb-3">
+                        <LessonNotesCard bookingId={pastBooking.id} audience="learner" />
+                      </div>
+                    )}
                   </Card>
                 ))}
                 {pastBookings.length > 2 && (

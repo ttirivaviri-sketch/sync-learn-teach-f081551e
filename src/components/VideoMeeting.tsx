@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Video, X, PenLine, AlertCircle } from "lucide-react";
+import { Video, X, PenLine, AlertCircle, Captions } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
+import { useLiveLessonTranscript } from "@/hooks/useLiveLessonTranscript";
+import { LiveCaptionsOverlay } from "@/components/lesson/LiveCaptionsOverlay";
 
 // Sub-components
 import { PreCallScreen } from "@/components/video-meeting/PreCallScreen";
@@ -58,6 +60,16 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const [rating, setRating] = useState(0);
   const [summaryNotes, setSummaryNotes] = useState("");
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ── Live captions / transcription ──
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const lessonTranscript = useLiveLessonTranscript({
+    bookingId: booking?.id,
+    tutorId: booking?.tutor_id,
+    learnerId: booking?.learner_id,
+    enabled: captionsEnabled,
+  });
+
 
   // Timer
   useEffect(() => {
@@ -241,11 +253,27 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   };
 
   // Controls
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     if (jitsiApi.current) { jitsiApi.current.dispose(); jitsiApi.current = null; }
     setHasJoinedSession(false);
+    if (captionsEnabled) {
+      try { await lessonTranscript.stop(); } catch (e) { console.error(e); }
+      setCaptionsEnabled(false);
+    }
     setSummaryNotes(notes);
     setScreen("summary");
+  };
+
+  const toggleCaptions = async () => {
+    if (captionsEnabled) {
+      await lessonTranscript.stop();
+      setCaptionsEnabled(false);
+      toast({ title: "Captions off", description: "Lesson notes will be generated from this recording shortly." });
+    } else {
+      setCaptionsEnabled(true);
+      await lessonTranscript.start();
+      toast({ title: "Captions on", description: "Live transcription + lesson notes enabled." });
+    }
   };
 
   const toggleAudio = () => jitsiApi.current?.executeCommand("toggleAudio");
@@ -379,6 +407,30 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
                 <p className="text-white/40 text-sm mt-1">Allow camera & mic access when prompted</p>
               </div>
             </div>
+          )}
+
+          {/* Live captions overlay (Gemini-powered) */}
+          {hasJoinedSession && (
+            <LiveCaptionsOverlay
+              caption={lessonTranscript.caption}
+              isRecording={lessonTranscript.isRecording}
+            />
+          )}
+
+          {/* Captions toggle pill */}
+          {hasJoinedSession && (
+            <button
+              onClick={toggleCaptions}
+              className={`absolute top-20 right-4 z-30 pointer-events-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur border transition-colors ${
+                captionsEnabled
+                  ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                  : "bg-black/50 border-white/10 text-white/80 hover:bg-black/70"
+              }`}
+              aria-label="Toggle live captions"
+            >
+              <Captions className="h-3.5 w-3.5" />
+              {captionsEnabled ? "Captions on" : "Live captions"}
+            </button>
           )}
 
           {/* Spacer to push controls to bottom */}
