@@ -1,144 +1,93 @@
-# Quality & Interpretability Upgrade — 5 Priorities
 
-Builds on the current architecture. Additive schema only; no existing rows break. Each phase ships independently and the app stays green between phases.
+## Part 1 — Extended KaTeX unit & quantity rules
 
-## Surfaces in scope
+Update `supabase/functions/_shared/katex-rules.ts` so every StudyMode generator emits consistently formatted quantities. The shared constant is already imported by 11+ edge functions, so updating it once propagates everywhere.
 
-11 edge functions return JSON today and are reachable with minimal change: `generate-daily-task`, `generate-quiz`, `generate-flashcards`, `generate-mock-paper`, `generate-exam-questions`, `generate-prerequisite-quiz`, `generate-concept-review`, `generate-topic-session`, `generate-progress-plan`, `generate-study-plan`, `grade-answer`, `evaluate-topic-answer`.
+Additions to `KATEX_RULES`:
+- **SI base units** (length/mass/time/temp): `mm, cm, m, km, mg, g, kg, t, s, min, h, °C, K` → always `$8\,\text{cm}$`, `$25\,\text{°C}$`, `$1.5\,\text{kg}$`.
+- **Physics derived units**: `N, J, W, Pa, V, A, Ω, Hz` and compounds → `$9.8\,\text{m/s}^2$`, `$50\,\text{Hz}$`, `$12\,\text{V}$`, `$5\,\Omega$`.
+- **Chemistry/biology**: `mol, mol/L, mL, L, μg, ppm, °, atm` → `$0.5\,\text{mol/L}$`, `$25\,\mu\text{g}$`, `$200\,\text{ppm}$`.
+- **Currencies + ratios** (already partly covered, tightened): `$\$120$`, `$R\,250$`, `$\pounds 10$`, `$\euro 5$`, ratios `$3:4$`.
+- **Per-unit notation**: always `$\text{kg/m}^3$`, never `kg/m^3`.
+- **Thin space rule**: always `\,` between number and unit; never bare `5kg`.
 
-Two stream markdown (`ai-tutor`, `generate-task-content`) — out of scope for structured rewrite in this pass; they get provenance via a post-stream meta event only.
+Also harden `src/studymode/components/MathMarkdown.tsx`:
+- Expand the unit-wrapping regex to recognise the new unit vocabulary (Ω, μg, mol/L, m/s², kg/m³, etc.) when AI slips and emits a bare `5 kg`.
+- Add a small post-processor that auto-inserts `\,` between digit and known unit token inside `$...$`.
 
----
+No DB or schema changes for Part 1.
 
-## Phase 1 — Schema foundation (one migration)
+## Part 2 — Lesson transcription + StudyMode reinforcement
 
-Additive only. Safe to ship before any function changes.
+Provider: **Lovable AI Gateway (Gemini)** — uses existing `LOVABLE_API_KEY`. Gemini 2.5 Flash accepts inline audio (base64) and returns transcripts; no new secret needed.
 
-- `concepts` table — canonical registry: `(subject_id, topic, label, slug, syllabus_ref)`, unique on `(subject_id, slug)`.
-- `concept_attempts` table — unified per-attempt log keyed by `concept_id`: `(user_id, concept_id, surface, was_correct, marks_awarded, marks_possible, source_id, source_table, created_at)`. Replaces the split between `quiz_attempts.concepts_tested[]` and `daily_task_attempts`.
-- `question_fingerprints` table — `(user_id, subject_id, fingerprint, surface, embedding, seen_at)`, unique `(user_id, fingerprint)`. `embedding vector(768)` column gated on `pgvector` extension; if extension unavailable, ship without it and add later.
-- `generation_meta jsonb` column on `daily_tasks`, `quiz_attempts`, `flashcards`, `mock_exam_attempts`, `topic_session_questions`.
-- `concept_id uuid` (nullable, FK → concepts) on `daily_task_concepts` and `weak_concepts` — backfill comes later, no rewrite of existing rows.
-- RLS + GRANTs per platform rules. `concepts` is readable by all authenticated; `concept_attempts` and `question_fingerprints` are user-scoped.
+Capture mode: **Both** live + post-lesson.
 
-## Phase 2 — Provenance everywhere
+### 2.1 Database (one migration)
 
-A single shared helper `_shared/provenance.ts` builds the meta object:
+New tables (with full GRANTs + RLS):
 
+```text
+lesson_recordings
+  id, booking_id (FK bookings), tutor_id, learner_id,
+  storage_path, duration_seconds, status (uploaded|transcribing|ready|failed),
+  created_at, updated_at
+
+lesson_transcripts
+  id, recording_id (FK lesson_recordings, unique),
+  booking_id, full_text, segments jsonb (speaker, start, end, text[]),
+  language, created_at
+
+lesson_notes
+  id, booking_id, owner_id (learner_id or tutor_id), audience (learner|tutor|shared),
+  summary, key_points jsonb, action_items jsonb, vocabulary jsonb,
+  created_at, updated_at
+
+lesson_topic_mapping
+  id, booking_id, learner_id, subject_id, topic,
+  concepts text[], coverage_score numeric (0-1),
+  weak_concepts text[], created_at
 ```
-{
-  model, fn_name, fn_version, prompt_hash,
-  generated_at, ai_latency_ms,
-  syllabus_objectives: string[],
-  subtopic, concept_ids: uuid[],
-  weak_area_triggers: string[],
-  paper_blueprint_id?: uuid,
-  past_paper_style_source?: string,
-  novelty_reason: 'fresh' | 'regenerated' | 'cache_hit',
-  validator_warnings: string[]
-}
-```
 
-Wired into every JSON generator. Stored in the new `generation_meta` column (or inside `task_payload.__meta` for `daily_tasks` to keep one source of truth there). For the streaming functions, the meta object is emitted as a final SSE `event: meta` frame and dropped on the floor by clients that don't care.
+RLS: learners read their own; tutors read their bookings' rows; service_role writes.
 
-## Phase 3 — Structured outputs for the laggards
+Storage: new private bucket `lesson-audio` (only owner + tutor of the booking can read; service_role writes).
 
-Move every JSON-returning generator from "JSON.parse + ad-hoc normalise" to **Zod parse against a shared schema**, and use **OpenAI tool-calls** (response_format: json_schema) where the model supports it. Schemas live in `_shared/schemas/` and are imported by both the edge function and the client (via a re-export from `src/integrations/ai/schemas.ts`).
+### 2.2 Live in-call captions
 
-Shared schema fields every question carries:
+- Add a "Live captions" toggle in the existing Jitsi call view (existing `integrations/video-conferencing`).
+- New hook `src/hooks/useLiveLessonTranscript.ts` that captures the local mic via `MediaRecorder` (webm/opus, 5-second chunks), base64-encodes, and POSTs each chunk to a new edge function `transcribe-lesson-chunk`.
+- Edge function calls Gemini 2.5 Flash with the audio chunk and returns a partial transcript; we append to a local in-memory transcript and render a caption strip overlay.
+- At call end, the accumulated chunks are uploaded as a single `lesson-audio` blob → triggers the post-lesson pipeline below (so we never lose the recording even if the user only had live mode on).
 
-- `id`, `question`, `marks`, `command_word`
-- `concept_ids: uuid[]` (required, non-empty)
-- `syllabus_objective_refs: string[]`
-- `difficulty: 'foundation'|'standard'|'stretch'`
-- `novelty: { fingerprint, reason }`
-- `rationale` (why this question, why now)
+### 2.3 Post-lesson upload pipeline
 
-Generators converted in this phase: `generate-quiz`, `generate-flashcards`, `generate-mock-paper`, `generate-exam-questions`, `generate-prerequisite-quiz`. `generate-daily-task` already uses tool-calls — just gets the shared schema + provenance fields.
+New edge function `process-lesson-recording`:
+1. Reads audio from `lesson-audio` storage.
+2. Calls Gemini for a clean diarised transcript (system prompt enforces speaker labels Tutor/Learner) → writes `lesson_transcripts`.
+3. Calls Gemini again with the transcript to produce:
+   - `lesson_notes` for learner (summary, key points, vocabulary, action items)
+   - `lesson_notes` for tutor (teaching summary, learner struggles, follow-up suggestions)
+   - `lesson_topic_mapping` (subject/topic/concepts covered, per-concept coverage_score, weak_concepts list) — uses `KATEX_RULES` so any maths in notes is correctly formatted.
+4. **Feeds StudyMode** (the "Both" option):
+   - For every concept in `lesson_topic_mapping.concepts`, insert a `concept_attempts` row with `source = 'tutor_lesson'`, `correct = true|partial` based on coverage_score → the existing `concept_mastery_v` view picks it up automatically (Phase 5 work).
+   - For every entry in `weak_concepts`, upsert into the existing `weak_concepts` table.
+   - Insert one row into `daily_tasks` of type `lesson-reinforcement` with metadata `{ booking_id, topic, concepts }` so the next-day quiz/flashcard generators bias toward what was covered. Existing `generate-quiz` and `generate-flashcards` already accept `weak_concepts` — no signature changes.
 
-## Phase 4 — Novelty engine
+### 2.4 UI
 
-Server-side service, two layers:
+- **Tutor & Learner Activity tabs**: each past booking gets a "Lesson notes" expandable card showing summary, key points, action items, and a "View transcript" link.
+- **StudyMode Dashboard**: new banner "Reinforce your last lesson" when a `lesson-reinforcement` daily task exists for today; tapping opens the existing daily task runner.
+- All transcript/notes rendered via `MathMarkdown` so KaTeX rules apply.
 
-1. **Exact fingerprint** — SHA-256 of a normalised question stem (lowercase, strip whitespace + punctuation, strip numbers in word problems). Query `question_fingerprints` by `(user_id, fingerprint)` — reject duplicate.
-2. **Semantic similarity** — embed question stem via Lovable AI Gateway (`text-embedding-3-small` or Gemini equivalent). Compare against last N=200 fingerprints for that `(user_id, subject_id)` using cosine distance; reject if `> 0.92`.
+### 2.5 Cost & privacy notes
 
-Flow lives in `_shared/novelty.ts`:
+- Audio stays in private storage; only booking participants can read.
+- Live chunking is opt-in (toggle defaults OFF); post-lesson processing runs only if a recording exists.
+- Gemini billed via existing workspace credits; surface 402/429 errors in the UI like other AI calls.
 
-- `await checkNovelty(userId, subjectId, questionText, surface)` → `{ ok, reason, fingerprint, embedding }`
-- On reject, the generator retries up to 2× with the failed stems passed back into the prompt as a `do_not_repeat` list.
-- On accept, fingerprint + embedding are persisted in the same transaction as the artifact write.
+## Technical summary
 
-Behind a feature flag (`NOVELTY_ENGINE_ENABLED` env var) so rollout is reversible.
-
-## Phase 5 — Concept-level mastery + validator
-
-**Concept extraction replacement** (`src/studymode/hooks/useTopicPerformance.ts`, `useWeakConcepts.ts`):
-
-- Stop deriving weak concepts from "wrong-question keywords".
-- Mastery now reads directly from `concept_attempts`. A concept is weak when `mastery_score < 0.6`, where mastery uses an EWMA over the last 10 attempts (recency-weighted accuracy, capped at 1.0).
-- `weak_concepts.weakness_score` becomes a materialised view over `concept_attempts` rather than a hand-maintained table. Old table stays for backward compatibility but writes go through a trigger.
-
-**Concept ID resolution** at generation time:
-
-- Generators receive the full `concepts` list for `(subject, topic)` and are required to return `concept_ids` chosen from that list (validated by Zod enum).
-- For free-text inputs from older artifacts, a tiny `resolveConceptId(label, subject_id)` does case-insensitive slug match, then falls back to embedding nearest-neighbour against the `concepts` table.
-
-**Validator pass** (`_shared/validators/`):
-Pure functions, no AI calls. Run after Zod parse, before persistence. Outputs `{ ok, warnings[], blocking_errors[] }`.
-
-Checks:
-
-1. Topic adherence — every `concept_id` in the response is in the requested topic's concept set.
-2. Syllabus mapping — every `syllabus_objective_refs[]` entry exists in `curriculum_topic_templates` for that subject+grade.
-3. Stem repetition — no two questions in the same artifact share a fingerprint; no question matches a fingerprint from the user's last 50 attempts.
-4. Mark-scheme arithmetic — `markingScheme[].marks.sum() === question.marks`; `paper.questions.marks.sum() === paper.total_marks`.
-5. Command-word legality — `question.command_word` in the per-subject allow-list (define, explain, calculate, evaluate, etc.).
-
-Blocking errors trigger one regeneration with the errors fed back into the prompt; persistent failure surfaces a clear error to the client instead of silently shipping bad content.
-
----
-
-## Technical details
-
-### Migration order
-
-1. Phase 1 migration — schema only, no code touches.
-2. Phase 2 — code-only PR, deploys provenance helper + wires every JSON generator. No schema changes.
-3. Phase 3 — code-only PR, schemas + Zod. Bumps `fn_version` in provenance so old vs new outputs are distinguishable in analytics.
-4. Phase 4 — migration to enable `pgvector` (if not present) + code PR + env flag rollout.
-5. Phase 5 — migration for the materialised view + trigger + concept seeding job + code PR.
-
-### Concept seeding
-
-A one-time job (`supabase/functions/seed-concepts/index.ts`, admin-only) walks `curriculum_topic_templates` for every `(curriculum, grade, subject)` and creates `concepts` rows from each subtopic's learning objectives. Idempotent on `(subject_id, slug)`.
-
-### Streaming generators
-
-`ai-tutor` and `generate-task-content` are not rewritten. They emit a final `event: meta\ndata: {...provenance}` SSE frame. The `generate-task-content` markdown is fingerprinted post-stream and added to `question_fingerprints` so it participates in novelty checks even without a structured shape.
-
-### What does NOT change
-
-- Existing `daily_tasks.task_payload` shape stays — provenance is added under `__meta`, existing readers ignore unknown keys.
-- `quiz_attempts` and `flashcards` reads stay backward compatible — `generation_meta` is nullable.
-- `weak_concepts` table keeps its current columns and reads; only the write path changes (trigger).
-- No client API breaks: every Supabase function keeps the same name, request shape, and response top-level shape.
-
-### Files touched (high level)
-
-- `supabase/migrations/` — 3 new migrations (Phase 1, 4, 5)
-- `supabase/functions/_shared/` — new files: `provenance.ts`, `novelty.ts`, `schemas/`, `validators/`
-- `supabase/functions/generate-*` — every JSON generator gets a ~30-line diff to wire the helpers
-- `supabase/functions/seed-concepts/` — new admin function (Phase 5)
-- `src/integrations/ai/schemas.ts` — re-export Zod schemas to the client for type safety
-- `src/studymode/hooks/useTopicPerformance.ts`, `useWeakConcepts.ts` — switch to `concept_attempts`-driven mastery
-
----
-
-## Open questions before I start
-
-1. **pgvector** — happy for me to enable the `vector` extension for semantic novelty, or keep Phase 4 to exact fingerprints only? Vector extension 
-2. **Concept seeding scope** — seed `concepts` for ZIMSEC + the just-added CAPS / IEB / Cambridge templates, or ZIMSEC only first and the rest after admins verify the templates? All templates
-3. **Validator on regenerate-fail** — when validation blocks twice in a row, do you want the user to see a "couldn't generate fresh content — try again" message, or do you want a relaxed-mode fallback that ships the content with `validator_warnings` attached?  Try again
-4. **Phase ordering** — ship all five in sequence (≈one phase per session), or batch Phase 1+2 together since they're the smallest and unlock everything else? Phase 1+2
-5. Study sync is not loading (white blank page)
+- **New files**: `supabase/functions/transcribe-lesson-chunk/index.ts`, `supabase/functions/process-lesson-recording/index.ts`, `src/hooks/useLiveLessonTranscript.ts`, `src/components/lesson/LessonNotesCard.tsx`, `src/components/lesson/LiveCaptionsOverlay.tsx`, 1 migration, 1 storage bucket migration.
+- **Edited**: `supabase/functions/_shared/katex-rules.ts`, `src/studymode/components/MathMarkdown.tsx`, Jitsi call component, `LearnerActivityTab.tsx`, `TutorActivityTab.tsx`, `studymode/components/Dashboard.tsx`.
+- **No edits** to existing generators' signatures — they already accept `weak_concepts`.
