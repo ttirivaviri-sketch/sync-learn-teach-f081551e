@@ -896,6 +896,192 @@ export type Database = {
           },
         ]
       }
+      lesson_notes: {
+        Row: {
+          action_items: Json
+          audience: string
+          booking_id: string
+          created_at: string
+          id: string
+          key_points: Json
+          owner_id: string
+          summary: string | null
+          updated_at: string
+          vocabulary: Json
+        }
+        Insert: {
+          action_items?: Json
+          audience: string
+          booking_id: string
+          created_at?: string
+          id?: string
+          key_points?: Json
+          owner_id: string
+          summary?: string | null
+          updated_at?: string
+          vocabulary?: Json
+        }
+        Update: {
+          action_items?: Json
+          audience?: string
+          booking_id?: string
+          created_at?: string
+          id?: string
+          key_points?: Json
+          owner_id?: string
+          summary?: string | null
+          updated_at?: string
+          vocabulary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_notes_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_recordings: {
+        Row: {
+          booking_id: string
+          created_at: string
+          duration_seconds: number | null
+          error_message: string | null
+          id: string
+          learner_id: string
+          status: string
+          storage_path: string
+          tutor_id: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          learner_id: string
+          status?: string
+          storage_path: string
+          tutor_id: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          duration_seconds?: number | null
+          error_message?: string | null
+          id?: string
+          learner_id?: string
+          status?: string
+          storage_path?: string
+          tutor_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_recordings_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_topic_mapping: {
+        Row: {
+          booking_id: string
+          concepts: string[]
+          coverage_score: number
+          created_at: string
+          id: string
+          learner_id: string
+          subject_id: string | null
+          subject_name: string | null
+          topic: string
+          weak_concepts: string[]
+        }
+        Insert: {
+          booking_id: string
+          concepts?: string[]
+          coverage_score?: number
+          created_at?: string
+          id?: string
+          learner_id: string
+          subject_id?: string | null
+          subject_name?: string | null
+          topic: string
+          weak_concepts?: string[]
+        }
+        Update: {
+          booking_id?: string
+          concepts?: string[]
+          coverage_score?: number
+          created_at?: string
+          id?: string
+          learner_id?: string
+          subject_id?: string | null
+          subject_name?: string | null
+          topic?: string
+          weak_concepts?: string[]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_topic_mapping_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_transcripts: {
+        Row: {
+          booking_id: string
+          created_at: string
+          full_text: string
+          id: string
+          language: string | null
+          recording_id: string
+          segments: Json
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          full_text: string
+          id?: string
+          language?: string | null
+          recording_id: string
+          segments?: Json
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          full_text?: string
+          id?: string
+          language?: string | null
+          recording_id?: string
+          segments?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_transcripts_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_transcripts_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: true
+            referencedRelation: "lesson_recordings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       library_access_log: {
         Row: {
           created_at: string
