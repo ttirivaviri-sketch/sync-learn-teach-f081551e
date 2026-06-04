@@ -253,11 +253,27 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   };
 
   // Controls
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     if (jitsiApi.current) { jitsiApi.current.dispose(); jitsiApi.current = null; }
     setHasJoinedSession(false);
+    if (captionsEnabled) {
+      try { await lessonTranscript.stop(); } catch (e) { console.error(e); }
+      setCaptionsEnabled(false);
+    }
     setSummaryNotes(notes);
     setScreen("summary");
+  };
+
+  const toggleCaptions = async () => {
+    if (captionsEnabled) {
+      await lessonTranscript.stop();
+      setCaptionsEnabled(false);
+      toast({ title: "Captions off", description: "Lesson notes will be generated from this recording shortly." });
+    } else {
+      setCaptionsEnabled(true);
+      await lessonTranscript.start();
+      toast({ title: "Captions on", description: "Live transcription + lesson notes enabled." });
+    }
   };
 
   const toggleAudio = () => jitsiApi.current?.executeCommand("toggleAudio");
