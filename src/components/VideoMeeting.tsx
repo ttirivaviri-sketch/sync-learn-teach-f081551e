@@ -61,6 +61,16 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
   const [summaryNotes, setSummaryNotes] = useState("");
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // ── Live captions / transcription ──
+  const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const lessonTranscript = useLiveLessonTranscript({
+    bookingId: booking?.id,
+    tutorId: booking?.tutor_id,
+    learnerId: booking?.learner_id,
+    enabled: captionsEnabled,
+  });
+
+
   // Timer
   useEffect(() => {
     if (screen !== "meeting" || !sessionStartTime) return;
