@@ -409,6 +409,30 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
             </div>
           )}
 
+          {/* Live captions overlay (Gemini-powered) */}
+          {hasJoinedSession && (
+            <LiveCaptionsOverlay
+              caption={lessonTranscript.caption}
+              isRecording={lessonTranscript.isRecording}
+            />
+          )}
+
+          {/* Captions toggle pill */}
+          {hasJoinedSession && (
+            <button
+              onClick={toggleCaptions}
+              className={`absolute top-20 right-4 z-30 pointer-events-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur border transition-colors ${
+                captionsEnabled
+                  ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
+                  : "bg-black/50 border-white/10 text-white/80 hover:bg-black/70"
+              }`}
+              aria-label="Toggle live captions"
+            >
+              <Captions className="h-3.5 w-3.5" />
+              {captionsEnabled ? "Captions on" : "Live captions"}
+            </button>
+          )}
+
           {/* Spacer to push controls to bottom */}
           <div className="flex-1" />
 
