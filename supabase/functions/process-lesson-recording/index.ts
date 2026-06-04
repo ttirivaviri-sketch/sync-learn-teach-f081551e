@@ -219,43 +219,55 @@ Deno.serve(async (req) => {
       const correct = tm.coverage_score >= 0.6;
       const attemptRows = tm.concepts.map((c: string) => ({
         user_id: rec.learner_id,
-        concept: c,
-        subject: tm.subject_name,
+        concept_label: c,
+        subject_name: tm.subject_name,
         topic: tm.topic,
-        correct,
-        source: "tutor_lesson",
+        surface: "tutor_lesson",
+        was_correct: correct,
+        marks_awarded: correct ? 1 : 0,
+        marks_possible: 1,
+        source_id: rec.booking_id,
+        source_table: "lesson_recordings",
       }));
       await sb.from("concept_attempts").insert(attemptRows);
     }
 
     // 5b. weak_concepts upsert
     if (Array.isArray(tm.weak_concepts) && tm.weak_concepts.length) {
+      const nowIso = new Date().toISOString();
       const weakRows = tm.weak_concepts.map((c: string) => ({
         user_id: rec.learner_id,
-        concept: c,
         subject: tm.subject_name,
+        curriculum: "ZIMSEC",
+        concept: c,
         topic: tm.topic,
-        source: "tutor_lesson",
+        weakness_score: 1 - (tm.coverage_score ?? 0.5),
+        last_seen_at: nowIso,
       }));
-      await sb.from("weak_concepts").upsert(weakRows, { onConflict: "user_id,concept" });
+      await sb.from("weak_concepts").upsert(weakRows, {
+        onConflict: "user_id,subject,curriculum,concept",
+      });
     }
 
     // 5c. Reinforcement daily task
+    const today = new Date().toISOString().slice(0, 10);
     await sb.from("daily_tasks").insert({
       user_id: rec.learner_id,
       task_type: "lesson-reinforcement",
       title: `Reinforce: ${tm.topic}`,
-      description: `Practice questions on what you covered with your tutor: ${tm.concepts.slice(0, 4).join(", ")}.`,
-      subject_id: null,
-      subject_name: tm.subject_name,
-      topic: tm.topic,
-      metadata: {
+      description: `Practice what you covered with your tutor: ${tm.concepts.slice(0, 4).join(", ")}.`,
+      is_completed: false,
+      is_locked: false,
+      task_date: today,
+      task_payload: {
         booking_id: rec.booking_id,
+        subject_name: tm.subject_name,
+        topic: tm.topic,
         concepts: tm.concepts,
         weak_concepts: tm.weak_concepts,
       },
-      is_completed: false,
-      is_locked: false,
+      concepts_covered: tm.concepts,
+      selection_reason: "Auto-generated from tutor lesson",
     });
 
     await sb.from("lesson_recordings").update({ status: "ready" }).eq("id", recording_id);
