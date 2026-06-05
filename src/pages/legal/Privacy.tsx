@@ -35,11 +35,12 @@ export default function Privacy() {
       </ul>
       <p>We do not sell your personal information.</p>
 
-      <h2>4. Recording of sessions</h2>
-      <p>Video tutor sessions are not recorded by default. If a recording is ever made it will be disclosed in-app and requires consent from both parties.</p>
+      <h2>4. Recording of sessions, transcription &amp; AI notes</h2>
+      <p>Live tutoring sessions are not recorded by default. Recording, transcription, and AI-generated notes are <strong>opt-in for both parties</strong> via <em>Profile → Data &amp; Compliance</em>. When enabled, audio is captured in your browser, stored in a private Supabase bucket, transcribed by Google Gemini (via the Lovable AI Gateway) with speaker diarisation (Tutor / Learner), and used to generate per-audience lesson notes and StudyMode reinforcement content (quizzes and flashcards). Default retention is 90 days; you can set anywhere between 7 and 365 days, export the full data bundle, or delete individual recordings at any time. Detailed terms live in our <a href="/legal/data-compliance">Data &amp; Compliance policy</a>.</p>
 
       <h2>5. Retention</h2>
-      <p>We keep account data for as long as your account is active. Financial records are retained for up to 5 years as required by South African tax law. Verification documents are kept for the duration of your tutor account plus 2 years.</p>
+      <p>We keep account data for as long as your account is active. Financial records are retained for up to 5 years as required by South African tax law. Verification documents are kept for the duration of your tutor account plus 2 years. Lesson recordings and transcripts follow your personal retention setting (default 90 days).</p>
+
 
       <h2>6. Your rights</h2>
       <p>You have the right to access, correct, delete or export your personal data, and to lodge a complaint with the Information Regulator (South Africa) or your local supervisory authority. To exercise these rights email <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>.</p>

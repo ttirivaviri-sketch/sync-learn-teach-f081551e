@@ -896,6 +896,53 @@ export type Database = {
           },
         ]
       }
+      lesson_consents: {
+        Row: {
+          booking_id: string
+          consented_at: string | null
+          created_at: string
+          id: string
+          notes_consent: boolean
+          recording_consent: boolean
+          revoked_at: string | null
+          transcription_consent: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          consented_at?: string | null
+          created_at?: string
+          id?: string
+          notes_consent?: boolean
+          recording_consent?: boolean
+          revoked_at?: string | null
+          transcription_consent?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          consented_at?: string | null
+          created_at?: string
+          id?: string
+          notes_consent?: boolean
+          recording_consent?: boolean
+          revoked_at?: string | null
+          transcription_consent?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_consents_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_notes: {
         Row: {
           action_items: Json
@@ -990,14 +1037,101 @@ export type Database = {
           },
         ]
       }
+      lesson_reinforcement_sets: {
+        Row: {
+          booking_id: string
+          completed_at: string | null
+          concepts: string[]
+          created_at: string
+          flashcards: Json
+          id: string
+          learner_id: string
+          mastery_after: Json | null
+          mastery_baseline: Json
+          quiz: Json
+          recording_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          booking_id: string
+          completed_at?: string | null
+          concepts?: string[]
+          created_at?: string
+          flashcards?: Json
+          id?: string
+          learner_id: string
+          mastery_after?: Json | null
+          mastery_baseline?: Json
+          quiz?: Json
+          recording_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string
+          completed_at?: string | null
+          concepts?: string[]
+          created_at?: string
+          flashcards?: Json
+          id?: string
+          learner_id?: string
+          mastery_after?: Json | null
+          mastery_baseline?: Json
+          quiz?: Json
+          recording_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_reinforcement_sets_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_reinforcement_sets_recording_id_fkey"
+            columns: ["recording_id"]
+            isOneToOne: false
+            referencedRelation: "lesson_recordings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lesson_retention_settings: {
+        Row: {
+          auto_delete_after_days: number
+          created_at: string
+          keep_notes_only: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_delete_after_days?: number
+          created_at?: string
+          keep_notes_only?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_delete_after_days?: number
+          created_at?: string
+          keep_notes_only?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       lesson_topic_mapping: {
         Row: {
           booking_id: string
           concepts: string[]
+          confidence: number | null
           coverage_score: number
           created_at: string
+          evidence: Json | null
           id: string
           learner_id: string
+          recommendation: string | null
           subject_id: string | null
           subject_name: string | null
           topic: string
@@ -1006,10 +1140,13 @@ export type Database = {
         Insert: {
           booking_id: string
           concepts?: string[]
+          confidence?: number | null
           coverage_score?: number
           created_at?: string
+          evidence?: Json | null
           id?: string
           learner_id: string
+          recommendation?: string | null
           subject_id?: string | null
           subject_name?: string | null
           topic: string
@@ -1018,10 +1155,13 @@ export type Database = {
         Update: {
           booking_id?: string
           concepts?: string[]
+          confidence?: number | null
           coverage_score?: number
           created_at?: string
+          evidence?: Json | null
           id?: string
           learner_id?: string
+          recommendation?: string | null
           subject_id?: string | null
           subject_name?: string | null
           topic?: string

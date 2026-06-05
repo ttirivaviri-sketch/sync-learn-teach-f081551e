@@ -49,6 +49,11 @@ const LegalCopyright = lazy(() => import("./pages/legal/Copyright"));
 const LegalLibrary = lazy(() => import("./pages/legal/LibraryDisclaimer"));
 const LegalCommunity = lazy(() => import("./pages/legal/Community"));
 const LegalRefunds = lazy(() => import("./pages/legal/Refunds"));
+const LegalDataCompliance = lazy(() => import("./pages/legal/DataCompliance"));
+
+// Settings
+const SettingsDataCompliance = lazy(() => import("./pages/settings/DataCompliance"));
+
 
 // ── Query client ──────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
@@ -116,10 +121,15 @@ const App = () => (
               <Route path="/legal/library" element={<LegalLibrary />} />
               <Route path="/legal/community" element={<LegalCommunity />} />
               <Route path="/legal/refunds" element={<LegalRefunds />} />
+              <Route path="/legal/data-compliance" element={<LegalDataCompliance />} />
+
+              {/* Settings */}
+              <Route path="/settings/data-compliance" element={<SettingsDataCompliance />} />
 
               {/* 404 handling */}
               <Route path="/404" element={<NotFound />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
+
             </Routes>
           </Suspense>
           <Toaster />

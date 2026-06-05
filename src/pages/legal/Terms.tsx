@@ -22,7 +22,8 @@ export default function Terms() {
       <p>You agree not to use {COMPANY.name} to cheat in active examinations, to harass or defraud other users, to upload illegal or infringing content, or to reverse-engineer the platform. Detailed rules live in our <a href="/legal/community">Community Guidelines</a>.</p>
 
       <h2>6. AI features — no guarantees</h2>
-      <p>{COMPANY.name} uses AI (currently Google Gemini via the Lovable AI Gateway) to generate study material, answers and feedback. AI output may be inaccurate or incomplete. <strong>Always verify with your textbook, syllabus or a qualified teacher.</strong> AI explanations are study aids, not authoritative academic guidance, and we do not guarantee any specific exam outcome.</p>
+      <p>{COMPANY.name} uses AI (currently Google Gemini via the Lovable AI Gateway) to generate study material, answers, feedback, lesson transcripts, lesson notes, and reinforcement quizzes and flashcards. AI output may be inaccurate or incomplete. <strong>Always verify with your textbook, syllabus or a qualified teacher.</strong> AI explanations are study aids, not authoritative academic guidance, and we do not guarantee any specific exam outcome. Lesson recording, transcription, and AI notes are opt-in for both parties and governed by our <a href="/legal/data-compliance">Data &amp; Compliance policy</a>.</p>
+
 
       <h2>7. Library content</h2>
       <p>The Library aggregates educational resources from public sources for non-commercial student use. We do not sell library content. See the <a href="/legal/library">Library Disclaimer</a> for attribution and takedown procedures.</p>
