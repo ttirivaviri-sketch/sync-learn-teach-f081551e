@@ -1,93 +1,101 @@
+## Scope
 
-## Part 1 — Extended KaTeX unit & quantity rules
+Five related changes that build on the lesson-transcription pipeline shipped in the previous loop. All work stays inside StudyMode + the lesson features, plus a small legal/consent surface.
 
-Update `supabase/functions/_shared/katex-rules.ts` so every StudyMode generator emits consistently formatted quantities. The shared constant is already imported by 11+ edge functions, so updating it once propagates everywhere.
+---
 
-Additions to `KATEX_RULES`:
-- **SI base units** (length/mass/time/temp): `mm, cm, m, km, mg, g, kg, t, s, min, h, °C, K` → always `$8\,\text{cm}$`, `$25\,\text{°C}$`, `$1.5\,\text{kg}$`.
-- **Physics derived units**: `N, J, W, Pa, V, A, Ω, Hz` and compounds → `$9.8\,\text{m/s}^2$`, `$50\,\text{Hz}$`, `$12\,\text{V}$`, `$5\,\Omega$`.
-- **Chemistry/biology**: `mol, mol/L, mL, L, μg, ppm, °, atm` → `$0.5\,\text{mol/L}$`, `$25\,\mu\text{g}$`, `$200\,\text{ppm}$`.
-- **Currencies + ratios** (already partly covered, tightened): `$\$120$`, `$R\,250$`, `$\pounds 10$`, `$\euro 5$`, ratios `$3:4$`.
-- **Per-unit notation**: always `$\text{kg/m}^3$`, never `kg/m^3`.
-- **Thin space rule**: always `\,` between number and unit; never bare `5kg`.
+## Part 1 — Speaker diarization (tutor vs student)
 
-Also harden `src/studymode/components/MathMarkdown.tsx`:
-- Expand the unit-wrapping regex to recognise the new unit vocabulary (Ω, μg, mol/L, m/s², kg/m³, etc.) when AI slips and emits a bare `5 kg`.
-- Add a small post-processor that auto-inserts `\,` between digit and known unit token inside `$...$`.
+**Edge: `transcribe-lesson-chunk`**
+- Accept `speaker_hint` (`tutor` | `learner`) plus the user's `display_name` and pass them in the Gemini prompt so each chunk transcript is tagged with `[Tutor]` / `[Learner]` line prefixes.
+- Return `{ text, segments: [{speaker, text}] }` instead of plain text.
 
-No DB or schema changes for Part 1.
+**Edge: `process-lesson-recording`**
+- Strengthen the diarization system prompt: enforce exactly two labels (`Tutor`, `Learner`), require every segment to carry a `speaker`, and reject unknown speakers (fallback to `unknown`).
+- Continue writing `segments` jsonb to `lesson_transcripts` but with the stricter schema.
 
-## Part 2 — Lesson transcription + StudyMode reinforcement
+**Client: `useLiveLessonTranscript.ts` + `LiveCaptionsOverlay.tsx`**
+- Hook now tracks per-speaker captions. Caller passes `localRole` (tutor/learner) and a display name; that's the `speaker_hint`.
+- Overlay shows the last 2 lines with a coloured speaker chip (Tutor = primary, Learner = accent).
 
-Provider: **Lovable AI Gateway (Gemini)** — uses existing `LOVABLE_API_KEY`. Gemini 2.5 Flash accepts inline audio (base64) and returns transcripts; no new secret needed.
+**UI: transcript viewer**
+- New `LessonTranscriptDialog.tsx` opened from `LessonNotesCard`; renders `segments` with speaker chips and timestamps, using `MathMarkdown` so KaTeX rules still apply.
 
-Capture mode: **Both** live + post-lesson.
+---
 
-### 2.1 Database (one migration)
+## Part 2 — Consent, retention, deletion, export
 
-New tables (with full GRANTs + RLS):
+**Migration**
+- New `lesson_consents` table: `user_id`, `booking_id`, `recording_consent bool`, `transcription_consent bool`, `notes_consent bool`, `consented_at`, `revoked_at`. RLS: user manages their own row; tutor + learner of the booking can read each other's row to know whether to start recording.
+- New `lesson_retention_settings` table (one row per user): `auto_delete_after_days` (default 90), `keep_notes_only bool` (default true — purges audio + transcript but keeps AI notes for StudyMode reinforcement).
+- New `pg_cron`-style purge: scheduled edge function `purge-expired-lesson-data` (manual trigger acceptable too) that deletes audio from storage and rows from `lesson_recordings` / `lesson_transcripts` past the retention window.
 
-```text
-lesson_recordings
-  id, booking_id (FK bookings), tutor_id, learner_id,
-  storage_path, duration_seconds, status (uploaded|transcribing|ready|failed),
-  created_at, updated_at
+**Client gating**
+- `VideoMeeting.tsx` shows a consent modal before the Live captions toggle does anything. Both parties must have a row with `recording_consent = true` for that booking, otherwise the toggle is disabled with a tooltip.
+- Hook checks consent before `start()`.
 
-lesson_transcripts
-  id, recording_id (FK lesson_recordings, unique),
-  booking_id, full_text, segments jsonb (speaker, start, end, text[]),
-  language, created_at
+**UI: Data & Compliance screen**
+- New `src/pages/settings/DataCompliance.tsx` linked from learner + tutor Profile tabs.
+- Shows: consent toggles (recording / transcription / AI notes), retention slider (7 / 30 / 90 / 365 days), "Delete all my lesson data" button, "Export my lesson data" button (downloads a JSON bundle of transcripts + notes + topic mappings via new edge `export-lesson-data`), and a per-lesson list with individual delete.
 
-lesson_notes
-  id, booking_id, owner_id (learner_id or tutor_id), audience (learner|tutor|shared),
-  summary, key_points jsonb, action_items jsonb, vocabulary jsonb,
-  created_at, updated_at
+---
 
-lesson_topic_mapping
-  id, booking_id, learner_id, subject_id, topic,
-  concepts text[], coverage_score numeric (0-1),
-  weak_concepts text[], created_at
-```
+## Part 3 — Smarter `lesson_topic_mapping` + weak-concept feedback
 
-RLS: learners read their own; tutors read their bookings' rows; service_role writes.
+**Edge: `process-lesson-recording`** (extend Step 3)
+- After producing topic mappings, run a second Gemini call to *review* the mapping against the transcript: for each concept produce `evidence_quotes`, `confidence` (0–1), and `recommendation` (`reinforce` | `review` | `skip`).
+- Persist new columns on `lesson_topic_mapping`: `confidence numeric`, `evidence jsonb`, `recommendation text`.
+- Weak-concept upsert thresholds:
+  - `confidence >= 0.75 && coverage_score < 0.6` → upsert `weak_concepts` with `severity = 'high'`.
+  - `0.5 <= confidence < 0.75` → upsert with `severity = 'medium'`.
+  - `confidence < 0.5` → ignore (don't pollute StudyMode).
+- `concept_attempts` only written for `confidence >= 0.6`.
 
-Storage: new private bucket `lesson-audio` (only owner + tutor of the booking can read; service_role writes).
+**Migration**
+- `ALTER TABLE lesson_topic_mapping ADD COLUMN confidence numeric, ADD COLUMN evidence jsonb, ADD COLUMN recommendation text;`
 
-### 2.2 Live in-call captions
+---
 
-- Add a "Live captions" toggle in the existing Jitsi call view (existing `integrations/video-conferencing`).
-- New hook `src/hooks/useLiveLessonTranscript.ts` that captures the local mic via `MediaRecorder` (webm/opus, 5-second chunks), base64-encodes, and POSTs each chunk to a new edge function `transcribe-lesson-chunk`.
-- Edge function calls Gemini 2.5 Flash with the audio chunk and returns a partial transcript; we append to a local in-memory transcript and render a caption strip overlay.
-- At call end, the accumulated chunks are uploaded as a single `lesson-audio` blob → triggers the post-lesson pipeline below (so we never lose the recording even if the user only had live mode on).
+## Part 4 — Lesson reinforcement set (quiz + flashcards) + mastery tracking
 
-### 2.3 Post-lesson upload pipeline
+**Edge: new `generate-lesson-reinforcement`**
+- Input: `recording_id`. Reads notes + topic mapping.
+- Calls existing `generate-quiz` (5 questions biased to high-confidence concepts) and `generate-flashcards` (6 cards covering vocabulary + key points) internally — no signature changes.
+- Stores result in new `lesson_reinforcement_sets` table: `booking_id`, `learner_id`, `quiz jsonb`, `flashcards jsonb`, `concepts text[]`, `mastery_baseline jsonb` (snapshot of each concept's current mastery from `concept_mastery_v`).
 
-New edge function `process-lesson-recording`:
-1. Reads audio from `lesson-audio` storage.
-2. Calls Gemini for a clean diarised transcript (system prompt enforces speaker labels Tutor/Learner) → writes `lesson_transcripts`.
-3. Calls Gemini again with the transcript to produce:
-   - `lesson_notes` for learner (summary, key points, vocabulary, action items)
-   - `lesson_notes` for tutor (teaching summary, learner struggles, follow-up suggestions)
-   - `lesson_topic_mapping` (subject/topic/concepts covered, per-concept coverage_score, weak_concepts list) — uses `KATEX_RULES` so any maths in notes is correctly formatted.
-4. **Feeds StudyMode** (the "Both" option):
-   - For every concept in `lesson_topic_mapping.concepts`, insert a `concept_attempts` row with `source = 'tutor_lesson'`, `correct = true|partial` based on coverage_score → the existing `concept_mastery_v` view picks it up automatically (Phase 5 work).
-   - For every entry in `weak_concepts`, upsert into the existing `weak_concepts` table.
-   - Insert one row into `daily_tasks` of type `lesson-reinforcement` with metadata `{ booking_id, topic, concepts }` so the next-day quiz/flashcard generators bias toward what was covered. Existing `generate-quiz` and `generate-flashcards` already accept `weak_concepts` — no signature changes.
+**Migration**
+- `lesson_reinforcement_sets` with full GRANTs + RLS (learner-only read/write of their own row).
 
-### 2.4 UI
+**Client**
+- `LessonNotesCard` gets a "Reinforce this lesson" CTA → opens new `LessonReinforcementRunner.tsx` (mini version of existing `StructuredDailyTaskRunner` — quiz first, then flashcards).
+- On completion, write `concept_attempts` rows (`source = 'lesson_reinforcement'`) and compute a delta vs `mastery_baseline`; show a "Mastery progression" panel: per-concept before → after bars, plus overall % gained.
+- StudyMode Dashboard banner ("Reinforce your last lesson") already exists from prior loop — wire it to open the new runner instead of the generic daily task runner.
 
-- **Tutor & Learner Activity tabs**: each past booking gets a "Lesson notes" expandable card showing summary, key points, action items, and a "View transcript" link.
-- **StudyMode Dashboard**: new banner "Reinforce your last lesson" when a `lesson-reinforcement` daily task exists for today; tapping opens the existing daily task runner.
-- All transcript/notes rendered via `MathMarkdown` so KaTeX rules apply.
+---
 
-### 2.5 Cost & privacy notes
+## Part 5 — Data & Compliance + Terms + Privacy across all apps
 
-- Audio stays in private storage; only booking participants can read.
-- Live chunking is opt-in (toggle defaults OFF); post-lesson processing runs only if a recording exists.
-- Gemini billed via existing workspace credits; surface 402/429 errors in the UI like other AI calls.
+Three legal pages already exist (`src/pages/legal/Terms.tsx`, `Privacy.tsx`, plus `Community`, `Cookies`, `Refunds`, `LibraryDisclaimer`, `Copyright`). Work needed:
+
+1. **New `src/pages/legal/DataCompliance.tsx`** (legal copy, distinct from the user-settings screen in Part 2) — covers POPIA/GDPR scope for recordings, transcripts, AI notes, retention defaults, export/deletion rights.
+2. **Update `Privacy.tsx`** — add a section on lesson recording, transcription, AI notes, retention windows, opt-out, processor (Gemini via Lovable AI Gateway).
+3. **Update `Terms.tsx`** — add a recording/AI-notes clause referencing the new consent + retention controls.
+4. **Add footer links** in Learner, Tutor, and Admin apps:
+   - Learner: `LearnerProfileTab.tsx` legal section row → Data & Compliance, Terms, Privacy.
+   - Tutor: `TutorProfileTab.tsx` same row.
+   - Admin: `AdminLayout.tsx` footer.
+   - Landing: already wired; add Data & Compliance link.
+5. **Update `mem://index.md` Core** with: "Lesson recordings require explicit consent from both parties; retention defaults 90 days; notes can outlive audio."
+
+---
 
 ## Technical summary
 
-- **New files**: `supabase/functions/transcribe-lesson-chunk/index.ts`, `supabase/functions/process-lesson-recording/index.ts`, `src/hooks/useLiveLessonTranscript.ts`, `src/components/lesson/LessonNotesCard.tsx`, `src/components/lesson/LiveCaptionsOverlay.tsx`, 1 migration, 1 storage bucket migration.
-- **Edited**: `supabase/functions/_shared/katex-rules.ts`, `src/studymode/components/MathMarkdown.tsx`, Jitsi call component, `LearnerActivityTab.tsx`, `TutorActivityTab.tsx`, `studymode/components/Dashboard.tsx`.
-- **No edits** to existing generators' signatures — they already accept `weak_concepts`.
+- **New tables**: `lesson_consents`, `lesson_retention_settings`, `lesson_reinforcement_sets`. ALTER on `lesson_topic_mapping`.
+- **New edge functions**: `export-lesson-data`, `purge-expired-lesson-data`, `generate-lesson-reinforcement`.
+- **Updated edge functions**: `transcribe-lesson-chunk`, `process-lesson-recording`.
+- **New components/pages**: `LessonTranscriptDialog`, `LessonReinforcementRunner`, `settings/DataCompliance`, `legal/DataCompliance`.
+- **Updated**: `VideoMeeting`, `useLiveLessonTranscript`, `LiveCaptionsOverlay`, `LessonNotesCard`, `LearnerProfileTab`, `TutorProfileTab`, `AdminLayout`, `Privacy`, `Terms`, route registration in `App.tsx`, StudyMode `Dashboard` banner wiring.
+- **Memory**: new core rule on consent + retention.
+
+This is a 3-migration, ~14-file change. Ready to implement on approval.
