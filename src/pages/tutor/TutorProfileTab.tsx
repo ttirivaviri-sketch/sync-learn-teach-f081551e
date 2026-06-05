@@ -5,8 +5,10 @@ import { useState } from "react";
 import { User as UserType } from "@supabase/supabase-js";
 import {
   DollarSign, Clock, ChevronRight, Download, Video,
-  Wallet, BookOpen, TrendingUp, Settings, Users,
+  Wallet, BookOpen, TrendingUp, Settings, Users, Shield, FileText,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
 import StarRating from "@/components/StarRating";
 import TutorEarningsChart from "@/components/TutorEarningsChart";
@@ -101,8 +103,10 @@ export const TutorProfileTab = ({
   onToast,
 }: TutorProfileTabProps) => {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const toggle = (key: string) => setExpanded(expanded === key ? null : key);
+
 
   const handleDownloadTax = () => {
     if (recentEarnings.length === 0) {
@@ -249,6 +253,22 @@ export const TutorProfileTab = ({
             </span>
           }
         />
+        <MenuRow
+          icon={<Shield className="h-4 w-4" />}
+          label="Data & Compliance"
+          onClick={() => navigate("/settings/data-compliance")}
+        />
+        <MenuRow
+          icon={<FileText className="h-4 w-4" />}
+          label="Terms of Use"
+          onClick={() => navigate("/legal/terms")}
+        />
+        <MenuRow
+          icon={<FileText className="h-4 w-4" />}
+          label="Privacy Policy"
+          onClick={() => navigate("/legal/privacy")}
+        />
+
       </div>
 
       {expanded === "profile" && (

@@ -4,8 +4,9 @@
 import { useState } from "react";
 import {
   User, CreditCard, Clock, Star, GraduationCap, LogOut,
-  ChevronRight, BookOpen, Wallet, CalendarCheck, Sparkles, Settings, FileText,
+  ChevronRight, BookOpen, Wallet, CalendarCheck, Sparkles, Settings, FileText, Shield,
 } from "lucide-react";
+
 import { Session } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
@@ -250,11 +251,27 @@ export const LearnerProfileTab = ({
           onClick={() => onNavigate("/learner/choose-level")}
         />
         <MenuRow
+          icon={<Shield className="h-4 w-4" />}
+          label="Data & Compliance"
+          onClick={() => onNavigate("/settings/data-compliance")}
+        />
+        <MenuRow
+          icon={<FileText className="h-4 w-4" />}
+          label="Terms of Use"
+          onClick={() => onNavigate("/legal/terms")}
+        />
+        <MenuRow
+          icon={<FileText className="h-4 w-4" />}
+          label="Privacy Policy"
+          onClick={() => onNavigate("/legal/privacy")}
+        />
+        <MenuRow
           icon={<LogOut className="h-4 w-4" />}
           label="Sign Out"
           onClick={onSignOut}
           destructive
         />
+
       </div>
     </div>
   );
