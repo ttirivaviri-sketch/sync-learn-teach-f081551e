@@ -63,12 +63,33 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
 
   // ── Live captions / transcription ──
   const [captionsEnabled, setCaptionsEnabled] = useState(false);
+  const [consentReady, setConsentReady] = useState<boolean | null>(null);
   const lessonTranscript = useLiveLessonTranscript({
     bookingId: booking?.id,
     tutorId: booking?.tutor_id,
     learnerId: booking?.learner_id,
+    localRole: sessionType,
+    displayName: partnerName,
     enabled: captionsEnabled,
   });
+
+  // Check consent of both parties for this booking before enabling captions.
+  useEffect(() => {
+    if (!booking?.id) return;
+    (async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sb = supabase as any;
+      const { data } = await sb
+        .from("lesson_consents")
+        .select("user_id,recording_consent,transcription_consent")
+        .eq("booking_id", booking.id);
+      const tutorOk = !!data?.find((c: any) => c.user_id === booking.tutor_id && c.recording_consent && c.transcription_consent);
+      const learnerOk = !!data?.find((c: any) => c.user_id === booking.learner_id && c.recording_consent && c.transcription_consent);
+      setConsentReady(tutorOk && learnerOk);
+    })();
+  }, [booking?.id, booking?.tutor_id, booking?.learner_id]);
+
+
 
 
   // Timer
@@ -412,7 +433,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           {/* Live captions overlay (Gemini-powered) */}
           {hasJoinedSession && (
             <LiveCaptionsOverlay
-              caption={lessonTranscript.caption}
+              lines={lessonTranscript.lines}
               isRecording={lessonTranscript.isRecording}
             />
           )}
@@ -420,18 +441,23 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
           {/* Captions toggle pill */}
           {hasJoinedSession && (
             <button
-              onClick={toggleCaptions}
+              onClick={consentReady ? toggleCaptions : undefined}
+              disabled={!consentReady}
+              title={consentReady ? "" : "Both parties must consent to recording (Profile → Data & Compliance)"}
               className={`absolute top-20 right-4 z-30 pointer-events-auto flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium backdrop-blur border transition-colors ${
-                captionsEnabled
+                !consentReady
+                  ? "bg-black/30 border-white/5 text-white/40 cursor-not-allowed"
+                  : captionsEnabled
                   ? "bg-emerald-500/20 border-emerald-400/40 text-emerald-200"
                   : "bg-black/50 border-white/10 text-white/80 hover:bg-black/70"
               }`}
               aria-label="Toggle live captions"
             >
               <Captions className="h-3.5 w-3.5" />
-              {captionsEnabled ? "Captions on" : "Live captions"}
+              {!consentReady ? "Captions (consent required)" : captionsEnabled ? "Captions on" : "Live captions"}
             </button>
           )}
+
 
           {/* Spacer to push controls to bottom */}
           <div className="flex-1" />
