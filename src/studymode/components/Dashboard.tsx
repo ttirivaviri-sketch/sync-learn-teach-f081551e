@@ -17,6 +17,7 @@ const AIProgressInsights = lazy(() => import('./AIProgressInsights').then(m => (
 const AIWeakTopicAlerts = lazy(() => import('./AIWeakTopicAlerts').then(m => ({ default: m.AIWeakTopicAlerts })));
 const DailySummary = lazy(() => import('./DailySummary').then(m => ({ default: m.DailySummary })));
 const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => ({ default: m.AdaptivePlanBanner })));
+const LessonReinforcementBanner = lazy(() => import('./LessonReinforcementBanner').then(m => ({ default: m.LessonReinforcementBanner })));
 const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
@@ -247,6 +248,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           <DailySummary onClose={() => setShowSummary(false)} />
         </Suspense>
       )}
+
+      <Suspense fallback={null}>
+        <LessonReinforcementBanner />
+      </Suspense>
 
       <Leaderboard
         open={showGlobalLeaderboard}
