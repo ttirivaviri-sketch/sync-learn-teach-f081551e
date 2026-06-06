@@ -248,6 +248,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </Suspense>
       )}
 
+      <Suspense fallback={null}>
+        <LessonReinforcementBanner />
+      </Suspense>
+
       <Leaderboard
         open={showGlobalLeaderboard}
         onOpenChange={setShowGlobalLeaderboard}
