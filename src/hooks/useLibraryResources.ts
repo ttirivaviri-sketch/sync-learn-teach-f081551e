@@ -554,13 +554,14 @@ export function useLibraryResources(
 
         const mappedSystemResources: LibraryResource[] = ((systemData as any[]) || []).map((row) => {
           const isPastPaper = row.kind === "past_paper";
+          const isVideo = row.kind === "video";
           const gradeLevels = Array.isArray(row.grade_levels) ? row.grade_levels : [];
 
           return {
             id: row.id,
             title: row.title,
             author: row.curriculum,
-            type: isPastPaper ? "pastpaper" : "book",
+            type: isVideo ? "video" : isPastPaper ? "pastpaper" : "book",
             category: row.subject || "General",
             gradeLevel: gradeLevels.join(" • ") || "All Grades",
             summary: row.description || "",
@@ -568,10 +569,10 @@ export function useLibraryResources(
             reviews: row.view_count || 0,
             thumbnail: row.thumbnail_url || "/placeholder.svg",
             isOffline: false,
-            duration: row.pages ? `${row.pages} pages` : "PDF",
-            isTutorial: false,
+            duration: isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
+            isTutorial: isVideo,
             videoUrl: row.pdf_url,
-            pdfSource: "system",
+            pdfSource: isVideo ? undefined : "system",
             tags: {
               subject: row.subject || "General",
               topic: row.topic || "All Topics",
