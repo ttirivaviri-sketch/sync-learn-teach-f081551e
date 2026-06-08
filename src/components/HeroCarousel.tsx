@@ -155,7 +155,7 @@ const Slide1 = () => {
             alt="Students learning with StudySync"
             width={640}
             height={640}
-            fetchPriority="high"
+            {...({ fetchpriority: "high" } as any)}
             decoding="async"
             className="w-full rounded-3xl object-cover"
           />

@@ -226,7 +226,7 @@ export const AuthForm = ({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <Card className="bg-white/95 backdrop-blur-sm">
+    <Card className="bg-white/95 backdrop-blur-sm text-slate-900 [&_label]:text-slate-900 [&_input]:text-slate-900 [&_input]:bg-white [&_input::placeholder]:text-slate-400">
       <CardHeader>
         <CardTitle className="text-center">Welcome</CardTitle>
         <CardDescription className="text-center">{subtitle}</CardDescription>

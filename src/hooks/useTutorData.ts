@@ -80,6 +80,15 @@ export const useTutorData = (
     try {
       setLoading(true);
 
+      // Skip silently when unauthenticated — RLS will reject these reads and
+      // we'd surface a confusing toast on public/auth screens while the
+      // learner app briefly mounts before redirecting.
+      const { data: { session: preSession } } = await supabase.auth.getSession();
+      if (!preSession?.user) {
+        if (mountedRef.current) setTutors([]);
+        return;
+      }
+
       // Use directory RPC — never exposes email/phone of other tutors.
       const { data: profilesData, error: profilesError } = await supabase
         .rpc('get_tutor_directory')
