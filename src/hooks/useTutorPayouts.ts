@@ -1,15 +1,18 @@
 /**
- * useTutorPayouts — React hook for the Real-time Payout System
+ * useTutorPayouts — Tutor wallet & payout history.
  *
- * Provides:
- *   - processPayout(): trigger payout for a completed session
- *   - wallet: current wallet balance and stats
- *   - payouts: list of recent payouts
- *   - isProcessing: loading state
+ * Derives wallet balance and earnings from existing tables:
+ *   - `bookings` (status='completed') for gross earnings
+ *   - `payout_requests` for withdrawals (locks any pending/approved/paid amounts)
+ *
+ * Real-time updates: subscribes to bookings and payout_requests for the tutor.
+ *
+ * processPayout(sessionId) still invokes the `process-tutor-payout` edge
+ * function which performs the authoritative payout transaction server-side.
  */
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { logger } from "@/utils/logger";
+import { logger } from '@/utils/logger';
 import type {
   PayoutRequest,
   PayoutResponse,
@@ -37,52 +40,64 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch wallet and payouts
   const refreshPayouts = useCallback(async () => {
     if (!tutorId) return;
     setIsLoading(true);
 
     try {
-      // Fetch wallet — table may not exist yet (migration pending)
-      const { data: walletData, error: walletError } = await (supabase as any)
-        .from('tutor_wallets')
-        .select('*')
-        .eq('tutor_id', tutorId)
-        .maybeSingle();
+      const [bookingsRes, payoutsRes] = await Promise.all([
+        supabase
+          .from('bookings')
+          .select('id, price, status, scheduled_at')
+          .eq('tutor_id', tutorId)
+          .eq('status', 'completed'),
+        supabase
+          .from('payout_requests')
+          .select('id, amount, currency, status, created_at, processed_at')
+          .eq('tutor_id', tutorId)
+          .order('created_at', { ascending: false })
+          .limit(50),
+      ]);
 
-      if (walletError) {
-        // Silently ignore "relation does not exist" for unmigrated DBs
-        if (!walletError.message?.includes('does not exist')) {
-          logger.warn('Wallet fetch error:', walletError.message);
-        }
-      } else if (walletData) {
-        setWallet(walletData as unknown as TutorWallet);
-      }
+      if (bookingsRes.error) logger.warn('Bookings fetch error:', bookingsRes.error.message);
+      if (payoutsRes.error) logger.warn('Payouts fetch error:', payoutsRes.error.message);
 
-      // Fetch recent payouts — table may not exist yet
-      const { data: payoutData, error: payoutError } = await (supabase as any)
-        .from('tutor_payouts')
-        .select('*')
-        .eq('tutor_id', tutorId)
-        .order('processed_at', { ascending: false })
-        .limit(50);
+      const completed = bookingsRes.data || [];
+      const payoutRequests = payoutsRes.data || [];
 
-      if (payoutError) {
-        if (!payoutError.message?.includes('does not exist')) {
-          logger.warn('Payouts fetch error:', payoutError.message);
-        }
-      } else if (payoutData) {
-        setPayouts(payoutData as unknown as TutorPayout[]);
-      }
+      const totalEarned = completed.reduce((sum, b) => sum + Number(b.price || 0), 0);
+      const lockedOrPaid = payoutRequests
+        .filter(p => ['pending', 'approved', 'paid'].includes(p.status))
+        .reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
+      const balance = Math.max(0, totalEarned - lockedOrPaid);
+
+      setWallet({
+        tutor_id: tutorId,
+        balance,
+        total_earned: totalEarned,
+        currency: payoutRequests[0]?.currency || 'ZAR',
+        updated_at: new Date().toISOString(),
+      } as unknown as TutorWallet);
+
+      setPayouts(
+        payoutRequests.map(p => ({
+          id: p.id,
+          tutor_id: tutorId,
+          amount: Number(p.amount),
+          currency: p.currency,
+          status: p.status,
+          processed_at: p.processed_at,
+          created_at: p.created_at,
+        })) as unknown as TutorPayout[],
+      );
     } catch (err) {
-      // Non-critical: payout tables may not be deployed yet
-      logger.warn('Error fetching payout data (tables may not exist yet):', err);
+      logger.warn('Error deriving tutor payout data:', err);
     } finally {
       setIsLoading(false);
     }
   }, [tutorId]);
 
-  // Process a payout for a completed session
   const processPayout = useCallback(
     async (sessionId: string): Promise<PayoutResponse | null> => {
       if (!tutorId) {
@@ -94,34 +109,21 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
       setError(null);
 
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-
-        if (!session?.access_token) {
-          throw new Error('Not authenticated');
-        }
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.access_token) throw new Error('Not authenticated');
 
         const response = await supabase.functions.invoke('process-tutor-payout', {
-          body: {
-            session_id: sessionId,
-            tutor_id: tutorId,
-          } as PayoutRequest,
+          body: { session_id: sessionId, tutor_id: tutorId } as PayoutRequest,
         });
 
-        if (response.error) {
-          throw new Error(response.error.message || 'Payout processing failed');
-        }
+        if (response.error) throw new Error(response.error.message || 'Payout processing failed');
 
         const result = response.data as PayoutResponse;
-
         if (result.status === 'rejected') {
           setError(result.reason || 'Payout rejected');
         } else {
-          // Refresh data after successful payout
           await refreshPayouts();
         }
-
         return result;
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error';
@@ -132,17 +134,14 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
         setIsProcessing(false);
       }
     },
-    [tutorId, refreshPayouts]
+    [tutorId, refreshPayouts],
   );
 
-  // Load initial data
   useEffect(() => {
-    if (tutorId) {
-      refreshPayouts();
-    }
+    if (tutorId) refreshPayouts();
   }, [tutorId, refreshPayouts]);
 
-  // Real-time subscription for wallet changes
+  // Real-time: refresh when a completed booking or payout_request changes.
   useEffect(() => {
     if (!tutorId) return;
 
@@ -150,27 +149,13 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
       .channel(`tutor-wallet-${tutorId}`)
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'tutor_wallets',
-          filter: `tutor_id=eq.${tutorId}`,
-        },
-        () => {
-          refreshPayouts();
-        }
+        { event: '*', schema: 'public', table: 'bookings', filter: `tutor_id=eq.${tutorId}` },
+        () => refreshPayouts(),
       )
       .on(
         'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'tutor_payouts',
-          filter: `tutor_id=eq.${tutorId}`,
-        },
-        () => {
-          refreshPayouts();
-        }
+        { event: '*', schema: 'public', table: 'payout_requests', filter: `tutor_id=eq.${tutorId}` },
+        () => refreshPayouts(),
       )
       .subscribe();
 
@@ -179,22 +164,14 @@ export function useTutorPayouts(tutorId?: string): UseTutorPayoutsReturn {
     };
   }, [tutorId, refreshPayouts]);
 
-  // Derived values
-  const totalEarned = useMemo(
-    () => wallet?.total_earned ?? 0,
-    [wallet]
-  );
-
-  const pendingBalance = useMemo(
-    () => wallet?.balance ?? 0,
-    [wallet]
-  );
+  const totalEarned = useMemo(() => wallet?.total_earned ?? 0, [wallet]);
+  const pendingBalance = useMemo(() => wallet?.balance ?? 0, [wallet]);
 
   const commissionTier = useMemo(() => {
-    const completedCount = payouts.length;
-    if (completedCount >= 100) return 'enterprise';
-    if (completedCount >= 50) return 'premium';
-    if (completedCount >= 10) return 'verified';
+    const paidCount = payouts.filter(p => (p as any).status === 'paid').length;
+    if (paidCount >= 100) return 'enterprise';
+    if (paidCount >= 50) return 'premium';
+    if (paidCount >= 10) return 'verified';
     return 'standard';
   }, [payouts]);
 
