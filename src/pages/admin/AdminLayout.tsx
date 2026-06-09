@@ -54,29 +54,26 @@ const AdminLayout = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen w-full bg-background text-foreground">
-        <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
-          <div className="mx-auto max-w-screen-2xl px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger aria-label="Toggle admin sidebar" />
-              <Link to="/admin">
-                <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
-              </Link>
+      <div className="min-h-screen flex w-full bg-background text-foreground">
+        <AppSidebar />
+        <SidebarInset className="flex flex-col min-w-0">
+          <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
+            <div className="px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <SidebarTrigger aria-label="Toggle admin sidebar" />
+                <Link to="/admin">
+                  <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
+                </Link>
+              </div>
+              <nav className="text-sm">
+                <Link to="/" className="hover:underline">Back to site</Link>
+              </nav>
             </div>
-            <nav className="text-sm">
-              <Link to="/" className="hover:underline">Back to site</Link>
-            </nav>
-          </div>
-        </header>
-
-        <div className="flex w-full min-h-[calc(100vh-56px)]">
-          <aside aria-label="Admin navigation">
-            <AppSidebar />
-          </aside>
-          <main className="flex-1 p-6">
+          </header>
+          <main className="flex-1 p-6 min-w-0">
             <Outlet />
           </main>
-        </div>
+        </SidebarInset>
       </div>
     </SidebarProvider>
   );
