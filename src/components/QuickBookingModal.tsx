@@ -234,35 +234,37 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
 
               <div>
                 <Label htmlFor="date">Date</Label>
-                <Select value={selectedDate} onValueChange={(v) => { setSelectedDate(v); setSelectedTime(''); }}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select date" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(datesWithAvailability.length > 0 ? datesWithAvailability : availableDates).map(date => (
-                      <SelectItem key={date.value} value={date.value}>
-                        {date.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  id="date"
+                  value={selectedDate}
+                  onChange={(e) => { setSelectedDate(e.target.value); setSelectedTime(''); }}
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                >
+                  <option value="">Select date</option>
+                  {(datesWithAvailability.length > 0 ? datesWithAvailability : availableDates).map(date => (
+                    <option key={date.value} value={date.value}>
+                      {date.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
                 <Label htmlFor="time">Time</Label>
-                <Select value={selectedTime} onValueChange={setSelectedTime}>
-                  <SelectTrigger>
-                    <SelectValue placeholder={selectedDate ? "Select time" : "Select a date first"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {timeSlots.map(time => (
-                      <SelectItem key={time} value={time}>
-                        {time}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select
+                  id="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  disabled={!selectedDate}
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:opacity-50"
+                >
+                  <option value="">{selectedDate ? "Select time" : "Select a date first"}</option>
+                  {timeSlots.map(time => (
+                    <option key={time} value={time}>{time}</option>
+                  ))}
+                </select>
               </div>
+
 
               <div>
                 <Label htmlFor="duration">Duration</Label>
