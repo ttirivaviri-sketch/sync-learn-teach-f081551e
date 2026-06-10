@@ -1,101 +1,69 @@
-## Scope
+## Goal
 
-Five related changes that build on the lesson-transcription pipeline shipped in the previous loop. All work stays inside StudyMode + the lesson features, plus a small legal/consent surface.
+Restyle Learner, Tutor, and Admin apps to match the uploaded reference (saturated blue hero headers, bright white cards, larger headings, roomier spacing, pill bottom nav) while **keeping all existing functionality, tabs, routes, hooks, and the glassmorphism look inside cards**.
 
----
+No tabs are added or removed. No business logic, RLS, or data hooks are touched.
 
-## Part 1 — Speaker diarization (tutor vs student)
+## What changes
 
-**Edge: `transcribe-lesson-chunk`**
-- Accept `speaker_hint` (`tutor` | `learner`) plus the user's `display_name` and pass them in the Gemini prompt so each chunk transcript is tagged with `[Tutor]` / `[Learner]` line prefixes.
-- Return `{ text, segments: [{speaker, text}] }` instead of plain text.
+### 1. Design tokens (the source of truth)
 
-**Edge: `process-lesson-recording`**
-- Strengthen the diarization system prompt: enforce exactly two labels (`Tutor`, `Learner`), require every segment to carry a `speaker`, and reject unknown speakers (fallback to `unknown`).
-- Continue writing `segments` jsonb to `lesson_transcripts` but with the stricter schema.
+- `src/index.css` — repoint semantic HSL tokens:
+  - `--primary` → brighter reference blue (~`hsl(228 89% 60%)`),` --primary-foreground` white
+  - `--primary-glow` / `--gradient-primary` → solid + subtle gradient variants used by hero headers
+  - `--background` stays light; `--card` stays white with existing glass `backdrop-blur` utilities preserved
+  - Add `--header-gradient` (deep→bright blue) for hero header bands
+- `tailwind.config.ts` — bump the typography/spacing scale globally:
+  - `fontSize`: nudge `sm/base/lg/xl/2xl/3xl` up ~1 step (e.g. base 15→16px, 2xl 24→28px, 3xl 30→34px)
+  - `spacing`: keep Tailwind defaults but add `safe-bottom` already present; widen container padding tokens used by tab shells
+  - `borderRadius`: increase `--radius` from current to `1rem` so cards/buttons feel rounder like the reference
 
-**Client: `useLiveLessonTranscript.ts` + `LiveCaptionsOverlay.tsx`**
-- Hook now tracks per-speaker captions. Caller passes `localRole` (tutor/learner) and a display name; that's the `speaker_hint`.
-- Overlay shows the last 2 lines with a coloured speaker chip (Tutor = primary, Learner = accent).
+### 2. Shared chrome
 
-**UI: transcript viewer**
-- New `LessonTranscriptDialog.tsx` opened from `LessonNotesCard`; renders `segments` with speaker chips and timestamps, using `MathMarkdown` so KaTeX rules still apply.
+- **Hero headers** in `LearnerHomeTab`, `LearnerLibraryTab`, `TutorHomeTab`, tutor profile detail: swap mesh-gradient header band for solid `--header-gradient` with white text, larger greeting (`text-3xl`), search bar pinned at bottom of band — exactly like the reference.
+- **Bottom nav** (`src/components/learner/LearnerBottomNav.tsx` + tutor equivalent): keep 4 tabs and current icons/labels; restyle pill container to pure white with subtle shadow and active tab in primary blue (icon + label).
+- **Cards** (`src/components/ui/card.tsx` consumers): keep glass surface inside content cards (tutor cards, continue-learning, daily tasks) — only the outer page header changes to solid blue.
 
----
+### 3. Per-app touch-ups
 
-## Part 2 — Consent, retention, deletion, export
+- **Learner**: Home greeting + search hero, Library header band, Tutor detail page hero (avatar + name + rate badge) sized to match reference proportions.
+- **Tutor**: same header treatment on `TutorHomeTab` and `TutorProfileTab`; tabs and earnings/wallet UI untouched functionally.
+- **Admin**: apply the new primary/radius tokens so sidebar + buttons inherit the brighter blue; layout structure (post-`SidebarInset` fix) unchanged.
 
-**Migration**
-- New `lesson_consents` table: `user_id`, `booking_id`, `recording_consent bool`, `transcription_consent bool`, `notes_consent bool`, `consented_at`, `revoked_at`. RLS: user manages their own row; tutor + learner of the booking can read each other's row to know whether to start recording.
-- New `lesson_retention_settings` table (one row per user): `auto_delete_after_days` (default 90), `keep_notes_only bool` (default true — purges audio + transcript but keeps AI notes for StudyMode reinforcement).
-- New `pg_cron`-style purge: scheduled edge function `purge-expired-lesson-data` (manual trigger acceptable too) that deletes audio from storage and rows from `lesson_recordings` / `lesson_transcripts` past the retention window.
+### 4. Memory
 
-**Client gating**
-- `VideoMeeting.tsx` shows a consent modal before the Live captions toggle does anything. Both parties must have a row with `recording_consent = true` for that booking, otherwise the toggle is disabled with a tooltip.
-- Hook checks consent before `start()`.
+- Update `mem://style/visual-theme` to note: solid blue hero headers, larger global type scale, glass retained inside cards.
+- Update `mem://style/navigation-structure` only if pill styling tokens change (tabs/labels unchanged).
 
-**UI: Data & Compliance screen**
-- New `src/pages/settings/DataCompliance.tsx` linked from learner + tutor Profile tabs.
-- Shows: consent toggles (recording / transcription / AI notes), retention slider (7 / 30 / 90 / 365 days), "Delete all my lesson data" button, "Export my lesson data" button (downloads a JSON bundle of transcripts + notes + topic mappings via new edge `export-lesson-data`), and a per-lesson list with individual delete.
+## What does NOT change
 
----
+- Routes, tabs, tab order, tab icons/labels.
+- Any hook, query, RLS, edge function, or business logic.
+- Tutor verification flow, booking flow, payments, Study Mode logic.
+- Logo asset (still the locked transparent PNG, 175px header / 325px auth).
 
-## Part 3 — Smarter `lesson_topic_mapping` + weak-concept feedback
+## Risk & verification
 
-**Edge: `process-lesson-recording`** (extend Step 3)
-- After producing topic mappings, run a second Gemini call to *review* the mapping against the transcript: for each concept produce `evidence_quotes`, `confidence` (0–1), and `recommendation` (`reinforce` | `review` | `skip`).
-- Persist new columns on `lesson_topic_mapping`: `confidence numeric`, `evidence jsonb`, `recommendation text`.
-- Weak-concept upsert thresholds:
-  - `confidence >= 0.75 && coverage_score < 0.6` → upsert `weak_concepts` with `severity = 'high'`.
-  - `0.5 <= confidence < 0.75` → upsert with `severity = 'medium'`.
-  - `confidence < 0.5` → ignore (don't pollute StudyMode).
-- `concept_attempts` only written for `confidence >= 0.6`.
+- Token-level changes ripple through shadcn components automatically — no per-component color overrides needed (the codebase already uses semantic tokens).
+- After changes I'll walk Home → Library → Tutors → Profile on learner, plus Tutor home + Admin dashboard, and check contrast/spacing at the current mobile viewport (552px) and at desktop.
+- Rollback is a single revert of `index.css` + `tailwind.config.ts` + the few header components.
 
-**Migration**
-- `ALTER TABLE lesson_topic_mapping ADD COLUMN confidence numeric, ADD COLUMN evidence jsonb, ADD COLUMN recommendation text;`
+## Files I expect to touch
 
----
+```
+src/index.css                              (tokens)
+tailwind.config.ts                         (type scale, radius)
+src/components/learner/LearnerBottomNav.tsx
+src/components/tutor/TutorBottomNav.tsx    (if present)
+src/pages/learner/LearnerHomeTab.tsx       (hero band)
+src/pages/learner/LearnerLibraryTab.tsx    (hero band)
+src/pages/learner/LearnerProfileTab.tsx    (header sizing)
+src/pages/tutor/TutorHomeTab.tsx           (hero band)
+src/pages/tutor/TutorProfileTab.tsx        (header sizing)
+src/components/TutorProfileDetail*.tsx     (profile hero — exact file confirmed at build time)
+mem://style/visual-theme                    (memory update)
+```
 
-## Part 4 — Lesson reinforcement set (quiz + flashcards) + mastery tracking
+Also update darkmode
 
-**Edge: new `generate-lesson-reinforcement`**
-- Input: `recording_id`. Reads notes + topic mapping.
-- Calls existing `generate-quiz` (5 questions biased to high-confidence concepts) and `generate-flashcards` (6 cards covering vocabulary + key points) internally — no signature changes.
-- Stores result in new `lesson_reinforcement_sets` table: `booking_id`, `learner_id`, `quiz jsonb`, `flashcards jsonb`, `concepts text[]`, `mastery_baseline jsonb` (snapshot of each concept's current mastery from `concept_mastery_v`).
-
-**Migration**
-- `lesson_reinforcement_sets` with full GRANTs + RLS (learner-only read/write of their own row).
-
-**Client**
-- `LessonNotesCard` gets a "Reinforce this lesson" CTA → opens new `LessonReinforcementRunner.tsx` (mini version of existing `StructuredDailyTaskRunner` — quiz first, then flashcards).
-- On completion, write `concept_attempts` rows (`source = 'lesson_reinforcement'`) and compute a delta vs `mastery_baseline`; show a "Mastery progression" panel: per-concept before → after bars, plus overall % gained.
-- StudyMode Dashboard banner ("Reinforce your last lesson") already exists from prior loop — wire it to open the new runner instead of the generic daily task runner.
-
----
-
-## Part 5 — Data & Compliance + Terms + Privacy across all apps
-
-Three legal pages already exist (`src/pages/legal/Terms.tsx`, `Privacy.tsx`, plus `Community`, `Cookies`, `Refunds`, `LibraryDisclaimer`, `Copyright`). Work needed:
-
-1. **New `src/pages/legal/DataCompliance.tsx`** (legal copy, distinct from the user-settings screen in Part 2) — covers POPIA/GDPR scope for recordings, transcripts, AI notes, retention defaults, export/deletion rights.
-2. **Update `Privacy.tsx`** — add a section on lesson recording, transcription, AI notes, retention windows, opt-out, processor (Gemini via Lovable AI Gateway).
-3. **Update `Terms.tsx`** — add a recording/AI-notes clause referencing the new consent + retention controls.
-4. **Add footer links** in Learner, Tutor, and Admin apps:
-   - Learner: `LearnerProfileTab.tsx` legal section row → Data & Compliance, Terms, Privacy.
-   - Tutor: `TutorProfileTab.tsx` same row.
-   - Admin: `AdminLayout.tsx` footer.
-   - Landing: already wired; add Data & Compliance link.
-5. **Update `mem://index.md` Core** with: "Lesson recordings require explicit consent from both parties; retention defaults 90 days; notes can outlive audio."
-
----
-
-## Technical summary
-
-- **New tables**: `lesson_consents`, `lesson_retention_settings`, `lesson_reinforcement_sets`. ALTER on `lesson_topic_mapping`.
-- **New edge functions**: `export-lesson-data`, `purge-expired-lesson-data`, `generate-lesson-reinforcement`.
-- **Updated edge functions**: `transcribe-lesson-chunk`, `process-lesson-recording`.
-- **New components/pages**: `LessonTranscriptDialog`, `LessonReinforcementRunner`, `settings/DataCompliance`, `legal/DataCompliance`.
-- **Updated**: `VideoMeeting`, `useLiveLessonTranscript`, `LiveCaptionsOverlay`, `LessonNotesCard`, `LearnerProfileTab`, `TutorProfileTab`, `AdminLayout`, `Privacy`, `Terms`, route registration in `App.tsx`, StudyMode `Dashboard` banner wiring.
-- **Memory**: new core rule on consent + retention.
-
-This is a 3-migration, ~14-file change. Ready to implement on approval.
+Ready to switch to build mode and implement.
