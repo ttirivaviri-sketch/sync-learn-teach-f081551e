@@ -22,12 +22,12 @@
     --popover:          0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    /* ── Brand: Electric Indigo / Blue ── */
-    --primary:          230 90% 60%;
+    /* ── Brand: Electric Indigo / Blue (reference-matched) ── */
+    --primary:          228 89% 60%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow:     230 90% 72%;
-    --primary-light:    230 90% 96%;
-    --primary-dark:     230 90% 45%;
+    --primary-glow:     228 89% 72%;
+    --primary-light:    228 89% 96%;
+    --primary-dark:     228 89% 42%;
 
     /* ── Accent: Teal-Green (tutors) ── */
     --secondary:        168 76% 36%;
@@ -38,8 +38,8 @@
     --muted:            220 14% 96%;
     --muted-foreground: 220 9% 46%;
 
-    --accent:           230 90% 96%;
-    --accent-foreground: 230 90% 55%;
+    --accent:           228 89% 96%;
+    --accent-foreground: 228 89% 55%;
 
     /* ── State ── */
     --destructive:      0 84% 60%;
@@ -47,30 +47,31 @@
 
     --border:           220 13% 91%;
     --input:            220 13% 91%;
-    --ring:             230 90% 60%;
+    --ring:             228 89% 60%;
 
     /* ── Gradient helpers ── */
-    --gradient-hero:     linear-gradient(135deg, hsl(230 90% 58%), hsl(260 90% 65%));
-    --gradient-hero-dark: linear-gradient(135deg, hsl(230 90% 40%), hsl(260 90% 50%));
+    --gradient-hero:     linear-gradient(135deg, hsl(228 89% 58%), hsl(248 88% 64%));
+    --gradient-hero-dark: linear-gradient(135deg, hsl(228 89% 40%), hsl(248 88% 50%));
+    --gradient-header:   linear-gradient(160deg, hsl(228 89% 52%) 0%, hsl(232 92% 58%) 60%, hsl(238 92% 64%) 100%);
     --gradient-tutor:    linear-gradient(135deg, hsl(168 76% 36%), hsl(190 76% 44%));
-    --gradient-card:     linear-gradient(180deg, hsl(0 0% 100%), hsl(230 90% 99%));
-    --gradient-mesh:     radial-gradient(ellipse at 20% 50%, hsl(230 90% 68% / 0.18) 0%, transparent 60%),
-                         radial-gradient(ellipse at 80% 20%, hsl(260 90% 68% / 0.15) 0%, transparent 55%),
+    --gradient-card:     linear-gradient(180deg, hsl(0 0% 100%), hsl(228 89% 99%));
+    --gradient-mesh:     radial-gradient(ellipse at 20% 50%, hsl(228 89% 68% / 0.18) 0%, transparent 60%),
+                         radial-gradient(ellipse at 80% 20%, hsl(248 88% 68% / 0.15) 0%, transparent 55%),
                          radial-gradient(ellipse at 60% 80%, hsl(200 90% 68% / 0.12) 0%, transparent 50%);
 
     /* ── Shadows ── */
-    --shadow-xs:      0 1px 2px 0 hsl(230 90% 30% / 0.05);
-    --shadow-sm:      0 1px 3px 0 hsl(230 90% 30% / 0.07), 0 1px 2px -1px hsl(230 90% 30% / 0.06);
-    --shadow-md:      0 4px 6px -1px hsl(230 90% 30% / 0.08), 0 2px 4px -2px hsl(230 90% 30% / 0.06);
-    --shadow-lg:      0 10px 15px -3px hsl(230 90% 30% / 0.09), 0 4px 6px -4px hsl(230 90% 30% / 0.06);
-    --shadow-xl:      0 20px 25px -5px hsl(230 90% 30% / 0.10), 0 8px 10px -6px hsl(230 90% 30% / 0.06);
-    --shadow-elegant: 0 8px 32px -8px hsl(230 90% 55% / 0.28);
-    --shadow-card:    0 2px 12px -2px hsl(230 90% 55% / 0.12);
-    --shadow-glow:    0 0 40px hsl(230 90% 60% / 0.35);
-    --shadow-glow-sm: 0 0 16px hsl(230 90% 60% / 0.25);
+    --shadow-xs:      0 1px 2px 0 hsl(228 89% 30% / 0.05);
+    --shadow-sm:      0 1px 3px 0 hsl(228 89% 30% / 0.07), 0 1px 2px -1px hsl(228 89% 30% / 0.06);
+    --shadow-md:      0 4px 6px -1px hsl(228 89% 30% / 0.08), 0 2px 4px -2px hsl(228 89% 30% / 0.06);
+    --shadow-lg:      0 10px 15px -3px hsl(228 89% 30% / 0.09), 0 4px 6px -4px hsl(228 89% 30% / 0.06);
+    --shadow-xl:      0 20px 25px -5px hsl(228 89% 30% / 0.10), 0 8px 10px -6px hsl(228 89% 30% / 0.06);
+    --shadow-elegant: 0 8px 32px -8px hsl(228 89% 55% / 0.30);
+    --shadow-card:    0 2px 12px -2px hsl(228 89% 55% / 0.12);
+    --shadow-glow:    0 0 40px hsl(228 89% 60% / 0.35);
+    --shadow-glow-sm: 0 0 16px hsl(228 89% 60% / 0.25);
 
-    /* ── Shape ── */
-    --radius: 0.875rem;
+    /* ── Shape (roomier, reference-matched) ── */
+    --radius: 1rem;
 
     /* ── Transitions ── */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
