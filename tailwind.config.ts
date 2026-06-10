@@ -104,13 +104,26 @@ export default {
 			backgroundImage: {
 				'gradient-hero':      'var(--gradient-hero)',
 				'gradient-hero-dark': 'var(--gradient-hero-dark)',
+				'gradient-header':    'var(--gradient-header)',
 				'gradient-tutor':     'var(--gradient-tutor)',
 				'gradient-card':      'var(--gradient-card)',
 				'gradient-mesh':      'var(--gradient-mesh)',
 				// STUDYMODE gradient utilities
-				'gradient-primary':   'linear-gradient(135deg, hsl(217.2 91.2% 59.8%), hsl(262.1 83.3% 57.8%))',
+				'gradient-primary':   'linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))',
 				'gradient-accent':    'linear-gradient(135deg, hsl(24.6 95% 53.1%), hsl(38 95% 60%))',
-				'gradient-secondary': 'linear-gradient(135deg, hsl(262.1 83.3% 57.8%), hsl(280 80% 60%))',
+				'gradient-secondary': 'linear-gradient(135deg, hsl(248 88% 64%), hsl(262 83% 60%))',
+			},
+			fontSize: {
+				xs:   ['0.78rem',  { lineHeight: '1.1rem' }],
+				sm:   ['0.9rem',   { lineHeight: '1.3rem' }],
+				base: ['1rem',     { lineHeight: '1.55rem' }],
+				lg:   ['1.15rem',  { lineHeight: '1.7rem' }],
+				xl:   ['1.3rem',   { lineHeight: '1.85rem' }],
+				'2xl':['1.6rem',   { lineHeight: '2.05rem' }],
+				'3xl':['2rem',     { lineHeight: '2.4rem' }],
+				'4xl':['2.5rem',   { lineHeight: '2.85rem' }],
+				'5xl':['3.15rem',  { lineHeight: '1.05' }],
+				'6xl':['3.85rem',  { lineHeight: '1.05' }],
 			},
 			keyframes: {
 				'accordion-down': {
