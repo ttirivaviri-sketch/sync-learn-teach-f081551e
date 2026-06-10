@@ -13,6 +13,7 @@
 import { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { CompactThemeToggle } from "@/components/ThemeToggle";
+import { haptic } from "@/lib/haptics";
 
 export interface NavItem {
   id: string;
@@ -75,7 +76,7 @@ export function AppShell({
           {navItems.map(({ id, label, icon, badge }) => (
             <button
               key={id}
-              onClick={() => onTabChange(id)}
+              onClick={() => { haptic("selection"); onTabChange(id); }}
               className={cn(
                 "relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 text-left w-full",
                 activeTab === id
@@ -158,7 +159,7 @@ export function AppShell({
               <button
                 key={id}
                 className={cn("nav-pill relative", activeTab === id && "nav-pill-active")}
-                onClick={() => onTabChange(id)}
+                onClick={() => { haptic("selection"); onTabChange(id); }}
               >
                 {icon}
                 <span className="text-[11px]">{label}</span>
