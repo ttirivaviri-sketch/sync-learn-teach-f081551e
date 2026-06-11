@@ -13,6 +13,7 @@ import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
 import { SyllabusSetupGate } from "@/components/SyllabusSetupGate";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { HapticsToggle } from "@/components/HapticsToggle";
 import { ProgressReportButton } from "@/components/ProgressReportButton";
 import { SubscriptionFlow } from "@/components/subscription/SubscriptionFlow";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
@@ -208,6 +209,7 @@ export const LearnerProfileTab = ({
       )}
 
       {/* ── Menu Rows ── */}
+      <HapticsToggle />
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
         <ThemeToggle />
         <MenuRow
