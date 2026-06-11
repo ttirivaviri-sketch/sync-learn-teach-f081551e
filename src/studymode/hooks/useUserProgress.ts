@@ -3,6 +3,10 @@ import { supabase } from '../../integrations/supabase/client';
 import { useEffect, useState } from 'react';
 import { Badge } from '../types/study';
 import { logger } from "@/utils/logger";
+import { studySyncHaptic } from "@/lib/haptics";
+
+// Level boundary: every 100 XP = 1 level. Adjust if app uses different curve.
+const levelFor = (xp: number) => Math.floor(xp / 100);
 
 interface UserProgressData {
   id: string;
@@ -147,6 +151,7 @@ export function useUserProgress() {
       try {
         const current = progress?.xp ?? 0;
         const newXp = current + xpAmount;
+        const leveledUp = levelFor(newXp) > levelFor(current);
 
         if (progress?.id) {
           await supabase
@@ -158,6 +163,7 @@ export function useUserProgress() {
             .from('user_progress')
             .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] });
         }
+        if (leveledUp) studySyncHaptic('xp.levelup');
         return newXp;
       } catch (err) {
         logger.warn('[addXp] Failed:', err);
