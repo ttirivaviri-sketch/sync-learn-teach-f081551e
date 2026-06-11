@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { aiRequestJSON } from '../lib/aiClient';
 import { logger } from "@/utils/logger";
+import { studySyncHaptic } from "@/lib/haptics";
 
 const MILESTONES = [7, 14, 30];
 const STORAGE_KEY = 'celebrated-streaks';
@@ -51,6 +52,8 @@ export function StreakCelebration() {
       if (streak >= m && !celebrated.includes(m)) {
         setActiveMilestone(m);
         setVisible(true);
+        // Premium tactile reward — stronger for bigger milestones.
+        studySyncHaptic(m >= 30 ? 'streak.day30' : m >= 7 ? 'streak.day7' : 'streak.day2');
         break;
       }
     }

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { security } from '@/utils/security';
 import { logger } from "@/utils/logger";
+import { studySyncHaptic } from "@/lib/haptics";
 
 export interface BookingRequest {
   id: string;
@@ -208,6 +209,7 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
           setSyncStatus('synced');
 
           if (userType === 'tutor' && payload.new.status === 'requested') {
+            studySyncHaptic('tutor.booking');
             toast({
               title: 'New Booking Request!',
               description: `${newBooking.learner_profile?.full_name} wants to book a session`,
@@ -239,6 +241,13 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
               completed: 'Session completed',
               canceled: 'Session cancelled',
             };
+
+            // Payment / completion success haptic on the tutor side.
+            if (userType === 'tutor' && payload.new.status === 'completed') {
+              studySyncHaptic('tutor.payment');
+            } else if (userType === 'learner' && payload.new.status === 'confirmed') {
+              studySyncHaptic('task.complete');
+            }
 
             const message = statusMessages[payload.new.status as keyof typeof statusMessages];
             if (message) {
