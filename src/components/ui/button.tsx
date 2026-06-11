@@ -51,7 +51,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     const Comp = asChild ? Slot : "button"
     const handleClick = React.useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (hapticStyle && hapticStyle !== false) haptic(hapticStyle)
+        if (hapticStyle) haptic(hapticStyle)
         onClick?.(e)
       },
       [onClick, hapticStyle]
