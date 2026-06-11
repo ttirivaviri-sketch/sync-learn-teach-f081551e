@@ -291,6 +291,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
         const graded = flashGraded[flashIdx];
         const gradeCard = (knew: boolean) => {
           setFlashGraded((p) => ({ ...p, [flashIdx]: knew ? 'correct' : 'wrong' }));
+          studySyncHaptic(knew ? 'quiz.correct' : 'quiz.wrong');
           const xp = knew ? (isReplay ? 1 : 2) : 0;
           if (xp > 0) {
             addXp.mutate(xp);
@@ -468,7 +469,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
             </Button>
           ) : (
             <Button
-              onClick={onComplete}
+              onClick={() => { studySyncHaptic('signature.success'); onComplete(); }}
               className="w-full bg-success hover:bg-success/90 text-success-foreground"
             >
               <CheckCircle2 className="mr-2 h-4 w-4" />
