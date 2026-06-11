@@ -100,6 +100,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
     const correct = ans.length > 0 && (ans === expected || expected.includes(ans) || ans.includes(expected.slice(0, Math.max(8, Math.floor(expected.length * 0.6)))));
     setPracticeRevealed((p) => ({ ...p, [practiceIdx]: true }));
     setPracticeCorrect((p) => ({ ...p, [practiceIdx]: correct }));
+    studySyncHaptic(correct ? 'quiz.correct' : 'quiz.wrong');
     if (correct) {
       const xp = xpMap[currentQ.difficulty] ?? (isReplay ? 3 : 5);
       addXp.mutate(xp);
@@ -152,6 +153,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
 
   const submitExam = () => {
     setExamRevealed(true);
+    studySyncHaptic('task.complete');
     addXp.mutate(examXp);
     awardXP.mutate({ subject: subject.name, curriculum, amount: examXp });
     if (!isReplay) updateStreak.mutate();
