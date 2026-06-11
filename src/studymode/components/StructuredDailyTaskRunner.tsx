@@ -11,6 +11,7 @@ import { useSubjectXP } from '../hooks/useSubjectXP';
 import { useDailyTaskAttempts } from '../hooks/useDailyTaskAttempts';
 import { DailyTask, Subject } from '../types/study';
 import { cn } from '@/lib/utils';
+import { studySyncHaptic } from '@/lib/haptics';
 
 interface Props {
   task: DailyTask;
