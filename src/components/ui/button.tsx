@@ -38,16 +38,20 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
-  /** Haptic feedback on click. Pass false to disable. Defaults to "light". */
+  /**
+   * Optional haptic feedback on click. OFF by default to prevent
+   * "every tap vibrates" anti-pattern — opt in per call site for
+   * meaningful actions only.
+   */
   haptic?: HapticStyle | false
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, haptic: hapticStyle = "light", onClick, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, haptic: hapticStyle, onClick, ...props }, ref) => {
     const Comp = asChild ? Slot : "button"
     const handleClick = React.useCallback(
       (e: React.MouseEvent<HTMLButtonElement>) => {
-        if (hapticStyle !== false) haptic(hapticStyle)
+        if (hapticStyle && hapticStyle !== false) haptic(hapticStyle)
         onClick?.(e)
       },
       [onClick, hapticStyle]
