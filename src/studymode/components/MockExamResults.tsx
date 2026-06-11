@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { studySyncHaptic } from "@/lib/haptics";
 import { MathMarkdown } from "./MathMarkdown";
 import type { MockPaper, GradedQuestion } from "../hooks/useMockExam";
 
@@ -50,6 +51,10 @@ export function MockExamResults({ paper, result, onClose }: Props) {
       }
       setAnimatedPercent(cur);
     }, 30);
+    // Celebrate on reveal: perfect score gets the full pulse,
+    // pass-band gets the standard success haptic.
+    if (target >= 100) studySyncHaptic('quiz.perfect');
+    else if (target >= 50) studySyncHaptic('task.complete');
     return () => clearInterval(t);
   }, [result.percent]);
 
