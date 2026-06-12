@@ -3761,6 +3761,24 @@ export type Database = {
           },
         ]
       }
+      user_preferences: {
+        Row: {
+          haptics_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          haptics_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          haptics_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_progress: {
         Row: {
           badges: Json | null

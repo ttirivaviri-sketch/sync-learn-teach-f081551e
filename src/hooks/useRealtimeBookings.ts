@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { security } from '@/utils/security';
 import { logger } from "@/utils/logger";
-import { studySyncHaptic } from "@/lib/haptics";
+import { studySyncHaptic, studySyncHapticOnce } from "@/lib/haptics";
 
 export interface BookingRequest {
   id: string;
@@ -245,8 +245,12 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
             // Payment / completion success haptic on the tutor side.
             if (userType === 'tutor' && payload.new.status === 'completed') {
               studySyncHaptic('tutor.payment');
+              studySyncHapticOnce('premium.milestone', `tutor-first-payment:${userId}`);
             } else if (userType === 'learner' && payload.new.status === 'confirmed') {
               studySyncHaptic('task.complete');
+              studySyncHapticOnce('premium.milestone', `learner-first-booking:${userId}`);
+            } else if (userType === 'tutor' && payload.new.status === 'confirmed') {
+              studySyncHapticOnce('premium.milestone', `tutor-first-booking:${userId}`);
             }
 
             const message = statusMessages[payload.new.status as keyof typeof statusMessages];

@@ -1,22 +1,22 @@
-import { useEffect, useState } from "react";
 import { Vibrate } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { getHapticsEnabled, setHapticsEnabled, studySyncHaptic } from "@/lib/haptics";
+import { studySyncHaptic } from "@/lib/haptics";
+import { useHapticsSync } from "@/hooks/useHapticsSync";
+
+interface HapticsToggleProps {
+  userId?: string;
+}
 
 /**
  * Inline toggle row for enabling/disabling haptic feedback.
- * Persists to localStorage via setHapticsEnabled().
+ * Persists across sessions and devices via `user_preferences` when a userId
+ * is provided; falls back to localStorage otherwise.
  */
-export function HapticsToggle() {
-  const [on, setOn] = useState<boolean>(true);
-
-  useEffect(() => {
-    setOn(getHapticsEnabled());
-  }, []);
+export function HapticsToggle({ userId }: HapticsToggleProps = {}) {
+  const { enabled, setEnabled } = useHapticsSync(userId);
 
   const handle = (v: boolean) => {
-    setHapticsEnabled(v);
-    setOn(v);
+    void setEnabled(v);
     if (v) studySyncHaptic("task.complete"); // preview when enabling
   };
 
@@ -31,7 +31,7 @@ export function HapticsToggle() {
           <p className="text-[11px] text-muted-foreground">Vibration on milestones & achievements</p>
         </div>
       </div>
-      <Switch checked={on} onCheckedChange={handle} />
+      <Switch checked={enabled} onCheckedChange={handle} />
     </div>
   );
 }

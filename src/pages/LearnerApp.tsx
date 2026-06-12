@@ -27,6 +27,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { analytics } from "@/utils/analytics";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
+import { useHapticsSync } from "@/hooks/useHapticsSync";
+import { usePremiumMilestones } from "@/hooks/usePremiumMilestones";
 import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
@@ -118,6 +120,10 @@ const LearnerApp = () => {
     bookings, loading: bookingsLoading,
     createBooking, updateBookingStatus, getUpcomingSessions,
   } = useRealtimeBookings("learner", userId);
+
+  // Cross-device haptics pref + rare premium milestone moments
+  useHapticsSync(userId);
+  usePremiumMilestones(userId, "learner");
 
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
