@@ -153,6 +153,40 @@ const EVENTS: Record<StudySyncEvent, EventSpec> = {
  * Silently no-ops when disabled, when running on iOS Safari, or when the
  * environment lacks vibration support.
  */
+/* ───────────────── Debug / QA log subscribers ───────────────── */
+
+export interface HapticLogEntry {
+  event: StudySyncEvent;
+  at: number;
+  fired: boolean;
+  guard?: "once" | "day" | null;
+  key?: string;
+}
+
+const logBuffer: HapticLogEntry[] = [];
+const LOG_LIMIT = 200;
+type LogListener = (entries: HapticLogEntry[]) => void;
+const logListeners = new Set<LogListener>();
+
+function pushLog(entry: HapticLogEntry) {
+  logBuffer.push(entry);
+  if (logBuffer.length > LOG_LIMIT) logBuffer.shift();
+  for (const fn of logListeners) {
+    try { fn(logBuffer.slice()); } catch { /* ignore */ }
+  }
+}
+
+/** Subscribe to a live log of haptic events. Returns an unsubscribe fn. */
+export function subscribeHapticLog(listener: LogListener): () => void {
+  logListeners.add(listener);
+  listener(logBuffer.slice());
+  return () => { logListeners.delete(listener); };
+}
+
+export function getHapticLog(): HapticLogEntry[] {
+  return logBuffer.slice();
+}
+
 export function studySyncHaptic(event: StudySyncEvent) {
   if (!enabled) return;
   if (typeof window === "undefined") return;
