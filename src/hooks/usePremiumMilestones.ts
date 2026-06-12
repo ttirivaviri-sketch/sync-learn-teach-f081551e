@@ -49,12 +49,12 @@ export function usePremiumMilestones(userId: string | undefined, role: Role) {
         }
 
         if (role === "learner") {
-          // First subject mastery — `topic_mastery` rows at mastery level
+          // First subject mastery — `topic_mastery` rows at ≥ 80%
           const { count: masteryCount } = await supabase
             .from("topic_mastery")
             .select("id", { count: "exact", head: true })
             .eq("user_id", userId)
-            .gte("mastery_level", 3);
+            .gte("mastery_percentage", 80);
           if (!cancelled && (masteryCount ?? 0) > 0) {
             studySyncHapticOnce("premium.milestone", `learner-first-mastery:${userId}`);
           }

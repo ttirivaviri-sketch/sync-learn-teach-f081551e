@@ -227,7 +227,7 @@ export const TutorProfileTab = ({
       )}
 
       {/* ── Menu Rows ── */}
-      <HapticsToggle />
+      <HapticsToggle userId={session?.user?.id} />
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
         <ThemeToggle />
         <MenuRow
