@@ -53,6 +53,7 @@ const LegalDataCompliance = lazy(() => import("./pages/legal/DataCompliance"));
 
 // Settings
 const SettingsDataCompliance = lazy(() => import("./pages/settings/DataCompliance"));
+const DebugHaptics = lazy(() => import("./pages/DebugHaptics"));
 
 
 // ── Query client ──────────────────────────────────────────────────────────────
@@ -125,6 +126,9 @@ const App = () => (
 
               {/* Settings */}
               <Route path="/settings/data-compliance" element={<SettingsDataCompliance />} />
+
+              {/* Debug */}
+              <Route path="/debug/haptics" element={<DebugHaptics />} />
 
               {/* 404 handling */}
               <Route path="/404" element={<NotFound />} />

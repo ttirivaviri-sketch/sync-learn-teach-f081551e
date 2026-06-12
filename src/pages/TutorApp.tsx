@@ -13,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useRealtimeBookings, BookingRequest } from "@/hooks/useRealtimeBookings";
+import { useHapticsSync } from "@/hooks/useHapticsSync";
+import { usePremiumMilestones } from "@/hooks/usePremiumMilestones";
+import { useTutorMessageHaptic } from "@/hooks/useTutorMessageHaptic";
 import { useTutorManagement } from "@/hooks/useTutorManagement";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
 import { useTutorStats } from "@/hooks/useTutorStats";
@@ -81,6 +84,11 @@ const TutorApp = () => {
     updateBookingStatus,
     getUpcomingSessions,
   } = useRealtimeBookings("tutor", userId);
+
+  // Cross-device haptics pref, rare premium milestones, and soft message buzz
+  useHapticsSync(userId);
+  usePremiumMilestones(userId, "tutor");
+  useTutorMessageHaptic(userId);
 
   const { updateOnlineStatus } = useTutorManagement();
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
