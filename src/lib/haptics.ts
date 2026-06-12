@@ -188,10 +188,15 @@ export function getHapticLog(): HapticLogEntry[] {
 }
 
 export function studySyncHaptic(event: StudySyncEvent) {
-  if (!enabled) return;
+  if (!enabled) {
+    pushLog({ event, at: Date.now(), fired: false });
+    return;
+  }
   if (typeof window === "undefined") return;
   const spec = EVENTS[event];
   if (!spec) return;
+
+  pushLog({ event, at: Date.now(), fired: true });
 
   const plugin = getCapacitorHaptics();
   if (plugin) {
@@ -225,7 +230,10 @@ export function studySyncHapticOncePerDay(event: StudySyncEvent, key: string): b
   const today = new Date().toISOString().slice(0, 10);
   const storageKey = `haptic-day:${key}`;
   try {
-    if (localStorage.getItem(storageKey) === today) return false;
+    if (localStorage.getItem(storageKey) === today) {
+      pushLog({ event, at: Date.now(), fired: false, guard: "day", key });
+      return false;
+    }
     localStorage.setItem(storageKey, today);
   } catch { /* ignore */ }
   studySyncHaptic(event);
@@ -237,7 +245,10 @@ export function studySyncHapticOnce(event: StudySyncEvent, key: string): boolean
   if (typeof window === "undefined") return false;
   const storageKey = `haptic-once:${key}`;
   try {
-    if (localStorage.getItem(storageKey) === "1") return false;
+    if (localStorage.getItem(storageKey) === "1") {
+      pushLog({ event, at: Date.now(), fired: false, guard: "once", key });
+      return false;
+    }
     localStorage.setItem(storageKey, "1");
   } catch { /* ignore */ }
   studySyncHaptic(event);
