@@ -59,3 +59,6 @@ verify_jwt = false
 
 [functions.library-stream]
 verify_jwt = false
+
+[functions.photo-solve-grade]
+verify_jwt = false
