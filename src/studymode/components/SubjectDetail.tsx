@@ -475,6 +475,18 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
         </Button>
       </div>
 
+      {/* Photo Solve — full-width premium tile */}
+      <Button
+        onClick={() => setActiveView('photo')}
+        className="w-full h-auto py-4 gap-3 bg-gradient-to-r from-accent to-primary text-white shadow-md hover:shadow-lg"
+      >
+        <Camera className="h-6 w-6" />
+        <div className="text-left">
+          <p className="text-sm font-bold">Photo Solve</p>
+          <p className="text-[10px] opacity-90">Snap your working — get step-by-step AI grading</p>
+        </div>
+      </Button>
+
       {/* Today's Plan — single bundle launcher (collapses 5 tiles into 1 canonical task) */}
       <div>
         <div className="flex items-center justify-between mb-4">
