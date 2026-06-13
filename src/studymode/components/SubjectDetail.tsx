@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy, Play } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy, Play, Camera } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
 import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
@@ -13,6 +13,7 @@ import { MasteryTrackerPanel } from './MasteryTrackerPanel';
 import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { Leaderboard } from './Leaderboard';
+import { PhotoSolvePanel } from './PhotoSolvePanel';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
@@ -35,7 +36,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
   const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery'>('tasks');
+  const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery' | 'photo'>('tasks');
   const [recallTopic, setRecallTopic] = useState<string | null>(null);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
@@ -174,6 +175,18 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
         onBack={() => setActiveView('tasks')}
         onStartRecall={(topicName) => { setRecallTopic(topicName); setActiveView('recall'); }}
         onStartExam={(topicName) => { setRecallTopic(topicName); setActiveView('exam'); }}
+      />
+    );
+  }
+
+  // ── Photo Solve ──────────────────────────────────────────────────────
+  if (activeView === 'photo') {
+    return (
+      <PhotoSolvePanel
+        subject={subject}
+        topic={subject.currentTopic}
+        curriculum={curriculum}
+        onBack={() => setActiveView('tasks')}
       />
     );
   }
