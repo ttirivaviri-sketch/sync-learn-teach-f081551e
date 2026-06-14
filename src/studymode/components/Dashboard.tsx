@@ -453,6 +453,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
         {/* ===== TAB 2: PROGRESS ===== */}
         <TabsContent value="progress" className="mt-4 space-y-6">
+          <PredictedGradeCard subjects={subjects.map((s) => ({ id: s.id, name: s.name }))} />
           <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
             <AIProgressInsights
               subjects={subjects.map(s => ({
