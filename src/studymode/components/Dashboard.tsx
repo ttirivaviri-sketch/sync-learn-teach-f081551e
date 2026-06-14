@@ -19,6 +19,7 @@ const DailySummary = lazy(() => import('./DailySummary').then(m => ({ default: m
 const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => ({ default: m.AdaptivePlanBanner })));
 const LessonReinforcementBanner = lazy(() => import('./LessonReinforcementBanner').then(m => ({ default: m.LessonReinforcementBanner })));
 const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
+import { PredictedGradeCard } from './PredictedGradeCard';
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '@/lib/utils';
@@ -453,6 +454,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
         {/* ===== TAB 2: PROGRESS ===== */}
         <TabsContent value="progress" className="mt-4 space-y-6">
+          <PredictedGradeCard subjects={subjects.map((s) => ({ id: s.id, name: s.name }))} />
           <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
             <AIProgressInsights
               subjects={subjects.map(s => ({
