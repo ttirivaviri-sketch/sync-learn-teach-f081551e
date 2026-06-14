@@ -19,6 +19,7 @@ const DailySummary = lazy(() => import('./DailySummary').then(m => ({ default: m
 const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => ({ default: m.AdaptivePlanBanner })));
 const LessonReinforcementBanner = lazy(() => import('./LessonReinforcementBanner').then(m => ({ default: m.LessonReinforcementBanner })));
 const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
+import { PredictedGradeCard } from './PredictedGradeCard';
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '@/lib/utils';
