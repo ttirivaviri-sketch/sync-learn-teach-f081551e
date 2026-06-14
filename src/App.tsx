@@ -82,6 +82,8 @@ const App = () => (
           <Suspense fallback={<LoadingScreen message="Loading StudySync..." />}>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/index" element={<Navigate to="/" replace />} />
+              <Route path="/home" element={<Navigate to="/" replace />} />
               <Route path="/learner" element={<LearnerApp />} />
               <Route path="/start-trial" element={<Navigate to="/learner/auth" replace />} />
               <Route path="/learner/auth" element={<LearnerAuth />} />
