@@ -98,11 +98,22 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "explain");
+    const quota = await enforceQuota(req, "misc");
     if (!quota.allowed)
-      return quotaExceededResponse("explain", quota.used, quota.limit);
+      return quotaExceededResponse("misc", quota.used, quota.limit);
 
-    const ai = getAIConfig("standard");
+    // Force Lovable AI Gateway with a multimodal-capable Gemini model,
+    // even if OPENAI_API_KEY happens to be set (the OpenAI fallback in
+    // getAIConfig returns gpt-4o-mini which gave us empty `steps`).
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
+    const ai = lovableKey
+      ? {
+          url: "https://ai.gateway.lovable.dev/v1/chat/completions",
+          key: lovableKey,
+          model: "google/gemini-2.5-flash",
+        }
+      : getAIConfig("standard");
+
     const body = await req.json();
 
     const {
@@ -130,6 +141,14 @@ serve(async (req) => {
       dataUrl = `data:${mt};base64,${dataUrl}`;
     }
 
+    console.log("[photo-solve-grade] payload",
+      "image_chars=", dataUrl.length,
+      "subject=", subject ?? "-",
+      "topic=", topic ?? "-",
+      "has_question=", !!question,
+      "model=", ai.model,
+    );
+
     const contextLines: string[] = [];
     if (curriculum) contextLines.push(`Curriculum: ${curriculum}`);
     if (examLevel) contextLines.push(`Exam level: ${examLevel}`);
@@ -140,35 +159,38 @@ serve(async (req) => {
     if (question) contextLines.push(`\nQuestion (provided):\n${question}`);
 
     const userText =
-      (contextLines.length
-        ? contextLines.join("\n") + "\n\n"
-        : "") +
+      (contextLines.length ? contextLines.join("\n") + "\n\n" : "") +
       `Grade the student's working in the attached image. Return ONLY the JSON described in the system prompt.`;
 
-    // Direct multimodal call (callAI helper only supports text user content)
-    const response = await fetch(ai.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ai.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: ai.model,
-        temperature: 0.2,
-        max_tokens: 2200,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: userText },
-              { type: "image_url", image_url: { url: dataUrl } },
-            ],
-          },
-        ],
-      }),
-    });
+    async function callModel(temperature: number, extraSystem = "") {
+      const sys = extraSystem ? `${SYSTEM_PROMPT}\n\n${extraSystem}` : SYSTEM_PROMPT;
+      const r = await fetch(ai.url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ai.key}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: ai.model,
+          temperature,
+          max_tokens: 2200,
+          response_format: { type: "json_object" },
+          messages: [
+            { role: "system", content: sys },
+            {
+              role: "user",
+              content: [
+                { type: "text", text: userText },
+                { type: "image_url", image_url: { url: dataUrl } },
+              ],
+            },
+          ],
+        }),
+      });
+      return r;
+    }
+
+    let response = await callModel(0.2);
 
     if (!response.ok) {
       const errText = await response.text();
@@ -178,22 +200,36 @@ serve(async (req) => {
       if (response.status === 402)
         return jsonResponse({ error: "credits_exhausted" }, 402);
       return jsonResponse(
-        { error: `AI gateway error ${response.status}` },
+        { error: `AI gateway error ${response.status}`, detail: errText.slice(0, 400) },
         502
       );
     }
 
-    const data = await response.json();
-    const raw = data?.choices?.[0]?.message?.content ?? "";
-    const parsed = safeJsonParse<any>(raw);
+    let data = await response.json();
+    let raw = data?.choices?.[0]?.message?.content ?? "";
+    let parsed = safeJsonParse<any>(raw);
+
+    // Retry once with stricter prompt if the model returned no steps at all
+    const noSteps = !Array.isArray(parsed?.steps) || parsed.steps.length === 0;
+    const noAnswer = !parsed?.final_answer && !parsed?.question_detected;
+    if (noSteps && noAnswer) {
+      console.warn("[photo-solve-grade] empty parse — retrying with temperature=0");
+      response = await callModel(
+        0,
+        "CRITICAL: You MUST return at least one item in `steps` (even if verdict is 'missing') and a non-empty `model_solution`. Never return an empty object."
+      );
+      if (response.ok) {
+        data = await response.json();
+        raw = data?.choices?.[0]?.message?.content ?? "";
+        parsed = safeJsonParse<any>(raw);
+      }
+    }
 
     const stepsRaw = Array.isArray(parsed.steps) ? parsed.steps : [];
     const steps = stepsRaw.map((s: any, i: number) => ({
       index: Number(s.index ?? i + 1),
       student_step: String(s.student_step ?? "").trim(),
-      verdict: ["correct", "partial", "incorrect", "missing"].includes(
-        s.verdict
-      )
+      verdict: ["correct", "partial", "incorrect", "missing"].includes(s.verdict)
         ? s.verdict
         : "partial",
       reason: String(s.reason ?? "").trim(),
