@@ -23,6 +23,25 @@ import { studySyncHaptic, studySyncHapticOnce } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 
+export interface PhotoSolveResult {
+  question_detected: string;
+  final_answer: string;
+  final_answer_correct: boolean | null;
+  steps: Array<{
+    index: number;
+    student_step: string;
+    verdict: 'correct' | 'partial' | 'incorrect' | 'missing';
+    reason: string;
+    correction: string;
+  }>;
+  missed_steps: string[];
+  next_hint: string;
+  model_solution: string;
+  confidence: number;
+  marks_awarded: number;
+  marks_possible: number;
+}
+
 interface PhotoSolvePanelProps {
   subject?: Subject;
   topic?: Topic;
@@ -30,6 +49,8 @@ interface PhotoSolvePanelProps {
   totalMarks?: number;
   curriculum?: string | null;
   onBack: () => void;
+  /** Called once grading succeeds — host can pull final_answer into its textarea */
+  onResult?: (result: PhotoSolveResult) => void;
 }
 
 interface GradedStep {
