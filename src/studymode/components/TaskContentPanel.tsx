@@ -249,6 +249,14 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack 
             </p>
           </div>
 
+          <div className="flex justify-end">
+            <PhotoAnswerButton
+              question={`Recall everything you know about ${subject.currentTopic.name}`}
+              subject={subject}
+              topic={subject.currentTopic}
+              onAnswer={(text) => setUserAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+            />
+          </div>
           <Textarea
             placeholder={`What do you remember about ${subject.currentTopic.name}? Write key concepts, formulas, definitions...`}
             value={userAnswer}
