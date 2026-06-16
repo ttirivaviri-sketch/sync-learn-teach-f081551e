@@ -136,25 +136,27 @@ const App = () => (
                 <Route path="schools/:id" element={<AdminSchoolDetail />} />
               </Route>
 
-              {/* School admin portal */}
-              <Route path="/school" element={<SchoolLayout />}>
-                <Route index element={<SchoolDashboard />} />
-              </Route>
-              <Route path="/school/:schoolId" element={<SchoolLayout />}>
-                <Route index element={<SchoolDashboard />} />
-                <Route path="members" element={<SchoolMembers />} />
-                <Route path="invitations" element={<SchoolInvitations />} />
-                <Route path="settings" element={<SchoolSettings />} />
-                <Route path="academic" element={<SchoolAcademic />} />
-                <Route path="announcements" element={<SchoolAnnouncements />} />
-                <Route path="teach" element={<TeacherWorkspace />} />
-                <Route path="teach/:classId" element={<TeacherClassDetail />} />
-                <Route path="learn" element={<StudentWorkspace />} />
-                <Route path="analytics" element={<SchoolAnalytics />} />
-              </Route>
-
-              {/* Invitation acceptance */}
-              <Route path="/invite/:token" element={<AcceptInvitation />} />
+              {/* School admin portal — gated behind FEATURE_SCHOOLS for P8 rollout */}
+              {FEATURE_SCHOOLS && (
+                <>
+                  <Route path="/school" element={<SchoolLayout />}>
+                    <Route index element={<SchoolDashboard />} />
+                  </Route>
+                  <Route path="/school/:schoolId" element={<SchoolLayout />}>
+                    <Route index element={<SchoolDashboard />} />
+                    <Route path="members" element={<SchoolMembers />} />
+                    <Route path="invitations" element={<SchoolInvitations />} />
+                    <Route path="settings" element={<SchoolSettings />} />
+                    <Route path="academic" element={<SchoolAcademic />} />
+                    <Route path="announcements" element={<SchoolAnnouncements />} />
+                    <Route path="teach" element={<TeacherWorkspace />} />
+                    <Route path="teach/:classId" element={<TeacherClassDetail />} />
+                    <Route path="learn" element={<StudentWorkspace />} />
+                    <Route path="analytics" element={<SchoolAnalytics />} />
+                  </Route>
+                  <Route path="/invite/:token" element={<AcceptInvitation />} />
+                </>
+              )}
 
               {/* Dev tools */}
               <Route path="/dev/submission-test" element={<DevSubmissionTest />} />
