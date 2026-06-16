@@ -27,6 +27,10 @@ export default function SchoolLayout() {
     })();
   }, [navigate]);
 
+  // P8: Feature flag gate — if schools are disabled in this environment,
+  // pretend the portal does not exist at all.
+  if (!FEATURE_SCHOOLS) return <Navigate to="/404" replace />;
+
   if (!authChecked || memberships.isLoading) {
     return <main className="min-h-[60vh] flex items-center justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading school portal…</main>;
   }
