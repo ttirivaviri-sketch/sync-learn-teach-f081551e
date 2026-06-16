@@ -50,6 +50,11 @@ const SchoolMembers = lazy(() => import("./pages/school/SchoolMembers"));
 const SchoolInvitations = lazy(() => import("./pages/school/SchoolInvitations"));
 const SchoolSettings = lazy(() => import("./pages/school/SchoolSettings"));
 const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
+const SchoolAcademic = lazy(() => import("./pages/school/SchoolAcademic"));
+const SchoolAnnouncements = lazy(() => import("./pages/school/SchoolAnnouncements"));
+const TeacherWorkspace = lazy(() => import("./pages/school/teacher/TeacherWorkspace"));
+const TeacherClassDetail = lazy(() => import("./pages/school/teacher/TeacherClassDetail"));
+const StudentWorkspace = lazy(() => import("./pages/school/student/StudentWorkspace"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
