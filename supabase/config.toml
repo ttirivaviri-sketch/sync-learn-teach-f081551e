@@ -62,3 +62,12 @@ verify_jwt = false
 
 [functions.photo-solve-grade]
 verify_jwt = false
+
+[functions.school-ingest-document]
+verify_jwt = true
+
+[functions.school-search]
+verify_jwt = true
+
+[functions.school-analytics]
+verify_jwt = true
