@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
+import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
 
 // ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
 const Index = lazy(() => import("./pages/Index"));
