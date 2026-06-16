@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useParams, Navigate } from "react-router-dom";
-import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3 } from "lucide-react";
+import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3, CreditCard } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { Card } from "@/components/ui/card";
@@ -100,6 +100,7 @@ export default function SchoolLayout() {
     { label: "Announcements", to: `/school/${schoolId}/announcements`, icon: Megaphone, show: true },
     { label: "Analytics", to: `/school/${schoolId}/analytics`, icon: BarChart3, show: isTeacher },
     { label: "Invitations", to: `/school/${schoolId}/invitations`, icon: Mail, show: isAdmin },
+    { label: "Billing", to: `/school/${schoolId}/billing`, icon: CreditCard, show: isAdmin },
     { label: "Settings", to: `/school/${schoolId}/settings`, icon: SettingsIcon, show: isAdmin },
   ].filter((t) => t.show);
 

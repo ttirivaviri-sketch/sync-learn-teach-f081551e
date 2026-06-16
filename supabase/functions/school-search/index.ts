@@ -5,7 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/ai-config.ts";
-import { assertSchoolContractLive } from "../_shared/school-contract.ts";
+import { enforceSchoolContract, logContractDenial } from "../_shared/school-contract.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -47,13 +47,19 @@ serve(async (req) => {
       .eq("school_id", school_id)
       .eq("user_id", userId)
       .eq("status", "active");
+    const callerRole = (memberships ?? [])[0]?.role ?? null;
     if (!memberships || memberships.length === 0) {
+      await logContractDenial(svc, school_id,
+        { ok: false, status: 403, code: "ROLE_DENIED", reason: "Not a school member" },
+        { userId, role: callerRole, feature: "rag.search" });
       return errorResponse("Forbidden — not a school member", 403);
     }
 
     // P8: contract / billing gate.
-    const gate = await assertSchoolContractLive(svc, school_id);
-    if (!gate.ok) return errorResponse(gate.reason, gate.status);
+    const gate = await enforceSchoolContract(svc, school_id, {
+      userId, role: callerRole, feature: "rag.search",
+    });
+    if ("response" in gate) return gate.response;
 
     const embedding = await embedOne(query);
     const { data, error } = await svc.rpc("match_school_chunks", {

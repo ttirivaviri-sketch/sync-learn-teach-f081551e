@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { invokeWithContract } from "@/lib/contractError";
 
 export interface AnalyticsFilters {
   from?: string;
@@ -41,8 +42,8 @@ export function useSchoolAnalytics(schoolId: string | undefined, filters: Analyt
   return useQuery({
     queryKey: ["school-analytics", schoolId, filters],
     enabled: !!schoolId,
-    queryFn: async (): Promise<SchoolAnalytics> => {
-      const { data, error } = await supabase.functions.invoke("school-analytics", {
+    queryFn: async (): Promise<SchoolAnalytics> =>
+      invokeWithContract<SchoolAnalytics>(() => supabase.functions.invoke("school-analytics", {
         body: {
           school_id: schoolId,
           days: filters.days,
@@ -51,9 +52,12 @@ export function useSchoolAnalytics(schoolId: string | undefined, filters: Analyt
           class_id: filters.classId,
           grade_id: filters.gradeId,
         },
-      });
-      if (error) throw error;
-      return data as SchoolAnalytics;
+      })),
+    retry: (count, err) => {
+      // Don't retry contract-gate failures (402/410/423) — they need billing intervention.
+      const status = (err as { status?: number } | null)?.status;
+      if (status === 402 || status === 410 || status === 423) return false;
+      return count < 2;
     },
   });
 }
@@ -62,15 +66,16 @@ export function useSchoolAnalytics(schoolId: string | undefined, filters: Analyt
 export function useSchoolSearch() {
   return useMutation({
     mutationFn: async (args: { schoolId: string; query: string; classId?: string; k?: number }) => {
-      const { data, error } = await supabase.functions.invoke("school-search", {
-        body: {
-          school_id: args.schoolId,
-          query: args.query,
-          class_id: args.classId,
-          k: args.k ?? 8,
-        },
-      });
-      if (error) throw error;
+      const data = await invokeWithContract<{ chunks?: unknown[] }>(() =>
+        supabase.functions.invoke("school-search", {
+          body: {
+            school_id: args.schoolId,
+            query: args.query,
+            class_id: args.classId,
+            k: args.k ?? 8,
+          },
+        }),
+      );
       return (data?.chunks ?? []) as Array<{
         id: string;
         document_id: string;
@@ -96,18 +101,18 @@ export function useIngestSchoolDocument() {
       classId?: string;
       subjectId?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke("school-ingest-document", {
-        body: {
-          school_id: args.schoolId,
-          resource_id: args.resourceId,
-          title: args.title,
-          content: args.content,
-          class_id: args.classId,
-          subject_id: args.subjectId,
-        },
-      });
-      if (error) throw error;
-      return data as { ok: boolean; document_id: string; chunks: number; tokens: number };
+      return invokeWithContract<{ ok: boolean; document_id: string; chunks: number; tokens: number }>(() =>
+        supabase.functions.invoke("school-ingest-document", {
+          body: {
+            school_id: args.schoolId,
+            resource_id: args.resourceId,
+            title: args.title,
+            content: args.content,
+            class_id: args.classId,
+            subject_id: args.subjectId,
+          },
+        }),
+      );
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["school-ai-documents", vars.schoolId] });

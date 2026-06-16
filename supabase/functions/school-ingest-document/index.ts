@@ -5,7 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/ai-config.ts";
-import { assertSchoolContractLive } from "../_shared/school-contract.ts";
+import { enforceSchoolContract, logContractDenial } from "../_shared/school-contract.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -67,14 +67,22 @@ serve(async (req) => {
       .eq("school_id", school_id)
       .eq("user_id", userId)
       .eq("status", "active");
-    const ok = (memberships ?? []).some((m: { role: string }) =>
-      m.role === "school_teacher" || m.role === "school_admin"
-    );
-    if (!ok) return errorResponse("Forbidden — not a school teacher/admin", 403);
+    const roles = (memberships ?? []).map((m: { role: string }) => m.role);
+    const callerRole = roles.includes("school_admin") ? "school_admin"
+      : roles.includes("school_teacher") ? "school_teacher" : (roles[0] ?? null);
+    const ok = callerRole === "school_admin" || callerRole === "school_teacher";
+    if (!ok) {
+      await logContractDenial(svc, school_id,
+        { ok: false, status: 403, code: "ROLE_DENIED", reason: "Not a teacher/admin" },
+        { userId, role: callerRole, feature: "rag.ingest" });
+      return errorResponse("Forbidden — not a school teacher/admin", 403);
+    }
 
     // P8: contract / billing gate.
-    const gate = await assertSchoolContractLive(svc, school_id);
-    if (!gate.ok) return errorResponse(gate.reason, gate.status);
+    const gate = await enforceSchoolContract(svc, school_id, {
+      userId, role: callerRole, feature: "rag.ingest",
+    });
+    if ("response" in gate) return gate.response;
 
     // Create document row
     const { data: doc, error: docErr } = await svc

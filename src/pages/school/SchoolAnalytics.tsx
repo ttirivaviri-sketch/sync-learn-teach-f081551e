@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/select";
 import {
   Loader2, Brain, Upload, Search, Users, BookOpen, FileText, Database,
-  Download, RefreshCw, ShieldAlert, CheckCircle2, XCircle, Clock,
+  Download, RefreshCw, ShieldAlert, CheckCircle2, XCircle, Clock, CreditCard,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { isContractGateError, type ContractGateError } from "@/lib/contractError";
+import { BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
 
 type Ctx = { school: { id: string; name: string }; role: string };
 
@@ -78,6 +80,9 @@ export default function SchoolAnalytics() {
   }
 
   if (error) {
+    if (isContractGateError(error)) {
+      return <ContractGateNotice err={error} schoolId={schoolId} onRetry={() => refetch()} />;
+    }
     const msg = (error as Error).message || "Failed to load analytics";
     const forbidden = /403|forbidden/i.test(msg);
     return (
@@ -96,6 +101,10 @@ export default function SchoolAnalytics() {
       const r = await search.mutateAsync({ schoolId, query, classId: filters.classId });
       setResults(r);
     } catch (e) {
+      if (isContractGateError(e)) {
+        toast({ title: "Search unavailable — contract paused", description: e.reason, variant: "destructive" });
+        return;
+      }
       toast({ title: "Search failed", description: (e as Error).message, variant: "destructive" });
     }
   };
@@ -114,6 +123,10 @@ export default function SchoolAnalytics() {
       setDocTitle("");
       refetch();
     } catch (e) {
+      if (isContractGateError(e)) {
+        toast({ title: "Ingest unavailable — contract paused", description: e.reason, variant: "destructive" });
+        return;
+      }
       toast({ title: "Ingest failed", description: (e as Error).message, variant: "destructive" });
     }
   };
@@ -419,6 +432,36 @@ function StatusBadge({ status }: { status: string }) {
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${m.cls}`}>
       {m.icon}{m.label}
     </span>
+  );
+}
+
+function ContractGateNotice({ err, schoolId, onRetry }: { err: ContractGateError; schoolId: string; onRetry: () => void }) {
+  const titleMap: Record<string, string> = {
+    SUSPENDED: "School suspended",
+    EXPIRED: "Contract ended",
+    ARCHIVED: "School archived",
+    NOT_STARTED: "Contract starts later",
+  };
+  const title = titleMap[err.code] ?? "Access paused by billing";
+  const subject = encodeURIComponent(`Restore access — analytics (${err.code})`);
+  return (
+    <Card className="mx-auto mt-8 max-w-md p-6 text-center">
+      <CreditCard className="mx-auto mb-3 h-10 w-10 text-destructive" />
+      <h2 className="mb-1 text-lg font-semibold">{title}</h2>
+      <p className="text-sm text-muted-foreground">{err.reason}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">Status {err.status}{err.feature ? ` · ${err.feature}` : ""}</p>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <Button asChild size="sm">
+          <a href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${subject}`}>
+            <CreditCard className="mr-1 h-4 w-4" /> Contact billing
+          </a>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to={`/school/${schoolId}/billing`}>Open billing</Link>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onRetry}>Retry</Button>
+      </div>
+    </Card>
   );
 }
 
