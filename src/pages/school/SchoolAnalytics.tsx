@@ -18,9 +18,11 @@ import {
 } from "@/components/ui/select";
 import {
   Loader2, Brain, Upload, Search, Users, BookOpen, FileText, Database,
-  Download, RefreshCw, ShieldAlert, CheckCircle2, XCircle, Clock,
+  Download, RefreshCw, ShieldAlert, CheckCircle2, XCircle, Clock, CreditCard,
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { isContractGateError, type ContractGateError } from "@/lib/contractError";
+import { BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
 
 type Ctx = { school: { id: string; name: string }; role: string };
 
