@@ -380,7 +380,21 @@ export interface Submission {
   id: Id; school_id: Id; assignment_id: Id; student_id: Id;
   status: string; text_response: string | null; submitted_at: string | null;
   score: number | null; feedback: string | null;
+  attachment_paths: string[] | null;
+  graded_at?: string | null; graded_by?: Id | null;
+  created_at?: string; updated_at?: string;
   profile?: { full_name: string | null; email: string | null } | null;
+}
+
+// Upload a student submission file. Path: {schoolId}/submissions/{assignmentId}/{studentId}/{ts-name}
+export async function uploadSubmissionFile(input: { schoolId: Id; assignmentId: Id; file: File }): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+  const safeName = input.file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${input.schoolId}/submissions/${input.assignmentId}/${user.id}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("school-content").upload(path, input.file, { upsert: false });
+  if (error) throw error;
+  return path;
 }
 export function useSubmissions(assignmentId?: Id) {
   return useQuery({
