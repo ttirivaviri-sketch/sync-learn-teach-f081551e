@@ -40,6 +40,16 @@ const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemp
 const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 const AdminAllocations = lazy(() => import("./pages/admin/Allocations"));
 const AdminStudyAnalytics = lazy(() => import("./pages/admin/StudyAnalytics"));
+const AdminSchools = lazy(() => import("./pages/admin/Schools"));
+const AdminSchoolDetail = lazy(() => import("./pages/admin/SchoolDetail"));
+
+// School admin portal
+const SchoolLayout = lazy(() => import("./pages/school/SchoolLayout"));
+const SchoolDashboard = lazy(() => import("./pages/school/SchoolDashboard"));
+const SchoolMembers = lazy(() => import("./pages/school/SchoolMembers"));
+const SchoolInvitations = lazy(() => import("./pages/school/SchoolInvitations"));
+const SchoolSettings = lazy(() => import("./pages/school/SchoolSettings"));
+const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
@@ -114,7 +124,25 @@ const App = () => (
                 <Route path="library" element={<AdminLibrary />} />
                 <Route path="allocations" element={<AdminAllocations />} />
                 <Route path="study-analytics" element={<AdminStudyAnalytics />} />
+                <Route path="schools" element={<AdminSchools />} />
+                <Route path="schools/:id" element={<AdminSchoolDetail />} />
               </Route>
+
+              {/* School admin portal */}
+              <Route path="/school" element={<SchoolLayout />}>
+                <Route index element={<SchoolDashboard />} />
+              </Route>
+              <Route path="/school/:schoolId" element={<SchoolLayout />}>
+                <Route index element={<SchoolDashboard />} />
+                <Route path="members" element={<SchoolMembers />} />
+                <Route path="invitations" element={<SchoolInvitations />} />
+                <Route path="settings" element={<SchoolSettings />} />
+              </Route>
+
+              {/* Invitation acceptance */}
+              <Route path="/invite/:token" element={<AcceptInvitation />} />
+
+
 
               {/* Legal */}
               <Route path="/legal/terms" element={<LegalTerms />} />

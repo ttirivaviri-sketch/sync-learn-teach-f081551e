@@ -23,12 +23,14 @@ import {
   Bot,
   FileCheck,
   BookOpen,
+  Building2,
 } from "lucide-react";
 
 const items = [
   { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
   { title: "SAIL", url: "/admin/sail", icon: Bot },
   { title: "Users", url: "/admin/users", icon: Users },
+  { title: "Schools", url: "/admin/schools", icon: Building2 },
   { title: "Verifications", url: "/admin/verifications", icon: FileCheck },
   { title: "Curriculum Templates", url: "/admin/curriculum-templates", icon: BookOpen },
   { title: "Library", url: "/admin/library", icon: BookOpen },
