@@ -73,12 +73,12 @@ function ClassAnalyticsPanel({ classId }: { classId: string }) {
       <div className="flex flex-wrap gap-2">
         {students.map((e: any) => (
           <Button
-            key={e.user_id}
+            key={e.student_id}
             size="sm"
-            variant={selected === e.user_id ? "default" : "outline"}
-            onClick={() => setSelected(e.user_id)}
+            variant={selected === e.student_id ? "default" : "outline"}
+            onClick={() => setSelected(e.student_id)}
           >
-            {e.profiles?.full_name ?? e.user_id.slice(0, 6)}
+            {e.profile?.full_name ?? e.student_id.slice(0, 6)}
           </Button>
         ))}
       </div>
