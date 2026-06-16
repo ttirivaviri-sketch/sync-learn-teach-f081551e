@@ -2561,6 +2561,62 @@ export type Database = {
           },
         ]
       }
+      school_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_user_id: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          message: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          status: Database["public"]["Enums"]["school_invitation_status"]
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          message?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          status?: Database["public"]["Enums"]["school_invitation_status"]
+          token?: string
+          updated_at?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_user_id?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          message?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          school_id?: string
+          status?: Database["public"]["Enums"]["school_invitation_status"]
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_invitations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_memberships: {
         Row: {
           created_at: string
@@ -4208,6 +4264,7 @@ export type Database = {
       }
     }
     Functions: {
+      accept_school_invitation: { Args: { _token: string }; Returns: Json }
       admin_study_completion_rate: {
         Args: { p_days?: number }
         Returns: {
@@ -4264,6 +4321,7 @@ export type Database = {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
+      get_invitation_summary: { Args: { _token: string }; Returns: Json }
       get_overall_leaderboard: {
         Args: { p_curriculum: string; p_limit?: number }
         Returns: Json
@@ -4537,6 +4595,7 @@ export type Database = {
         | "rejected"
         | "deployed"
       sail_task_type: "bug" | "ux" | "backend" | "learning" | "monetization"
+      school_invitation_status: "pending" | "accepted" | "revoked" | "expired"
       school_membership_status: "invited" | "active" | "suspended" | "removed"
       school_plan: "trial" | "starter" | "standard" | "premium" | "enterprise"
       school_status: "active" | "suspended" | "archived" | "trial"
@@ -4708,6 +4767,7 @@ export const Constants = {
         "deployed",
       ],
       sail_task_type: ["bug", "ux", "backend", "learning", "monetization"],
+      school_invitation_status: ["pending", "accepted", "revoked", "expired"],
       school_membership_status: ["invited", "active", "suspended", "removed"],
       school_plan: ["trial", "starter", "standard", "premium", "enterprise"],
       school_status: ["active", "suspended", "archived", "trial"],
