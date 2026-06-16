@@ -23,6 +23,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { isContractGateError, type ContractGateError } from "@/lib/contractError";
 import { BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
+import { SchoolLearningOutcomes } from "@/components/school/SchoolLearningOutcomes";
 
 type Ctx = { school: { id: string; name: string }; role: string };
 
