@@ -586,7 +586,14 @@ export function ExamQuestionPanel({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="answer">Your Answer</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="answer">Your Answer</Label>
+              <PhotoAnswerButton
+                question={question?.text}
+                totalMarks={question?.marks}
+                onAnswer={(text) => setAnswer(answer ? `${answer}\n\n${text}` : text)}
+              />
+            </div>
             <Textarea
               id="answer"
               placeholder="Write your complete answer here. Show all working / reasoning steps."
