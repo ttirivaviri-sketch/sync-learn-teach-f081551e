@@ -50,6 +50,7 @@ const SchoolDashboard = lazy(() => import("./pages/school/SchoolDashboard"));
 const SchoolMembers = lazy(() => import("./pages/school/SchoolMembers"));
 const SchoolInvitations = lazy(() => import("./pages/school/SchoolInvitations"));
 const SchoolSettings = lazy(() => import("./pages/school/SchoolSettings"));
+const SchoolBilling = lazy(() => import("./pages/school/SchoolBilling"));
 const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
 const SchoolAcademic = lazy(() => import("./pages/school/SchoolAcademic"));
 const SchoolAnnouncements = lazy(() => import("./pages/school/SchoolAnnouncements"));
@@ -147,6 +148,7 @@ const App = () => (
                     <Route path="members" element={<SchoolMembers />} />
                     <Route path="invitations" element={<SchoolInvitations />} />
                     <Route path="settings" element={<SchoolSettings />} />
+                    <Route path="billing" element={<SchoolBilling />} />
                     <Route path="academic" element={<SchoolAcademic />} />
                     <Route path="announcements" element={<SchoolAnnouncements />} />
                     <Route path="teach" element={<TeacherWorkspace />} />
