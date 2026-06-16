@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
 
 import StarRating from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
