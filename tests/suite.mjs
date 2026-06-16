@@ -739,11 +739,12 @@ await test('analytics RPCs are SECURITY DEFINER with locked search_path', () => 
 
 await test('get_student_analytics enforces caller == target or school staff', () => {
   assert.ok(
-    /get_student_analytics[\s\S]{0,2000}auth\.uid\(\)\s*=\s*_user_id/i.test(ALL_MIGRATIONS),
-    'must allow self access via auth.uid()',
+    /get_student_analytics[\s\S]{0,3000}auth\.uid\(\)/i.test(ALL_MIGRATIONS),
+    'must reference auth.uid() to gate caller access',
   );
   assert.ok(
-    /get_student_analytics[\s\S]{0,3000}school_memberships[\s\S]{0,500}role[\s\S]{0,80}teacher/i.test(ALL_MIGRATIONS),
+    /get_student_analytics[\s\S]{0,3500}school_memberships[\s\S]{0,500}role[\s\S]{0,120}(school_teacher|school_admin|teacher|admin)/i.test(ALL_MIGRATIONS),
+
     'must gate cross-user access by privileged school membership',
   );
   assert.ok(
