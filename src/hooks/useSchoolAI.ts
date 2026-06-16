@@ -1,5 +1,13 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+
+export interface AnalyticsFilters {
+  from?: string;
+  to?: string;
+  classId?: string;
+  gradeId?: string;
+  days?: number;
+}
 
 export interface SchoolAnalytics {
   school: {
@@ -24,15 +32,25 @@ export interface SchoolAnalytics {
     storage_mb: number;
   }>;
   ai_usage: Array<{ usage_date: string; bucket: string; requests: number; tokens_in: number; tokens_out: number }>;
+  filters: { from: string; to: string; class_id: string | null; grade_id: string | null; applied: boolean };
+  classes: Array<{ id: string; name: string; grade_id: string | null }>;
+  grades: Array<{ id: string; name: string }>;
 }
 
-export function useSchoolAnalytics(schoolId: string | undefined, days = 14) {
+export function useSchoolAnalytics(schoolId: string | undefined, filters: AnalyticsFilters = {}) {
   return useQuery({
-    queryKey: ["school-analytics", schoolId, days],
+    queryKey: ["school-analytics", schoolId, filters],
     enabled: !!schoolId,
     queryFn: async (): Promise<SchoolAnalytics> => {
       const { data, error } = await supabase.functions.invoke("school-analytics", {
-        body: { school_id: schoolId, days },
+        body: {
+          school_id: schoolId,
+          days: filters.days,
+          from: filters.from,
+          to: filters.to,
+          class_id: filters.classId,
+          grade_id: filters.gradeId,
+        },
       });
       if (error) throw error;
       return data as SchoolAnalytics;
@@ -68,6 +86,7 @@ export function useSchoolSearch() {
 
 /** Ingest a resource into the school's RAG index. Teacher/admin only. */
 export function useIngestSchoolDocument() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: {
       schoolId: string;
@@ -89,6 +108,45 @@ export function useIngestSchoolDocument() {
       });
       if (error) throw error;
       return data as { ok: boolean; document_id: string; chunks: number; tokens: number };
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["school-ai-documents", vars.schoolId] });
+    },
+  });
+}
+
+/** Live list of ingest jobs (queued/parsed/embedded/failed) for a school. */
+export function useSchoolAIDocuments(schoolId: string | undefined) {
+  return useQuery({
+    queryKey: ["school-ai-documents", schoolId],
+    enabled: !!schoolId,
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("school_ai_documents")
+        .select("id,title,status,error,page_count,total_tokens,created_at,updated_at")
+        .eq("school_id", schoolId!)
+        .order("created_at", { ascending: false })
+        .limit(25);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+/** Reset a failed ingest document back to queued so the user can re-upload content. */
+export function useRetrySchoolIngest() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { schoolId: string; documentId: string }) => {
+      const { data, error } = await supabase.functions.invoke("school-ingest-retry", {
+        body: { school_id: args.schoolId, document_id: args.documentId },
+      });
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ["school-ai-documents", vars.schoolId] });
     },
   });
 }
