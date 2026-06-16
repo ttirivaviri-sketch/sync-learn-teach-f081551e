@@ -42,6 +42,10 @@ serve(async (req) => {
       return errorResponse("Forbidden — teacher or admin access required", 403);
     }
 
+    // P8: contract / billing gate — refuse suspended/archived/expired schools.
+    const gate = await assertSchoolContractLive(svc, school_id);
+    if (!gate.ok) return errorResponse(gate.reason, gate.status);
+
     // Resolve date range — explicit from/to wins, otherwise last `days` (default 14, max 90)
     const today = new Date();
     let toDate = to ? new Date(to) : today;
