@@ -146,12 +146,13 @@ export function PhotoSolvePanel({
   totalMarks,
   curriculum,
   onBack,
+  onResult,
 }: PhotoSolvePanelProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  const [result, setResult] = useState<PhotoSolveResult | null>(null);
   const [showSolution, setShowSolution] = useState(false);
 
   const cameraRef = useRef<HTMLInputElement>(null);
