@@ -101,6 +101,9 @@ export const LearnerHomeTab = ({
 
   return (
   <div className="space-y-4 p-4 mt-0">
+    {/* School Workspace banner — only renders for school-enrolled learners */}
+    <SchoolWorkspaceBanner />
+
     {/* My Lessons Button */}
     <Button
       onClick={() => setLessonsOpen(true)}
