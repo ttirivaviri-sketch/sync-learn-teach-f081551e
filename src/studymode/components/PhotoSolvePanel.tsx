@@ -163,7 +163,7 @@ export function PhotoSolvePanel({
   const onPick = async (file: File | undefined) => {
     if (!file) return;
     if (file.size > MAX_BYTES) {
-      setError('Image is too large — please use one under 6MB.');
+      setError('Image is too large — please use one under 12MB.');
       return;
     }
     setError(null);
@@ -183,7 +183,7 @@ export function PhotoSolvePanel({
     setLoading(true);
     setError(null);
     try {
-      const data = await aiRequestJSON<GradeResult>('photo-solve-grade', {
+      const data = await aiRequestJSON<PhotoSolveResult>('photo-solve-grade', {
         image: dataUrl,
         question,
         subject: subject?.name,
@@ -192,6 +192,7 @@ export function PhotoSolvePanel({
         totalMarks,
       });
       setResult(data);
+      onResult?.(data);
 
       // XP + haptics
       const correctCount = data.steps.filter((s) => s.verdict === 'correct').length;
@@ -216,11 +217,20 @@ export function PhotoSolvePanel({
       updateStreak.mutate();
     } catch (e: any) {
       logger.error('photo-solve grade failed', e);
-      setError(e?.message || 'Could not grade your photo. Try again.');
+      const msg = String(e?.message || '');
+      if (msg.includes('rate_limited') || msg.includes('429')) {
+        setError("You've hit today's AI limit — try again tomorrow or upgrade.");
+      } else if (msg.includes('credits_exhausted') || msg.includes('402')) {
+        setError('AI credits exhausted on this workspace. Please add credits.');
+      } else if (msg.toLowerCase().includes('payload') || msg.includes('413')) {
+        setError('Image too large after upload — try a clearer, smaller photo.');
+      } else {
+        setError(msg || 'Could not grade your photo. Try a clearer image.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [dataUrl, question, subject?.name, topic?.name, curriculum, totalMarks, addXp, updateStreak]);
+  }, [dataUrl, question, subject?.name, topic?.name, curriculum, totalMarks, addXp, updateStreak, onResult]);
 
   const reset = () => {
     setResult(null);
