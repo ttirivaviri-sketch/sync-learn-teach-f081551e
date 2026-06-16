@@ -520,12 +520,23 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
             ))}
           </div>
         ) : (
-          <Textarea
-            placeholder="Write your answer here. Show all working..."
-            value={currentAnswer}
-            onChange={e => handleAnswerChange(e.target.value)}
-            className="min-h-[180px] text-sm"
-          />
+          <div className="space-y-2">
+            <div className="flex justify-end">
+              <PhotoAnswerButton
+                question={engine.currentQuestion?.question}
+                totalMarks={engine.currentQuestion?.marks}
+                onAnswer={(text) =>
+                  handleAnswerChange(currentAnswer ? `${currentAnswer}\n\n${text}` : text)
+                }
+              />
+            </div>
+            <Textarea
+              placeholder="Write your answer here. Show all working..."
+              value={currentAnswer}
+              onChange={e => handleAnswerChange(e.target.value)}
+              className="min-h-[180px] text-sm"
+            />
+          </div>
         )}
       </div>
 
