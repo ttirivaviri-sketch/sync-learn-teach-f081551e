@@ -53,32 +53,34 @@ serve(async (req) => {
       buckets.set(key, b);
     };
 
-    // 1. Quiz attempts: pull recent attempts, score/total < 0.6 counts wrong.
+    // 1. Quiz attempts (per-question rows): use marks_awarded/marks_possible.
     const { data: quizzes } = await svc
       .from("quiz_attempts")
-      .select("score,total_questions,topic,subject_id,created_at")
+      .select("marks_awarded,marks_possible,was_correct,topic_name,subject_id,created_at")
       .eq("user_id", userId)
       .gte("created_at", since)
-      .limit(500);
+      .limit(1000);
     for (const q of quizzes ?? []) {
-      const total = Number(q.total_questions ?? 0);
-      if (total <= 0) continue;
-      const pct = Number(q.score ?? 0) / total;
-      bump(q.topic ?? "General", q.subject_id ?? null, pct < 0.6, "quiz");
+      const max = Number(q.marks_possible ?? 1);
+      const got = Number(q.marks_awarded ?? (q.was_correct ? 1 : 0));
+      if (max <= 0) continue;
+      const wrong = got / max < 0.6;
+      bump(q.topic_name ?? "General", q.subject_id ?? null, wrong, "quiz");
     }
 
-    // 2. Daily task attempts — count incorrect via score/max_score.
+    // 2. Daily task attempts — also per-question.
     const { data: tasks } = await svc
       .from("daily_task_attempts")
-      .select("score,max_score,topic,subject_id,created_at")
+      .select("marks_awarded,marks_possible,was_correct,topic,subject_id,created_at")
       .eq("user_id", userId)
       .gte("created_at", since)
-      .limit(500);
+      .limit(1000);
     for (const t of tasks ?? []) {
-      const max = Number(t.max_score ?? 0);
+      const max = Number((t as any).marks_possible ?? 1);
+      const got = Number((t as any).marks_awarded ?? ((t as any).was_correct ? 1 : 0));
       if (max <= 0) continue;
-      const pct = Number(t.score ?? 0) / max;
-      bump((t as any).topic ?? "General", (t as any).subject_id ?? null, pct < 0.6, "daily_task");
+      const wrong = got / max < 0.6;
+      bump((t as any).topic ?? "General", (t as any).subject_id ?? null, wrong, "daily_task");
     }
 
     // 3. School homework — pull responses joined to questions for topics/concepts.
