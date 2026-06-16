@@ -450,6 +450,13 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
               <MathMarkdown>{task.blocks.exam_question.question}</MathMarkdown>
             </div>
 
+            <div className="flex justify-end">
+              <PhotoAnswerButton
+                question={task.blocks.exam_question.question}
+                totalMarks={task.blocks.exam_question.marks}
+                onAnswer={(text) => setExamAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+              />
+            </div>
             <Textarea
               placeholder="Write your full multi-step answer…"
               value={examAnswer}
