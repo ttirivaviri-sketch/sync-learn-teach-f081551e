@@ -46,7 +46,13 @@ export const useNotifications = (userId?: string) => {
           event: 'INSERT', schema: 'public', table: 'notifications',
           filter: `user_id=eq.${userId}`,
         }, (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev]);
+          const n = payload.new as Notification;
+          setNotifications(prev => [n, ...prev]);
+          try {
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification(n.title, { body: n.message, tag: n.id, icon: '/favicon.ico' });
+            }
+          } catch { /* ignore */ }
         })
         .on('postgres_changes', {
           event: 'UPDATE', schema: 'public', table: 'notifications',
