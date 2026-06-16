@@ -124,7 +124,25 @@ const App = () => (
                 <Route path="library" element={<AdminLibrary />} />
                 <Route path="allocations" element={<AdminAllocations />} />
                 <Route path="study-analytics" element={<AdminStudyAnalytics />} />
+                <Route path="schools" element={<AdminSchools />} />
+                <Route path="schools/:id" element={<AdminSchoolDetail />} />
               </Route>
+
+              {/* School admin portal */}
+              <Route path="/school" element={<SchoolLayout />}>
+                <Route index element={<SchoolDashboard />} />
+              </Route>
+              <Route path="/school/:schoolId" element={<SchoolLayout />}>
+                <Route index element={<SchoolDashboard />} />
+                <Route path="members" element={<SchoolMembers />} />
+                <Route path="invitations" element={<SchoolInvitations />} />
+                <Route path="settings" element={<SchoolSettings />} />
+              </Route>
+
+              {/* Invitation acceptance */}
+              <Route path="/invite/:token" element={<AcceptInvitation />} />
+
+
 
               {/* Legal */}
               <Route path="/legal/terms" element={<LegalTerms />} />
