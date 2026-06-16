@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, BookOpen, Zap, Send, Eye
 import { MathMarkdown } from './MathMarkdown';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { DailyTask, Subject } from '../types/study';
 import { useTaskContent } from '../hooks/useTaskContent';
 import { useSyllabusContext } from '../hooks/useSyllabusContext';
