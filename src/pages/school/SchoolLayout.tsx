@@ -145,8 +145,20 @@ export default function SchoolLayout() {
           ))}
         </nav>
       </header>
+      {(gate.state === "trial" || gate.state === "expiring_soon") && (
+        <div className="border-b bg-amber-500/10 text-amber-900 dark:text-amber-200">
+          <div className="px-4 py-2 text-xs flex flex-wrap items-center gap-2">
+            <Clock3 className="h-3.5 w-3.5" />
+            <span className="font-medium">{contractMessage(gate).title}.</span>
+            <span className="opacity-80">{contractMessage(gate).body}</span>
+            <a className="ml-auto underline" href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Renew — ${current.school.name}`)}`}>
+              Contact billing
+            </a>
+          </div>
+        </div>
+      )}
       <main className="p-4 md:p-6">
-        <Outlet context={{ school: current.school, role }} />
+        <Outlet context={{ school: current.school, role, contractGate: gate }} />
       </main>
     </div>
   );
