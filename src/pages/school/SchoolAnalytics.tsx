@@ -80,6 +80,9 @@ export default function SchoolAnalytics() {
   }
 
   if (error) {
+    if (isContractGateError(error)) {
+      return <ContractGateNotice err={error} schoolId={schoolId} onRetry={() => refetch()} />;
+    }
     const msg = (error as Error).message || "Failed to load analytics";
     const forbidden = /403|forbidden/i.test(msg);
     return (
@@ -98,6 +101,10 @@ export default function SchoolAnalytics() {
       const r = await search.mutateAsync({ schoolId, query, classId: filters.classId });
       setResults(r);
     } catch (e) {
+      if (isContractGateError(e)) {
+        toast({ title: "Search unavailable — contract paused", description: e.reason, variant: "destructive" });
+        return;
+      }
       toast({ title: "Search failed", description: (e as Error).message, variant: "destructive" });
     }
   };
@@ -116,6 +123,10 @@ export default function SchoolAnalytics() {
       setDocTitle("");
       refetch();
     } catch (e) {
+      if (isContractGateError(e)) {
+        toast({ title: "Ingest unavailable — contract paused", description: e.reason, variant: "destructive" });
+        return;
+      }
       toast({ title: "Ingest failed", description: (e as Error).message, variant: "destructive" });
     }
   };
