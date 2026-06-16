@@ -1182,6 +1182,30 @@ export type Database = {
           },
         ]
       }
+      homework_reminder_sent: {
+        Row: {
+          homework_id: string
+          id: string
+          kind: string
+          sent_at: string
+          student_id: string
+        }
+        Insert: {
+          homework_id: string
+          id?: string
+          kind: string
+          sent_at?: string
+          student_id: string
+        }
+        Update: {
+          homework_id?: string
+          id?: string
+          kind?: string
+          sent_at?: string
+          student_id?: string
+        }
+        Relationships: []
+      }
       landing_events: {
         Row: {
           created_at: string
@@ -5938,6 +5962,7 @@ export type Database = {
         Args: { p_allocation_id: string; p_event: string; p_extra?: string }
         Returns: undefined
       }
+      notify_homework_due_soon: { Args: never; Returns: number }
       rebuild_school_analytics_today: {
         Args: { _school_id: string }
         Returns: undefined
