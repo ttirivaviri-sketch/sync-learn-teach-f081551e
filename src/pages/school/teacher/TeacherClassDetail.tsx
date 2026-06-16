@@ -12,11 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink } from "lucide-react";
+import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
+import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
 import {
   useClass,
   useResources, useCreateResource, useDeleteResource,
@@ -48,13 +49,44 @@ export default function TeacherClassDetail() {
           <TabsTrigger value="homework"><ClipboardList className="h-4 w-4 mr-1" />Homework</TabsTrigger>
           <TabsTrigger value="quizzes">Quizzes</TabsTrigger>
           <TabsTrigger value="students"><Users className="h-4 w-4 mr-1" />Students</TabsTrigger>
+          <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />Analytics</TabsTrigger>
         </TabsList>
         <TabsContent value="stream"><StreamPanel schoolId={school.id} classId={classId!} /></TabsContent>
         <TabsContent value="materials"><MaterialsPanel schoolId={school.id} classId={classId!} /></TabsContent>
         <TabsContent value="homework"><HomeworkPanel schoolId={school.id} classId={classId!} /></TabsContent>
         <TabsContent value="quizzes"><QuizzesPanel schoolId={school.id} classId={classId!} /></TabsContent>
         <TabsContent value="students"><StudentsPanel classId={classId!} /></TabsContent>
+        <TabsContent value="analytics"><ClassAnalyticsPanel classId={classId!} /></TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ClassAnalyticsPanel({ classId }: { classId: string }) {
+  const enrollments = useEnrollments(classId);
+  const students = enrollments.data ?? [];
+  const [selected, setSelected] = useState<string | null>(null);
+  if (enrollments.isLoading) return <Loader2 className="h-4 w-4 animate-spin" />;
+  if (students.length === 0) return <p className="text-sm text-muted-foreground">No students enrolled.</p>;
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {students.map((e: any) => (
+          <Button
+            key={e.student_id}
+            size="sm"
+            variant={selected === e.student_id ? "default" : "outline"}
+            onClick={() => setSelected(e.student_id)}
+          >
+            {e.profile?.full_name ?? e.student_id.slice(0, 6)}
+          </Button>
+        ))}
+      </div>
+      {selected ? (
+        <StudentAnalyticsPanel userId={selected} title="Student analytics" />
+      ) : (
+        <p className="text-sm text-muted-foreground">Pick a student to see their learning analytics.</p>
+      )}
     </div>
   );
 }

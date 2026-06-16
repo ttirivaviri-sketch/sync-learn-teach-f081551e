@@ -23,6 +23,7 @@ import {
 import { toast } from "@/hooks/use-toast";
 import { isContractGateError, type ContractGateError } from "@/lib/contractError";
 import { BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
+import { SchoolLearningOutcomes } from "@/components/school/SchoolLearningOutcomes";
 
 type Ctx = { school: { id: string; name: string }; role: string };
 
@@ -211,6 +212,8 @@ export default function SchoolAnalytics() {
           <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
       </div>
+
+      {data?.school?.id && <SchoolLearningOutcomes schoolId={data.school.id} />}
 
       {/* Filters */}
       <Card className="grid gap-3 p-3 md:grid-cols-5">

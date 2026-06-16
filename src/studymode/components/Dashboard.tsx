@@ -20,6 +20,9 @@ const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => (
 const LessonReinforcementBanner = lazy(() => import('./LessonReinforcementBanner').then(m => ({ default: m.LessonReinforcementBanner })));
 const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
 import { PredictedGradeCard } from './PredictedGradeCard';
+import { SchoolHomeworkRail } from './SchoolHomeworkRail';
+import { WeakTopicReport } from './WeakTopicReport';
+import { useStudyContext } from '@/hooks/useStudyContext';
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
 import { cn } from '@/lib/utils';
@@ -69,6 +72,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   
   const { settings: examSettings, getExamDate, isLoading: examSettingsLoading, saveSettings, isSaving: examSettingsSaving } = useExamSettings();
   const { exams: subjectExams, addExam, deleteExam, getNextExam } = useSubjectExams();
+  const { data: studyContext } = useStudyContext();
   
   const [syllabusSetupDone, setSyllabusSetupDone] = useState(false);
 
@@ -314,6 +318,12 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
         {/* ===== TAB 1: SUBJECTS (clean, subjects only) ===== */}
         <TabsContent value="subjects" className="mt-4">
+          {userId && studyContext?.school && (
+            <div className="mb-4 space-y-4">
+              <SchoolHomeworkRail studentId={userId} schoolName={studyContext.school.schoolName} />
+              <WeakTopicReport userId={userId} />
+            </div>
+          )}
           {subjectsLoading ? (
             <div className="grid gap-4 sm:grid-cols-2">
               {[1, 2, 3, 4].map((i) => (

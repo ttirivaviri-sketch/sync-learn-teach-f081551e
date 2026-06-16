@@ -3997,6 +3997,60 @@ export type Database = {
         }
         Relationships: []
       }
+      student_analytics_daily: {
+        Row: {
+          created_at: string
+          day: string
+          flashcard_mastery_avg: number
+          flashcards_reviewed: number
+          homework_completed: number
+          id: string
+          minutes_studied: number
+          quiz_count: number
+          quiz_score_max_sum: number
+          quiz_score_sum: number
+          resources_opened: number
+          school_id: string | null
+          tasks_completed: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          day?: string
+          flashcard_mastery_avg?: number
+          flashcards_reviewed?: number
+          homework_completed?: number
+          id?: string
+          minutes_studied?: number
+          quiz_count?: number
+          quiz_score_max_sum?: number
+          quiz_score_sum?: number
+          resources_opened?: number
+          school_id?: string | null
+          tasks_completed?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          day?: string
+          flashcard_mastery_avg?: number
+          flashcards_reviewed?: number
+          homework_completed?: number
+          id?: string
+          minutes_studied?: number
+          quiz_count?: number
+          quiz_score_max_sum?: number
+          quiz_score_sum?: number
+          resources_opened?: number
+          school_id?: string | null
+          tasks_completed?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       student_context_snapshots: {
         Row: {
           class_ids: string[]
@@ -5688,6 +5742,8 @@ export type Database = {
       }
     }
     Functions: {
+      _sad_upsert: { Args: { _day: string; _user_id: string }; Returns: string }
+      _student_primary_school: { Args: { _user_id: string }; Returns: string }
       accept_school_invitation: { Args: { _token: string }; Returns: Json }
       admin_study_completion_rate: {
         Args: { p_days?: number }
@@ -5781,6 +5837,10 @@ export type Database = {
           video_url: string
           watch_count: number
         }[]
+      }
+      get_student_analytics: {
+        Args: { _from?: string; _to?: string; _user_id?: string }
+        Returns: Json
       }
       get_study_memory_context: {
         Args: {
@@ -5881,6 +5941,32 @@ export type Database = {
       rebuild_school_analytics_today: {
         Args: { _school_id: string }
         Returns: undefined
+      }
+      rebuild_student_analytics_today: {
+        Args: { _user_id?: string }
+        Returns: {
+          created_at: string
+          day: string
+          flashcard_mastery_avg: number
+          flashcards_reviewed: number
+          homework_completed: number
+          id: string
+          minutes_studied: number
+          quiz_count: number
+          quiz_score_max_sum: number
+          quiz_score_sum: number
+          resources_opened: number
+          school_id: string | null
+          tasks_completed: number
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "student_analytics_daily"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       refresh_student_context_snapshot: {
         Args: { _user_id: string }

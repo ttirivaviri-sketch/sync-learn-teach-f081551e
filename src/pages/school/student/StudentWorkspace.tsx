@@ -20,6 +20,7 @@ import {
 } from "@/hooks/useSchoolAcademics";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
+import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
 
 type View =
   | { kind: "home" }
@@ -42,6 +43,7 @@ function HomeView({ school, onOpen }: { school: any; onOpen: (v: View) => void }
   const classes = useMyEnrolledClasses(school.id);
   return (
     <div className="space-y-6">
+      <StudentAnalyticsPanel title="Your learning" />
       <section>
         <h2 className="text-lg font-semibold mb-2">Due soon</h2>
         {today.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
