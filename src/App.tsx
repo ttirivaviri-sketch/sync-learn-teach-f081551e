@@ -55,6 +55,7 @@ const SchoolAnnouncements = lazy(() => import("./pages/school/SchoolAnnouncement
 const TeacherWorkspace = lazy(() => import("./pages/school/teacher/TeacherWorkspace"));
 const TeacherClassDetail = lazy(() => import("./pages/school/teacher/TeacherClassDetail"));
 const StudentWorkspace = lazy(() => import("./pages/school/student/StudentWorkspace"));
+const SchoolAnalytics = lazy(() => import("./pages/school/SchoolAnalytics"));
 const DevSubmissionTest = lazy(() => import("./pages/dev/DevSubmissionTest"));
 
 // Legal pages
@@ -148,6 +149,7 @@ const App = () => (
                 <Route path="teach" element={<TeacherWorkspace />} />
                 <Route path="teach/:classId" element={<TeacherClassDetail />} />
                 <Route path="learn" element={<StudentWorkspace />} />
+                <Route path="analytics" element={<SchoolAnalytics />} />
               </Route>
 
               {/* Invitation acceptance */}

@@ -85,6 +85,7 @@ export type Database = {
           fn_name: string
           hits: number
           response: Json
+          school_id: string | null
         }
         Insert: {
           cache_key: string
@@ -93,6 +94,7 @@ export type Database = {
           fn_name: string
           hits?: number
           response: Json
+          school_id?: string | null
         }
         Update: {
           cache_key?: string
@@ -101,8 +103,17 @@ export type Database = {
           fn_name?: string
           hits?: number
           response?: Json
+          school_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_response_cache_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ai_usage_daily: {
         Row: {
@@ -2989,6 +3000,219 @@ export type Database = {
         }
         Relationships: []
       }
+      school_ai_chunks: {
+        Row: {
+          class_id: string | null
+          content: string
+          created_at: string
+          document_id: string
+          embedding: string | null
+          id: string
+          metadata: Json
+          ord: number
+          school_id: string
+          subject_id: string | null
+        }
+        Insert: {
+          class_id?: string | null
+          content: string
+          created_at?: string
+          document_id: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json
+          ord?: number
+          school_id: string
+          subject_id?: string | null
+        }
+        Update: {
+          class_id?: string | null
+          content?: string
+          created_at?: string
+          document_id?: string
+          embedding?: string | null
+          id?: string
+          metadata?: Json
+          ord?: number
+          school_id?: string
+          subject_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_ai_chunks_class_id_fkey"
+            columns: ["class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_ai_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "school_ai_documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_ai_chunks_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_ai_chunks_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "school_subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_ai_documents: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          error: string | null
+          id: string
+          page_count: number | null
+          resource_id: string | null
+          school_id: string
+          status: string
+          title: string | null
+          total_tokens: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          page_count?: number | null
+          resource_id?: string | null
+          school_id: string
+          status?: string
+          title?: string | null
+          total_tokens?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          error?: string | null
+          id?: string
+          page_count?: number | null
+          resource_id?: string | null
+          school_id?: string
+          status?: string
+          title?: string | null
+          total_tokens?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_ai_documents_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "school_resources"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_ai_documents_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_ai_usage_daily: {
+        Row: {
+          bucket: string
+          requests: number
+          school_id: string
+          tokens_in: number
+          tokens_out: number
+          updated_at: string
+          usage_date: string
+        }
+        Insert: {
+          bucket?: string
+          requests?: number
+          school_id: string
+          tokens_in?: number
+          tokens_out?: number
+          updated_at?: string
+          usage_date?: string
+        }
+        Update: {
+          bucket?: string
+          requests?: number
+          school_id?: string
+          tokens_in?: number
+          tokens_out?: number
+          updated_at?: string
+          usage_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_ai_usage_daily_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_analytics_daily: {
+        Row: {
+          active_users: number
+          ai_requests: number
+          assignments_created: number
+          day: string
+          graded_submissions: number
+          lessons: number
+          quiz_attempts: number
+          school_id: string
+          storage_mb: number
+          submissions: number
+          updated_at: string
+        }
+        Insert: {
+          active_users?: number
+          ai_requests?: number
+          assignments_created?: number
+          day?: string
+          graded_submissions?: number
+          lessons?: number
+          quiz_attempts?: number
+          school_id: string
+          storage_mb?: number
+          submissions?: number
+          updated_at?: string
+        }
+        Update: {
+          active_users?: number
+          ai_requests?: number
+          assignments_created?: number
+          day?: string
+          graded_submissions?: number
+          lessons?: number
+          quiz_attempts?: number
+          school_id?: string
+          storage_mb?: number
+          submissions?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_analytics_daily_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_audit_logs: {
         Row: {
           action: string
@@ -5232,6 +5456,14 @@ export type Database = {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
+      check_school_ai_quota: {
+        Args: { _school_id: string }
+        Returns: {
+          allowed: boolean
+          limit: number
+          used: number
+        }[]
+      }
       current_school_ids: { Args: never; Returns: string[] }
       expire_stale_topic_sessions: { Args: never; Returns: number }
       generate_allocation_bookings: {
@@ -5318,6 +5550,15 @@ export type Database = {
         Returns: boolean
       }
       has_shared_relationship: { Args: { _other: string }; Returns: boolean }
+      increment_school_ai_usage: {
+        Args: {
+          _bucket: string
+          _school_id: string
+          _tokens_in?: number
+          _tokens_out?: number
+        }
+        Returns: undefined
+      }
       is_class_teacher: { Args: { _class_id: string }; Returns: boolean }
       is_enrolled_in_class: { Args: { _class_id: string }; Returns: boolean }
       is_school_member: {
@@ -5338,8 +5579,29 @@ export type Database = {
         Returns: string
       }
       mark_learner_onboarding_complete: { Args: never; Returns: undefined }
+      match_school_chunks: {
+        Args: {
+          _class_id?: string
+          _match_count?: number
+          _query_embedding: string
+          _school_id: string
+        }
+        Returns: {
+          class_id: string
+          content: string
+          document_id: string
+          id: string
+          metadata: Json
+          similarity: number
+          subject_id: string
+        }[]
+      }
       notify_allocation_event: {
         Args: { p_allocation_id: string; p_event: string; p_extra?: string }
+        Returns: undefined
+      }
+      rebuild_school_analytics_today: {
+        Args: { _school_id: string }
         Returns: undefined
       }
       request_tutor_withdrawal: {
@@ -5378,6 +5640,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      school_storage_used_mb: { Args: { _school_id: string }; Returns: number }
       set_subscription_plan: {
         Args: { p_plan: string }
         Returns: {
