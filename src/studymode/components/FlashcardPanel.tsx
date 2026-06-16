@@ -154,6 +154,12 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
       {/* Answer input (before attempting) */}
       {!hasAttempted && (
         <div className="w-full space-y-3">
+          <div className="flex justify-end">
+            <PhotoAnswerButton
+              question={card.front}
+              onAnswer={(text) => setUserAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+            />
+          </div>
           <Textarea
             ref={textareaRef}
             placeholder="Type your answer before revealing..."
