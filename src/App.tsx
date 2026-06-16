@@ -40,6 +40,16 @@ const AdminCurriculumTemplates = lazy(() => import("./pages/admin/CurriculumTemp
 const AdminLibrary = lazy(() => import("./pages/admin/Library"));
 const AdminAllocations = lazy(() => import("./pages/admin/Allocations"));
 const AdminStudyAnalytics = lazy(() => import("./pages/admin/StudyAnalytics"));
+const AdminSchools = lazy(() => import("./pages/admin/Schools"));
+const AdminSchoolDetail = lazy(() => import("./pages/admin/SchoolDetail"));
+
+// School admin portal
+const SchoolLayout = lazy(() => import("./pages/school/SchoolLayout"));
+const SchoolDashboard = lazy(() => import("./pages/school/SchoolDashboard"));
+const SchoolMembers = lazy(() => import("./pages/school/SchoolMembers"));
+const SchoolInvitations = lazy(() => import("./pages/school/SchoolInvitations"));
+const SchoolSettings = lazy(() => import("./pages/school/SchoolSettings"));
+const AcceptInvitation = lazy(() => import("./pages/AcceptInvitation"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
