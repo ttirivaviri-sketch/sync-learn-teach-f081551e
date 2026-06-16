@@ -212,6 +212,8 @@ export default function SchoolAnalytics() {
         </Button>
       </div>
 
+      {data?.school?.id && <SchoolLearningOutcomes schoolId={data.school.id} />}
+
       {/* Filters */}
       <Card className="grid gap-3 p-3 md:grid-cols-5">
         <div className="space-y-1">
