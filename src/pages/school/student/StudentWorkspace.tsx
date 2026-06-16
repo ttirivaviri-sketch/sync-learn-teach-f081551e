@@ -14,10 +14,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   useMyEnrolledClasses, useStudentTodayFeed,
-  useAssignments, useAssignment, useMySubmission, useSubmitAssignment,
+  useAssignments, useAssignment, useMySubmission, useSubmitAssignment, uploadSubmissionFile,
   useQuizzes, useQuiz, useQuizQuestions, useStartQuizAttempt, useSubmitQuizAttempt, useMyQuizAttempts,
   useResources, useAnnouncements,
 } from "@/hooks/useSchoolAcademics";
+import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
+import { SchoolFileLink } from "@/components/school/SchoolFileLink";
 
 type View =
   | { kind: "home" }
