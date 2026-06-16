@@ -4327,7 +4327,7 @@ export type Database = {
           }
     }
     Enums: {
-      app_role: "admin"
+      app_role: "admin" | "school_admin" | "school_teacher" | "school_student"
       booking_status: "requested" | "confirmed" | "completed" | "canceled"
       message_channel: "sms" | "ussd" | "whatsapp"
       message_direction: "inbound" | "outbound"
@@ -4492,7 +4492,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin"],
+      app_role: ["admin", "school_admin", "school_teacher", "school_student"],
       booking_status: ["requested", "confirmed", "completed", "canceled"],
       message_channel: ["sms", "ussd", "whatsapp"],
       message_direction: ["inbound", "outbound"],
