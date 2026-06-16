@@ -53,26 +53,7 @@ interface PhotoSolvePanelProps {
   onResult?: (result: PhotoSolveResult) => void;
 }
 
-interface GradedStep {
-  index: number;
-  student_step: string;
-  verdict: 'correct' | 'partial' | 'incorrect' | 'missing';
-  reason: string;
-  correction: string;
-}
-
-interface GradeResult {
-  question_detected: string;
-  final_answer: string;
-  final_answer_correct: boolean | null;
-  steps: GradedStep[];
-  missed_steps: string[];
-  next_hint: string;
-  model_solution: string;
-  confidence: number;
-  marks_awarded: number;
-  marks_possible: number;
-}
+type GradedStep = PhotoSolveResult['steps'][number];
 
 const MAX_BYTES = 12 * 1024 * 1024; // 12MB cap on the raw user file
 
