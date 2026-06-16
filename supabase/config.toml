@@ -71,3 +71,6 @@ verify_jwt = true
 
 [functions.school-analytics]
 verify_jwt = true
+
+[functions.school-ingest-retry]
+verify_jwt = true
