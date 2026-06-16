@@ -4,10 +4,12 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Save, CreditCard, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateSchool, type School } from "@/hooks/useSchools";
+import { evaluateSchoolContract, contractMessage, BILLING_CONTACT_EMAIL, type ContractGate } from "@/lib/schoolContract";
 
 export default function SchoolSettings() {
   const { school } = useOutletContext<{ school: School }>();
