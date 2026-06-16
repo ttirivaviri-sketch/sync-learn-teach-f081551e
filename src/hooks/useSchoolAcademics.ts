@@ -380,7 +380,21 @@ export interface Submission {
   id: Id; school_id: Id; assignment_id: Id; student_id: Id;
   status: string; text_response: string | null; submitted_at: string | null;
   score: number | null; feedback: string | null;
+  attachment_paths: string[] | null;
+  graded_at?: string | null; graded_by?: Id | null;
+  created_at?: string; updated_at?: string;
   profile?: { full_name: string | null; email: string | null } | null;
+}
+
+// Upload a student submission file. Path: {schoolId}/submissions/{assignmentId}/{studentId}/{ts-name}
+export async function uploadSubmissionFile(input: { schoolId: Id; assignmentId: Id; file: File }): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+  const safeName = input.file.name.replace(/[^\w.\-]+/g, "_");
+  const path = `${input.schoolId}/submissions/${input.assignmentId}/${user.id}/${Date.now()}-${safeName}`;
+  const { error } = await supabase.storage.from("school-content").upload(path, input.file, { upsert: false });
+  if (error) throw error;
+  return path;
 }
 export function useSubmissions(assignmentId?: Id) {
   return useQuery({
@@ -416,13 +430,17 @@ export function useMySubmission(assignmentId?: Id) {
 export function useSubmitAssignment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { school_id: Id; assignment_id: Id; text_response: string; final: boolean }) => {
+    mutationFn: async (input: { school_id: Id; assignment_id: Id; text_response: string; final: boolean; attachment_paths?: string[] }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      // Merge with existing attachment_paths so partial updates don't clobber files
+      const { data: existing } = await sb.from("submissions").select("attachment_paths").eq("assignment_id", input.assignment_id).eq("student_id", user!.id).maybeSingle();
+      const merged = Array.from(new Set([...(existing?.attachment_paths ?? []), ...(input.attachment_paths ?? [])]));
       const payload: any = {
         school_id: input.school_id,
         assignment_id: input.assignment_id,
         student_id: user!.id,
         text_response: input.text_response,
+        attachment_paths: merged,
         status: input.final ? "submitted" : "draft",
         submitted_at: input.final ? new Date().toISOString() : null,
       };

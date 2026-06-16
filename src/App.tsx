@@ -55,6 +55,7 @@ const SchoolAnnouncements = lazy(() => import("./pages/school/SchoolAnnouncement
 const TeacherWorkspace = lazy(() => import("./pages/school/teacher/TeacherWorkspace"));
 const TeacherClassDetail = lazy(() => import("./pages/school/teacher/TeacherClassDetail"));
 const StudentWorkspace = lazy(() => import("./pages/school/student/StudentWorkspace"));
+const DevSubmissionTest = lazy(() => import("./pages/dev/DevSubmissionTest"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
@@ -151,6 +152,9 @@ const App = () => (
 
               {/* Invitation acceptance */}
               <Route path="/invite/:token" element={<AcceptInvitation />} />
+
+              {/* Dev tools */}
+              <Route path="/dev/submission-test" element={<DevSubmissionTest />} />
 
 
 
