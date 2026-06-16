@@ -163,8 +163,32 @@ function AssignmentView({ id, schoolId, onBack }: { id: string; schoolId: string
   const mine = useMySubmission(id);
   const submit = useSubmitAssignment();
   const [text, setText] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const sub = mine.data;
-  const isFinal = sub && sub.status !== "draft" && sub.status !== "not_started";
+  const isFinal = !!sub && sub.status !== "draft" && (sub.status as string) !== "not_started";
+
+  async function handleSubmit(final: boolean) {
+    setUploading(true);
+    try {
+      let attachment_paths: string[] | undefined;
+      if (file) {
+        const path = await uploadSubmissionFile({ schoolId, assignmentId: id, file });
+        attachment_paths = [path];
+      }
+      await submit.mutateAsync({
+        school_id: schoolId, assignment_id: id,
+        text_response: text || sub?.text_response || "",
+        final, attachment_paths,
+      });
+      setFile(null);
+      toast.success(final ? "Submitted" : "Saved draft");
+    } catch (e: any) {
+      toast.error(e.message ?? "Submission failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   return (
     <div className="space-y-3 max-w-2xl">
@@ -174,12 +198,19 @@ function AssignmentView({ id, schoolId, onBack }: { id: string; schoolId: string
           <h1 className="text-xl font-semibold">{a.data.title}</h1>
           <p className="text-xs text-muted-foreground">{a.data.due_at ? `Due ${new Date(a.data.due_at).toLocaleString()}` : "No due date"} · /{a.data.max_score}</p>
           {a.data.instructions && <Card className="p-3 text-sm whitespace-pre-wrap">{a.data.instructions}</Card>}
+
+          <Card className="p-3">
+            <div className="text-sm font-medium mb-2">Progress</div>
+            <SubmissionTimeline submission={sub} />
+          </Card>
+
           {sub?.status === "graded" && (
             <Card className="p-3 bg-muted/40">
               <div className="font-medium">Grade: {sub.score} / {a.data.max_score}</div>
-              {sub.feedback && <p className="text-sm mt-1">{sub.feedback}</p>}
+              {sub.feedback && <p className="text-sm mt-1 whitespace-pre-wrap"><span className="font-medium">Feedback: </span>{sub.feedback}</p>}
             </Card>
           )}
+
           <Card className="p-3 space-y-2">
             <div className="text-sm font-medium">Your response</div>
             <Textarea
@@ -188,11 +219,25 @@ function AssignmentView({ id, schoolId, onBack }: { id: string; schoolId: string
               onChange={(e) => setText(e.target.value)}
               disabled={isFinal}
             />
-            {!isFinal && (
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => submit.mutate({ school_id: schoolId, assignment_id: id, text_response: text || sub?.text_response || "", final: false }, { onSuccess: () => toast.success("Saved draft") })}>Save draft</Button>
-                <Button onClick={() => submit.mutate({ school_id: schoolId, assignment_id: id, text_response: text || sub?.text_response || "", final: true }, { onSuccess: () => toast.success("Submitted") })}>Submit</Button>
+            {!!sub?.attachment_paths?.length && (
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">Uploaded files</div>
+                {sub.attachment_paths.map((p) => <SchoolFileLink key={p} path={p} />)}
               </div>
+            )}
+            {!isFinal && (
+              <>
+                <div>
+                  <label className="text-xs text-muted-foreground">Attach a file (optional)</label>
+                  <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" disabled={uploading} onClick={() => handleSubmit(false)}>Save draft</Button>
+                  <Button disabled={uploading} onClick={() => handleSubmit(true)}>
+                    {uploading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Submit
+                  </Button>
+                </div>
+              </>
             )}
           </Card>
         </>
