@@ -3794,6 +3794,48 @@ export type Database = {
         }
         Relationships: []
       }
+      student_context_snapshots: {
+        Row: {
+          class_ids: string[]
+          context: Json
+          created_at: string
+          curriculum: string | null
+          grade_id: string | null
+          refreshed_at: string
+          school_id: string | null
+          subject_ids: string[]
+          teacher_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          class_ids?: string[]
+          context?: Json
+          created_at?: string
+          curriculum?: string | null
+          grade_id?: string | null
+          refreshed_at?: string
+          school_id?: string | null
+          subject_ids?: string[]
+          teacher_ids?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          class_ids?: string[]
+          context?: Json
+          created_at?: string
+          curriculum?: string | null
+          grade_id?: string | null
+          refreshed_at?: string
+          school_id?: string | null
+          subject_ids?: string[]
+          teacher_ids?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       study_activity: {
         Row: {
           activity_type: string
@@ -5603,6 +5645,28 @@ export type Database = {
       rebuild_school_analytics_today: {
         Args: { _school_id: string }
         Returns: undefined
+      }
+      refresh_student_context_snapshot: {
+        Args: { _user_id: string }
+        Returns: {
+          class_ids: string[]
+          context: Json
+          created_at: string
+          curriculum: string | null
+          grade_id: string | null
+          refreshed_at: string
+          school_id: string | null
+          subject_ids: string[]
+          teacher_ids: string[]
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "student_context_snapshots"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       request_tutor_withdrawal: {
         Args: {
