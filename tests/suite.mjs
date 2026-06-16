@@ -620,6 +620,67 @@ await test('CSS @import precedes @tailwind directives', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SCHOOLS PORTAL — FEATURE_SCHOOLS flag + contract gate source-level wiring
+// ─────────────────────────────────────────────────────────────────────────────
+suite('Schools portal feature flag & contract gate');
+
+const SUPA_FN_DIR = path.join(__dirname, '../supabase/functions');
+
+await test('FEATURE_SCHOOLS reads VITE_FEATURE_SCHOOLS with default ON', () => {
+  const src = readFileSync(path.join(SRC_DIR, 'lib/featureFlags.ts'), 'utf8');
+  assert.ok(src.includes('VITE_FEATURE_SCHOOLS'), 'flag name missing');
+  assert.ok(/readFlag\("VITE_FEATURE_SCHOOLS",\s*true\)/.test(src), 'default must be true');
+  assert.ok(/off|false|0|no/.test(src) && /on|true|1|yes/.test(src), 'must accept truthy/falsy strings');
+});
+
+await test('SchoolLayout hides portal when FEATURE_SCHOOLS is off', () => {
+  const src = readFileSync(path.join(SRC_DIR, 'pages/school/SchoolLayout.tsx'), 'utf8');
+  assert.ok(src.includes('FEATURE_SCHOOLS'), 'must import the flag');
+  assert.ok(/!FEATURE_SCHOOLS[\s\S]{0,80}Navigate to="\/404"/.test(src),
+    'must redirect to /404 when flag is off');
+});
+
+await test('SchoolLayout hard-blocks non-live contract states', () => {
+  const src = readFileSync(path.join(SRC_DIR, 'pages/school/SchoolLayout.tsx'), 'utf8');
+  assert.ok(src.includes('evaluateSchoolContract'), 'must evaluate contract');
+  assert.ok(src.includes('isContractLive'), 'must check live state');
+  assert.ok(/if\s*\(!live\)/.test(src), 'must hard-block when contract is not live');
+  assert.ok(src.includes('BILLING_CONTACT_EMAIL'), 'must surface billing contact');
+});
+
+await test('App.tsx routes /school/* and /school/:id/billing', () => {
+  const src = readFileSync(path.join(SRC_DIR, 'App.tsx'), 'utf8');
+  assert.ok(/FEATURE_SCHOOLS\s*&&/.test(src), '/school routes must be flag-gated');
+  assert.ok(src.includes('SchoolBilling'), 'must import SchoolBilling');
+  assert.ok(/path="billing"\s+element=\{<SchoolBilling/.test(src), 'must register billing route');
+});
+
+await test('Shared contract helper exports enforceSchoolContract + audit logging', () => {
+  const src = readFileSync(path.join(SUPA_FN_DIR, '_shared/school-contract.ts'), 'utf8');
+  assert.ok(src.includes('enforceSchoolContract'), 'helper missing');
+  assert.ok(src.includes('logContractDenial'), 'audit helper missing');
+  assert.ok(src.includes("'contract_gate_denied'") || src.includes('"contract_gate_denied"'),
+    'must write contract_gate_denied audit rows');
+  for (const code of ['SUSPENDED', 'ARCHIVED', 'EXPIRED', 'NOT_STARTED']) {
+    assert.ok(src.includes(code), `must classify ${code}`);
+  }
+  for (const status of [402, 410, 423]) {
+    assert.ok(src.includes(`status: ${status}`) || src.includes(`status:${status}`),
+      `must return HTTP ${status}`);
+  }
+});
+
+for (const fn of ['school-analytics', 'school-ingest-document', 'school-search']) {
+  await test(`${fn} enforces contract gate with audit context`, () => {
+    const src = readFileSync(path.join(SUPA_FN_DIR, fn, 'index.ts'), 'utf8');
+    assert.ok(src.includes('enforceSchoolContract'), `${fn} must enforce contract gate`);
+    assert.ok(src.includes('feature:'), `${fn} must pass feature label`);
+    assert.ok(/if\s*\("response"\s+in\s+gate\)/.test(src),
+      `${fn} must return the gate Response on denial`);
+  });
+}
+
+
 // SUMMARY
 // ─────────────────────────────────────────────────────────────────────────────
 console.log(`\n${'═'.repeat(56)}`);
