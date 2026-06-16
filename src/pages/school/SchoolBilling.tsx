@@ -126,6 +126,8 @@ export default function SchoolBilling() {
           <Stat label="Contract end" value={fmtDate(school.contract_end)} />
         </dl>
       </Card>
+
+      <BillingTimeline school={school} />
     </section>
   );
 }
