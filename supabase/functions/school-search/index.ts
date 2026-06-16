@@ -51,6 +51,10 @@ serve(async (req) => {
       return errorResponse("Forbidden — not a school member", 403);
     }
 
+    // P8: contract / billing gate.
+    const gate = await assertSchoolContractLive(svc, school_id);
+    if (!gate.ok) return errorResponse(gate.reason, gate.status);
+
     const embedding = await embedOne(query);
     const { data, error } = await svc.rpc("match_school_chunks", {
       _school_id: school_id,
