@@ -61,6 +61,36 @@ export default function SchoolLayout() {
   const isTeacher = role === "school_teacher" || isAdmin;
   const isStudent = role === "school_student";
 
+  // P8: Contract / billing gate. Suspended, archived, expired and
+  // not-yet-started schools are hard-blocked. Settings stays reachable
+  // for school admins so they can still see billing info.
+  const gate = evaluateSchoolContract(current.school);
+  const live = isContractLive(gate);
+  if (!live) {
+    const msg = contractMessage(gate);
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center p-6">
+        <Card className="p-8 text-center max-w-md">
+          <ShieldAlert className="h-10 w-10 mx-auto mb-2 text-destructive" />
+          <h1 className="text-lg font-semibold">{msg.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{msg.body}</p>
+          <p className="text-xs text-muted-foreground mt-3">{current.school.name} · plan {current.school.plan}</p>
+          <div className="flex flex-wrap gap-2 justify-center mt-4">
+            <Button asChild size="sm" variant="default">
+              <a href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Restore access — ${current.school.name}`)}`}>Contact billing</a>
+            </Button>
+            {isAdmin && (
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/school/${schoolId}/settings`}>Open settings</Link>
+              </Button>
+            )}
+            <Button asChild size="sm" variant="ghost"><Link to="/">Back home</Link></Button>
+          </div>
+        </Card>
+      </main>
+    );
+  }
+
   const tabs = [
     { label: "Overview", to: `/school/${schoolId}`, icon: LayoutDashboard, end: true, show: true },
     { label: "Members", to: `/school/${schoolId}/members`, icon: Users, show: isAdmin },
