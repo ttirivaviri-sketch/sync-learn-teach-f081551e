@@ -96,7 +96,7 @@ export default function BillingTimeline({ school }: { school: School }) {
       at: a.created_at,
       title: a.action === "contract_state_changed"
         ? `Status changed${fromS && toS ? `: ${fromS} → ${toS}` : ""}`
-        : a.action.replaceAll("_", " "),
+        : a.action.replace(/_/g, " "),
       body: typeof diff.reason === "string" ? diff.reason : undefined,
       tone: "past",
     });
