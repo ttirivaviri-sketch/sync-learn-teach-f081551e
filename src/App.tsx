@@ -149,6 +149,7 @@ const App = () => (
                 <Route path="teach" element={<TeacherWorkspace />} />
                 <Route path="teach/:classId" element={<TeacherClassDetail />} />
                 <Route path="learn" element={<StudentWorkspace />} />
+                <Route path="analytics" element={<SchoolAnalytics />} />
               </Route>
 
               {/* Invitation acceptance */}
