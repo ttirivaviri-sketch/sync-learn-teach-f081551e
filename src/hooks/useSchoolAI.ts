@@ -42,8 +42,8 @@ export function useSchoolAnalytics(schoolId: string | undefined, filters: Analyt
   return useQuery({
     queryKey: ["school-analytics", schoolId, filters],
     enabled: !!schoolId,
-    queryFn: async (): Promise<SchoolAnalytics> => {
-      const { data, error } = await supabase.functions.invoke("school-analytics", {
+    queryFn: async (): Promise<SchoolAnalytics> =>
+      invokeWithContract<SchoolAnalytics>(() => supabase.functions.invoke("school-analytics", {
         body: {
           school_id: schoolId,
           days: filters.days,
@@ -52,9 +52,12 @@ export function useSchoolAnalytics(schoolId: string | undefined, filters: Analyt
           class_id: filters.classId,
           grade_id: filters.gradeId,
         },
-      });
-      if (error) throw error;
-      return data as SchoolAnalytics;
+      })),
+    retry: (count, err) => {
+      // Don't retry contract-gate failures (402/410/423) — they need billing intervention.
+      const status = (err as { status?: number } | null)?.status;
+      if (status === 402 || status === 410 || status === 423) return false;
+      return count < 2;
     },
   });
 }
