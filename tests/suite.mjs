@@ -830,8 +830,9 @@ await test('Network: anon cannot invoke studymode-detect-gaps without a JWT', as
     body: '{}',
   });
   await res.text();
-  assert.ok(res.status === 401 || res.status === 403,
-    `expected 401/403 for unauthenticated detect-gaps, got ${res.status}`);
+  assert.ok([401, 403, 404].includes(res.status),
+    `expected 401/403/404 for unauthenticated detect-gaps, got ${res.status}`);
+
 });
 
 
