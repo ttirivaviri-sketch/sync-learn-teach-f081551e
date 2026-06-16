@@ -860,6 +860,36 @@ export type Database = {
           },
         ]
       }
+      device_push_tokens: {
+        Row: {
+          created_at: string
+          device_label: string | null
+          id: string
+          last_seen_at: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_label?: string | null
+          id?: string
+          last_seen_at?: string
+          platform: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          device_label?: string | null
+          id?: string
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       documents: {
         Row: {
           created_at: string
@@ -1903,6 +1933,33 @@ export type Database = {
           submitted_at?: string | null
           time_taken_seconds?: number | null
           total_marks?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_preferences: {
+        Row: {
+          created_at: string
+          due_soon_alerts: boolean
+          homework_release_alerts: boolean
+          push_enabled: boolean
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_soon_alerts?: boolean
+          homework_release_alerts?: boolean
+          push_enabled?: boolean
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_soon_alerts?: boolean
+          homework_release_alerts?: boolean
+          push_enabled?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -5962,7 +6019,7 @@ export type Database = {
         Args: { p_allocation_id: string; p_event: string; p_extra?: string }
         Returns: undefined
       }
-      notify_homework_due_soon: { Args: never; Returns: number }
+      notify_homework_due_soon: { Args: never; Returns: undefined }
       rebuild_school_analytics_today: {
         Args: { _school_id: string }
         Returns: undefined
