@@ -377,6 +377,17 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
               <MathMarkdown>{currentQ.question}</MathMarkdown>
             </div>
 
+            <div className="flex justify-end">
+              <PhotoAnswerButton
+                question={currentQ.question}
+                onAnswer={(text) =>
+                  setPracticeAnswers((p) => ({
+                    ...p,
+                    [practiceIdx]: p[practiceIdx] ? `${p[practiceIdx]}\n\n${text}` : text,
+                  }))
+                }
+              />
+            </div>
             <Textarea
               placeholder="Your answer…"
               value={practiceAnswers[practiceIdx] ?? ''}
