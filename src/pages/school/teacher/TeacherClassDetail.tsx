@@ -253,10 +253,25 @@ function SubmissionsDialog({ assignmentId, onClose }: { assignmentId: string; on
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Submissions</DialogTitle></DialogHeader>
-        <div className="space-y-3 max-h-[60vh] overflow-auto">
+        <DialogHeader><DialogTitle>Submissions ({subs.data?.length ?? 0})</DialogTitle></DialogHeader>
+        <div className="space-y-3 max-h-[70vh] overflow-auto">
+          {subs.isLoading && <p className="text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-1" />Loading…</p>}
           {subs.data?.length === 0 && <p className="text-sm text-muted-foreground">No submissions yet.</p>}
-          {subs.data?.map((s) => <GradeRow key={s.id} sub={s} onGrade={(score, feedback) => grade.mutate({ submission: s, score, feedback })} />)}
+          {subs.data?.map((s) => (
+            <GradeRow
+              key={s.id}
+              sub={s}
+              onGrade={(score, feedback) =>
+                grade.mutate(
+                  { submission: s, score, feedback },
+                  {
+                    onSuccess: () => toast.success("Graded — student notified"),
+                    onError: (e: any) => toast.error(e.message ?? "Grading failed"),
+                  }
+                )
+              }
+            />
+          ))}
         </div>
       </DialogContent>
     </Dialog>
@@ -268,12 +283,28 @@ function GradeRow({ sub, onGrade }: { sub: any; onGrade: (score: number, feedbac
   const [feedback, setFeedback] = useState(sub.feedback ?? "");
   return (
     <Card className="p-3 space-y-2">
-      <div className="text-sm font-medium">{sub.profile?.full_name ?? sub.profile?.email ?? sub.student_id.slice(0,8)} <span className="text-xs text-muted-foreground">· {sub.status}</span></div>
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-sm font-medium">
+          {sub.profile?.full_name ?? sub.profile?.email ?? sub.student_id.slice(0, 8)}
+          <span className="text-xs text-muted-foreground ml-1">· {sub.status}</span>
+        </div>
+        {sub.submitted_at && (
+          <span className="text-xs text-muted-foreground">Submitted {new Date(sub.submitted_at).toLocaleString()}</span>
+        )}
+      </div>
       {sub.text_response && <p className="text-sm whitespace-pre-wrap p-2 bg-muted rounded">{sub.text_response}</p>}
+      {!!sub.attachment_paths?.length && (
+        <div className="flex flex-wrap gap-1">
+          {sub.attachment_paths.map((p: string) => <SchoolFileLink key={p} path={p} />)}
+        </div>
+      )}
+      <div className="rounded-md border p-2 bg-background/40">
+        <SubmissionTimeline submission={sub} />
+      </div>
       <div className="flex gap-2">
         <Input type="number" placeholder="Score" value={score} onChange={(e) => setScore(e.target.value)} className="w-24" />
-        <Input placeholder="Feedback" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
-        <Button size="sm" onClick={() => onGrade(Number(score) || 0, feedback)}>Grade</Button>
+        <Input placeholder="Feedback for student" value={feedback} onChange={(e) => setFeedback(e.target.value)} />
+        <Button size="sm" onClick={() => onGrade(Number(score) || 0, feedback)}>{sub.status === "graded" ? "Update" : "Grade"}</Button>
       </div>
     </Card>
   );
