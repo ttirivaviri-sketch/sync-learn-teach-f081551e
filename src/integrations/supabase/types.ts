@@ -2517,6 +2517,178 @@ export type Database = {
         }
         Relationships: []
       }
+      school_audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          diff: Json | null
+          id: string
+          ip: string | null
+          school_id: string
+          target_id: string | null
+          target_table: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          diff?: Json | null
+          id?: string
+          ip?: string | null
+          school_id: string
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          diff?: Json | null
+          id?: string
+          ip?: string | null
+          school_id?: string
+          target_id?: string | null
+          target_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_audit_logs_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_memberships: {
+        Row: {
+          created_at: string
+          id: string
+          invited_by: string | null
+          invited_email: string | null
+          joined_at: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          status: Database["public"]["Enums"]["school_membership_status"]
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          invited_email?: string | null
+          joined_at?: string | null
+          role: Database["public"]["Enums"]["app_role"]
+          school_id: string
+          status?: Database["public"]["Enums"]["school_membership_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_by?: string | null
+          invited_email?: string | null
+          joined_at?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+          school_id?: string
+          status?: Database["public"]["Enums"]["school_membership_status"]
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_memberships_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schools: {
+        Row: {
+          address: string | null
+          ai_quota_daily: number
+          brand_color: string | null
+          contact_email: string | null
+          contact_person: string | null
+          contact_phone: string | null
+          contract_end: string | null
+          contract_start: string | null
+          country: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          id: string
+          logo_url: string | null
+          metadata: Json
+          name: string
+          plan: Database["public"]["Enums"]["school_plan"]
+          school_type: string | null
+          seats_students: number
+          seats_teachers: number
+          slug: string
+          status: Database["public"]["Enums"]["school_status"]
+          storage_quota_mb: number
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          ai_quota_daily?: number
+          brand_color?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contract_end?: string | null
+          contract_start?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          logo_url?: string | null
+          metadata?: Json
+          name: string
+          plan?: Database["public"]["Enums"]["school_plan"]
+          school_type?: string | null
+          seats_students?: number
+          seats_teachers?: number
+          slug: string
+          status?: Database["public"]["Enums"]["school_status"]
+          storage_quota_mb?: number
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          ai_quota_daily?: number
+          brand_color?: string | null
+          contact_email?: string | null
+          contact_person?: string | null
+          contact_phone?: string | null
+          contract_end?: string | null
+          contract_start?: string | null
+          country?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          id?: string
+          logo_url?: string | null
+          metadata?: Json
+          name?: string
+          plan?: Database["public"]["Enums"]["school_plan"]
+          school_type?: string | null
+          seats_students?: number
+          seats_teachers?: number
+          slug?: string
+          status?: Database["public"]["Enums"]["school_status"]
+          storage_quota_mb?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       security_audit_logs: {
         Row: {
           action: string
@@ -4081,6 +4253,7 @@ export type Database = {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
+      current_school_ids: { Args: never; Returns: string[] }
       expire_stale_topic_sessions: { Args: never; Returns: number }
       generate_allocation_bookings: {
         Args: { p_allocation_id: string }
@@ -4165,6 +4338,13 @@ export type Database = {
         Returns: boolean
       }
       has_shared_relationship: { Args: { _other: string }; Returns: boolean }
+      is_school_member: {
+        Args: {
+          _role?: Database["public"]["Enums"]["app_role"]
+          _school_id: string
+        }
+        Returns: boolean
+      }
       log_security_event: {
         Args: {
           _action: string
@@ -4357,6 +4537,9 @@ export type Database = {
         | "rejected"
         | "deployed"
       sail_task_type: "bug" | "ux" | "backend" | "learning" | "monetization"
+      school_membership_status: "invited" | "active" | "suspended" | "removed"
+      school_plan: "trial" | "starter" | "standard" | "premium" | "enterprise"
+      school_status: "active" | "suspended" | "archived" | "trial"
       study_level:
         | "junior_primary"
         | "senior_primary"
@@ -4525,6 +4708,9 @@ export const Constants = {
         "deployed",
       ],
       sail_task_type: ["bug", "ux", "backend", "learning", "monetization"],
+      school_membership_status: ["invited", "active", "suspended", "removed"],
+      school_plan: ["trial", "starter", "standard", "premium", "enterprise"],
+      school_status: ["active", "suspended", "archived", "trial"],
       study_level: [
         "junior_primary",
         "senior_primary",
