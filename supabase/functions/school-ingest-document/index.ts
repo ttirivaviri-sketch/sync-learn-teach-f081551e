@@ -72,6 +72,10 @@ serve(async (req) => {
     );
     if (!ok) return errorResponse("Forbidden — not a school teacher/admin", 403);
 
+    // P8: contract / billing gate.
+    const gate = await assertSchoolContractLive(svc, school_id);
+    if (!gate.ok) return errorResponse(gate.reason, gate.status);
+
     // Create document row
     const { data: doc, error: docErr } = await svc
       .from("school_ai_documents")
