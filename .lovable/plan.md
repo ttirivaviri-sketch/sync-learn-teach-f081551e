@@ -1,218 +1,93 @@
 
-# StudyMode School Intelligence Layer
+# P12 + P13 + P14 — StudyMode School Intelligence (Finalization)
 
-**Guiding rule:** StudyMode stays the flagship. We do **not** fork it, do not build a second AI system, do not duplicate features. We add a **Context Engine** and **school-aware retrieval** that the existing hooks (`useDailyTasks`, `useQuizGenerator`, `useStructuredDailyTask`, `useAITutor`, `useAIStudyIntelligence`, `useStudyMemory`, `useRecallEngine`, etc.) consume through a single new context object.
+Builds on the existing P9–P11 stack (context snapshot, school chunks, homework, shared flashcards/quizzes). No new StudyMode product — these are enhancements to the existing engine, gated by `useStudyContext().school`.
 
-The School Workspace already built in P1–P8 (memberships, classes, grades, `school_ai_documents`, `school_ai_chunks`, `school-search`, `school-ingest-document`, contract gating, audit logs) becomes the *knowledge + governance* layer that feeds StudyMode — not a parallel product.
+## P12 — Daily Tasks Personalization + Gap Detection
 
----
+### 1. Fuse tutor signals into Daily Tasks
+Extend `useDailyTasks` / `useStructuredDailyTask` ranking so when `context.school` is present and a subject matches the student's `subject_ids`:
 
-## Mapping to existing StudyMode (reuse, don't duplicate)
+- **Upcoming tutor bookings (next 7 days)**: read `bookings` joined to `tutor_subjects` where `learner_id = user` and subject matches. Inject a "Prep for your session with {tutor}" task surfacing related concepts/weak topics for that subject. Card-level only — no booking logic touched.
+- **Tutor materials**: query `tutor_tutorials` (status=published) and `school_resources` filtered by curriculum + subject + (optional) topic from `topic_mastery`. Surface as a "Recommended clip" task that deep-links to the existing Study Clips viewer.
+- **Homework-driven tasks**: if `school_homework_responses` for the student has `status in ('ai_marked','released')` with `ai_score / marks < 0.6`, emit a "Practice {topic}" task using the rubric's `concepts`.
 
-| New capability | Existing piece we extend | What changes |
-|---|---|---|
-| Student context profile | `useAcademicProfile`, `useSubjects`, `useLearnerSubjects`, `useSyllabusContext` | Wrap into one `useStudyContext` hook that also pulls school/class/teacher data |
-| AI retrieval | `useAITutor`, `ChatPanel`, `useTaskContent`, `useQuizGenerator` | All call a new `studymode-context-retrieve` edge fn that runs `school-search` first, then falls back to existing curriculum/general knowledge |
-| Daily Tasks | `useDailyTasks`, `useStructuredDailyTask`, `daily_tasks` table | Same table; new task types `homework` and `teacher-review` slot into existing `subject → tasks` rendering in `SubjectDetail` |
-| Flashcards | `FlashcardPanel`, `flashcards` table | Add `source_document_id` / `source_school_id` columns; generator accepts teacher-uploaded content as source |
-| Quizzes | `useQuizGenerator`, `quizzes`, `quiz_questions`, `quiz_attempts` | Same tables; quizzes can be `scope = personal | class | grade | school` |
-| Homework | `assignments`, `submissions` (already exist) | Add AI-generated assignment flow + teacher review queue + per-question AI feedback |
-| Weakness detection | `useWeakConcepts`, `useTopicPerformance`, `useConceptMastery` | Unchanged; Context Engine reads from them |
-| Exam Mode / Mock exams | `useMockExam`, `MockExamRunner` | Unchanged; gains teacher-content sourcing |
-| Dashboard | `studymode/components/Dashboard.tsx` | Adds a "From your school" rail (teacher uploads, homework due, class quizzes) — no new tab tree |
-| School ingest | `school-ingest-document`, `school_ai_documents`, `school_ai_chunks` | Unchanged pipeline; new triggers fire generators on success |
+All injection happens client-side inside the existing daily-task ranker — no new edge function for ordering.
 
-Nothing in current StudyMode is removed. Anonymous / non-school learners keep today's behavior — the context just has empty school fields.
+### 2. Gap detection → weak-topic reports + practice tasks
+New edge function `studymode-detect-gaps` (verify_jwt) that, for the current student:
 
----
+- Aggregates wrong answers from `quiz_attempts`, `daily_task_attempts`, and `school_homework_responses` over the last 30 days
+- Groups by `topic` / `concepts[]`, computes accuracy + attempt count
+- Returns `{ weak_topics: [{ topic, subject_id, accuracy, attempts, evidence_source[] }], suggested_tasks: [...] }`
 
-## Architecture
+Client hook `useLearningGaps(userId)` caches via React Query (10 min). Renders into a new `WeakTopicReport` panel on the StudyMode dashboard (school context only — solo learners keep existing `AIWeakTopicAlerts`). "Generate practice" button materializes the suggested tasks into the daily-task queue.
 
-```text
-                ┌─────────────────────────────────────┐
-                │       useStudyContext (client)      │
-                │ profile + school + class + teachers │
-                │   + recent perf + upcoming exams    │
-                └───────────────┬─────────────────────┘
-                                │  AIContextPayload (extended)
-   ┌────────────────────────────┼────────────────────────────┐
-   │                            │                            │
-useDailyTasks            useQuizGenerator               useAITutor / ChatPanel
-   │                            │                            │
-   └────────────┬───────────────┴──────────────┬─────────────┘
-                ▼                              ▼
-   studymode-generate (edge)        studymode-context-retrieve (edge)
-   (existing, extended)             ├─ school-search (priority 1–4)
-                                    ├─ curriculum_topic_templates (5)
-                                    ├─ tutor_tutorials chunks (6)
-                                    └─ general LLM knowledge (7)
-```
+### 3. Files (P12)
+- `supabase/functions/studymode-detect-gaps/index.ts` (new)
+- `supabase/config.toml` — register function (verify_jwt = true)
+- `src/hooks/useLearningGaps.ts` (new)
+- `src/studymode/hooks/useTutorMaterialRecommendations.ts` (new) — pulls tutorials/resources scoped to context
+- `src/studymode/hooks/useDailyTasks.ts` — extend with school-aware fusion (additive)
+- `src/studymode/components/WeakTopicReport.tsx` (new) — school-context panel
+- `src/studymode/components/Dashboard.tsx` — mount `WeakTopicReport` and `SchoolHomeworkRail` (still unmounted from prior phase) under school context
 
-`AIContextPayload` (returned by `useAIStudyIntelligence`) gains a `school` block — every existing hook keeps working because the field is optional.
+## P13 — Student Analytics Counters & Trends (school workspace)
 
----
+### 1. Aggregation
+New table `student_analytics_daily` (one row per student per day):
+- `tasks_completed`, `homework_completed`, `quiz_avg_score`, `quiz_count`, `flashcards_reviewed`, `flashcard_mastery_avg`, `resources_opened`, `minutes_studied`
 
-## Data model changes (additive only)
+Populated incrementally by triggers on `daily_task_attempts`, `school_homework_responses` (status=released), `quiz_attempts`, `flashcards` (last_reviewed_at), `library_access_log` / `tutorial_watch_events`. Plus a `rebuild_student_analytics_today(_user_id)` RPC used on demand.
 
-All new objects respect the existing `school_memberships` + `has_role` pattern. Tenant isolation is enforced server-side in retrieval; we never trust `school_id` from the client.
+### 2. RPC for trends
+`get_student_analytics(_user_id, _from, _to)` returns daily series + 7d/30d rollups + sparkline values. Teachers/admins may pass any student in their class (RLS via `school_memberships`); students may pass only themselves.
 
-1. **`student_context_snapshots`** — cached materialized view of a learner's context (school, grade, class, teacher_ids, subject_ids, weak topics, upcoming exams). Refreshed by trigger on enrollment / quiz_attempt / submission. One row per user, JSONB body.
-2. **`school_homework`** — wraps `assignments` for AI-generated homework:
-   - `assignment_id` FK, `source_document_id` FK to `school_ai_documents`, `auto_release_grades bool`, `auto_feedback bool`, `generation_prompt`, `topic`, `difficulty`.
-3. **`school_homework_questions`** — per-question AI rubric (`expected_answer`, `examiner_notes`, `marks`, `common_mistakes`). Same questions for every student in the (grade, class, subject, teacher) tuple — generated once, reused.
-4. **`school_homework_responses`** — per-student per-question: `student_answer`, `ai_score`, `ai_feedback`, `teacher_score`, `teacher_comment`, `status` (`submitted | ai_marked | teacher_reviewed | released`).
-5. **`flashcards`** + `quizzes` — add columns: `school_id`, `class_id`, `source_document_id`, `scope`.
-6. **`teacher_ai_settings`** — per-teacher toggles: `auto_release_grades`, `auto_release_feedback`, `feedback_style` (`concise|examiner|encouraging`), `homework_difficulty_default`.
-7. **`school_ai_chunks`** already has `school_id, class_id, subject_id` — add `grade_id`, `teacher_id`, `priority` (1–4) for the knowledge hierarchy.
+### 3. UI
+- Student-facing: `StudentAnalyticsPanel` mounted in `StudentWorkspace.tsx` — 5 counter tiles (tasks / homework / quiz avg / flashcard mastery / resources) + 30-day sparkline per metric.
+- Teacher-facing: extend `TeacherClassDetail.tsx` with a "Student analytics" tab listing class students with the same counters; click-through opens that student's detail.
+- Admin-facing: `SchoolAnalytics.tsx` gets an aggregated "Learning outcomes" section (avg per metric across the school, last 14d).
 
-RLS: every new table follows the existing pattern — `has_role(auth.uid(), 'school_admin'|'school_teacher')` for writes, membership-scoped reads, learner can read their own response rows.
+### 4. Files (P13)
+- `supabase/migrations/<ts>_student_analytics.sql` — table, GRANTs, RLS, triggers, RPC
+- `src/hooks/useStudentAnalytics.ts` (new)
+- `src/components/school/StudentAnalyticsPanel.tsx` (new)
+- `src/pages/school/student/StudentWorkspace.tsx` — mount panel
+- `src/pages/school/teacher/TeacherClassDetail.tsx` — add analytics tab
+- `src/pages/school/SchoolAnalytics.tsx` — add learning-outcomes block
 
----
+## P14 — Hardening
 
-## Knowledge hierarchy & retrieval
+### 1. Strict school isolation tests
+Add `tests/suite.mjs` cases that hit each edge function with a forged `school_id` and assert 403. Covers: `studymode-context-retrieve`, `studymode-generate-school-flashcards`, `studymode-generate-school-quiz`, `studymode-generate-homework`, `studymode-mark-homework`, `studymode-release-homework`, `studymode-detect-gaps`.
 
-One edge function: `studymode-context-retrieve`. Input `{ query, user_id, subject_id?, topic? }`. Steps:
+### 2. Rate limits + quota
+Wrap every studymode-* school function with `check_school_ai_quota` (already exists) + `increment_school_ai_usage`. Add per-user rate limit via `check_and_increment_ai_usage` (`bucket = 'studymode_school'`, limit per plan).
 
-1. Load `student_context_snapshots` for the user (school_id, class_id, grade_id, teacher_ids).
-2. Run `match_school_chunks` four times with progressively widening filters: teacher → class → grade → school. Stop early once `k` hits are gathered with similarity ≥ threshold.
-3. If still short, query `curriculum_topic_templates` for the learner's curriculum + subject.
-4. If still short, query `tutor_tutorials` chunks the learner has access to (existing booking-based ACL).
-5. Fall back to model general knowledge.
+### 3. Error surfaces
+- `lib/schoolContract.ts`: extend so contract denials from new functions render a unified toast + banner (reuses existing P8 contract-gate UI).
+- All new hooks return `{ data, error, isLoading }` and surface errors through the existing `useToast` pattern.
 
-`school-search` stays untouched; the retrieve fn calls it via RPC. **No cross-school leakage** — the snapshot's `school_id` is the only school filter ever passed.
+### 4. Solo-learner safety
+Add an integration test asserting that `context.school === null` users:
+- Do not see `WeakTopicReport`, `SchoolHomeworkRail`, tutor-prep daily tasks
+- Still get the existing `AIWeakTopicAlerts`
+- Continue to see the "Join a school" CTA from prior phase
 
----
+### 5. Files (P14)
+- `tests/suite.mjs` — add suites: `school-isolation`, `studymode-quota`, `solo-learner-fallback`
+- `supabase/functions/_shared/school-generators.ts` — add `enforceQuota(school_id, user_id)` helper, wire into all generator functions
+- `src/lib/schoolContract.ts` — extend mapper for new function names
+- Minor edits across existing studymode hooks for error/empty states
 
-## Homework flow (the new headline feature)
+## Technical notes
 
-```text
-Teacher uploads resource ──► school-ingest-document (existing)
-        │
-        ▼
-school_ai_documents.status = 'embedded'
-        │
-        ▼
-Teacher clicks "Generate homework" (one-click panel on the doc card)
-        │
-        ▼
-studymode-generate-homework (new edge fn)
-  • pulls chunks for that doc
-  • produces N questions + rubric (Output.object schema)
-  • inserts ONE row in school_homework + N in school_homework_questions
-  • fans out one assignment row per enrolled student (or one shared assignment + per-student response rows — we use the latter for cost)
-        │
-        ▼
-Student opens StudyMode → SubjectDetail shows new daily task type 'homework'
-        │
-        ▼
-Student answers → studymode-mark-homework (edge fn)
-  • AI scores against rubric, writes school_homework_responses.ai_*
-  • If teacher_ai_settings.auto_release_grades → status='released'
-  • Else status='ai_marked', queued for teacher review
-        │
-        ▼
-Teacher Review screen: list of pending responses, can override score / comment, click Release
-        │
-        ▼
-Student sees grade + per-question feedback (highlights, examiner expectations, concept corrections)
-```
+- **One StudyMode**: every change is additive behind `context.school`. Solo flows are untouched.
+- **No second AI system**: gap detection reuses the existing Lovable Gateway client in `studymode/lib/aiClient.ts`; school content retrieval continues to flow through `studymode-context-retrieve`.
+- **Cost control**: detect-gaps runs on demand + cached 10 min; analytics aggregation is trigger-based (cheap), with `rebuild_student_analytics_today` for force-refresh.
+- **Privacy**: `student_analytics_daily` RLS — student reads own; teacher reads if shares a class (via `school_memberships` + `enrollments`); admin reads if `school_admin` of student's school.
 
-Per-question feedback uses a fixed schema:
-```ts
-{ correct: boolean, awarded: number, examiner_expects: string,
-  what_you_missed: string, concept_fix: string, references: { doc_id, chunk_ids } }
-```
+## Out of scope
 
----
-
-## Daily Tasks extension
-
-`daily_tasks.task_type` enum gains: `homework`, `homework-review`, `teacher-note-review`. Generator (`useStructuredDailyTask` / its edge fn) consumes the school context block and prefers:
-1. Open homework due today
-2. Teacher uploads from last 7 days the student hasn't opened
-3. Weak topics from `weak_concepts` cross-referenced with class syllabus
-4. Existing generic tasks (unchanged)
-
-Tasks render in the existing `SubjectDetail` list — no new UI tree.
-
----
-
-## Teacher one-click automation
-
-On each `school_ai_documents` card in `TeacherWorkspace`, a popover offers:
-Generate → [Homework | Flashcards | Quiz | Exam Questions | Revision Notes | Daily Tasks | Study Guide].
-All call `studymode-generate-*` edge fns sharing one helper that:
-- loads chunks from that doc,
-- writes outputs scoped to (school, class, subject, teacher),
-- inherits the doc's RLS (students in `enrollments` for that class can read).
-
----
-
-## Dashboard additions (minimal UI surface)
-
-`studymode/components/Dashboard.tsx` gets one new section above existing tabs **only when `context.school` is non-null**:
-- "From your school" rail: Homework due (count + CTA), Recent teacher uploads (3), Class quiz invites.
-Everything else (Subjects/Calendar/Exams/Progress/Setup tabs) is untouched. Solo learners see no change.
-
----
-
-## Analytics (reuse existing)
-
-`school_analytics_daily` already tracks AI requests, submissions, quiz attempts. We add three counters via existing `increment_school_ai_usage` buckets: `homework_generated`, `homework_marked`, `feedback_released`. The `SchoolAnalytics` page gains two cards driven by the same query; no new pipeline.
-
----
-
-## Security & isolation
-
-- Server-side: every generate/retrieve fn re-reads membership and `school_id` from the JWT user, never from the body.
-- `enforceSchoolContract` already wraps `school-search` / `school-ingest-document`; new fns reuse the shared helper.
-- New tables get the same `GRANT … TO authenticated` + RLS pattern documented in our security memory.
-- Audit: every homework release writes to `school_audit_logs` with action `homework_released` (admin can filter on existing AuditLogs page).
-
----
-
-## Implementation roadmap (phased, each phase ships independently)
-
-**P9 — Context Engine** (foundation, no UX change)
-- `student_context_snapshots` table + refresh trigger
-- `useStudyContext` hook + extend `AIContextPayload.school`
-- `studymode-context-retrieve` edge fn (wraps `school-search`)
-- Wire `useAITutor` and `ChatPanel` to use it (school students get teacher-grounded answers)
-
-**P10 — Teacher knowledge → StudyMode artifacts**
-- `studymode-generate-flashcards` and `-quiz` edge fns
-- Flashcards/quizzes table column additions
-- Teacher doc-card "Generate" popover
-- Student flashcards/quizzes pick up school-sourced cards automatically
-
-**P11 — Homework with AI marking + teacher review**
-- `school_homework*` tables + RLS
-- `studymode-generate-homework` + `studymode-mark-homework` fns
-- `teacher_ai_settings` + settings UI (`auto_release_grades`, `auto_release_feedback`, `feedback_style`)
-- Student homework UI inside `SubjectDetail` (uses existing task runner)
-- Teacher Review queue page
-
-**P12 — Daily Tasks personalization**
-- Extend `daily_tasks.task_type`
-- Update generator to prioritize school homework + teacher uploads
-- "From your school" dashboard rail
-
-**P13 — Analytics + audit**
-- New buckets in `increment_school_ai_usage`
-- Two cards on `SchoolAnalytics`
-- `homework_released` audit action
-
-**P14 — Hardening**
-- Cache embeddings/snapshots
-- Rate limits per school plan
-- E2E tests for cross-school isolation
-- Cost telemetry on generate fns
-
----
-
-## What I need from you before I start P9
-
-1. **Scope of first build:** start with **P9 + P10** (context engine + teacher-knowledge-grounded flashcards/quizzes) so school students immediately feel the difference, then move to homework in a follow-up? Or jump straight to **P11 homework** because that's the headline?
-2. **Homework granularity:** one shared `assignments` row + per-student `school_homework_responses` (cheaper, recommended) — confirm OK.
-3. **Feedback defaults:** ship with `auto_release_grades = false` and `auto_release_feedback = true` (students see AI feedback immediately, grades wait for teacher) — confirm.
-4. **Solo learners:** confirm zero UX change for non-school users in every phase.
+- No new dashboard product, no second tutor system, no schema changes to `flashcards`/`quizzes` beyond what P10 already added.
+- Booking/tutor-marketplace logic is read-only here.
