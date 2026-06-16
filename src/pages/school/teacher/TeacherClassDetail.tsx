@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { SchoolFileLink } from "@/components/school/SchoolFileLink";
+import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import {
   useClass,
   useResources, useCreateResource, useDeleteResource,
