@@ -681,6 +681,160 @@ for (const fn of ['school-analytics', 'school-ingest-document', 'school-search']
 }
 
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STUDENT ANALYTICS & GAP DETECTION — isolation + quota hardening
+// ─────────────────────────────────────────────────────────────────────────────
+suite('Student analytics & gap detection: isolation + quota');
+
+import { readdirSync } from 'node:fs';
+const MIGRATIONS_DIR = path.join(__dirname, '../supabase/migrations');
+const ALL_MIGRATIONS = readdirSync(MIGRATIONS_DIR)
+  .filter((f) => f.endsWith('.sql'))
+  .map((f) => readFileSync(path.join(MIGRATIONS_DIR, f), 'utf8'))
+  .join('\n\n');
+
+await test('student_analytics_daily has RLS enabled', () => {
+  assert.ok(
+    /ALTER TABLE\s+public\.student_analytics_daily\s+ENABLE ROW LEVEL SECURITY/i.test(ALL_MIGRATIONS),
+    'RLS must be explicitly enabled on student_analytics_daily',
+  );
+});
+
+await test('student_analytics_daily does NOT grant anon access', () => {
+  assert.ok(
+    !/GRANT[^;]+ON\s+public\.student_analytics_daily[^;]+TO\s+anon/i.test(ALL_MIGRATIONS),
+    'analytics is sensitive — anon role must never be granted access',
+  );
+});
+
+await test('student_analytics_daily restricts SELECT to self or school staff', () => {
+  assert.ok(
+    /CREATE POLICY\s+"student reads own analytics"[\s\S]{0,300}auth\.uid\(\)\s*=\s*user_id/i.test(ALL_MIGRATIONS),
+    'self-read policy missing or not scoped to auth.uid()',
+  );
+  assert.ok(
+    /CREATE POLICY\s+"school staff reads student analytics"[\s\S]{0,600}school_memberships[\s\S]{0,300}sm\.school_id\s*=\s*student_analytics_daily\.school_id/i.test(ALL_MIGRATIONS),
+    'staff-read policy must join school_memberships on the row school_id (no cross-school reads)',
+  );
+  assert.ok(
+    /school staff reads student analytics[\s\S]{0,900}role[\s\S]{0,80}teacher/i.test(ALL_MIGRATIONS),
+    'staff-read policy must require a privileged school role',
+  );
+});
+
+await test('student_analytics_daily has NO insert/update/delete policies for end users', () => {
+  const writePolicy = /CREATE POLICY[^;]+ON\s+public\.student_analytics_daily\s+FOR\s+(INSERT|UPDATE|DELETE)/i;
+  assert.ok(!writePolicy.test(ALL_MIGRATIONS), 'no client write policies allowed on analytics');
+});
+
+await test('analytics RPCs are SECURITY DEFINER with locked search_path', () => {
+  for (const fn of ['get_student_analytics', 'rebuild_student_analytics_today']) {
+    const re = new RegExp(
+      `FUNCTION\\s+public\\.${fn}[\\s\\S]{0,1200}SECURITY\\s+DEFINER[\\s\\S]{0,600}SET\\s+search_path`,
+      'i',
+    );
+    assert.ok(re.test(ALL_MIGRATIONS), `${fn} must be SECURITY DEFINER with SET search_path`);
+  }
+});
+
+await test('get_student_analytics enforces caller == target or school staff', () => {
+  assert.ok(
+    /get_student_analytics[\s\S]{0,2000}auth\.uid\(\)\s*=\s*_user_id/i.test(ALL_MIGRATIONS),
+    'must allow self access via auth.uid()',
+  );
+  assert.ok(
+    /get_student_analytics[\s\S]{0,3000}school_memberships[\s\S]{0,500}role[\s\S]{0,80}teacher/i.test(ALL_MIGRATIONS),
+    'must gate cross-user access by privileged school membership',
+  );
+  assert.ok(
+    /get_student_analytics[\s\S]{0,3500}(RAISE\s+EXCEPTION|not authorized|forbidden|insufficient)/i.test(ALL_MIGRATIONS),
+    'must raise when caller is neither self nor staff',
+  );
+});
+
+await test('analytics trigger functions run as SECURITY DEFINER', () => {
+  for (const trg of ['tg_sad_daily_task', 'tg_sad_homework', 'tg_sad_quiz']) {
+    const re = new RegExp(`FUNCTION\\s+public\\.${trg}[\\s\\S]{0,800}SECURITY\\s+DEFINER`, 'i');
+    assert.ok(re.test(ALL_MIGRATIONS), `${trg} must run as SECURITY DEFINER`);
+  }
+});
+
+await test('studymode-detect-gaps requires a JWT (no anon access)', () => {
+  const src = readFileSync(path.join(SUPA_FN_DIR, 'studymode-detect-gaps/index.ts'), 'utf8');
+  assert.ok(src.includes('Authorization'), 'must read Authorization header');
+  assert.ok(/if\s*\(!authHeader\)[\s\S]{0,80}401/.test(src), 'must 401 when header missing');
+  assert.ok(/auth\.getUser\(\)/.test(src), 'must verify the JWT via getUser()');
+  assert.ok(/if\s*\(!userId\)[\s\S]{0,80}401/.test(src), 'must 401 when no userId resolved');
+});
+
+await test('studymode-detect-gaps scopes every query to the caller userId', () => {
+  const src = readFileSync(path.join(SUPA_FN_DIR, 'studymode-detect-gaps/index.ts'), 'utf8');
+  const tables = ['quiz_attempts', 'daily_task_attempts', 'school_homework_responses'];
+  for (const t of tables) {
+    const block = new RegExp(
+      `\\.from\\(\\s*["']${t}["']\\s*\\)[\\s\\S]{0,800}?\\.eq\\(\\s*["'](user_id|student_id)["']\\s*,\\s*userId\\s*\\)`,
+    );
+    assert.ok(block.test(src), `${t} query must .eq('user_id'|'student_id', userId)`);
+  }
+});
+
+await test('studymode-detect-gaps never accepts a target user_id from the client', () => {
+  const src = readFileSync(path.join(SUPA_FN_DIR, 'studymode-detect-gaps/index.ts'), 'utf8');
+  assert.ok(!/req\.json\([\s\S]{0,200}user_?id/i.test(src),
+    'must not read user_id from request body (would bypass caller isolation)');
+  assert.ok(!/body\.(user_?id|student_?id)/i.test(src),
+    'must not read student_id/user_id from request payload');
+});
+
+await test('AI quota helper enforces per-user daily buckets', () => {
+  const src = readFileSync(path.join(SUPA_FN_DIR, '_shared/ai-config.ts'), 'utf8');
+  assert.ok(src.includes('QUOTA_BUCKETS'), 'QUOTA_BUCKETS map must exist');
+  assert.ok(/export\s+async\s+function\s+enforceQuota/.test(src), 'enforceQuota must be exported');
+  assert.ok(src.includes('quotaExceededResponse'), 'must expose quotaExceededResponse helper');
+  assert.ok(/429/.test(src), 'quota-exceeded response must use HTTP 429');
+});
+
+await test('School AI usage is tracked in a school-scoped table with RLS', () => {
+  assert.ok(
+    /CREATE TABLE[\s\S]{0,200}public\.school_ai_usage_daily[\s\S]{0,1200}school_id\s+UUID/i.test(ALL_MIGRATIONS),
+    'school_ai_usage_daily must include a school_id column for per-school quotas',
+  );
+  assert.ok(
+    /ALTER TABLE\s+public\.school_ai_usage_daily\s+ENABLE ROW LEVEL SECURITY/i.test(ALL_MIGRATIONS),
+    'school_ai_usage_daily must have RLS enabled',
+  );
+});
+
+await test('Network: anon client cannot read student_analytics_daily', async () => {
+  if (!NETWORK) return skip('anon analytics read', 'no SUPABASE creds');
+  const url = `${SUPABASE_URL}/rest/v1/student_analytics_daily?select=user_id&limit=1`;
+  const res = await fetch(url, {
+    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}` },
+  });
+  const body = await res.text();
+  if (res.ok) {
+    const rows = JSON.parse(body);
+    assert.equal(rows.length, 0, 'anon must not receive any analytics rows');
+  } else {
+    assert.ok([401, 403, 404].includes(res.status), `expected auth/forbidden, got ${res.status}`);
+  }
+});
+
+await test('Network: anon cannot invoke studymode-detect-gaps without a JWT', async () => {
+  if (!NETWORK) return skip('detect-gaps anon call', 'no SUPABASE creds');
+  const url = `${SUPABASE_URL}/functions/v1/studymode-detect-gaps`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json' },
+    body: '{}',
+  });
+  await res.text();
+  assert.ok(res.status === 401 || res.status === 403,
+    `expected 401/403 for unauthenticated detect-gaps, got ${res.status}`);
+});
+
+
+
 // SUMMARY
 // ─────────────────────────────────────────────────────────────────────────────
 console.log(`\n${'═'.repeat(56)}`);
