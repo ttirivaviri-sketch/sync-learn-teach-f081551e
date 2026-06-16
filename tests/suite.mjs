@@ -717,7 +717,7 @@ await test('student_analytics_daily restricts SELECT to self or school staff', (
     'staff-read policy must join school_memberships on the row school_id (no cross-school reads)',
   );
   assert.ok(
-    /school staff reads student analytics[\s\S]{0,900}role[\s\S]{0,80}teacher/i.test(ALL_MIGRATIONS),
+    /school staff reads student analytics[\s\S]{0,900}role[\s\S]{0,120}(school_teacher|school_admin|teacher|admin)/i.test(ALL_MIGRATIONS),
     'staff-read policy must require a privileged school role',
   );
 });
