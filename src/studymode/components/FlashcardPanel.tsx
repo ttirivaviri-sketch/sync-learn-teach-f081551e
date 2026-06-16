@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send, MinusCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Badge } from '@/components/ui/badge';
 import { MathMarkdown } from './MathMarkdown';
 import { DailyTask, Subject } from '../types/study';
