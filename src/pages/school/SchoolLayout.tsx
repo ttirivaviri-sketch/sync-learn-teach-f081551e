@@ -4,10 +4,13 @@
  */
 import { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useParams, Navigate } from "react-router-dom";
-import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3 } from "lucide-react";
+import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
+import { evaluateSchoolContract, isContractLive, contractMessage, BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
 
 export default function SchoolLayout() {
   const navigate = useNavigate();
@@ -23,6 +26,10 @@ export default function SchoolLayout() {
       setAuthChecked(true);
     })();
   }, [navigate]);
+
+  // P8: Feature flag gate — if schools are disabled in this environment,
+  // pretend the portal does not exist at all.
+  if (!FEATURE_SCHOOLS) return <Navigate to="/404" replace />;
 
   if (!authChecked || memberships.isLoading) {
     return <main className="min-h-[60vh] flex items-center justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading school portal…</main>;
@@ -53,6 +60,36 @@ export default function SchoolLayout() {
   const isAdmin = role === "school_admin";
   const isTeacher = role === "school_teacher" || isAdmin;
   const isStudent = role === "school_student";
+
+  // P8: Contract / billing gate. Suspended, archived, expired and
+  // not-yet-started schools are hard-blocked. Settings stays reachable
+  // for school admins so they can still see billing info.
+  const gate = evaluateSchoolContract(current.school);
+  const live = isContractLive(gate);
+  if (!live) {
+    const msg = contractMessage(gate);
+    return (
+      <main className="min-h-[60vh] flex items-center justify-center p-6">
+        <Card className="p-8 text-center max-w-md">
+          <ShieldAlert className="h-10 w-10 mx-auto mb-2 text-destructive" />
+          <h1 className="text-lg font-semibold">{msg.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{msg.body}</p>
+          <p className="text-xs text-muted-foreground mt-3">{current.school.name} · plan {current.school.plan}</p>
+          <div className="flex flex-wrap gap-2 justify-center mt-4">
+            <Button asChild size="sm" variant="default">
+              <a href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Restore access — ${current.school.name}`)}`}>Contact billing</a>
+            </Button>
+            {isAdmin && (
+              <Button asChild size="sm" variant="outline">
+                <Link to={`/school/${schoolId}/settings`}>Open settings</Link>
+              </Button>
+            )}
+            <Button asChild size="sm" variant="ghost"><Link to="/">Back home</Link></Button>
+          </div>
+        </Card>
+      </main>
+    );
+  }
 
   const tabs = [
     { label: "Overview", to: `/school/${schoolId}`, icon: LayoutDashboard, end: true, show: true },
@@ -108,8 +145,20 @@ export default function SchoolLayout() {
           ))}
         </nav>
       </header>
+      {(gate.state === "trial" || gate.state === "expiring_soon") && (
+        <div className="border-b bg-amber-500/10 text-amber-900 dark:text-amber-200">
+          <div className="px-4 py-2 text-xs flex flex-wrap items-center gap-2">
+            <Clock3 className="h-3.5 w-3.5" />
+            <span className="font-medium">{contractMessage(gate).title}.</span>
+            <span className="opacity-80">{contractMessage(gate).body}</span>
+            <a className="ml-auto underline" href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Renew — ${current.school.name}`)}`}>
+              Contact billing
+            </a>
+          </div>
+        </div>
+      )}
       <main className="p-4 md:p-6">
-        <Outlet context={{ school: current.school, role }} />
+        <Outlet context={{ school: current.school, role, contractGate: gate }} />
       </main>
     </div>
   );

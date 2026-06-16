@@ -5,6 +5,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/ai-config.ts";
+import { assertSchoolContractLive } from "../_shared/school-contract.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -49,6 +50,10 @@ serve(async (req) => {
     if (!memberships || memberships.length === 0) {
       return errorResponse("Forbidden — not a school member", 403);
     }
+
+    // P8: contract / billing gate.
+    const gate = await assertSchoolContractLive(svc, school_id);
+    if (!gate.ok) return errorResponse(gate.reason, gate.status);
 
     const embedding = await embedOne(query);
     const { data, error } = await svc.rpc("match_school_chunks", {
