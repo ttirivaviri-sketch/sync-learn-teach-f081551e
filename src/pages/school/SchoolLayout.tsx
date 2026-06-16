@@ -1,11 +1,10 @@
 /**
- * School admin portal layout. Authenticated users with at least one active
- * `school_admin` membership can access it. The currently active school is
- * selected via the URL: /school/:schoolId.
+ * School portal layout. Anyone with an active membership of the school
+ * (admin/teacher/student) can access it. Tabs are filtered by role.
  */
 import { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useParams, Navigate } from "react-router-dom";
-import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2 } from "lucide-react";
+import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { Card } from "@/components/ui/card";
@@ -17,7 +16,7 @@ export default function SchoolLayout() {
   const memberships = useMySchoolMemberships();
 
   useEffect(() => {
-    document.title = "School Admin | StudySync";
+    document.title = "School | StudySync";
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) navigate("/learner/auth?next=/school", { replace: true });
@@ -29,17 +28,16 @@ export default function SchoolLayout() {
     return <main className="min-h-[60vh] flex items-center justify-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading school portal…</main>;
   }
 
-  const adminMemberships = (memberships.data ?? []).filter((m) => m.membership.role === "school_admin");
+  const all = memberships.data ?? [];
 
-  if (!adminMemberships.length) {
+  if (!all.length) {
     return (
       <main className="min-h-[60vh] flex items-center justify-center p-6">
         <Card className="p-8 text-center max-w-md">
           <Building2 className="h-10 w-10 mx-auto mb-2 text-muted-foreground" />
           <h1 className="text-lg font-semibold">No school access</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            You aren't a school admin yet. Ask your school administrator to invite you,
-            or contact StudySync support.
+            You aren't a member of any school yet. Ask your school administrator to invite you.
           </p>
           <Link to="/" className="inline-block mt-4 text-sm underline">Back to home</Link>
         </Card>
@@ -47,21 +45,25 @@ export default function SchoolLayout() {
     );
   }
 
-  // Pick default school
-  if (!schoolId) {
-    return <Navigate to={`/school/${adminMemberships[0].school.id}`} replace />;
-  }
-  const current = adminMemberships.find((m) => m.school.id === schoolId);
-  if (!current) {
-    return <Navigate to={`/school/${adminMemberships[0].school.id}`} replace />;
-  }
+  if (!schoolId) return <Navigate to={`/school/${all[0].school.id}`} replace />;
+  const current = all.find((m) => m.school.id === schoolId);
+  if (!current) return <Navigate to={`/school/${all[0].school.id}`} replace />;
+
+  const role = current.membership.role;
+  const isAdmin = role === "school_admin";
+  const isTeacher = role === "school_teacher" || isAdmin;
+  const isStudent = role === "school_student";
 
   const tabs = [
-    { label: "Overview", to: `/school/${schoolId}`, icon: LayoutDashboard, end: true },
-    { label: "Members", to: `/school/${schoolId}/members`, icon: Users },
-    { label: "Invitations", to: `/school/${schoolId}/invitations`, icon: Mail },
-    { label: "Settings", to: `/school/${schoolId}/settings`, icon: SettingsIcon },
-  ];
+    { label: "Overview", to: `/school/${schoolId}`, icon: LayoutDashboard, end: true, show: true },
+    { label: "Members", to: `/school/${schoolId}/members`, icon: Users, show: isAdmin },
+    { label: "Academic", to: `/school/${schoolId}/academic`, icon: GraduationCap, show: isAdmin },
+    { label: "Teach", to: `/school/${schoolId}/teach`, icon: BookOpenCheck, show: isTeacher },
+    { label: "My classes", to: `/school/${schoolId}/learn`, icon: Backpack, show: isStudent },
+    { label: "Announcements", to: `/school/${schoolId}/announcements`, icon: Megaphone, show: true },
+    { label: "Invitations", to: `/school/${schoolId}/invitations`, icon: Mail, show: isAdmin },
+    { label: "Settings", to: `/school/${schoolId}/settings`, icon: SettingsIcon, show: isAdmin },
+  ].filter((t) => t.show);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -72,17 +74,17 @@ export default function SchoolLayout() {
               <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
             </Link>
             <div className="hidden sm:block min-w-0">
-              <p className="text-xs text-muted-foreground">School portal</p>
+              <p className="text-xs text-muted-foreground">{role.replace("school_","").replace("_"," ")}</p>
               <p className="text-sm font-medium truncate">{current.school.name}</p>
             </div>
           </div>
-          {adminMemberships.length > 1 && (
+          {all.length > 1 && (
             <select
               className="text-sm border rounded-md px-2 py-1 bg-background"
               value={schoolId}
               onChange={(e) => navigate(`/school/${e.target.value}`)}
             >
-              {adminMemberships.map((m) => (
+              {all.map((m) => (
                 <option key={m.school.id} value={m.school.id}>{m.school.name}</option>
               ))}
             </select>
@@ -95,7 +97,7 @@ export default function SchoolLayout() {
               to={t.to}
               end={t.end}
               className={({ isActive }) =>
-                `flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 -mb-px transition-colors ${
+                `flex items-center gap-1.5 px-3 py-2 text-sm border-b-2 -mb-px transition-colors whitespace-nowrap ${
                   isActive ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
                 }`
               }
@@ -105,8 +107,8 @@ export default function SchoolLayout() {
           ))}
         </nav>
       </header>
-      <main className="p-6">
-        <Outlet context={{ school: current.school }} />
+      <main className="p-4 md:p-6">
+        <Outlet context={{ school: current.school, role }} />
       </main>
     </div>
   );
