@@ -66,15 +66,16 @@ export function useSchoolAnalytics(schoolId: string | undefined, filters: Analyt
 export function useSchoolSearch() {
   return useMutation({
     mutationFn: async (args: { schoolId: string; query: string; classId?: string; k?: number }) => {
-      const { data, error } = await supabase.functions.invoke("school-search", {
-        body: {
-          school_id: args.schoolId,
-          query: args.query,
-          class_id: args.classId,
-          k: args.k ?? 8,
-        },
-      });
-      if (error) throw error;
+      const data = await invokeWithContract<{ chunks?: unknown[] }>(() =>
+        supabase.functions.invoke("school-search", {
+          body: {
+            school_id: args.schoolId,
+            query: args.query,
+            class_id: args.classId,
+            k: args.k ?? 8,
+          },
+        }),
+      );
       return (data?.chunks ?? []) as Array<{
         id: string;
         document_id: string;
@@ -100,18 +101,18 @@ export function useIngestSchoolDocument() {
       classId?: string;
       subjectId?: string;
     }) => {
-      const { data, error } = await supabase.functions.invoke("school-ingest-document", {
-        body: {
-          school_id: args.schoolId,
-          resource_id: args.resourceId,
-          title: args.title,
-          content: args.content,
-          class_id: args.classId,
-          subject_id: args.subjectId,
-        },
-      });
-      if (error) throw error;
-      return data as { ok: boolean; document_id: string; chunks: number; tokens: number };
+      return invokeWithContract<{ ok: boolean; document_id: string; chunks: number; tokens: number }>(() =>
+        supabase.functions.invoke("school-ingest-document", {
+          body: {
+            school_id: args.schoolId,
+            resource_id: args.resourceId,
+            title: args.title,
+            content: args.content,
+            class_id: args.classId,
+            subject_id: args.subjectId,
+          },
+        }),
+      );
     },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["school-ai-documents", vars.schoolId] });
