@@ -4,7 +4,8 @@
  */
 import { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useParams, Navigate } from "react-router-dom";
-import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3, CreditCard } from "lucide-react";
+import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3, CreditCard, ScrollText } from "lucide-react";
+import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { Card } from "@/components/ui/card";
@@ -66,6 +67,29 @@ export default function SchoolLayout() {
   // for school admins so they can still see billing info.
   const gate = evaluateSchoolContract(current.school);
   const live = isContractLive(gate);
+
+  // Fire an in-app warning toast once per session/school for at-risk contracts.
+  // Suspended / expired schools fall through to the hard-block below — we still
+  // notify so a returning admin sees the warning even if they bypass the block
+  // via a deep link to /settings.
+  if (typeof window !== "undefined" && (isTeacher || isAdmin)) {
+    const flagKey = `school-contract-warn:${schoolId}:${gate.state}`;
+    if (!sessionStorage.getItem(flagKey) &&
+        (gate.state === "expiring_soon" || gate.state === "suspended" || gate.state === "expired")) {
+      sessionStorage.setItem(flagKey, "1");
+      const m = contractMessage(gate);
+      toast.warning(m.title, {
+        description: m.body,
+        duration: 10_000,
+        action: {
+          label: "Contact billing",
+          onClick: () => {
+            window.location.href = `mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Billing — ${current.school.name}`)}`;
+          },
+        },
+      });
+    }
+  }
   if (!live) {
     const msg = contractMessage(gate);
     return (
@@ -101,6 +125,7 @@ export default function SchoolLayout() {
     { label: "Analytics", to: `/school/${schoolId}/analytics`, icon: BarChart3, show: isTeacher },
     { label: "Invitations", to: `/school/${schoolId}/invitations`, icon: Mail, show: isAdmin },
     { label: "Billing", to: `/school/${schoolId}/billing`, icon: CreditCard, show: isAdmin },
+    { label: "Audit logs", to: `/school/${schoolId}/audit-logs`, icon: ScrollText, show: isAdmin },
     { label: "Settings", to: `/school/${schoolId}/settings`, icon: SettingsIcon, show: isAdmin },
   ].filter((t) => t.show);
 

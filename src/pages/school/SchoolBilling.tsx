@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { CreditCard, Mail, ShieldAlert, CalendarClock, Users, Database, Brain, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import BillingTimeline from "@/components/school/BillingTimeline";
 import type { School } from "@/hooks/useSchools";
 import {
   evaluateSchoolContract, contractMessage, BILLING_CONTACT_EMAIL, type ContractGate,
@@ -125,6 +126,8 @@ export default function SchoolBilling() {
           <Stat label="Contract end" value={fmtDate(school.contract_end)} />
         </dl>
       </Card>
+
+      <BillingTimeline school={school} />
     </section>
   );
 }
