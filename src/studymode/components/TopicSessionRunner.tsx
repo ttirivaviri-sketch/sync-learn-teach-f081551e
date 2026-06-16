@@ -159,6 +159,12 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                   {/* Answer input */}
                   {!result && (
                     <div className="space-y-2">
+                      <div className="flex justify-end">
+                        <PhotoAnswerButton
+                          question={q.question}
+                          onAnswer={(text) => setAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+                        />
+                      </div>
                       <Textarea
                         value={answer}
                         onChange={e => setAnswer(e.target.value)}
