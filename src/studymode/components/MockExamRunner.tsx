@@ -129,12 +129,26 @@ export function MockExamRunner({ paper, onSubmit, isGrading, gradeProgress }: Pr
                 })}
               </div>
             ) : (
-              <Textarea
-                placeholder={`Write your answer here… (${q.marks} marks)`}
-                value={answers[q.id] || ""}
-                onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                className="min-h-[180px]"
-              />
+              <div className="space-y-2">
+                <div className="flex justify-end">
+                  <PhotoAnswerButton
+                    question={q.question}
+                    totalMarks={q.marks}
+                    onAnswer={(text) =>
+                      setAnswers((a) => ({
+                        ...a,
+                        [q.id]: a[q.id] ? `${a[q.id]}\n\n${text}` : text,
+                      }))
+                    }
+                  />
+                </div>
+                <Textarea
+                  placeholder={`Write your answer here… (${q.marks} marks)`}
+                  value={answers[q.id] || ""}
+                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                  className="min-h-[180px]"
+                />
+              </div>
             )}
           </CardContent>
         </Card>
