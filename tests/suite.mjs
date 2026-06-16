@@ -709,7 +709,7 @@ await test('student_analytics_daily does NOT grant anon access', () => {
 
 await test('student_analytics_daily restricts SELECT to self or school staff', () => {
   assert.ok(
-    /CREATE POLICY\s+"student reads own analytics"[\s\S]{0,300}auth\.uid\(\)\s*=\s*user_id/i.test(ALL_MIGRATIONS),
+    /CREATE POLICY\s+"student reads own analytics"[\s\S]{0,400}(user_id\s*=\s*auth\.uid\(\)|auth\.uid\(\)\s*=\s*user_id)/i.test(ALL_MIGRATIONS),
     'self-read policy missing or not scoped to auth.uid()',
   );
   assert.ok(
