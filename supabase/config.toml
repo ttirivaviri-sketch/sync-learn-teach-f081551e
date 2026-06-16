@@ -74,3 +74,7 @@ verify_jwt = true
 
 [functions.school-ingest-retry]
 verify_jwt = true
+
+[functions.studymode-context-retrieve]
+verify_jwt = true
+

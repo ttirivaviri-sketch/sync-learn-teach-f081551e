@@ -40,8 +40,8 @@ export interface StudyContext {
 const STALE_MS = 24 * 60 * 60 * 1000;
 
 export function useStudyContext() {
-  const { user } = useAuth();
-  const userId = user?.id ?? null;
+  const { session } = useAuth();
+  const userId = session?.user?.id ?? null;
 
   return useQuery<StudyContext>({
     queryKey: ["study-context", userId],
