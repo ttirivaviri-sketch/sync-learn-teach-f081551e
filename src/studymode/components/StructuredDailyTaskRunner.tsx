@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RefreshCw, Eye, Send, La
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MathMarkdown } from './MathMarkdown';
 import { useStructuredDailyTask, PracticeQuestion, FlashcardItem } from '../hooks/useStructuredDailyTask';
