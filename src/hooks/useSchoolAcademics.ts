@@ -430,13 +430,17 @@ export function useMySubmission(assignmentId?: Id) {
 export function useSubmitAssignment() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { school_id: Id; assignment_id: Id; text_response: string; final: boolean }) => {
+    mutationFn: async (input: { school_id: Id; assignment_id: Id; text_response: string; final: boolean; attachment_paths?: string[] }) => {
       const { data: { user } } = await supabase.auth.getUser();
+      // Merge with existing attachment_paths so partial updates don't clobber files
+      const { data: existing } = await sb.from("submissions").select("attachment_paths").eq("assignment_id", input.assignment_id).eq("student_id", user!.id).maybeSingle();
+      const merged = Array.from(new Set([...(existing?.attachment_paths ?? []), ...(input.attachment_paths ?? [])]));
       const payload: any = {
         school_id: input.school_id,
         assignment_id: input.assignment_id,
         student_id: user!.id,
         text_response: input.text_response,
+        attachment_paths: merged,
         status: input.final ? "submitted" : "draft",
         submitted_at: input.final ? new Date().toISOString() : null,
       };
