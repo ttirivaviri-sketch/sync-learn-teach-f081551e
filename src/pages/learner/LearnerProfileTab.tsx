@@ -4,7 +4,7 @@
 import { useState } from "react";
 import {
   User, CreditCard, Clock, Star, GraduationCap, LogOut,
-  ChevronRight, BookOpen, Wallet, CalendarCheck, Sparkles, Settings, FileText, Shield,
+  ChevronRight, BookOpen, Wallet, CalendarCheck, Sparkles, Settings, FileText, Shield, Bell,
 } from "lucide-react";
 
 import { Session } from "@supabase/supabase-js";
@@ -251,6 +251,11 @@ export const LearnerProfileTab = ({
           icon={<Settings className="h-4 w-4" />}
           label="Change Study Level"
           onClick={() => onNavigate("/learner/choose-level")}
+        />
+        <MenuRow
+          icon={<Bell className="h-4 w-4" />}
+          label="Notifications"
+          onClick={() => onNavigate("/settings/notifications")}
         />
         <MenuRow
           icon={<Shield className="h-4 w-4" />}

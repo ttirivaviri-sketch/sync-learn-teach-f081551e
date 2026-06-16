@@ -74,6 +74,7 @@ const LegalDataCompliance = lazy(() => import("./pages/legal/DataCompliance"));
 
 // Settings
 const SettingsDataCompliance = lazy(() => import("./pages/settings/DataCompliance"));
+const SettingsNotifications = lazy(() => import("./pages/settings/NotificationSettings"));
 const DebugHaptics = lazy(() => import("./pages/DebugHaptics"));
 
 
@@ -181,6 +182,7 @@ const App = () => (
 
               {/* Settings */}
               <Route path="/settings/data-compliance" element={<SettingsDataCompliance />} />
+              <Route path="/settings/notifications" element={<SettingsNotifications />} />
 
               {/* Debug */}
               <Route path="/debug/haptics" element={<DebugHaptics />} />
