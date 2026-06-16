@@ -4,10 +4,13 @@
  */
 import { useEffect, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useParams, Navigate } from "react-router-dom";
-import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3 } from "lucide-react";
+import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
+import { evaluateSchoolContract, isContractLive, contractMessage, BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
 
 export default function SchoolLayout() {
   const navigate = useNavigate();
