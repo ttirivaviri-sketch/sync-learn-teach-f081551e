@@ -435,6 +435,36 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+function ContractGateNotice({ err, schoolId, onRetry }: { err: ContractGateError; schoolId: string; onRetry: () => void }) {
+  const titleMap: Record<string, string> = {
+    SUSPENDED: "School suspended",
+    EXPIRED: "Contract ended",
+    ARCHIVED: "School archived",
+    NOT_STARTED: "Contract starts later",
+  };
+  const title = titleMap[err.code] ?? "Access paused by billing";
+  const subject = encodeURIComponent(`Restore access — analytics (${err.code})`);
+  return (
+    <Card className="mx-auto mt-8 max-w-md p-6 text-center">
+      <CreditCard className="mx-auto mb-3 h-10 w-10 text-destructive" />
+      <h2 className="mb-1 text-lg font-semibold">{title}</h2>
+      <p className="text-sm text-muted-foreground">{err.reason}</p>
+      <p className="mt-1 text-[11px] text-muted-foreground">Status {err.status}{err.feature ? ` · ${err.feature}` : ""}</p>
+      <div className="mt-4 flex flex-wrap justify-center gap-2">
+        <Button asChild size="sm">
+          <a href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${subject}`}>
+            <CreditCard className="mr-1 h-4 w-4" /> Contact billing
+          </a>
+        </Button>
+        <Button asChild size="sm" variant="outline">
+          <Link to={`/school/${schoolId}/billing`}>Open billing</Link>
+        </Button>
+        <Button size="sm" variant="ghost" onClick={onRetry}>Retry</Button>
+      </div>
+    </Card>
+  );
+}
+
 function csvEscape(v: string | number | null | undefined): string {
   const s = String(v ?? "");
   if (/[",\n]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
