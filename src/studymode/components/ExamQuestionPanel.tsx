@@ -589,8 +589,10 @@ export function ExamQuestionPanel({
             <div className="flex items-center justify-between">
               <Label htmlFor="answer">Your Answer</Label>
               <PhotoAnswerButton
-                question={question?.text}
-                totalMarks={question?.marks}
+                question={activeQuestion?.text}
+                totalMarks={activeQuestion?.marks}
+                subject={subject}
+                topic={topic}
                 onAnswer={(text) => setAnswer(answer ? `${answer}\n\n${text}` : text)}
               />
             </div>
