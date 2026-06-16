@@ -53,15 +53,40 @@ interface GradeResult {
   marks_possible: number;
 }
 
-const MAX_BYTES = 6 * 1024 * 1024; // 6MB cap before encoding
+const MAX_BYTES = 12 * 1024 * 1024; // 12MB cap on the raw user file
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error || new Error('Could not read file'));
-    r.readAsDataURL(file);
-  });
+/** Downscale to ≤1600px on the long edge and re-encode as JPEG (~0.82). */
+async function fileToCompressedDataUrl(file: File): Promise<string> {
+  const readAsDataUrl = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error || new Error('Could not read file'));
+      r.readAsDataURL(f);
+    });
+
+  const original = await readAsDataUrl(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('decode failed'));
+      im.src = original;
+    });
+    const MAX = 1600;
+    const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return original;
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } catch {
+    return original;
+  }
 }
 
 function verdictStyles(v: GradedStep['verdict']) {
