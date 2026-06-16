@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -426,6 +427,14 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
       {/* Answer Phase */}
       {phase === 'answering' && q.questionType !== 'multiple_choice' && (
         <div className="space-y-3">
+          <div className="flex justify-end">
+            <PhotoAnswerButton
+              question={q.question}
+              subject={subject}
+              topic={topic}
+              onAnswer={(text) => setUserAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+            />
+          </div>
           <Textarea
             placeholder="Write your complete answer here. Show all working and reasoning steps..."
             value={userAnswer}

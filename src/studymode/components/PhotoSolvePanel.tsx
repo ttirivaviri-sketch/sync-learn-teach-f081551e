@@ -23,28 +23,17 @@ import { studySyncHaptic, studySyncHapticOnce } from '@/lib/haptics';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 
-interface PhotoSolvePanelProps {
-  subject?: Subject;
-  topic?: Topic;
-  question?: string;
-  totalMarks?: number;
-  curriculum?: string | null;
-  onBack: () => void;
-}
-
-interface GradedStep {
-  index: number;
-  student_step: string;
-  verdict: 'correct' | 'partial' | 'incorrect' | 'missing';
-  reason: string;
-  correction: string;
-}
-
-interface GradeResult {
+export interface PhotoSolveResult {
   question_detected: string;
   final_answer: string;
   final_answer_correct: boolean | null;
-  steps: GradedStep[];
+  steps: Array<{
+    index: number;
+    student_step: string;
+    verdict: 'correct' | 'partial' | 'incorrect' | 'missing';
+    reason: string;
+    correction: string;
+  }>;
   missed_steps: string[];
   next_hint: string;
   model_solution: string;
@@ -53,15 +42,53 @@ interface GradeResult {
   marks_possible: number;
 }
 
-const MAX_BYTES = 6 * 1024 * 1024; // 6MB cap before encoding
+interface PhotoSolvePanelProps {
+  subject?: Subject;
+  topic?: Topic;
+  question?: string;
+  totalMarks?: number;
+  curriculum?: string | null;
+  onBack: () => void;
+  /** Called once grading succeeds — host can pull final_answer into its textarea */
+  onResult?: (result: PhotoSolveResult) => void;
+}
 
-function fileToDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(String(r.result));
-    r.onerror = () => reject(r.error || new Error('Could not read file'));
-    r.readAsDataURL(file);
-  });
+type GradedStep = PhotoSolveResult['steps'][number];
+
+const MAX_BYTES = 12 * 1024 * 1024; // 12MB cap on the raw user file
+
+/** Downscale to ≤1600px on the long edge and re-encode as JPEG (~0.82). */
+async function fileToCompressedDataUrl(file: File): Promise<string> {
+  const readAsDataUrl = (f: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error || new Error('Could not read file'));
+      r.readAsDataURL(f);
+    });
+
+  const original = await readAsDataUrl(file);
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('decode failed'));
+      im.src = original;
+    });
+    const MAX = 1600;
+    const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+    const w = Math.max(1, Math.round(img.width * scale));
+    const h = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return original;
+    ctx.drawImage(img, 0, 0, w, h);
+    return canvas.toDataURL('image/jpeg', 0.82);
+  } catch {
+    return original;
+  }
 }
 
 function verdictStyles(v: GradedStep['verdict']) {
@@ -100,12 +127,13 @@ export function PhotoSolvePanel({
   totalMarks,
   curriculum,
   onBack,
+  onResult,
 }: PhotoSolvePanelProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<GradeResult | null>(null);
+  const [result, setResult] = useState<PhotoSolveResult | null>(null);
   const [showSolution, setShowSolution] = useState(false);
 
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -116,13 +144,13 @@ export function PhotoSolvePanel({
   const onPick = async (file: File | undefined) => {
     if (!file) return;
     if (file.size > MAX_BYTES) {
-      setError('Image is too large — please use one under 6MB.');
+      setError('Image is too large — please use one under 12MB.');
       return;
     }
     setError(null);
     setResult(null);
     try {
-      const url = await fileToDataUrl(file);
+      const url = await fileToCompressedDataUrl(file);
       setDataUrl(url);
       setPreviewUrl(url);
     } catch (e) {
@@ -136,7 +164,7 @@ export function PhotoSolvePanel({
     setLoading(true);
     setError(null);
     try {
-      const data = await aiRequestJSON<GradeResult>('photo-solve-grade', {
+      const data = await aiRequestJSON<PhotoSolveResult>('photo-solve-grade', {
         image: dataUrl,
         question,
         subject: subject?.name,
@@ -145,6 +173,7 @@ export function PhotoSolvePanel({
         totalMarks,
       });
       setResult(data);
+      onResult?.(data);
 
       // XP + haptics
       const correctCount = data.steps.filter((s) => s.verdict === 'correct').length;
@@ -169,11 +198,20 @@ export function PhotoSolvePanel({
       updateStreak.mutate();
     } catch (e: any) {
       logger.error('photo-solve grade failed', e);
-      setError(e?.message || 'Could not grade your photo. Try again.');
+      const msg = String(e?.message || '');
+      if (msg.includes('rate_limited') || msg.includes('429')) {
+        setError("You've hit today's AI limit — try again tomorrow or upgrade.");
+      } else if (msg.includes('credits_exhausted') || msg.includes('402')) {
+        setError('AI credits exhausted on this workspace. Please add credits.');
+      } else if (msg.toLowerCase().includes('payload') || msg.includes('413')) {
+        setError('Image too large after upload — try a clearer, smaller photo.');
+      } else {
+        setError(msg || 'Could not grade your photo. Try a clearer image.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [dataUrl, question, subject?.name, topic?.name, curriculum, totalMarks, addXp, updateStreak]);
+  }, [dataUrl, question, subject?.name, topic?.name, curriculum, totalMarks, addXp, updateStreak, onResult]);
 
   const reset = () => {
     setResult(null);

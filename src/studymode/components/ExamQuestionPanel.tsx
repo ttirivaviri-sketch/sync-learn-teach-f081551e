@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -585,7 +586,16 @@ export function ExamQuestionPanel({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="answer">Your Answer</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="answer">Your Answer</Label>
+              <PhotoAnswerButton
+                question={activeQuestion?.text}
+                totalMarks={activeQuestion?.marks}
+                subject={subject}
+                topic={topic}
+                onAnswer={(text) => setAnswer(answer ? `${answer}\n\n${text}` : text)}
+              />
+            </div>
             <Textarea
               id="answer"
               placeholder="Write your complete answer here. Show all working / reasoning steps."

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RotateCw, ChevronLeft, ChevronRight, Layers, Lightbulb, Send, MinusCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Badge } from '@/components/ui/badge';
 import { MathMarkdown } from './MathMarkdown';
 import { DailyTask, Subject } from '../types/study';
@@ -153,6 +154,12 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
       {/* Answer input (before attempting) */}
       {!hasAttempted && (
         <div className="w-full space-y-3">
+          <div className="flex justify-end">
+            <PhotoAnswerButton
+              question={card.front}
+              onAnswer={(text) => setUserAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+            />
+          </div>
           <Textarea
             ref={textareaRef}
             placeholder="Type your answer before revealing..."

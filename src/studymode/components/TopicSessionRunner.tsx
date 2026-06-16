@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BookOpen, Sparkles, X, ArrowRight, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
@@ -158,6 +159,12 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                   {/* Answer input */}
                   {!result && (
                     <div className="space-y-2">
+                      <div className="flex justify-end">
+                        <PhotoAnswerButton
+                          question={q.question}
+                          onAnswer={(text) => setAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+                        />
+                      </div>
                       <Textarea
                         value={answer}
                         onChange={e => setAnswer(e.target.value)}

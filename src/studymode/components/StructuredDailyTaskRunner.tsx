@@ -3,6 +3,7 @@ import { ArrowLeft, Loader2, AlertCircle, CheckCircle2, RefreshCw, Eye, Send, La
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { PhotoAnswerButton } from './PhotoAnswerButton';
 import { Checkbox } from '@/components/ui/checkbox';
 import { MathMarkdown } from './MathMarkdown';
 import { useStructuredDailyTask, PracticeQuestion, FlashcardItem } from '../hooks/useStructuredDailyTask';
@@ -376,6 +377,17 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
               <MathMarkdown>{currentQ.question}</MathMarkdown>
             </div>
 
+            <div className="flex justify-end">
+              <PhotoAnswerButton
+                question={currentQ.question}
+                onAnswer={(text) =>
+                  setPracticeAnswers((p) => ({
+                    ...p,
+                    [practiceIdx]: p[practiceIdx] ? `${p[practiceIdx]}\n\n${text}` : text,
+                  }))
+                }
+              />
+            </div>
             <Textarea
               placeholder="Your answer…"
               value={practiceAnswers[practiceIdx] ?? ''}
@@ -438,6 +450,13 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
               <MathMarkdown>{task.blocks.exam_question.question}</MathMarkdown>
             </div>
 
+            <div className="flex justify-end">
+              <PhotoAnswerButton
+                question={task.blocks.exam_question.question}
+                totalMarks={task.blocks.exam_question.marks}
+                onAnswer={(text) => setExamAnswer((p) => (p ? `${p}\n\n${text}` : text))}
+              />
+            </div>
             <Textarea
               placeholder="Write your full multi-step answer…"
               value={examAnswer}
