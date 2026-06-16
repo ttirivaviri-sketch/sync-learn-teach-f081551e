@@ -78,3 +78,19 @@ verify_jwt = true
 [functions.studymode-context-retrieve]
 verify_jwt = true
 
+[functions.studymode-generate-school-flashcards]
+verify_jwt = true
+
+[functions.studymode-generate-school-quiz]
+verify_jwt = true
+
+[functions.studymode-generate-homework]
+verify_jwt = true
+
+[functions.studymode-mark-homework]
+verify_jwt = true
+
+[functions.studymode-release-homework]
+verify_jwt = true
+
+

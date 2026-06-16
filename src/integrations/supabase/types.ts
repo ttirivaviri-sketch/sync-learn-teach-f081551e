@@ -1043,6 +1043,7 @@ export type Database = {
       flashcards: {
         Row: {
           back: string
+          class_id: string | null
           created_at: string | null
           difficulty: string | null
           ease_factor: number | null
@@ -1054,6 +1055,10 @@ export type Database = {
           last_reviewed_at: string | null
           next_review_date: string | null
           repetitions: number | null
+          school_id: string | null
+          scope: string
+          shared_template_id: string | null
+          source_document_id: string | null
           subject: string
           subject_id: string | null
           tags: Json | null
@@ -1063,6 +1068,7 @@ export type Database = {
         }
         Insert: {
           back: string
+          class_id?: string | null
           created_at?: string | null
           difficulty?: string | null
           ease_factor?: number | null
@@ -1074,6 +1080,10 @@ export type Database = {
           last_reviewed_at?: string | null
           next_review_date?: string | null
           repetitions?: number | null
+          school_id?: string | null
+          scope?: string
+          shared_template_id?: string | null
+          source_document_id?: string | null
           subject: string
           subject_id?: string | null
           tags?: Json | null
@@ -1083,6 +1093,7 @@ export type Database = {
         }
         Update: {
           back?: string
+          class_id?: string | null
           created_at?: string | null
           difficulty?: string | null
           ease_factor?: number | null
@@ -1094,6 +1105,10 @@ export type Database = {
           last_reviewed_at?: string | null
           next_review_date?: string | null
           repetitions?: number | null
+          school_id?: string | null
+          scope?: string
+          shared_template_id?: string | null
+          source_document_id?: string | null
           subject?: string
           subject_id?: string | null
           tags?: Json | null
@@ -3257,6 +3272,194 @@ export type Database = {
           },
         ]
       }
+      school_homework: {
+        Row: {
+          auto_release_feedback: boolean
+          auto_release_grades: boolean
+          class_id: string
+          created_at: string
+          difficulty: string
+          due_at: string | null
+          id: string
+          instructions: string | null
+          school_id: string
+          source_document_id: string | null
+          status: string
+          subject_id: string | null
+          teacher_id: string
+          title: string
+          topic: string | null
+          total_marks: number
+          updated_at: string
+        }
+        Insert: {
+          auto_release_feedback?: boolean
+          auto_release_grades?: boolean
+          class_id: string
+          created_at?: string
+          difficulty?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          school_id: string
+          source_document_id?: string | null
+          status?: string
+          subject_id?: string | null
+          teacher_id: string
+          title: string
+          topic?: string | null
+          total_marks?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_release_feedback?: boolean
+          auto_release_grades?: boolean
+          class_id?: string
+          created_at?: string
+          difficulty?: string
+          due_at?: string | null
+          id?: string
+          instructions?: string | null
+          school_id?: string
+          source_document_id?: string | null
+          status?: string
+          subject_id?: string | null
+          teacher_id?: string
+          title?: string
+          topic?: string | null
+          total_marks?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      school_homework_questions: {
+        Row: {
+          common_mistakes: string | null
+          concepts: string[] | null
+          created_at: string
+          examiner_notes: string | null
+          expected_answer: string | null
+          homework_id: string
+          id: string
+          marks: number
+          options: Json | null
+          ord: number
+          prompt: string
+          question_type: string
+          school_id: string
+        }
+        Insert: {
+          common_mistakes?: string | null
+          concepts?: string[] | null
+          created_at?: string
+          examiner_notes?: string | null
+          expected_answer?: string | null
+          homework_id: string
+          id?: string
+          marks?: number
+          options?: Json | null
+          ord: number
+          prompt: string
+          question_type?: string
+          school_id: string
+        }
+        Update: {
+          common_mistakes?: string | null
+          concepts?: string[] | null
+          created_at?: string
+          examiner_notes?: string | null
+          expected_answer?: string | null
+          homework_id?: string
+          id?: string
+          marks?: number
+          options?: Json | null
+          ord?: number
+          prompt?: string
+          question_type?: string
+          school_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_homework_questions_homework_id_fkey"
+            columns: ["homework_id"]
+            isOneToOne: false
+            referencedRelation: "school_homework"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_homework_responses: {
+        Row: {
+          ai_feedback: Json | null
+          ai_score: number | null
+          created_at: string
+          homework_id: string
+          id: string
+          marked_at: string | null
+          question_id: string
+          released_at: string | null
+          school_id: string
+          status: string
+          student_answer: string | null
+          student_id: string
+          submitted_at: string | null
+          teacher_comment: string | null
+          teacher_score: number | null
+          updated_at: string
+        }
+        Insert: {
+          ai_feedback?: Json | null
+          ai_score?: number | null
+          created_at?: string
+          homework_id: string
+          id?: string
+          marked_at?: string | null
+          question_id: string
+          released_at?: string | null
+          school_id: string
+          status?: string
+          student_answer?: string | null
+          student_id: string
+          submitted_at?: string | null
+          teacher_comment?: string | null
+          teacher_score?: number | null
+          updated_at?: string
+        }
+        Update: {
+          ai_feedback?: Json | null
+          ai_score?: number | null
+          created_at?: string
+          homework_id?: string
+          id?: string
+          marked_at?: string | null
+          question_id?: string
+          released_at?: string | null
+          school_id?: string
+          status?: string
+          student_answer?: string | null
+          student_id?: string
+          submitted_at?: string | null
+          teacher_comment?: string | null
+          teacher_score?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_homework_responses_homework_id_fkey"
+            columns: ["homework_id"]
+            isOneToOne: false
+            referencedRelation: "school_homework"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "school_homework_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "school_homework_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       school_invitations: {
         Row: {
           accepted_at: string | null
@@ -4447,6 +4650,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      teacher_ai_settings: {
+        Row: {
+          auto_release_feedback: boolean
+          auto_release_grades: boolean
+          created_at: string
+          feedback_style: string
+          homework_difficulty_default: string
+          school_id: string
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          auto_release_feedback?: boolean
+          auto_release_grades?: boolean
+          created_at?: string
+          feedback_style?: string
+          homework_difficulty_default?: string
+          school_id: string
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          auto_release_feedback?: boolean
+          auto_release_grades?: boolean
+          created_at?: string
+          feedback_style?: string
+          homework_difficulty_default?: string
+          school_id?: string
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       timetable_slots: {
         Row: {
