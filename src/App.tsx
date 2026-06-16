@@ -142,6 +142,11 @@ const App = () => (
                 <Route path="members" element={<SchoolMembers />} />
                 <Route path="invitations" element={<SchoolInvitations />} />
                 <Route path="settings" element={<SchoolSettings />} />
+                <Route path="academic" element={<SchoolAcademic />} />
+                <Route path="announcements" element={<SchoolAnnouncements />} />
+                <Route path="teach" element={<TeacherWorkspace />} />
+                <Route path="teach/:classId" element={<TeacherClassDetail />} />
+                <Route path="learn" element={<StudentWorkspace />} />
               </Route>
 
               {/* Invitation acceptance */}
