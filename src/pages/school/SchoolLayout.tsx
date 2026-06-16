@@ -67,6 +67,29 @@ export default function SchoolLayout() {
   // for school admins so they can still see billing info.
   const gate = evaluateSchoolContract(current.school);
   const live = isContractLive(gate);
+
+  // Fire an in-app warning toast once per session/school for at-risk contracts.
+  // Suspended / expired schools fall through to the hard-block below — we still
+  // notify so a returning admin sees the warning even if they bypass the block
+  // via a deep link to /settings.
+  if (typeof window !== "undefined" && (isTeacher || isAdmin)) {
+    const flagKey = `school-contract-warn:${schoolId}:${gate.state}`;
+    if (!sessionStorage.getItem(flagKey) &&
+        (gate.state === "expiring_soon" || gate.state === "suspended" || gate.state === "expired")) {
+      sessionStorage.setItem(flagKey, "1");
+      const m = contractMessage(gate);
+      toast.warning(m.title, {
+        description: m.body,
+        duration: 10_000,
+        action: {
+          label: "Contact billing",
+          onClick: () => {
+            window.location.href = `mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Billing — ${current.school.name}`)}`;
+          },
+        },
+      });
+    }
+  }
   if (!live) {
     const msg = contractMessage(gate);
     return (
