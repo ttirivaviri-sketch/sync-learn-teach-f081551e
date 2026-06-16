@@ -147,7 +147,7 @@ export function PhotoSolvePanel({
     setError(null);
     setResult(null);
     try {
-      const url = await fileToDataUrl(file);
+      const url = await fileToCompressedDataUrl(file);
       setDataUrl(url);
       setPreviewUrl(url);
     } catch (e) {
