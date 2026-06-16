@@ -153,6 +153,9 @@ const App = () => (
               {/* Invitation acceptance */}
               <Route path="/invite/:token" element={<AcceptInvitation />} />
 
+              {/* Dev tools */}
+              <Route path="/dev/submission-test" element={<DevSubmissionTest />} />
+
 
 
               {/* Legal */}
