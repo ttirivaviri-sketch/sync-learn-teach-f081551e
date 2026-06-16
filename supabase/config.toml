@@ -93,4 +93,7 @@ verify_jwt = true
 [functions.studymode-release-homework]
 verify_jwt = true
 
+[functions.studymode-detect-gaps]
+verify_jwt = true
+
 
