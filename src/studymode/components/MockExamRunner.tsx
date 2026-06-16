@@ -9,6 +9,7 @@ import { useState, useEffect, useRef } from "react";
 import { Clock, ChevronLeft, ChevronRight, Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { PhotoAnswerButton } from "./PhotoAnswerButton";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
