@@ -524,8 +524,8 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
           <div className="space-y-2">
             <div className="flex justify-end">
               <PhotoAnswerButton
-                question={engine.currentQuestion?.question}
-                totalMarks={engine.currentQuestion?.marks}
+                question={q.question}
+                totalMarks={q.marks}
                 onAnswer={(text) =>
                   handleAnswerChange(currentAnswer ? `${currentAnswer}\n\n${text}` : text)
                 }
