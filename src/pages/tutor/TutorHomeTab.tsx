@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
+import { TeacherWorkspaceBanner } from "@/components/school/TeacherWorkspaceBanner";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface TodayStats {
@@ -103,6 +104,11 @@ export const TutorHomeTab = ({
           </CardContent>
         </Card>
       )}
+
+      {/* Teacher workspace shortcut (visible only to school teachers/admins) */}
+      <TeacherWorkspaceBanner />
+
+
 
       {/* Getting Started Checklist */}
       {showChecklist && (
