@@ -2,11 +2,12 @@
  * TeacherWorkspaceBanner — shown on the tutor app home for users who are
  * also teachers/admins at a school. Links to the teacher workspace where
  * they manage classes (materials, homework incl. AI homework, quizzes,
- * announcements, students).
+ * announcements, students) and provides quick-action shortcuts.
  */
 import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { ChevronRight, School as SchoolIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ChevronRight, School as SchoolIcon, Megaphone, FileText, ClipboardList } from "lucide-react";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 
 export function TeacherWorkspaceBanner() {
@@ -22,6 +23,11 @@ export function TeacherWorkspaceBanner() {
   const target = isTeacher
     ? `/school/${teaching.school.id}/teach`
     : `/school/${teaching.school.id}`;
+
+  const quick = (action: "announce" | "materials" | "homework") => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigate(`/school/${teaching.school.id}/teach?action=${action}`);
+  };
 
   return (
     <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-background">
@@ -40,6 +46,20 @@ export function TeacherWorkspaceBanner() {
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </button>
+
+      {isTeacher && (
+        <div className="px-3 pb-3 grid grid-cols-3 gap-2">
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={quick("announce")}>
+            <Megaphone className="h-3.5 w-3.5 mr-1" /> Post
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={quick("materials")}>
+            <FileText className="h-3.5 w-3.5 mr-1" /> Upload
+          </Button>
+          <Button variant="outline" size="sm" className="h-8 text-xs" onClick={quick("homework")}>
+            <ClipboardList className="h-3.5 w-3.5 mr-1" /> Homework
+          </Button>
+        </div>
+      )}
     </Card>
   );
 }
