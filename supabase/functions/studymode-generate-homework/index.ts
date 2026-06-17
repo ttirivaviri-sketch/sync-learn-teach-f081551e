@@ -26,10 +26,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const body = await req.json();
-    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions } = body;
+    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft } = body;
     if (!school_id || !document_id || !class_id || !title) {
       return errorResponse("school_id, document_id, class_id, title required", 400);
     }
+    const startStatus = as_draft === true ? "draft" : "published";
 
     const auth = await authenticateTeacher(req, school_id);
     if (!auth.ok) {
@@ -70,7 +71,7 @@ serve(async (req) => {
       difficulty: diff, instructions: instructions ?? null,
       due_at: due_at ?? null, total_marks: totalMarks,
       auto_release_grades: autoGrades, auto_release_feedback: autoFeedback,
-      status: "published",
+      status: startStatus,
     }).select().single();
     if (hwErr || !hw) return errorResponse(`Homework insert failed: ${hwErr?.message}`, 500);
 

@@ -3,7 +3,7 @@
  * Each tab is a small panel with create + list interactions.
  */
 import { useState } from "react";
-import { useParams, useOutletContext, Link } from "react-router-dom";
+import { useParams, useOutletContext, Link, useSearchParams } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink, BarChart3 } from "lucide-react";
+import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink, BarChart3, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
+import { AiHomeworkPanel } from "@/components/school/AiHomeworkPanel";
+import { ClassPerformancePanel } from "@/components/school/ClassPerformancePanel";
 import {
   useClass,
   useResources, useCreateResource, useDeleteResource,
@@ -31,10 +33,16 @@ import {
 export default function TeacherClassDetail() {
   const { school } = useOutletContext<{ school: any }>();
   const { classId } = useParams();
+  const [search] = useSearchParams();
   const cls = useClass(classId);
 
   if (cls.isLoading) return <p className="text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin inline mr-2" />Loading…</p>;
   if (!cls.data) return <p className="text-sm text-muted-foreground">Class not found.</p>;
+
+  // Optional deep-link from the tutor home "My Workspace" quick actions:
+  //   ?tab=stream | materials | homework | quizzes | students | analytics
+  const validTabs = ["stream", "materials", "homework", "quizzes", "students", "analytics"] as const;
+  const initialTab = (validTabs.find((t) => t === search.get("tab")) ?? "stream") as typeof validTabs[number];
 
   return (
     <div className="space-y-4">
@@ -42,7 +50,7 @@ export default function TeacherClassDetail() {
         <Link to={`/school/${school.id}/teach`} className="text-sm text-muted-foreground hover:underline">← My classes</Link>
         <h1 className="text-xl font-semibold mt-1">{cls.data.name}</h1>
       </div>
-      <Tabs defaultValue="stream">
+      <Tabs defaultValue={initialTab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="stream"><Megaphone className="h-4 w-4 mr-1" />Stream</TabsTrigger>
           <TabsTrigger value="materials"><FileText className="h-4 w-4 mr-1" />Materials</TabsTrigger>
@@ -53,10 +61,32 @@ export default function TeacherClassDetail() {
         </TabsList>
         <TabsContent value="stream"><StreamPanel schoolId={school.id} classId={classId!} /></TabsContent>
         <TabsContent value="materials"><MaterialsPanel schoolId={school.id} classId={classId!} /></TabsContent>
-        <TabsContent value="homework"><HomeworkPanel schoolId={school.id} classId={classId!} /></TabsContent>
+        <TabsContent value="homework">
+          <div className="space-y-6 mt-3">
+            <section>
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <h3 className="font-semibold text-sm">AI homework</h3>
+              </div>
+              <AiHomeworkPanel schoolId={school.id} classId={classId!} />
+            </section>
+            <section>
+              <h3 className="font-semibold text-sm mb-2">Classic assignments</h3>
+              <HomeworkPanel schoolId={school.id} classId={classId!} />
+            </section>
+          </div>
+        </TabsContent>
         <TabsContent value="quizzes"><QuizzesPanel schoolId={school.id} classId={classId!} /></TabsContent>
         <TabsContent value="students"><StudentsPanel classId={classId!} /></TabsContent>
-        <TabsContent value="analytics"><ClassAnalyticsPanel classId={classId!} /></TabsContent>
+        <TabsContent value="analytics">
+          <div className="space-y-6 mt-3">
+            <ClassPerformancePanel classId={classId!} />
+            <section>
+              <h4 className="font-medium text-sm mb-2">Per-student deep dive</h4>
+              <ClassAnalyticsPanel classId={classId!} />
+            </section>
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   );

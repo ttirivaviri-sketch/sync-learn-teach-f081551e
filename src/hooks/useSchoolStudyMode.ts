@@ -67,18 +67,150 @@ export function useGenerateSchoolQuiz() {
 export function useGenerateHomework() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { schoolId: string; documentId: string; classId: string; subjectId?: string; title: string; topic?: string; difficulty?: string; count?: number; dueAt?: string; instructions?: string; }) =>
+    mutationFn: async (args: { schoolId: string; documentId: string; classId: string; subjectId?: string; title: string; topic?: string; difficulty?: string; count?: number; dueAt?: string; instructions?: string; asDraft?: boolean; }) =>
       invokeWithContract<{ ok: boolean; homework_id: string; count: number; total_marks: number }>(() =>
         supabase.functions.invoke("studymode-generate-homework", {
-          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, difficulty: args.difficulty, count: args.count, due_at: args.dueAt, instructions: args.instructions },
+          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, difficulty: args.difficulty, count: args.count, due_at: args.dueAt, instructions: args.instructions, as_draft: args.asDraft },
         }),
       ),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["teacher-homework", v.schoolId] });
+      qc.invalidateQueries({ queryKey: ["ai-homework-class", v.classId] });
       qc.invalidateQueries({ queryKey: ["student-homework"] });
     },
   });
 }
+
+// ── Teacher: AI homework for a class (drafts + published) ──────────────────
+export function useAiHomeworkForClass(classId?: string) {
+  return useQuery({
+    queryKey: ["ai-homework-class", classId],
+    enabled: !!classId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("school_homework")
+        .select("id,school_id,class_id,title,topic,due_at,total_marks,status,created_at")
+        .eq("class_id", classId!)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useHomeworkQuestions(homeworkId?: string) {
+  return useQuery({
+    queryKey: ["homework-questions", homeworkId],
+    enabled: !!homeworkId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("school_homework_questions")
+        .select("*").eq("homework_id", homeworkId!).order("ord");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
+export function useUpdateHomeworkQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: { id: string; homework_id: string; prompt?: string; expected_answer?: string; marks?: number; options?: any; examiner_notes?: string; }) => {
+      const { id, homework_id, ...patch } = row;
+      const { error } = await supabase.from("school_homework_questions").update(patch).eq("id", id);
+      if (error) throw error;
+      return row;
+    },
+    onSuccess: (r) => qc.invalidateQueries({ queryKey: ["homework-questions", r.homework_id] }),
+  });
+}
+
+export function useDeleteHomeworkQuestion() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (row: { id: string; homework_id: string }) => {
+      const { error } = await supabase.from("school_homework_questions").delete().eq("id", row.id);
+      if (error) throw error;
+      return row;
+    },
+    onSuccess: (r) => qc.invalidateQueries({ queryKey: ["homework-questions", r.homework_id] }),
+  });
+}
+
+export function usePublishHomework() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: { id: string; class_id: string; due_at: string | null; status?: "published" | "draft" }) => {
+      const patch: any = { status: args.status ?? "published", due_at: args.due_at };
+      // Recompute total_marks from current questions.
+      const { data: qs } = await supabase.from("school_homework_questions").select("marks").eq("homework_id", args.id);
+      if (qs) patch.total_marks = (qs as any[]).reduce((s, q) => s + Number(q.marks || 0), 0);
+      const { error } = await supabase.from("school_homework").update(patch).eq("id", args.id);
+      if (error) throw error;
+      return args;
+    },
+    onSuccess: (a) => {
+      qc.invalidateQueries({ queryKey: ["ai-homework-class", a.class_id] });
+      qc.invalidateQueries({ queryKey: ["student-homework"] });
+    },
+  });
+}
+
+// ── Teacher: class performance analytics ───────────────────────────────────
+export function useClassPerformance(classId?: string) {
+  return useQuery({
+    queryKey: ["class-performance", classId],
+    enabled: !!classId,
+    queryFn: async () => {
+      const [enrRes, hwRes, qzRes] = await Promise.all([
+        supabase.from("enrollments").select("student_id").eq("class_id", classId!).eq("status", "active"),
+        supabase.from("school_homework").select("id,title,total_marks,status,due_at,created_at").eq("class_id", classId!).eq("status", "published"),
+        supabase.from("quizzes").select("id,title,created_at").eq("class_id", classId!),
+      ]);
+      const enrolled = enrRes.data ?? [];
+      const enrolledCount = enrolled.length;
+      const hwIds = (hwRes.data ?? []).map((h) => h.id);
+      const quizIds = (qzRes.data ?? []).map((q) => q.id);
+
+      const [respRes, attRes] = await Promise.all([
+        hwIds.length
+          ? supabase.from("school_homework_responses")
+            .select("homework_id,student_id,ai_score,teacher_score,status").in("homework_id", hwIds)
+          : Promise.resolve({ data: [] as any[] }),
+        quizIds.length
+          ? supabase.from("school_quiz_attempts")
+            .select("quiz_id,student_id,score,max_score,status").in("quiz_id", quizIds)
+          : Promise.resolve({ data: [] as any[] }),
+      ]);
+
+      const homework = (hwRes.data ?? []).map((h) => {
+        const rows = (respRes.data ?? []).filter((r: any) => r.homework_id === h.id);
+        const studentsAnswered = new Set(rows.map((r: any) => r.student_id)).size;
+        const scoreSum = rows.reduce((s: number, r: any) => s + Number(r.teacher_score ?? r.ai_score ?? 0), 0);
+        const scored = rows.filter((r: any) => r.teacher_score != null || r.ai_score != null).length;
+        return {
+          id: h.id, title: h.title, total_marks: Number(h.total_marks || 0), due_at: h.due_at,
+          completion: enrolledCount ? studentsAnswered / enrolledCount : 0,
+          students_answered: studentsAnswered, enrolled: enrolledCount,
+          avg_score: scored ? scoreSum / scored : null,
+        };
+      });
+
+      const quizzes = (qzRes.data ?? []).map((q) => {
+        const rows = (attRes.data ?? []).filter((r: any) => r.quiz_id === q.id && r.status === "submitted");
+        const studentsAttempted = new Set(rows.map((r: any) => r.student_id)).size;
+        const pctSum = rows.reduce((s: number, r: any) => s + (Number(r.max_score || 0) > 0 ? Number(r.score || 0) / Number(r.max_score) : 0), 0);
+        return {
+          id: q.id, title: q.title,
+          completion: enrolledCount ? studentsAttempted / enrolledCount : 0,
+          students_attempted: studentsAttempted, enrolled: enrolledCount,
+          avg_pct: rows.length ? pctSum / rows.length : null,
+        };
+      });
+
+      return { enrolled: enrolledCount, homework, quizzes };
+    },
+  });
+}
+
 
 // ── Teacher AI settings ─────────────────────────────────────────────────────
 export function useTeacherAiSettings(teacherId?: string, schoolId?: string) {
