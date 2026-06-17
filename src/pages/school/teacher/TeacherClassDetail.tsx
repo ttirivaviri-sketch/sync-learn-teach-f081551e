@@ -12,12 +12,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink, BarChart3 } from "lucide-react";
+import { Plus, Trash2, FileText, ClipboardList, Megaphone, Users, Loader2, ExternalLink, BarChart3, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
+import { AiHomeworkPanel } from "@/components/school/AiHomeworkPanel";
+import { ClassPerformancePanel } from "@/components/school/ClassPerformancePanel";
 import {
   useClass,
   useResources, useCreateResource, useDeleteResource,
