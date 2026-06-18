@@ -280,8 +280,11 @@ export default function Library() {
                       <SelectItem value="textbook">textbook</SelectItem>
                       <SelectItem value="past_paper">past_paper</SelectItem>
                       <SelectItem value="syllabus">syllabus</SelectItem>
+                      <SelectItem value="guide">guide</SelectItem>
+                      <SelectItem value="video">video (clip)</SelectItem>
                     </SelectContent>
                   </Select>
+
                 </div>
                 <div className="grid gap-1">
                   <Label>Curriculum</Label>
