@@ -313,13 +313,24 @@ export default function Library() {
               </div>
               <div className="grid gap-1">
                 <Label>PDF URL (direct .pdf link or storage path)</Label>
-                <Input value={editing.pdf_url ?? ""} onChange={(e) => setEditing({ ...editing, pdf_url: e.target.value })} />
-                <p className="text-xs text-muted-foreground">
-                  Use a direct .pdf URL (https://...). Landing pages won't render.
-                </p>
-              </div>
-              <div className="grid gap-1">
-                <Label>Thumbnail URL</Label>
+              {editing.kind === "video" ? (
+                <div className="grid gap-1">
+                  <Label>Video URL (YouTube, Vimeo, Loom, or direct .mp4)</Label>
+                  <Input value={editing.video_url ?? ""} onChange={(e) => setEditing({ ...editing, video_url: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">
+                    Videos surface in the Clips tab. Paste a YouTube/Vimeo/Loom URL or a direct video file URL.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-1">
+                  <Label>PDF URL (direct .pdf link or storage path)</Label>
+                  <Input value={editing.pdf_url ?? ""} onChange={(e) => setEditing({ ...editing, pdf_url: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">
+                    Use a direct .pdf URL (https://...). Landing pages won't render.
+                  </p>
+                </div>
+              )}
+
                 <Input value={editing.thumbnail_url ?? ""} onChange={(e) => setEditing({ ...editing, thumbnail_url: e.target.value })} />
               </div>
               <div className="grid gap-1">
