@@ -179,6 +179,7 @@ function ClassesPanel({ schoolId }: { schoolId: string }) {
           <ClassEditor schoolId={schoolId} classId={selected} />
         )}
       </Card>
+      </div>
     </div>
   );
 }
