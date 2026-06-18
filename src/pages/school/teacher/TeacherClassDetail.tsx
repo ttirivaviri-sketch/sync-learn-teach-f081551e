@@ -466,6 +466,10 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
       toast.error("Add a quiz title and topic");
       return;
     }
+    if (selectedTypes.length === 0) {
+      toast.error("Pick at least one question type");
+      return;
+    }
     try {
       setBusy(true);
       let documentId = pickedDocId;
