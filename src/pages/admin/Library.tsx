@@ -81,8 +81,17 @@ export default function Library() {
   });
 
   const save = async () => {
-    if (!editing?.title || !editing?.pdf_url || !editing?.subject || !editing?.curriculum || !editing?.kind) {
-      toast.error("Title, kind, curriculum, subject and PDF URL are required");
+    const isVideo = editing?.kind === "video";
+    if (!editing?.title || !editing?.subject || !editing?.curriculum || !editing?.kind) {
+      toast.error("Title, kind, curriculum and subject are required");
+      return;
+    }
+    if (isVideo && !editing?.video_url) {
+      toast.error("Video kind requires a Video URL");
+      return;
+    }
+    if (!isVideo && !editing?.pdf_url) {
+      toast.error("Non-video kinds require a PDF URL");
       return;
     }
     setSaving(true);
@@ -94,7 +103,8 @@ export default function Library() {
         subject: editing.subject,
         topic: editing.topic || null,
         description: editing.description || null,
-        pdf_url: editing.pdf_url,
+        pdf_url: isVideo ? null : editing.pdf_url,
+        video_url: isVideo ? editing.video_url : null,
         thumbnail_url: editing.thumbnail_url || null,
         grade_levels: editing.grade_levels ?? [],
       };
@@ -111,6 +121,7 @@ export default function Library() {
       setSaving(false);
     }
   };
+
 
   const remove = async (id: string) => {
     if (!confirm("Delete this resource?")) return;
