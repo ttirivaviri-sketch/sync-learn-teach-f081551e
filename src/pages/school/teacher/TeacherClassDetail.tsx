@@ -538,6 +538,29 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
         </div>
       </div>
 
+
+      <div>
+        <Label>Question types</Label>
+        <div className="grid grid-cols-3 gap-2 mt-1">
+          {([
+            { key: "mcq", label: "Multiple choice" },
+            { key: "tf", label: "True / false" },
+            { key: "short", label: "Short answer" },
+          ] as const).map((t) => (
+            <Button
+              key={t.key}
+              type="button"
+              size="sm"
+              variant={types[t.key] ? "default" : "outline"}
+              onClick={() => setTypes((p) => ({ ...p, [t.key]: !p[t.key] }))}
+            >
+              {t.label}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">Pick one or more — the AI will mix them in the quiz.</p>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <Button type="button" size="sm" variant={sourceMode === "existing" ? "default" : "outline"} onClick={() => setSourceMode("existing")}>Existing resource</Button>
         <Button type="button" size="sm" variant={sourceMode === "upload" ? "default" : "outline"} onClick={() => setSourceMode("upload")}>Upload sample</Button>
