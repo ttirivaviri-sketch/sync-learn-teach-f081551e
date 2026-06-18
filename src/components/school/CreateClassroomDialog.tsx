@@ -4,10 +4,8 @@
  * the school admin Academic page and the Teacher Workspace so teachers and
  * admins build a "closed ecosystem" in a single step.
  *
- * Permissions: backed by RLS on `classes`, `class_subjects`, and `enrollments`.
- * Admins can create any class; teachers can create a class and (because the
- * INSERT they make assigns themselves as the subject teacher) will then own
- * follow-up edits to that classroom.
+ * When the school has no grades or subjects yet, the dialog lets the user
+ * add them inline so they never hit a dead end with empty dropdowns.
  */
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
@@ -16,10 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   useGrades, useSchoolSubjects,
+  useUpsertGrade, useUpsertSubject,
   useUpsertClass, useUpsertClassSubject, useCreateEnrollment,
   findUserIdByEmail,
 } from "@/hooks/useSchoolAcademics";
@@ -33,11 +32,16 @@ interface Props {
   onCreated?: (classId: string) => void;
 }
 
+const CURRICULA = ["ZIMSEC", "CAPS", "IEB", "Cambridge", "Other"] as const;
+const ADD_NEW = "__add_new__";
+
 export function CreateClassroomDialog({ schoolId, defaultTeacherId, trigger, onCreated }: Props) {
   const { session } = useAuth();
   const userId = session?.user?.id ?? null;
   const grades = useGrades(schoolId);
   const subjects = useSchoolSubjects(schoolId);
+  const upsertGrade = useUpsertGrade();
+  const upsertSubject = useUpsertSubject();
   const upsertClass = useUpsertClass();
   const upsertClassSubject = useUpsertClassSubject();
   const enroll = useCreateEnrollment();
@@ -46,20 +50,64 @@ export function CreateClassroomDialog({ schoolId, defaultTeacherId, trigger, onC
   const [name, setName] = useState("");
   const [gradeId, setGradeId] = useState("");
   const [subjectId, setSubjectId] = useState("");
+  const [curriculum, setCurriculum] = useState<string>("");
   const [teacherEmail, setTeacherEmail] = useState("");
   const [students, setStudents] = useState("");
   const [busy, setBusy] = useState(false);
 
+  // Inline-create state
+  const [addingGrade, setAddingGrade] = useState(false);
+  const [newGradeName, setNewGradeName] = useState("");
+  const [addingSubject, setAddingSubject] = useState(false);
+  const [newSubjectName, setNewSubjectName] = useState("");
+
   const teacherDefault = defaultTeacherId ?? userId;
 
   function reset() {
-    setName(""); setGradeId(""); setSubjectId("");
+    setName(""); setGradeId(""); setSubjectId(""); setCurriculum("");
     setTeacherEmail(""); setStudents("");
+    setAddingGrade(false); setNewGradeName("");
+    setAddingSubject(false); setNewSubjectName("");
+  }
+
+  async function createGrade() {
+    const n = newGradeName.trim();
+    if (!n) { toast.error("Give the grade a name"); return; }
+    try {
+      const g = await upsertGrade.mutateAsync({
+        school_id: schoolId,
+        name: n,
+        sort_order: (grades.data?.length ?? 0) + 1,
+      } as any);
+      setGradeId(g.id);
+      setAddingGrade(false);
+      setNewGradeName("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not add grade");
+    }
+  }
+
+  async function createSubject() {
+    const n = newSubjectName.trim();
+    if (!n) { toast.error("Give the subject a name"); return; }
+    try {
+      const s = await upsertSubject.mutateAsync({
+        school_id: schoolId,
+        name: n,
+      } as any);
+      setSubjectId(s.id);
+      setAddingSubject(false);
+      setNewSubjectName("");
+    } catch (e: any) {
+      toast.error(e.message ?? "Could not add subject");
+    }
   }
 
   async function submit() {
     if (!name.trim()) { toast.error("Give the classroom a name"); return; }
-    if (!subjectId) { toast.error("Pick a subject"); return; }
+    if (!subjectId) { toast.error("Pick or add a subject"); return; }
+    if (!gradeId) { toast.error("Pick or add a grade"); return; }
+    if (!curriculum) { toast.error("Pick a curriculum"); return; }
     setBusy(true);
     try {
       // 1. Resolve teacher
@@ -74,6 +122,7 @@ export function CreateClassroomDialog({ schoolId, defaultTeacherId, trigger, onC
         school_id: schoolId,
         name: name.trim(),
         grade_id: gradeId || null,
+        curriculum,
       } as any);
 
       // 3. Assign subject + teacher
@@ -142,22 +191,80 @@ export function CreateClassroomDialog({ schoolId, defaultTeacherId, trigger, onC
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Grade</Label>
-              <Select value={gradeId} onValueChange={setGradeId}>
-                <SelectTrigger><SelectValue placeholder={grades.data?.length ? "Pick a grade" : "No grades yet"} /></SelectTrigger>
-                <SelectContent>
-                  {grades.data?.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {addingGrade ? (
+                <div className="flex gap-1">
+                  <Input
+                    autoFocus
+                    value={newGradeName}
+                    onChange={(e) => setNewGradeName(e.target.value)}
+                    placeholder="e.g. Form 4"
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createGrade(); } }}
+                  />
+                  <Button size="icon" variant="outline" onClick={createGrade} disabled={upsertGrade.isPending}>
+                    {upsertGrade.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => { setAddingGrade(false); setNewGradeName(""); }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={gradeId}
+                  onValueChange={(v) => v === ADD_NEW ? setAddingGrade(true) : setGradeId(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={grades.data?.length ? "Pick a grade" : "Add your first grade"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {grades.data?.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                    <SelectItem value={ADD_NEW}>＋ Add new grade…</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
             <div>
               <Label>Subject</Label>
-              <Select value={subjectId} onValueChange={setSubjectId}>
-                <SelectTrigger><SelectValue placeholder={subjects.data?.length ? "Pick a subject" : "No subjects yet"} /></SelectTrigger>
-                <SelectContent>
-                  {subjects.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              {addingSubject ? (
+                <div className="flex gap-1">
+                  <Input
+                    autoFocus
+                    value={newSubjectName}
+                    onChange={(e) => setNewSubjectName(e.target.value)}
+                    placeholder="e.g. Mathematics"
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); createSubject(); } }}
+                  />
+                  <Button size="icon" variant="outline" onClick={createSubject} disabled={upsertSubject.isPending}>
+                    {upsertSubject.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={() => { setAddingSubject(false); setNewSubjectName(""); }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={subjectId}
+                  onValueChange={(v) => v === ADD_NEW ? setAddingSubject(true) : setSubjectId(v)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={subjects.data?.length ? "Pick a subject" : "Add your first subject"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.data?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                    <SelectItem value={ADD_NEW}>＋ Add new subject…</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
+          </div>
+
+          <div>
+            <Label>Curriculum</Label>
+            <Select value={curriculum} onValueChange={setCurriculum}>
+              <SelectTrigger><SelectValue placeholder="Pick a curriculum" /></SelectTrigger>
+              <SelectContent>
+                {CURRICULA.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
