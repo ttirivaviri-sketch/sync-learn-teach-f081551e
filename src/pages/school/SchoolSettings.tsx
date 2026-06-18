@@ -10,6 +10,7 @@ import { Loader2, Save, CreditCard, Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUpdateSchool, type School } from "@/hooks/useSchools";
 import { evaluateSchoolContract, contractMessage, BILLING_CONTACT_EMAIL, type ContractGate } from "@/lib/schoolContract";
+import { SchoolLogoUploader } from "@/components/school/SchoolLogoUploader";
 
 export default function SchoolSettings() {
   const { school } = useOutletContext<{ school: School }>();
