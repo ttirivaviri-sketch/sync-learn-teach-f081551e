@@ -468,6 +468,7 @@ export type Database = {
         Row: {
           code: string | null
           created_at: string
+          curriculum: string | null
           deleted_at: string | null
           grade_id: string | null
           homeroom_teacher_id: string | null
@@ -479,6 +480,7 @@ export type Database = {
         Insert: {
           code?: string | null
           created_at?: string
+          curriculum?: string | null
           deleted_at?: string | null
           grade_id?: string | null
           homeroom_teacher_id?: string | null
@@ -490,6 +492,7 @@ export type Database = {
         Update: {
           code?: string | null
           created_at?: string
+          curriculum?: string | null
           deleted_at?: string | null
           grade_id?: string | null
           homeroom_teacher_id?: string | null
