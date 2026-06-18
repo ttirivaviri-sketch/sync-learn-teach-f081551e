@@ -311,8 +311,6 @@ export default function Library() {
                   />
                 </div>
               </div>
-              <div className="grid gap-1">
-                <Label>PDF URL (direct .pdf link or storage path)</Label>
               {editing.kind === "video" ? (
                 <div className="grid gap-1">
                   <Label>Video URL (YouTube, Vimeo, Loom, or direct .mp4)</Label>
@@ -330,9 +328,11 @@ export default function Library() {
                   </p>
                 </div>
               )}
-
+              <div className="grid gap-1">
+                <Label>Thumbnail URL</Label>
                 <Input value={editing.thumbnail_url ?? ""} onChange={(e) => setEditing({ ...editing, thumbnail_url: e.target.value })} />
               </div>
+
               <div className="grid gap-1">
                 <Label>Description</Label>
                 <Textarea rows={3} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
