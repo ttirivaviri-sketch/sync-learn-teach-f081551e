@@ -10,6 +10,7 @@ import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom
 import { Card } from "@/components/ui/card";
 import { Loader2, BookOpenCheck, Megaphone, FileText, ClipboardList } from "lucide-react";
 import { useMyTeachingClasses } from "@/hooks/useSchoolAcademics";
+import { CreateClassroomDialog } from "@/components/school/CreateClassroomDialog";
 
 const ACTION_TO_TAB: Record<string, string> = {
   announce: "stream",
