@@ -132,15 +132,17 @@ export default function Library() {
   };
 
   const testLink = async (r: Resource) => {
+    const url = r.video_url || r.pdf_url;
+    if (!url) return;
     setTesting(r.id);
     try {
-      // HEAD via no-cors so we can at least fire it; for inspection use GET range.
-      const res = await fetch(r.pdf_url, { method: "GET", headers: { Range: "bytes=0-0" } });
+      const res = await fetch(url, { method: "GET", headers: { Range: "bytes=0-0" } });
       const ct = res.headers.get("content-type") || "";
-      const ok = res.ok && ct.toLowerCase().includes("pdf");
+      const expectVideo = r.kind === "video";
+      const ok = res.ok && (expectVideo ? !ct.toLowerCase().includes("pdf") : ct.toLowerCase().includes("pdf"));
       setTestResults((p) => ({ ...p, [r.id]: { ok, ct, status: res.status } }));
       toast[ok ? "success" : "error"](
-        ok ? "Looks like a real PDF" : `Not a PDF: ${ct || res.status}`,
+        ok ? "URL reachable" : `Unexpected content-type: ${ct || res.status}`,
       );
     } catch (e) {
       setTestResults((p) => ({ ...p, [r.id]: { ok: false, ct: "(blocked)", status: 0 } }));
@@ -149,6 +151,7 @@ export default function Library() {
       setTesting(null);
     }
   };
+
 
   const preview = (r: Resource) => {
     setPreviewing({
