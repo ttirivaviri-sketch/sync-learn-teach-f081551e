@@ -2,7 +2,7 @@
  * School portal layout. Anyone with an active membership of the school
  * (admin/teacher/student) can access it. Tabs are filtered by role.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Outlet, Link, NavLink, useNavigate, useParams, Navigate } from "react-router-dom";
 import { Loader2, LayoutDashboard, Users, Mail, Settings as SettingsIcon, Building2, GraduationCap, BookOpenCheck, Megaphone, Backpack, BarChart3, ShieldAlert, Clock3, CreditCard, ScrollText } from "lucide-react";
 import { toast } from "sonner";
@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
 import { evaluateSchoolContract, isContractLive, contractMessage, BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
+import { applySchoolTheme } from "@/lib/schoolBranding";
 
 export default function SchoolLayout() {
   const navigate = useNavigate();
