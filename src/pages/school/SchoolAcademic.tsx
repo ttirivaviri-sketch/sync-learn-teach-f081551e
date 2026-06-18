@@ -20,6 +20,7 @@ import {
   useEnrollments, useCreateEnrollment, useRemoveEnrollment,
   findUserIdByEmail,
 } from "@/hooks/useSchoolAcademics";
+import { CreateClassroomDialog } from "@/components/school/CreateClassroomDialog";
 
 export default function SchoolAcademic() {
   const { school } = useOutletContext<{ school: any }>();
