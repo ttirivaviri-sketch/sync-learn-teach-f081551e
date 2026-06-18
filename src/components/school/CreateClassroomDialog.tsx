@@ -34,7 +34,8 @@ interface Props {
 }
 
 export function CreateClassroomDialog({ schoolId, defaultTeacherId, trigger, onCreated }: Props) {
-  const { user } = useAuth();
+  const { session } = useAuth();
+  const userId = session?.user?.id ?? null;
   const grades = useGrades(schoolId);
   const subjects = useSchoolSubjects(schoolId);
   const upsertClass = useUpsertClass();
