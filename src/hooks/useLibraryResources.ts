@@ -553,9 +553,15 @@ export function useLibraryResources(
           };
         });
 
+        const VIDEO_URL_RE = /(youtube\.com|youtu\.be|vimeo\.com|loom\.com|\.(mp4|webm|mov|m4v)(\?|$))/i;
         const mappedSystemResources: LibraryResource[] = ((systemData as any[]) || []).map((row) => {
-          const isPastPaper = row.kind === "past_paper";
-          const isVideo = row.kind === "video";
+          const rawVideoUrl = row.video_url || (row.pdf_url && VIDEO_URL_RE.test(row.pdf_url) ? row.pdf_url : null);
+          const urlSaysVideo = !!rawVideoUrl;
+          const isVideo = row.kind === "video" || urlSaysVideo;
+          if (isVideo && row.kind !== "video") {
+            logger.warn("[useLibraryResources] row classified as video by URL but kind=", row.kind, row.id);
+          }
+          const isPastPaper = !isVideo && row.kind === "past_paper";
           const gradeLevels = Array.isArray(row.grade_levels) ? row.grade_levels : [];
 
           return {
@@ -572,7 +578,7 @@ export function useLibraryResources(
             isOffline: false,
             duration: isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
             isTutorial: isVideo,
-            videoUrl: row.pdf_url,
+            videoUrl: isVideo ? rawVideoUrl ?? undefined : row.pdf_url,
             pdfSource: isVideo ? undefined : "system",
             tags: {
               subject: row.subject || "General",
@@ -582,6 +588,7 @@ export function useLibraryResources(
             },
           };
         });
+
 
         const mapped = [...mappedTutorials, ...mappedSystemResources];
 
