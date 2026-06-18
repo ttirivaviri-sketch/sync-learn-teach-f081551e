@@ -493,7 +493,7 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
       const r = await gen.mutateAsync({
         schoolId, classId, documentId,
         title: aiTitle.trim(), topic: topic.trim(),
-        count, difficulty,
+        count, difficulty, types: selectedTypes,
       });
       toast.success(`Quiz published — ${r.count} questions`);
       setAiTitle(""); setTopic(""); setFile(null);
