@@ -50,7 +50,7 @@ export function CreateClassroomDialog({ schoolId, defaultTeacherId, trigger, onC
   const [students, setStudents] = useState("");
   const [busy, setBusy] = useState(false);
 
-  const teacherDefault = defaultTeacherId ?? user?.id ?? null;
+  const teacherDefault = defaultTeacherId ?? userId;
 
   function reset() {
     setName(""); setGradeId(""); setSubjectId("");
