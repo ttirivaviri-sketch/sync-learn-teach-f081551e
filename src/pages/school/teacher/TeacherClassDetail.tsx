@@ -388,7 +388,7 @@ function QuizzesPanel({ schoolId, classId }: { schoolId: string; classId: string
       <Card className="p-4 flex gap-2 items-end">
         <div className="flex-1">
           <Label>Quiz title</Label>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Photosynthesis check-in" />
         </div>
         <Button
           disabled={!title.trim() || create.isPending}
@@ -396,8 +396,11 @@ function QuizzesPanel({ schoolId, classId }: { schoolId: string; classId: string
             const q = await create.mutateAsync({ school_id: schoolId, class_id: classId, title: title.trim(), status: "published" } as any);
             setTitle(""); setEditingId(q.id); toast.success("Quiz created — add questions");
           }}
-        ><Plus className="h-4 w-4 mr-1" />Create</Button>
+        ><Plus className="h-4 w-4 mr-1" />Create blank</Button>
       </Card>
+
+      <AiQuizGeneratorCard schoolId={schoolId} classId={classId} />
+
       <div className="space-y-2">
         {list.data?.filter((q) => q.class_id === classId).map((q) => (
           <Card key={q.id} className="p-4 flex items-center justify-between">
@@ -408,6 +411,157 @@ function QuizzesPanel({ schoolId, classId }: { schoolId: string; classId: string
       </div>
       {editingId && <QuizQuestionsDialog schoolId={schoolId} quizId={editingId} onClose={() => setEditingId(null)} />}
     </div>
+  );
+}
+
+/**
+ * AI-powered quiz generator. Two sources are supported:
+ *   1. Pick an already-embedded school AI document.
+ *   2. Upload a sample (PDF / DOCX / TXT) which is ingested first, then used.
+ *
+ * Either way we send the document_id to studymode-generate-school-quiz,
+ * which writes a published quiz + questions for the class.
+ */
+function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId: string }) {
+  const docs = useTeacherSchoolDocuments(schoolId);
+  const ingest = useIngestSchoolDocument();
+  const gen = useGenerateSchoolQuiz();
+
+  const [aiTitle, setAiTitle] = useState("");
+  const [topic, setTopic] = useState("");
+  const [count, setCount] = useState(6);
+  const [difficulty, setDifficulty] = useState("medium");
+  const [sourceMode, setSourceMode] = useState<"existing" | "upload">("existing");
+  const [pickedDocId, setPickedDocId] = useState<string>("");
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [status, setStatus] = useState<string>("");
+
+  async function waitForEmbedded(documentId: string) {
+    // poll up to ~60s for embedding to finish
+    for (let i = 0; i < 30; i++) {
+      const { data } = await supabase
+        .from("school_ai_documents")
+        .select("status,error")
+        .eq("id", documentId)
+        .maybeSingle();
+      if (data?.status === "embedded") return;
+      if (data?.status === "failed") throw new Error(data.error ?? "Document ingest failed");
+      setStatus(`Indexing sample (${data?.status ?? "queued"})…`);
+      await new Promise((r) => setTimeout(r, 2000));
+    }
+    throw new Error("Timed out waiting for the sample to finish indexing");
+  }
+
+  async function run() {
+    if (!aiTitle.trim() || !topic.trim()) {
+      toast.error("Add a quiz title and topic");
+      return;
+    }
+    try {
+      setBusy(true);
+      let documentId = pickedDocId;
+
+      if (sourceMode === "upload") {
+        if (!file) { toast.error("Choose a sample file first"); setBusy(false); return; }
+        setStatus("Reading sample…");
+        const text = await extractTextFromFile(file);
+        if (!text.trim()) throw new Error("Could not extract any text from this file");
+        setStatus("Uploading to AI index…");
+        const res = await ingest.mutateAsync({
+          schoolId, title: file.name, content: text, classId,
+        });
+        documentId = res.document_id;
+        await waitForEmbedded(documentId);
+      }
+
+      if (!documentId) { toast.error("Pick a source document"); setBusy(false); return; }
+
+      setStatus("Generating questions…");
+      const r = await gen.mutateAsync({
+        schoolId, classId, documentId,
+        title: aiTitle.trim(), topic: topic.trim(),
+        count, difficulty,
+      });
+      toast.success(`Quiz published — ${r.count} questions`);
+      setAiTitle(""); setTopic(""); setFile(null);
+    } catch (e) {
+      toast.error((e as Error).message || "Generation failed");
+    } finally {
+      setBusy(false);
+      setStatus("");
+    }
+  }
+
+  return (
+    <Card className="p-4 space-y-3 border-primary/30">
+      <div className="flex items-center gap-2 text-sm font-medium">
+        <Sparkles className="h-4 w-4 text-primary" /> Generate quiz with AI
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-2">
+        <div>
+          <Label>Quiz title</Label>
+          <Input value={aiTitle} onChange={(e) => setAiTitle(e.target.value)} placeholder="Mid-unit quiz" />
+        </div>
+        <div>
+          <Label>Topic / focus</Label>
+          <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Cell division" />
+        </div>
+        <div>
+          <Label>Question count</Label>
+          <Input type="number" min={3} max={20} value={count} onChange={(e) => setCount(Number(e.target.value) || 6)} />
+        </div>
+        <div>
+          <Label>Difficulty</Label>
+          <Select value={difficulty} onValueChange={setDifficulty}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="easy">Easy</SelectItem>
+              <SelectItem value="medium">Medium</SelectItem>
+              <SelectItem value="hard">Hard</SelectItem>
+              <SelectItem value="mixed">Mixed</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button type="button" size="sm" variant={sourceMode === "existing" ? "default" : "outline"} onClick={() => setSourceMode("existing")}>Existing resource</Button>
+        <Button type="button" size="sm" variant={sourceMode === "upload" ? "default" : "outline"} onClick={() => setSourceMode("upload")}>Upload sample</Button>
+      </div>
+
+      {sourceMode === "existing" ? (
+        <div>
+          <Label>Source document</Label>
+          <Select value={pickedDocId} onValueChange={setPickedDocId}>
+            <SelectTrigger>
+              <SelectValue placeholder={docs.data?.length ? "Pick an indexed resource" : "No indexed resources yet — upload a sample"} />
+            </SelectTrigger>
+            <SelectContent>
+              {(docs.data ?? []).map((d) => (
+                <SelectItem key={d.id} value={d.id}>{d.title ?? "Untitled"}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : (
+        <div>
+          <Label>Sample file (PDF, DOCX or TXT)</Label>
+          <Input
+            type="file"
+            accept=".pdf,.txt,.md,.docx,application/pdf,text/plain"
+            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+          />
+          {file && <p className="text-xs text-muted-foreground mt-1">{file.name}</p>}
+        </div>
+      )}
+
+      <Button onClick={run} disabled={busy} className="w-full">
+        {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+        {busy ? (status || "Working…") : "Generate quiz"}
+      </Button>
+    </Card>
   );
 }
 
