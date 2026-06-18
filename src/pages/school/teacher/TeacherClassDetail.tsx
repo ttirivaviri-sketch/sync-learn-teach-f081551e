@@ -434,8 +434,16 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
   const [sourceMode, setSourceMode] = useState<"existing" | "upload">("existing");
   const [pickedDocId, setPickedDocId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
+  const [types, setTypes] = useState<{ mcq: boolean; tf: boolean; short: boolean }>({ mcq: true, tf: false, short: false });
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>("");
+
+  const TYPE_MAP: Record<keyof typeof types, string> = {
+    mcq: "multiple_choice",
+    tf: "true_false",
+    short: "short_answer",
+  };
+  const selectedTypes = (Object.keys(types) as (keyof typeof types)[]).filter((k) => types[k]).map((k) => TYPE_MAP[k]);
 
   async function waitForEmbedded(documentId: string) {
     // poll up to ~60s for embedding to finish
@@ -456,6 +464,10 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
   async function run() {
     if (!aiTitle.trim() || !topic.trim()) {
       toast.error("Add a quiz title and topic");
+      return;
+    }
+    if (selectedTypes.length === 0) {
+      toast.error("Pick at least one question type");
       return;
     }
     try {
@@ -481,7 +493,7 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
       const r = await gen.mutateAsync({
         schoolId, classId, documentId,
         title: aiTitle.trim(), topic: topic.trim(),
-        count, difficulty,
+        count, difficulty, types: selectedTypes,
       });
       toast.success(`Quiz published — ${r.count} questions`);
       setAiTitle(""); setTopic(""); setFile(null);
@@ -524,6 +536,29 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
             </SelectContent>
           </Select>
         </div>
+      </div>
+
+
+      <div>
+        <Label>Question types</Label>
+        <div className="grid grid-cols-3 gap-2 mt-1">
+          {([
+            { key: "mcq", label: "Multiple choice" },
+            { key: "tf", label: "True / false" },
+            { key: "short", label: "Short answer" },
+          ] as const).map((t) => (
+            <Button
+              key={t.key}
+              type="button"
+              size="sm"
+              variant={types[t.key] ? "default" : "outline"}
+              onClick={() => setTypes((p) => ({ ...p, [t.key]: !p[t.key] }))}
+            >
+              {t.label}
+            </Button>
+          ))}
+        </div>
+        <p className="text-xs text-muted-foreground mt-1">Pick one or more — the AI will mix them in the quiz.</p>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
