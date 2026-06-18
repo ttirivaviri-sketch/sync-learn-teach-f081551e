@@ -229,7 +229,7 @@ export default function Library() {
                       {r.subject}{r.topic ? ` · ${r.topic}` : ""} · {r.view_count} views
                     </div>
                     <div className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                      {r.pdf_url}
+                      {r.video_url || r.pdf_url}
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
@@ -240,10 +240,11 @@ export default function Library() {
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="ghost" asChild>
-                      <a href={r.pdf_url} target="_blank" rel="noreferrer">
+                      <a href={r.video_url || r.pdf_url || "#"} target="_blank" rel="noreferrer">
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     </Button>
+
                     <Button size="sm" variant="outline" onClick={() => setEditing(r)}>Edit</Button>
                     <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
