@@ -421,9 +421,8 @@ const StudySyncLibrary = ({
             {/* Books Tab — Netflix-style poster racks (strict personalization) */}
             <TabsContent value="books" className="space-y-5 mt-4">
               {(() => {
-                const allBooks = personalizedResources.filter(
-                  (r) => r.type === "book" || r.type === "guide"
-                );
+                const allBooks = personalizedResources.filter(isBookish);
+
 
                 // Separate study-skills guides from subject-specific books
                 const studySkillsBooks = allBooks.filter(
