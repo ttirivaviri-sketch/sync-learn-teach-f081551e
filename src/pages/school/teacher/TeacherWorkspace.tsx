@@ -10,6 +10,7 @@ import { useOutletContext, useNavigate, useSearchParams } from "react-router-dom
 import { Card } from "@/components/ui/card";
 import { Loader2, BookOpenCheck, Megaphone, FileText, ClipboardList } from "lucide-react";
 import { useMyTeachingClasses } from "@/hooks/useSchoolAcademics";
+import { CreateClassroomDialog } from "@/components/school/CreateClassroomDialog";
 
 const ACTION_TO_TAB: Record<string, string> = {
   announce: "stream",
@@ -47,9 +48,12 @@ export default function TeacherWorkspace() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold">My classes</h1>
-        <p className="text-sm text-muted-foreground">Classes you teach or are the homeroom for.</p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-semibold">My classes</h1>
+          <p className="text-sm text-muted-foreground">Classes you teach or are the homeroom for.</p>
+        </div>
+        <CreateClassroomDialog schoolId={school.id} onCreated={(id) => nav(`/school/${school.id}/teach/${id}`)} />
       </div>
 
       {meta && (classes.data?.length ?? 0) > 1 && (

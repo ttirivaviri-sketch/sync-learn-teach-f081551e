@@ -20,6 +20,7 @@ import {
   useEnrollments, useCreateEnrollment, useRemoveEnrollment,
   findUserIdByEmail,
 } from "@/hooks/useSchoolAcademics";
+import { CreateClassroomDialog } from "@/components/school/CreateClassroomDialog";
 
 export default function SchoolAcademic() {
   const { school } = useOutletContext<{ school: any }>();
@@ -135,7 +136,11 @@ function ClassesPanel({ schoolId }: { schoolId: string }) {
   const [gradeId, setGradeId] = useState<string>("");
   const [selected, setSelected] = useState<string | null>(null);
   return (
-    <div className="grid md:grid-cols-2 gap-4 mt-3">
+    <div className="space-y-3 mt-3">
+      <div className="flex justify-end">
+        <CreateClassroomDialog schoolId={schoolId} onCreated={(id) => setSelected(id)} />
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
       <Card className="p-4 space-y-3">
         <div className="flex gap-2 items-end flex-wrap">
           <div className="flex-1 min-w-[140px]">
@@ -174,6 +179,7 @@ function ClassesPanel({ schoolId }: { schoolId: string }) {
           <ClassEditor schoolId={schoolId} classId={selected} />
         )}
       </Card>
+      </div>
     </div>
   );
 }
