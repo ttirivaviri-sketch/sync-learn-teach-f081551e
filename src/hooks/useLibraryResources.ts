@@ -461,9 +461,10 @@ export function useLibraryResources(
             .from("library_system_resources")
             .select(
               `id, title, subject, curriculum, grade_levels, topic,
-               kind, description, pages, thumbnail_url, pdf_url, view_count`
+               kind, description, pages, thumbnail_url, pdf_url, video_url, view_count`
             )
             .order("created_at", { ascending: false }),
+
         ]);
 
         const { data: directData, error: directError } = tutorialsResult;
