@@ -25,12 +25,27 @@ interface Resource {
   subject: string;
   topic: string | null;
   description: string | null;
-  pdf_url: string;
+  pdf_url: string | null;
+  video_url: string | null;
   thumbnail_url: string | null;
   grade_levels: string[];
   pages: number | null;
   view_count: number;
 }
+
+const empty: Partial<Resource> = {
+  title: "",
+  kind: "textbook",
+  curriculum: "ZIMSEC",
+  subject: "",
+  topic: "",
+  description: "",
+  pdf_url: "",
+  video_url: "",
+  thumbnail_url: "",
+  grade_levels: [],
+};
+
 
 const empty: Partial<Resource> = {
   title: "",
