@@ -131,13 +131,38 @@ export default function SchoolLayout() {
     { label: "Settings", to: `/school/${schoolId}/settings`, icon: SettingsIcon, show: isAdmin },
   ].filter((t) => t.show);
 
+  return <SchoolShell
+    schoolId={schoolId}
+    current={current}
+    role={role}
+    isAdmin={isAdmin}
+    tabs={tabs}
+    gate={gate}
+    all={all}
+    navigate={navigate}
+  />;
+}
+
+function SchoolShell({
+  schoolId, current, role, isAdmin, tabs, gate, all, navigate,
+}: any) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    applySchoolTheme(rootRef.current, current.school.brand_color);
+    return () => applySchoolTheme(rootRef.current, null);
+  }, [current.school.brand_color]);
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div ref={rootRef} className="min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <Link to="/" className="shrink-0">
-              <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
+            <Link to="/" className="shrink-0 flex items-center gap-2">
+              {current.school.logo_url ? (
+                <img src={current.school.logo_url} alt={current.school.name} className="h-10 w-10 object-contain rounded-md border bg-card" />
+              ) : (
+                <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-10 object-contain" />
+              )}
             </Link>
             <div className="hidden sm:block min-w-0">
               <p className="text-xs text-muted-foreground">{role.replace("school_","").replace("_"," ")}</p>
