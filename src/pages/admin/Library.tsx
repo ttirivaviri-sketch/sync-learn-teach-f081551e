@@ -47,17 +47,7 @@ const empty: Partial<Resource> = {
 };
 
 
-const empty: Partial<Resource> = {
-  title: "",
-  kind: "textbook",
-  curriculum: "ZIMSEC",
-  subject: "",
-  topic: "",
-  description: "",
-  pdf_url: "",
-  thumbnail_url: "",
-  grade_levels: [],
-};
+
 
 export default function Library() {
   const [items, setItems] = useState<Resource[]>([]);
