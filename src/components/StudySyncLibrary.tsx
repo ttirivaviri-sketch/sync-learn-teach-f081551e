@@ -65,15 +65,23 @@ const StudySyncLibrary = ({
     getMatchStatsFor,
   } = useLibraryResources(academicProfile);
 
+  // Defensive: anything that looks like a video URL is never a book
+  const VIDEO_URL_RE = /(youtube\.com|youtu\.be|vimeo\.com|loom\.com|\.(mp4|webm|mov|m4v)(\?|$))/i;
+  const isClip = (r: LibraryResource) =>
+    !!r.isTutorial || r.type === "video" || (!!r.videoUrl && VIDEO_URL_RE.test(r.videoUrl));
+  const isBookish = (r: LibraryResource) =>
+    !isClip(r) && (r.type === "book" || r.type === "guide");
+
   // Strict personalization: only show content matching learner's syllabus + grade + subjects
-  const tutorialFeed = personalizedResources.filter((r) => r.isTutorial);
+  const tutorialFeed = personalizedResources.filter(isClip);
 
   // Per-tab match diagnostics for empty-state explanations
-  const tutorialStats = getMatchStatsFor((r) => !!r.isTutorial);
-  const bookStats = getMatchStatsFor((r) => r.type === "book" || r.type === "guide");
+  const tutorialStats = getMatchStatsFor(isClip);
+  const bookStats = getMatchStatsFor(isBookish);
   const paperStats = getMatchStatsFor(
     (r) => r.type === "pastpaper" || (r.category || "").toLowerCase().includes("past paper")
   );
+
 
   // Tabs handler: when user picks "tutorials", drop them straight into the carousel
   const handleTabChange = (next: string) => {
@@ -413,9 +421,8 @@ const StudySyncLibrary = ({
             {/* Books Tab — Netflix-style poster racks (strict personalization) */}
             <TabsContent value="books" className="space-y-5 mt-4">
               {(() => {
-                const allBooks = personalizedResources.filter(
-                  (r) => r.type === "book" || r.type === "guide"
-                );
+                const allBooks = personalizedResources.filter(isBookish);
+
 
                 // Separate study-skills guides from subject-specific books
                 const studySkillsBooks = allBooks.filter(

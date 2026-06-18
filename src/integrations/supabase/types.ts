@@ -1706,12 +1706,13 @@ export type Database = {
           id: string
           kind: string
           pages: number | null
-          pdf_url: string
+          pdf_url: string | null
           subject: string
           thumbnail_url: string | null
           title: string
           topic: string | null
           updated_at: string
+          video_url: string | null
           view_count: number
         }
         Insert: {
@@ -1722,12 +1723,13 @@ export type Database = {
           id?: string
           kind: string
           pages?: number | null
-          pdf_url: string
+          pdf_url?: string | null
           subject: string
           thumbnail_url?: string | null
           title: string
           topic?: string | null
           updated_at?: string
+          video_url?: string | null
           view_count?: number
         }
         Update: {
@@ -1738,12 +1740,13 @@ export type Database = {
           id?: string
           kind?: string
           pages?: number | null
-          pdf_url?: string
+          pdf_url?: string | null
           subject?: string
           thumbnail_url?: string | null
           title?: string
           topic?: string | null
           updated_at?: string
+          video_url?: string | null
           view_count?: number
         }
         Relationships: []

@@ -25,7 +25,8 @@ interface Resource {
   subject: string;
   topic: string | null;
   description: string | null;
-  pdf_url: string;
+  pdf_url: string | null;
+  video_url: string | null;
   thumbnail_url: string | null;
   grade_levels: string[];
   pages: number | null;
@@ -40,9 +41,13 @@ const empty: Partial<Resource> = {
   topic: "",
   description: "",
   pdf_url: "",
+  video_url: "",
   thumbnail_url: "",
   grade_levels: [],
 };
+
+
+
 
 export default function Library() {
   const [items, setItems] = useState<Resource[]>([]);
@@ -76,8 +81,17 @@ export default function Library() {
   });
 
   const save = async () => {
-    if (!editing?.title || !editing?.pdf_url || !editing?.subject || !editing?.curriculum || !editing?.kind) {
-      toast.error("Title, kind, curriculum, subject and PDF URL are required");
+    const isVideo = editing?.kind === "video";
+    if (!editing?.title || !editing?.subject || !editing?.curriculum || !editing?.kind) {
+      toast.error("Title, kind, curriculum and subject are required");
+      return;
+    }
+    if (isVideo && !editing?.video_url) {
+      toast.error("Video kind requires a Video URL");
+      return;
+    }
+    if (!isVideo && !editing?.pdf_url) {
+      toast.error("Non-video kinds require a PDF URL");
       return;
     }
     setSaving(true);
@@ -89,7 +103,8 @@ export default function Library() {
         subject: editing.subject,
         topic: editing.topic || null,
         description: editing.description || null,
-        pdf_url: editing.pdf_url,
+        pdf_url: isVideo ? null : editing.pdf_url,
+        video_url: isVideo ? editing.video_url : null,
         thumbnail_url: editing.thumbnail_url || null,
         grade_levels: editing.grade_levels ?? [],
       };
@@ -107,6 +122,7 @@ export default function Library() {
     }
   };
 
+
   const remove = async (id: string) => {
     if (!confirm("Delete this resource?")) return;
     const { error } = await supabase.from("library_system_resources").delete().eq("id", id);
@@ -116,15 +132,17 @@ export default function Library() {
   };
 
   const testLink = async (r: Resource) => {
+    const url = r.video_url || r.pdf_url;
+    if (!url) return;
     setTesting(r.id);
     try {
-      // HEAD via no-cors so we can at least fire it; for inspection use GET range.
-      const res = await fetch(r.pdf_url, { method: "GET", headers: { Range: "bytes=0-0" } });
+      const res = await fetch(url, { method: "GET", headers: { Range: "bytes=0-0" } });
       const ct = res.headers.get("content-type") || "";
-      const ok = res.ok && ct.toLowerCase().includes("pdf");
+      const expectVideo = r.kind === "video";
+      const ok = res.ok && (expectVideo ? !ct.toLowerCase().includes("pdf") : ct.toLowerCase().includes("pdf"));
       setTestResults((p) => ({ ...p, [r.id]: { ok, ct, status: res.status } }));
       toast[ok ? "success" : "error"](
-        ok ? "Looks like a real PDF" : `Not a PDF: ${ct || res.status}`,
+        ok ? "URL reachable" : `Unexpected content-type: ${ct || res.status}`,
       );
     } catch (e) {
       setTestResults((p) => ({ ...p, [r.id]: { ok: false, ct: "(blocked)", status: 0 } }));
@@ -133,6 +151,7 @@ export default function Library() {
       setTesting(null);
     }
   };
+
 
   const preview = (r: Resource) => {
     setPreviewing({
@@ -210,7 +229,7 @@ export default function Library() {
                       {r.subject}{r.topic ? ` · ${r.topic}` : ""} · {r.view_count} views
                     </div>
                     <div className="mt-1 truncate font-mono text-xs text-muted-foreground">
-                      {r.pdf_url}
+                      {r.video_url || r.pdf_url}
                     </div>
                   </div>
                   <div className="flex shrink-0 gap-1">
@@ -221,10 +240,11 @@ export default function Library() {
                       <Eye className="h-4 w-4" />
                     </Button>
                     <Button size="sm" variant="ghost" asChild>
-                      <a href={r.pdf_url} target="_blank" rel="noreferrer">
+                      <a href={r.video_url || r.pdf_url || "#"} target="_blank" rel="noreferrer">
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     </Button>
+
                     <Button size="sm" variant="outline" onClick={() => setEditing(r)}>Edit</Button>
                     <Button size="sm" variant="ghost" onClick={() => remove(r.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
@@ -260,8 +280,11 @@ export default function Library() {
                       <SelectItem value="textbook">textbook</SelectItem>
                       <SelectItem value="past_paper">past_paper</SelectItem>
                       <SelectItem value="syllabus">syllabus</SelectItem>
+                      <SelectItem value="guide">guide</SelectItem>
+                      <SelectItem value="video">video (clip)</SelectItem>
                     </SelectContent>
                   </Select>
+
                 </div>
                 <div className="grid gap-1">
                   <Label>Curriculum</Label>
@@ -288,17 +311,28 @@ export default function Library() {
                   />
                 </div>
               </div>
-              <div className="grid gap-1">
-                <Label>PDF URL (direct .pdf link or storage path)</Label>
-                <Input value={editing.pdf_url ?? ""} onChange={(e) => setEditing({ ...editing, pdf_url: e.target.value })} />
-                <p className="text-xs text-muted-foreground">
-                  Use a direct .pdf URL (https://...). Landing pages won't render.
-                </p>
-              </div>
+              {editing.kind === "video" ? (
+                <div className="grid gap-1">
+                  <Label>Video URL (YouTube, Vimeo, Loom, or direct .mp4)</Label>
+                  <Input value={editing.video_url ?? ""} onChange={(e) => setEditing({ ...editing, video_url: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">
+                    Videos surface in the Clips tab. Paste a YouTube/Vimeo/Loom URL or a direct video file URL.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-1">
+                  <Label>PDF URL (direct .pdf link or storage path)</Label>
+                  <Input value={editing.pdf_url ?? ""} onChange={(e) => setEditing({ ...editing, pdf_url: e.target.value })} />
+                  <p className="text-xs text-muted-foreground">
+                    Use a direct .pdf URL (https://...). Landing pages won't render.
+                  </p>
+                </div>
+              )}
               <div className="grid gap-1">
                 <Label>Thumbnail URL</Label>
                 <Input value={editing.thumbnail_url ?? ""} onChange={(e) => setEditing({ ...editing, thumbnail_url: e.target.value })} />
               </div>
+
               <div className="grid gap-1">
                 <Label>Description</Label>
                 <Textarea rows={3} value={editing.description ?? ""} onChange={(e) => setEditing({ ...editing, description: e.target.value })} />
