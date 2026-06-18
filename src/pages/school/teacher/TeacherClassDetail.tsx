@@ -29,6 +29,9 @@ import {
   useAnnouncements, useCreateAnnouncement,
   useEnrollments,
 } from "@/hooks/useSchoolAcademics";
+import { useTeacherSchoolDocuments, useGenerateSchoolQuiz } from "@/hooks/useSchoolStudyMode";
+import { useIngestSchoolDocument } from "@/hooks/useSchoolAI";
+import { extractTextFromFile } from "@/studymode/lib/pdfExtractor";
 
 export default function TeacherClassDetail() {
   const { school } = useOutletContext<{ school: any }>();
