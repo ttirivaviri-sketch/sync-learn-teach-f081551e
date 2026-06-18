@@ -434,8 +434,16 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
   const [sourceMode, setSourceMode] = useState<"existing" | "upload">("existing");
   const [pickedDocId, setPickedDocId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
+  const [types, setTypes] = useState<{ mcq: boolean; tf: boolean; short: boolean }>({ mcq: true, tf: false, short: false });
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>("");
+
+  const TYPE_MAP: Record<keyof typeof types, string> = {
+    mcq: "multiple_choice",
+    tf: "true_false",
+    short: "short_answer",
+  };
+  const selectedTypes = (Object.keys(types) as (keyof typeof types)[]).filter((k) => types[k]).map((k) => TYPE_MAP[k]);
 
   async function waitForEmbedded(documentId: string) {
     // poll up to ~60s for embedding to finish
