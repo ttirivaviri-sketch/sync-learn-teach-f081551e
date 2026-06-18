@@ -52,6 +52,7 @@ export default function SchoolSettings() {
         <div><Label>Contact phone</Label><Input value={form.contact_phone ?? ""} onChange={(e) => setForm({ ...form, contact_phone: e.target.value })} /></div>
         <div className="md:col-span-2"><Label>Address</Label><Textarea rows={2} value={form.address ?? ""} onChange={(e) => setForm({ ...form, address: e.target.value })} /></div>
       </Card>
+      <SchoolLogoUploader school={school} />
       <BillingCard school={school} />
     </section>
   );
