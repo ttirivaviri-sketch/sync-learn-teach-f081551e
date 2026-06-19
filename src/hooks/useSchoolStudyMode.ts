@@ -51,13 +51,74 @@ export function useGenerateSchoolFlashcards() {
   });
 }
 
+export type GeneratedQuizQuestion = {
+  type: "mcq" | "tf" | "short";
+  prompt: string;
+  options: string[] | null;
+  answer: string | boolean | number;
+  marks: number;
+  difficulty?: string;
+};
+
 export function useGenerateSchoolQuiz() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { schoolId: string; documentId: string; classId: string; subjectId?: string; title: string; topic: string; count?: number; difficulty?: string; types?: string[]; }) =>
+    mutationFn: async (args: {
+      schoolId: string; documentId: string; classId: string; subjectId?: string;
+      title: string; topic: string;
+      count?: number; difficulty?: string; types?: string[];
+      typeCounts?: { mcq?: number; tf?: number; short?: number };
+    }) =>
       invokeWithContract<{ ok: boolean; quiz_id: string; count: number }>(() =>
         supabase.functions.invoke("studymode-generate-school-quiz", {
-          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, count: args.count, difficulty: args.difficulty, types: args.types },
+          body: {
+            school_id: args.schoolId, document_id: args.documentId, class_id: args.classId,
+            subject_id: args.subjectId, title: args.title, topic: args.topic,
+            count: args.count, difficulty: args.difficulty, types: args.types,
+            type_counts: args.typeCounts,
+          },
+        }),
+      ),
+    onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["class-quizzes", v.classId] }),
+  });
+}
+
+/** Preview-only: generate questions without writing a quiz. */
+export function usePreviewSchoolQuiz() {
+  return useMutation({
+    mutationFn: async (args: {
+      schoolId: string; documentId: string; classId: string;
+      topic: string; difficulty?: string;
+      typeCounts: { mcq?: number; tf?: number; short?: number };
+    }) =>
+      invokeWithContract<{ ok: boolean; preview: true; questions: GeneratedQuizQuestion[]; count: number }>(() =>
+        supabase.functions.invoke("studymode-generate-school-quiz", {
+          body: {
+            school_id: args.schoolId, document_id: args.documentId, class_id: args.classId,
+            topic: args.topic, difficulty: args.difficulty,
+            type_counts: args.typeCounts, preview: true,
+          },
+        }),
+      ),
+  });
+}
+
+/** Persist a (possibly edited) preview as a published or draft quiz. */
+export function useSaveSchoolQuizFromPreview() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (args: {
+      schoolId: string; documentId: string; classId: string; subjectId?: string;
+      title: string; status?: "draft" | "published";
+      questions: GeneratedQuizQuestion[];
+    }) =>
+      invokeWithContract<{ ok: boolean; quiz_id: string; count: number; status: string }>(() =>
+        supabase.functions.invoke("studymode-generate-school-quiz", {
+          body: {
+            school_id: args.schoolId, document_id: args.documentId, class_id: args.classId,
+            subject_id: args.subjectId, title: args.title, status: args.status ?? "published",
+            questions: args.questions,
+          },
         }),
       ),
     onSuccess: (_d, v) => qc.invalidateQueries({ queryKey: ["class-quizzes", v.classId] }),

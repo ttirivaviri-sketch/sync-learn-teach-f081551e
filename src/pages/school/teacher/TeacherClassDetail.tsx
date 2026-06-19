@@ -29,7 +29,7 @@ import {
   useAnnouncements, useCreateAnnouncement,
   useEnrollments,
 } from "@/hooks/useSchoolAcademics";
-import { useTeacherSchoolDocuments, useGenerateSchoolQuiz } from "@/hooks/useSchoolStudyMode";
+import { useTeacherSchoolDocuments, usePreviewSchoolQuiz, useSaveSchoolQuizFromPreview, type GeneratedQuizQuestion } from "@/hooks/useSchoolStudyMode";
 import { useIngestSchoolDocument } from "@/hooks/useSchoolAI";
 import { extractTextFromFile } from "@/studymode/lib/pdfExtractor";
 
@@ -425,28 +425,26 @@ function QuizzesPanel({ schoolId, classId }: { schoolId: string; classId: string
 function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId: string }) {
   const docs = useTeacherSchoolDocuments(schoolId);
   const ingest = useIngestSchoolDocument();
-  const gen = useGenerateSchoolQuiz();
+  const preview = usePreviewSchoolQuiz();
 
   const [aiTitle, setAiTitle] = useState("");
   const [topic, setTopic] = useState("");
-  const [count, setCount] = useState(6);
   const [difficulty, setDifficulty] = useState("medium");
   const [sourceMode, setSourceMode] = useState<"existing" | "upload">("existing");
   const [pickedDocId, setPickedDocId] = useState<string>("");
   const [file, setFile] = useState<File | null>(null);
-  const [types, setTypes] = useState<{ mcq: boolean; tf: boolean; short: boolean }>({ mcq: true, tf: false, short: false });
+  const [counts, setCounts] = useState<{ mcq: number; tf: number; short: number }>({ mcq: 4, tf: 0, short: 0 });
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string>("");
 
-  const TYPE_MAP: Record<keyof typeof types, string> = {
-    mcq: "multiple_choice",
-    tf: "true_false",
-    short: "short_answer",
-  };
-  const selectedTypes = (Object.keys(types) as (keyof typeof types)[]).filter((k) => types[k]).map((k) => TYPE_MAP[k]);
+  // Preview state — held in memory until the teacher saves
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewQs, setPreviewQs] = useState<GeneratedQuizQuestion[]>([]);
+  const [previewDocId, setPreviewDocId] = useState<string>("");
+
+  const totalCount = counts.mcq + counts.tf + counts.short;
 
   async function waitForEmbedded(documentId: string) {
-    // poll up to ~60s for embedding to finish
     for (let i = 0; i < 30; i++) {
       const { data } = await supabase
         .from("school_ai_documents")
@@ -462,14 +460,9 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
   }
 
   async function run() {
-    if (!aiTitle.trim() || !topic.trim()) {
-      toast.error("Add a quiz title and topic");
-      return;
-    }
-    if (selectedTypes.length === 0) {
-      toast.error("Pick at least one question type");
-      return;
-    }
+    if (!aiTitle.trim() || !topic.trim()) { toast.error("Add a quiz title and topic"); return; }
+    if (totalCount === 0) { toast.error("Set at least one question count above 0"); return; }
+    if (totalCount > 30) { toast.error("Maximum 30 questions per quiz"); return; }
     try {
       setBusy(true);
       let documentId = pickedDocId;
@@ -480,23 +473,21 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
         const text = await extractTextFromFile(file);
         if (!text.trim()) throw new Error("Could not extract any text from this file");
         setStatus("Uploading to AI index…");
-        const res = await ingest.mutateAsync({
-          schoolId, title: file.name, content: text, classId,
-        });
+        const res = await ingest.mutateAsync({ schoolId, title: file.name, content: text, classId });
         documentId = res.document_id;
         await waitForEmbedded(documentId);
       }
-
       if (!documentId) { toast.error("Pick a source document"); setBusy(false); return; }
 
       setStatus("Generating questions…");
-      const r = await gen.mutateAsync({
+      const r = await preview.mutateAsync({
         schoolId, classId, documentId,
-        title: aiTitle.trim(), topic: topic.trim(),
-        count, difficulty, types: selectedTypes,
+        topic: topic.trim(), difficulty,
+        typeCounts: counts,
       });
-      toast.success(`Quiz published — ${r.count} questions`);
-      setAiTitle(""); setTopic(""); setFile(null);
+      setPreviewQs(r.questions);
+      setPreviewDocId(documentId);
+      setPreviewOpen(true);
     } catch (e) {
       toast.error((e as Error).message || "Generation failed");
     } finally {
@@ -505,98 +496,285 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
     }
   }
 
+  const typeRow = (key: "mcq" | "tf" | "short", label: string) => (
+    <div className="flex items-center justify-between gap-2 p-2 rounded-md border bg-background/50">
+      <span className="text-sm">{label}</span>
+      <Input
+        type="number" min={0} max={20} className="w-20 h-8"
+        value={counts[key]}
+        onChange={(e) => setCounts((p) => ({ ...p, [key]: Math.max(0, Math.min(20, Number(e.target.value) || 0)) }))}
+      />
+    </div>
+  );
+
   return (
-    <Card className="p-4 space-y-3 border-primary/30">
-      <div className="flex items-center gap-2 text-sm font-medium">
-        <Sparkles className="h-4 w-4 text-primary" /> Generate quiz with AI
-      </div>
+    <>
+      <Card className="p-4 space-y-3 border-primary/30">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          <Sparkles className="h-4 w-4 text-primary" /> Generate quiz with AI
+        </div>
 
-      <div className="grid sm:grid-cols-2 gap-2">
-        <div>
-          <Label>Quiz title</Label>
-          <Input value={aiTitle} onChange={(e) => setAiTitle(e.target.value)} placeholder="Mid-unit quiz" />
+        <div className="grid sm:grid-cols-2 gap-2">
+          <div>
+            <Label>Quiz title</Label>
+            <Input value={aiTitle} onChange={(e) => setAiTitle(e.target.value)} placeholder="Mid-unit quiz" />
+          </div>
+          <div>
+            <Label>Topic / focus</Label>
+            <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Cell division" />
+          </div>
+          <div className="sm:col-span-2">
+            <Label>Difficulty</Label>
+            <Select value={difficulty} onValueChange={setDifficulty}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="easy">Easy</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="hard">Hard</SelectItem>
+                <SelectItem value="mixed">Mixed</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div>
-          <Label>Topic / focus</Label>
-          <Input value={topic} onChange={(e) => setTopic(e.target.value)} placeholder="e.g. Cell division" />
-        </div>
-        <div>
-          <Label>Question count</Label>
-          <Input type="number" min={3} max={20} value={count} onChange={(e) => setCount(Number(e.target.value) || 6)} />
-        </div>
-        <div>
-          <Label>Difficulty</Label>
-          <Select value={difficulty} onValueChange={setDifficulty}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">Easy</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="hard">Hard</SelectItem>
-              <SelectItem value="mixed">Mixed</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
+        <div>
+          <Label>Questions per type</Label>
+          <div className="grid sm:grid-cols-3 gap-2 mt-1">
+            {typeRow("mcq", "Multiple choice")}
+            {typeRow("tf", "True / false")}
+            {typeRow("short", "Short answer")}
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Total: <strong>{totalCount}</strong> question{totalCount === 1 ? "" : "s"}. Set any count to 0 to skip that type.
+          </p>
+        </div>
 
-      <div>
-        <Label>Question types</Label>
-        <div className="grid grid-cols-3 gap-2 mt-1">
-          {([
-            { key: "mcq", label: "Multiple choice" },
-            { key: "tf", label: "True / false" },
-            { key: "short", label: "Short answer" },
-          ] as const).map((t) => (
-            <Button
-              key={t.key}
-              type="button"
-              size="sm"
-              variant={types[t.key] ? "default" : "outline"}
-              onClick={() => setTypes((p) => ({ ...p, [t.key]: !p[t.key] }))}
-            >
-              {t.label}
-            </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button type="button" size="sm" variant={sourceMode === "existing" ? "default" : "outline"} onClick={() => setSourceMode("existing")}>Existing resource</Button>
+          <Button type="button" size="sm" variant={sourceMode === "upload" ? "default" : "outline"} onClick={() => setSourceMode("upload")}>Upload sample</Button>
+        </div>
+
+        {sourceMode === "existing" ? (
+          <div>
+            <Label>Source document</Label>
+            <Select value={pickedDocId} onValueChange={setPickedDocId}>
+              <SelectTrigger>
+                <SelectValue placeholder={docs.data?.length ? "Pick an indexed resource" : "No indexed resources yet — upload a sample"} />
+              </SelectTrigger>
+              <SelectContent>
+                {(docs.data ?? []).map((d) => (
+                  <SelectItem key={d.id} value={d.id}>{d.title ?? "Untitled"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ) : (
+          <div>
+            <Label>Sample file (PDF, DOCX or TXT)</Label>
+            <Input
+              type="file"
+              accept=".pdf,.txt,.md,.docx,application/pdf,text/plain"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+            />
+            {file && <p className="text-xs text-muted-foreground mt-1">{file.name}</p>}
+          </div>
+        )}
+
+        <Button onClick={run} disabled={busy} className="w-full">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
+          {busy ? (status || "Working…") : "Preview quiz"}
+        </Button>
+      </Card>
+
+      {previewOpen && (
+        <QuizPreviewDialog
+          schoolId={schoolId}
+          classId={classId}
+          documentId={previewDocId}
+          title={aiTitle.trim()}
+          difficulty={difficulty}
+          initialQuestions={previewQs}
+          onClose={() => setPreviewOpen(false)}
+          onSaved={() => {
+            setPreviewOpen(false);
+            setAiTitle(""); setTopic(""); setFile(null);
+          }}
+        />
+      )}
+    </>
+  );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Preview / edit dialog — shown after AI generates, before the quiz is saved.
+// Teachers can edit prompts/options, reorder, delete, and pick correct
+// answers from a locked set for MCQ/TF. Short-answer reference answers stay
+// freely editable.
+// ───────────────────────────────────────────────────────────────────────────
+function QuizPreviewDialog({
+  schoolId, classId, documentId, title, difficulty,
+  initialQuestions, onClose, onSaved,
+}: {
+  schoolId: string; classId: string; documentId: string;
+  title: string; difficulty: string;
+  initialQuestions: GeneratedQuizQuestion[];
+  onClose: () => void; onSaved: () => void;
+}) {
+  const [items, setItems] = useState<GeneratedQuizQuestion[]>(() => initialQuestions.map((q) => ({ ...q, options: q.options ? [...q.options] : null })));
+  const save = useSaveSchoolQuizFromPreview();
+
+  function update(i: number, patch: Partial<GeneratedQuizQuestion>) {
+    setItems((arr) => arr.map((q, idx) => (idx === i ? { ...q, ...patch } : q)));
+  }
+  function move(i: number, dir: -1 | 1) {
+    setItems((arr) => {
+      const j = i + dir;
+      if (j < 0 || j >= arr.length) return arr;
+      const next = arr.slice();
+      [next[i], next[j]] = [next[j], next[i]];
+      return next;
+    });
+  }
+  function remove(i: number) {
+    setItems((arr) => arr.filter((_, idx) => idx !== i));
+  }
+  function updateOption(i: number, optIdx: number, value: string) {
+    setItems((arr) => arr.map((q, idx) => {
+      if (idx !== i || !q.options) return q;
+      const opts = q.options.slice();
+      const prev = opts[optIdx];
+      opts[optIdx] = value;
+      // keep answer pointer aligned if it referred to the renamed option
+      const answer = q.answer === prev ? value : q.answer;
+      return { ...q, options: opts, answer };
+    }));
+  }
+
+  async function doSave(status: "draft" | "published") {
+    if (items.length === 0) { toast.error("Add at least one question"); return; }
+    if (!title) { toast.error("Quiz title is required"); return; }
+    // Validate
+    for (let i = 0; i < items.length; i++) {
+      const q = items[i];
+      if (!q.prompt.trim()) { toast.error(`Question ${i + 1} needs a prompt`); return; }
+      if (q.type === "mcq") {
+        const opts = (q.options ?? []).filter((o) => o.trim());
+        if (opts.length < 2) { toast.error(`Question ${i + 1} needs at least 2 options`); return; }
+        if (!opts.includes(String(q.answer))) { toast.error(`Question ${i + 1}: pick a correct option`); return; }
+      }
+    }
+    try {
+      const r = await save.mutateAsync({
+        schoolId, classId, documentId, title, status, questions: items,
+      });
+      toast.success(`Quiz ${r.status === "draft" ? "saved as draft" : "published"} — ${r.count} questions`);
+      onSaved();
+    } catch (e) {
+      toast.error((e as Error).message || "Save failed");
+    }
+  }
+
+  const counts = items.reduce(
+    (acc, q) => { acc[q.type] = (acc[q.type] ?? 0) + 1; return acc; },
+    {} as Record<string, number>,
+  );
+
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Preview quiz — {title || "Untitled"}</DialogTitle>
+          <p className="text-xs text-muted-foreground">
+            Difficulty: <strong className="capitalize">{difficulty}</strong> · {items.length} question{items.length === 1 ? "" : "s"}
+            {" · "}{counts.mcq ?? 0} MCQ · {counts.tf ?? 0} T/F · {counts.short ?? 0} short
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-3 overflow-auto pr-1 flex-1">
+          {items.map((q, i) => (
+            <Card key={i} className="p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                  {i + 1}. {q.type === "mcq" ? "Multiple choice" : q.type === "tf" ? "True / false" : "Short answer"}
+                  {q.difficulty && <span className="ml-2 capitalize">· {q.difficulty}</span>}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up">↑</Button>
+                  <Button variant="ghost" size="sm" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label="Move down">↓</Button>
+                  <Button variant="ghost" size="sm" onClick={() => remove(i)} aria-label="Delete"><Trash2 className="h-4 w-4" /></Button>
+                </div>
+              </div>
+
+              <div>
+                <Label className="text-xs">Prompt</Label>
+                <Textarea rows={2} value={q.prompt} onChange={(e) => update(i, { prompt: e.target.value })} />
+              </div>
+
+              {q.type === "mcq" && q.options && (
+                <div className="space-y-1">
+                  <Label className="text-xs">Options — tick the correct one</Label>
+                  {q.options.map((opt, oi) => (
+                    <div key={oi} className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name={`answer-${i}`}
+                        checked={q.answer === opt}
+                        onChange={() => update(i, { answer: opt })}
+                        aria-label={`Mark option ${oi + 1} as correct`}
+                      />
+                      <Input value={opt} onChange={(e) => updateOption(i, oi, e.target.value)} />
+                    </div>
+                  ))}
+                  <p className="text-[11px] text-muted-foreground">Answer key is locked to one of the options above.</p>
+                </div>
+              )}
+
+              {q.type === "tf" && (
+                <div>
+                  <Label className="text-xs">Correct answer</Label>
+                  <Select value={String(q.answer)} onValueChange={(v) => update(i, { answer: v === "true" })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">True</SelectItem>
+                      <SelectItem value="false">False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[11px] text-muted-foreground mt-1">Answer key is locked to True or False.</p>
+                </div>
+              )}
+
+              {q.type === "short" && (
+                <div>
+                  <Label className="text-xs">Reference answer (editable)</Label>
+                  <Textarea rows={2} value={String(q.answer ?? "")} onChange={(e) => update(i, { answer: e.target.value })} />
+                </div>
+              )}
+
+              <div className="flex items-center gap-2">
+                <Label className="text-xs">Marks</Label>
+                <Input
+                  type="number" min={1} max={20} className="w-20 h-8"
+                  value={q.marks}
+                  onChange={(e) => update(i, { marks: Math.max(1, Number(e.target.value) || 1) })}
+                />
+              </div>
+            </Card>
           ))}
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Pick one or more — the AI will mix them in the quiz.</p>
-      </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <Button type="button" size="sm" variant={sourceMode === "existing" ? "default" : "outline"} onClick={() => setSourceMode("existing")}>Existing resource</Button>
-        <Button type="button" size="sm" variant={sourceMode === "upload" ? "default" : "outline"} onClick={() => setSourceMode("upload")}>Upload sample</Button>
-      </div>
-
-      {sourceMode === "existing" ? (
-        <div>
-          <Label>Source document</Label>
-          <Select value={pickedDocId} onValueChange={setPickedDocId}>
-            <SelectTrigger>
-              <SelectValue placeholder={docs.data?.length ? "Pick an indexed resource" : "No indexed resources yet — upload a sample"} />
-            </SelectTrigger>
-            <SelectContent>
-              {(docs.data ?? []).map((d) => (
-                <SelectItem key={d.id} value={d.id}>{d.title ?? "Untitled"}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : (
-        <div>
-          <Label>Sample file (PDF, DOCX or TXT)</Label>
-          <Input
-            type="file"
-            accept=".pdf,.txt,.md,.docx,application/pdf,text/plain"
-            onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-          />
-          {file && <p className="text-xs text-muted-foreground mt-1">{file.name}</p>}
-        </div>
-      )}
-
-      <Button onClick={run} disabled={busy} className="w-full">
-        {busy ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Sparkles className="h-4 w-4 mr-2" />}
-        {busy ? (status || "Working…") : "Generate quiz"}
-      </Button>
-    </Card>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} disabled={save.isPending}>Cancel</Button>
+          <Button variant="outline" onClick={() => doSave("draft")} disabled={save.isPending}>
+            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Save as draft
+          </Button>
+          <Button onClick={() => doSave("published")} disabled={save.isPending}>
+            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+            Publish quiz
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
