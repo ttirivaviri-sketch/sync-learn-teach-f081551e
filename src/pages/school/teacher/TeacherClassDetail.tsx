@@ -608,21 +608,25 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
 
 // ───────────────────────────────────────────────────────────────────────────
 // Preview / edit dialog — shown after AI generates, before the quiz is saved.
-// Teachers can edit prompts/options, reorder, delete, and pick correct
-// answers from a locked set for MCQ/TF. Short-answer reference answers stay
-// freely editable.
+// Teachers can drag to reorder, edit prompts/options, regenerate a single
+// question with AI, tweak marks (total updates live), and export a printable
+// worksheet PDF.
 // ───────────────────────────────────────────────────────────────────────────
 function QuizPreviewDialog({
-  schoolId, classId, documentId, title, difficulty,
+  schoolId, classId, documentId, title, topic, difficulty,
   initialQuestions, onClose, onSaved,
 }: {
   schoolId: string; classId: string; documentId: string;
-  title: string; difficulty: string;
+  title: string; topic: string; difficulty: string;
   initialQuestions: GeneratedQuizQuestion[];
   onClose: () => void; onSaved: () => void;
 }) {
   const [items, setItems] = useState<GeneratedQuizQuestion[]>(() => initialQuestions.map((q) => ({ ...q, options: q.options ? [...q.options] : null })));
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [overIndex, setOverIndex] = useState<number | null>(null);
+  const [regenIdx, setRegenIdx] = useState<number | null>(null);
   const save = useSaveSchoolQuizFromPreview();
+  const regen = useRegenerateSchoolQuizQuestion();
 
   function update(i: number, patch: Partial<GeneratedQuizQuestion>) {
     setItems((arr) => arr.map((q, idx) => (idx === i ? { ...q, ...patch } : q)));
@@ -636,6 +640,15 @@ function QuizPreviewDialog({
       return next;
     });
   }
+  function reorder(from: number, to: number) {
+    if (from === to) return;
+    setItems((arr) => {
+      const next = arr.slice();
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
+  }
   function remove(i: number) {
     setItems((arr) => arr.filter((_, idx) => idx !== i));
   }
@@ -645,16 +658,37 @@ function QuizPreviewDialog({
       const opts = q.options.slice();
       const prev = opts[optIdx];
       opts[optIdx] = value;
-      // keep answer pointer aligned if it referred to the renamed option
       const answer = q.answer === prev ? value : q.answer;
       return { ...q, options: opts, answer };
     }));
   }
 
+  async function regenerateOne(i: number) {
+    const q = items[i];
+    setRegenIdx(i);
+    try {
+      const others = items.filter((_, idx) => idx !== i).map((x) => x.prompt);
+      const r = await regen.mutateAsync({
+        schoolId, classId, documentId,
+        topic, difficulty, type: q.type,
+        avoidPrompts: others.concat(q.prompt),
+      });
+      const fresh = r.questions?.[0];
+      if (!fresh) { toast.error("AI did not return a replacement"); return; }
+      setItems((arr) => arr.map((cur, idx) => idx === i
+        ? { ...fresh, marks: cur.marks, options: fresh.options ? [...fresh.options] : null }
+        : cur));
+      toast.success(`Question ${i + 1} regenerated`);
+    } catch (e) {
+      toast.error((e as Error).message || "Regenerate failed");
+    } finally {
+      setRegenIdx(null);
+    }
+  }
+
   async function doSave(status: "draft" | "published") {
     if (items.length === 0) { toast.error("Add at least one question"); return; }
     if (!title) { toast.error("Quiz title is required"); return; }
-    // Validate
     for (let i = 0; i < items.length; i++) {
       const q = items[i];
       if (!q.prompt.trim()) { toast.error(`Question ${i + 1} needs a prompt`); return; }
@@ -675,10 +709,84 @@ function QuizPreviewDialog({
     }
   }
 
+  function exportPdf() {
+    if (items.length === 0) { toast.error("Nothing to export"); return; }
+    import("jspdf").then(({ jsPDF }) => {
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const margin = 48;
+      const maxW = pageW - margin * 2;
+      let y = margin;
+
+      const ensureRoom = (h: number) => {
+        if (y + h > pageH - margin) { doc.addPage(); y = margin; }
+      };
+      const text = (str: string, size = 11, bold = false, indent = 0) => {
+        doc.setFont("helvetica", bold ? "bold" : "normal");
+        doc.setFontSize(size);
+        const lines = doc.splitTextToSize(str, maxW - indent) as string[];
+        for (const ln of lines) {
+          ensureRoom(size + 4);
+          doc.text(ln, margin + indent, y);
+          y += size + 4;
+        }
+      };
+
+      text(title || "Quiz worksheet", 18, true);
+      text(`Topic: ${topic || "—"}  ·  Difficulty: ${difficulty}  ·  Total marks: ${totalMarks}`, 10);
+      y += 8;
+
+      items.forEach((q, i) => {
+        ensureRoom(40);
+        const typeLabel = q.type === "mcq" ? "MCQ" : q.type === "tf" ? "True/False" : "Short answer";
+        text(`Q${i + 1}. [${typeLabel} · ${q.marks} mark${q.marks === 1 ? "" : "s"}] ${q.prompt}`, 11, true);
+        if (q.type === "mcq" && q.options) {
+          q.options.forEach((opt, oi) => {
+            text(`${String.fromCharCode(65 + oi)}. ${opt}`, 11, false, 18);
+          });
+        } else if (q.type === "tf") {
+          text("☐ True    ☐ False", 11, false, 18);
+        } else {
+          // short / long answer: leave writing lines
+          for (let k = 0; k < 4; k++) {
+            ensureRoom(20);
+            doc.setDrawColor(180);
+            doc.line(margin + 18, y + 4, pageW - margin, y + 4);
+            y += 18;
+          }
+        }
+        y += 6;
+      });
+
+      // Answer key
+      doc.addPage();
+      y = margin;
+      text("Answer key", 16, true);
+      y += 4;
+      items.forEach((q, i) => {
+        let ans = "";
+        if (q.type === "mcq" && q.options) {
+          const idx = q.options.findIndex((o) => o === q.answer);
+          ans = idx >= 0 ? `${String.fromCharCode(65 + idx)}. ${q.answer}` : String(q.answer);
+        } else if (q.type === "tf") {
+          ans = q.answer ? "True" : "False";
+        } else {
+          ans = String(q.answer ?? "");
+        }
+        text(`Q${i + 1}. ${ans}`, 11, false);
+      });
+
+      const safeTitle = (title || "quiz").replace(/[^a-z0-9-_]+/gi, "_");
+      doc.save(`${safeTitle}_worksheet.pdf`);
+    }).catch((e) => toast.error(e.message || "PDF export failed"));
+  }
+
   const counts = items.reduce(
     (acc, q) => { acc[q.type] = (acc[q.type] ?? 0) + 1; return acc; },
     {} as Record<string, number>,
   );
+  const totalMarks = items.reduce((s, q) => s + (Number(q.marks) || 0), 0);
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -688,18 +796,39 @@ function QuizPreviewDialog({
           <p className="text-xs text-muted-foreground">
             Difficulty: <strong className="capitalize">{difficulty}</strong> · {items.length} question{items.length === 1 ? "" : "s"}
             {" · "}{counts.mcq ?? 0} MCQ · {counts.tf ?? 0} T/F · {counts.short ?? 0} short
+            {" · "}<strong>Total: {totalMarks} mark{totalMarks === 1 ? "" : "s"}</strong>
           </p>
+          <div className="flex justify-end">
+            <Button type="button" size="sm" variant="outline" onClick={exportPdf}>
+              <FileText className="h-4 w-4 mr-1" /> Export PDF worksheet
+            </Button>
+          </div>
         </DialogHeader>
 
         <div className="space-y-3 overflow-auto pr-1 flex-1">
-          {items.map((q, i) => (
-            <Card key={i} className="p-3 space-y-2">
+          {items.map((q, i) => {
+            const isOver = overIndex === i && dragIndex !== null && dragIndex !== i;
+            return (
+            <Card
+              key={i}
+              className={`p-3 space-y-2 transition-colors ${isOver ? "ring-2 ring-primary" : ""} ${dragIndex === i ? "opacity-50" : ""}`}
+              draggable
+              onDragStart={(e) => { setDragIndex(i); e.dataTransfer.effectAllowed = "move"; }}
+              onDragOver={(e) => { e.preventDefault(); setOverIndex(i); }}
+              onDragLeave={() => setOverIndex((cur) => (cur === i ? null : cur))}
+              onDrop={(e) => { e.preventDefault(); if (dragIndex !== null) reorder(dragIndex, i); setDragIndex(null); setOverIndex(null); }}
+              onDragEnd={() => { setDragIndex(null); setOverIndex(null); }}
+            >
               <div className="flex items-start justify-between gap-2">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+                  <span className="cursor-grab select-none text-base leading-none" title="Drag to reorder">⋮⋮</span>
                   {i + 1}. {q.type === "mcq" ? "Multiple choice" : q.type === "tf" ? "True / false" : "Short answer"}
-                  {q.difficulty && <span className="ml-2 capitalize">· {q.difficulty}</span>}
+                  {q.difficulty && <span className="ml-1 capitalize">· {q.difficulty}</span>}
                 </div>
                 <div className="flex items-center gap-1">
+                  <Button variant="ghost" size="sm" onClick={() => regenerateOne(i)} disabled={regenIdx !== null} aria-label="Regenerate with AI" title="Regenerate this question">
+                    {regenIdx === i ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  </Button>
                   <Button variant="ghost" size="sm" onClick={() => move(i, -1)} disabled={i === 0} aria-label="Move up">↑</Button>
                   <Button variant="ghost" size="sm" onClick={() => move(i, 1)} disabled={i === items.length - 1} aria-label="Move down">↓</Button>
                   <Button variant="ghost" size="sm" onClick={() => remove(i)} aria-label="Delete"><Trash2 className="h-4 w-4" /></Button>
@@ -760,7 +889,8 @@ function QuizPreviewDialog({
                 />
               </div>
             </Card>
-          ))}
+            );
+          })}
         </div>
 
         <DialogFooter className="gap-2">
