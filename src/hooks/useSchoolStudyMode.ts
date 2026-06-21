@@ -90,6 +90,7 @@ export function usePreviewSchoolQuiz() {
       schoolId: string; documentId: string; classId: string;
       topic: string; difficulty?: string;
       typeCounts: { mcq?: number; tf?: number; short?: number };
+      avoidPrompts?: string[];
     }) =>
       invokeWithContract<{ ok: boolean; preview: true; questions: GeneratedQuizQuestion[]; count: number }>(() =>
         supabase.functions.invoke("studymode-generate-school-quiz", {
@@ -97,6 +98,30 @@ export function usePreviewSchoolQuiz() {
             school_id: args.schoolId, document_id: args.documentId, class_id: args.classId,
             topic: args.topic, difficulty: args.difficulty,
             type_counts: args.typeCounts, preview: true,
+            avoid_prompts: args.avoidPrompts,
+          },
+        }),
+      ),
+  });
+}
+
+/** Regenerate a single question of a given type. */
+export function useRegenerateSchoolQuizQuestion() {
+  return useMutation({
+    mutationFn: async (args: {
+      schoolId: string; documentId: string; classId: string;
+      topic: string; difficulty?: string;
+      type: "mcq" | "tf" | "short";
+      avoidPrompts?: string[];
+    }) =>
+      invokeWithContract<{ ok: boolean; preview: true; questions: GeneratedQuizQuestion[]; count: number }>(() =>
+        supabase.functions.invoke("studymode-generate-school-quiz", {
+          body: {
+            school_id: args.schoolId, document_id: args.documentId, class_id: args.classId,
+            topic: args.topic, difficulty: args.difficulty,
+            type_counts: { [args.type]: 1 },
+            preview: true,
+            avoid_prompts: args.avoidPrompts,
           },
         }),
       ),

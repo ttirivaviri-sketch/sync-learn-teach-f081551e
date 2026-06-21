@@ -65,6 +65,7 @@ serve(async (req) => {
       title, topic,
       count, difficulty, types, type_counts,
       preview, status, questions: savedQuestions,
+      avoid_prompts,
     } = body;
 
     if (!school_id || !class_id) {
@@ -152,7 +153,10 @@ serve(async (req) => {
     const diff = difficulty ?? "medium";
     const planText = plan.map((p) => `${p.n} ${p.label}`).join(", ");
     const system = "You write fair classroom quiz questions strictly grounded in the provided source. Use LaTeX for math. Reply ONLY with JSON.";
-    const prompt = `Topic: ${topic}\nDifficulty: ${diff}\n\nProduce EXACTLY this mix: ${planText}.\n\nSource content:\n${text}\n\nJSON shape: { "questions": [{ "type": "multiple_choice"|"true_false"|"short_answer", "prompt": string, "options": string[]?, "answer": (string|boolean|number), "marks": number, "difficulty": "easy"|"medium"|"hard" }] }.\n\nRules:\n- For multiple_choice: provide EXACTLY 4 options and an answer that exactly matches one option string.\n- For true_false: omit options; answer must be the boolean true or false.\n- For short_answer: omit options; answer is a concise reference answer (1–2 sentences).\n- Return the questions grouped in this order: ${plan.map((p) => `${p.n}×${p.label}`).join(", ")}.\n- Do NOT exceed the requested totals.`;
+    const avoidBlock = Array.isArray(avoid_prompts) && avoid_prompts.length > 0
+      ? `\n\nDo NOT repeat or paraphrase any of these existing questions:\n${avoid_prompts.map((p: string, i: number) => `${i + 1}. ${String(p).slice(0, 200)}`).join("\n")}`
+      : "";
+    const prompt = `Topic: ${topic}\nDifficulty: ${diff}\n\nProduce EXACTLY this mix: ${planText}.\n\nSource content:\n${text}${avoidBlock}\n\nJSON shape: { "questions": [{ "type": "multiple_choice"|"true_false"|"short_answer", "prompt": string, "options": string[]?, "answer": (string|boolean|number), "marks": number, "difficulty": "easy"|"medium"|"hard" }] }.\n\nRules:\n- For multiple_choice: provide EXACTLY 4 options and an answer that exactly matches one option string.\n- For true_false: omit options; answer must be the boolean true or false.\n- For short_answer: omit options; answer is a concise reference answer (1–2 sentences).\n- Return the questions grouped in this order: ${plan.map((p) => `${p.n}×${p.label}`).join(", ")}.\n- Do NOT exceed the requested totals.`;
 
     const result = await callAIJson<{ questions: AiQuestion[] }>(prompt, system);
     let aiQs = (result?.questions ?? []) as AiQuestion[];
