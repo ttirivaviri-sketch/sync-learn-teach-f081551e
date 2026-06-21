@@ -65,6 +65,7 @@ serve(async (req) => {
       title, topic,
       count, difficulty, types, type_counts,
       preview, status, questions: savedQuestions,
+      avoid_prompts,
     } = body;
 
     if (!school_id || !class_id) {
