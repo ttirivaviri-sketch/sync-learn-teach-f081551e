@@ -592,6 +592,7 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
           classId={classId}
           documentId={previewDocId}
           title={aiTitle.trim()}
+          topic={topic.trim()}
           difficulty={difficulty}
           initialQuestions={previewQs}
           onClose={() => setPreviewOpen(false)}
