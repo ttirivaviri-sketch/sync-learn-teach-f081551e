@@ -29,7 +29,7 @@ import {
   useAnnouncements, useCreateAnnouncement,
   useEnrollments,
 } from "@/hooks/useSchoolAcademics";
-import { useTeacherSchoolDocuments, usePreviewSchoolQuiz, useSaveSchoolQuizFromPreview, type GeneratedQuizQuestion } from "@/hooks/useSchoolStudyMode";
+import { useTeacherSchoolDocuments, usePreviewSchoolQuiz, useSaveSchoolQuizFromPreview, useRegenerateSchoolQuizQuestion, type GeneratedQuizQuestion } from "@/hooks/useSchoolStudyMode";
 import { useIngestSchoolDocument } from "@/hooks/useSchoolAI";
 import { extractTextFromFile } from "@/studymode/lib/pdfExtractor";
 
