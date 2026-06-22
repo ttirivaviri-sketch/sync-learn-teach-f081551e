@@ -132,13 +132,17 @@ export function TutorBriefing({
   const { data: recentEvents = [], isLoading: eventsLoading } = useLearningTimeline({
     userId: learnerId,
     schoolId,
-    limit: recentLimit,
+    limit: Math.max(recentLimit, 20),
     enabled: !!learnerId,
   });
 
-  const hasRecent = recentEvents.length > 0;
+  const visibleEvents = useMemo(() => recentEvents.slice(0, recentLimit), [recentEvents, recentLimit]);
+  const suggestions = useMemo(() => buildSuggestions(recentEvents), [recentEvents]);
 
-  if (!tutoringRecommended && struggles.length === 0 && !hasRecent && !eventsLoading) return null;
+  const hasRecent = visibleEvents.length > 0;
+  const hasSuggestions = suggestions.length > 0;
+
+  if (!tutoringRecommended && struggles.length === 0 && !hasRecent && !hasSuggestions && !eventsLoading) return null;
 
   return (
     <div className="space-y-4">
