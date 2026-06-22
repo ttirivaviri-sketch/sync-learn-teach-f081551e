@@ -259,7 +259,27 @@ export function useTopicSessionRunner() {
         last_activity_at: new Date().toISOString(),
       })
       .eq('id', sessionId);
-  }, [sessionId]);
+    // Unified learning timeline (best-effort).
+    try {
+      const { logLearningEvent } = await import('@/lib/learningEvents');
+      const scorePct = questionsAttempted > 0
+        ? Math.round((questionsCorrect / questionsAttempted) * 100)
+        : null;
+      await logLearningEvent({
+        source: 'topic_session',
+        topicName: topic,
+        scorePct,
+        payload: {
+          session_id: sessionId,
+          subject,
+          curriculum,
+          questions_attempted: questionsAttempted,
+          questions_correct: questionsCorrect,
+          session_xp: sessionXP,
+        },
+      });
+    } catch { /* best-effort */ }
+  }, [sessionId, questionsAttempted, questionsCorrect, topic, subject, curriculum, sessionXP]);
 
   const currentQuestion = questions[currentIndex] || null;
   const isFinished = questions.length > 0 && currentIndex >= questions.length;
