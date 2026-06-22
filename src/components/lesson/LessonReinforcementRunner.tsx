@@ -105,6 +105,29 @@ export function LessonReinforcementRunner({ reinforcementId, open, onOpenChange 
     }).eq("id", set.id);
     setSet({ ...set, mastery_after: masteryAfter });
     setPhase("results");
+    // Unified learning timeline (best-effort).
+    try {
+      const { logLearningEvent } = await import("@/lib/learningEvents");
+      const totals = Object.values(perConcept).reduce(
+        (acc, s) => ({ correct: acc.correct + s.correct, total: acc.total + s.total }),
+        { correct: 0, total: 0 },
+      );
+      const scorePct = totals.total > 0 ? Math.round((totals.correct / totals.total) * 100) : null;
+      const deltas = set.concepts.map((c) => (masteryAfter[c] ?? 0) - (set.mastery_baseline[c] ?? 0));
+      const masteryDelta = deltas.length ? deltas.reduce((a, b) => a + b, 0) / deltas.length : null;
+      await logLearningEvent({
+        source: "lesson_reinforcement",
+        userId: set.learner_id,
+        scorePct,
+        masteryDelta,
+        payload: {
+          reinforcement_id: set.id,
+          concepts: set.concepts,
+          mastery_before: set.mastery_baseline,
+          mastery_after: masteryAfter,
+        },
+      });
+    } catch { /* best-effort */ }
   };
 
   const renderResults = () => {
