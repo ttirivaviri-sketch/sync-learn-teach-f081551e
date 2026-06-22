@@ -396,9 +396,28 @@ export function useSubmitHomework() {
           body: { school_id: args.schoolId, homework_id: args.homeworkId, answers: args.answers },
         }),
       ),
-    onSuccess: (_d, v) => {
+    onSuccess: async (d, v) => {
       qc.invalidateQueries({ queryKey: ["homework-detail", v.homeworkId] });
       qc.invalidateQueries({ queryKey: ["student-homework"] });
+      // Unified learning timeline (best-effort).
+      try {
+        const { logLearningEvent } = await import("@/lib/learningEvents");
+        const responses = (d?.responses ?? []) as Array<{ ai_score?: number | null; teacher_score?: number | null }>;
+        let scorePct: number | null = null;
+        if (responses.length) {
+          const scores = responses
+            .map((r) => Number(r.teacher_score ?? r.ai_score ?? NaN))
+            .filter((n) => Number.isFinite(n));
+          if (scores.length) scorePct = scores.reduce((a, b) => a + b, 0) / scores.length;
+        }
+        await logLearningEvent({
+          source: "school_homework",
+          schoolId: v.schoolId,
+          scorePct,
+          payload: { homework_id: v.homeworkId, answered: v.answers.length, grades_released: d?.grades_released },
+        });
+        qc.invalidateQueries({ queryKey: ["learning-timeline"] });
+      } catch { /* best-effort */ }
     },
   });
 }
