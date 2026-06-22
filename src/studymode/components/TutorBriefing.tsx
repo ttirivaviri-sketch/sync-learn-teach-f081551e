@@ -186,7 +186,7 @@ export function TutorBriefing({
             <div className="text-xs text-muted-foreground">Loading recent activity…</div>
           ) : (
             <ul className="space-y-2">
-              {recentEvents.map((ev) => {
+              {visibleEvents.map((ev) => {
                 const score = typeof ev.score_pct === 'number' ? Math.round(ev.score_pct) : null;
                 const scoreTone =
                   score === null
