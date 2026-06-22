@@ -218,6 +218,54 @@ export function TutorBriefing({
         </div>
       )}
 
+      {/* Suggested Next Actions — derived locally from learning events, no AI call */}
+      {learnerId && hasSuggestions && (
+        <div className="p-5 rounded-2xl bg-card border border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-accent" />
+            <h3 className="font-bold text-foreground">Suggested Next Actions</h3>
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent">
+              FROM RECENT ACTIVITY
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Derived from {studentName}'s last {recentEvents.length} learning event{recentEvents.length === 1 ? '' : 's'} — no AI required.
+          </p>
+          <ul className="space-y-2">
+            {suggestions.map((s) => {
+              const tone =
+                s.priority === 'high'
+                  ? 'border-destructive/40 bg-destructive/5'
+                  : s.priority === 'medium'
+                  ? 'border-yellow-500/40 bg-yellow-500/5'
+                  : 'border-green-500/40 bg-green-500/5';
+              const badgeTone =
+                s.priority === 'high'
+                  ? 'bg-destructive/15 text-destructive'
+                  : s.priority === 'medium'
+                  ? 'bg-yellow-500/20 text-yellow-700'
+                  : 'bg-green-500/15 text-green-600';
+              return (
+                <li key={s.id} className={`p-3 rounded-xl border ${tone}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ArrowRight className="h-4 w-4 text-foreground/70 shrink-0" />
+                      <p className="text-sm font-semibold text-foreground truncate">{s.title}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${badgeTone}`}>
+                      {s.priority}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">{s.reason}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+
+
       {/* Student Struggles - Tutor Preparation Guide */}
       {struggles.length > 0 && (
         <div className="p-5 rounded-2xl bg-card border border-border">
