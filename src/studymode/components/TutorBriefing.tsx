@@ -1,6 +1,79 @@
-import { GraduationCap, AlertTriangle, Lightbulb, Target, BookOpen, Activity } from 'lucide-react';
+import { GraduationCap, AlertTriangle, Lightbulb, Target, BookOpen, Activity, Sparkles, ArrowRight } from 'lucide-react';
+import { useMemo } from 'react';
 import { useLearningTimeline, type LearningEventRow } from '@/hooks/useLearningTimeline';
 import type { LearningEventSource } from '@/lib/learningEvents';
+
+interface SuggestedAction {
+  id: string;
+  title: string;
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Pure, deterministic (non-AI) suggestion builder from recent learning events.
+ * Heuristics:
+ *  - Any topic with avg score < 50% across recent events → high-priority review.
+ *  - Topic scored 50–74% → medium-priority practice.
+ *  - Topic appearing ≥2 times with avg ≥75% → low-priority "advance to next subtopic".
+ *  - If the most recent event is a school_homework with score < 60% → high-priority re-teach.
+ */
+function buildSuggestions(events: LearningEventRow[]): SuggestedAction[] {
+  if (!events.length) return [];
+  const byTopic = new Map<string, { sum: number; n: number; sources: Set<string> }>();
+  for (const ev of events) {
+    const t = ev.topic_name?.trim();
+    if (!t || typeof ev.score_pct !== 'number') continue;
+    const cur = byTopic.get(t) ?? { sum: 0, n: 0, sources: new Set<string>() };
+    cur.sum += ev.score_pct;
+    cur.n += 1;
+    cur.sources.add(ev.source);
+    byTopic.set(t, cur);
+  }
+
+  const out: SuggestedAction[] = [];
+  for (const [topic, { sum, n, sources }] of byTopic) {
+    const avg = sum / n;
+    if (avg < 50) {
+      out.push({
+        id: `review-${topic}`,
+        title: `Re-teach “${topic}” from the basics`,
+        reason: `Average ${Math.round(avg)}% across ${n} recent attempt${n > 1 ? 's' : ''} (${Array.from(sources).join(', ')}).`,
+        priority: 'high',
+      });
+    } else if (avg < 75) {
+      out.push({
+        id: `practice-${topic}`,
+        title: `Guided practice on “${topic}”`,
+        reason: `Sitting at ${Math.round(avg)}% — work through 2–3 exam-style questions together.`,
+        priority: 'medium',
+      });
+    } else if (n >= 2) {
+      out.push({
+        id: `advance-${topic}`,
+        title: `Advance “${topic}” to a harder subtopic`,
+        reason: `Consistently strong (${Math.round(avg)}% over ${n} attempts) — push toward exam-level questions.`,
+        priority: 'low',
+      });
+    }
+  }
+
+  const latest = events[0];
+  if (latest && latest.source === 'school_homework' && typeof latest.score_pct === 'number' && latest.score_pct < 60 && latest.topic_name) {
+    const already = out.find((s) => s.id === `review-${latest.topic_name}`);
+    if (!already) {
+      out.unshift({
+        id: `homework-${latest.id}`,
+        title: `Walk through the latest homework on “${latest.topic_name}”`,
+        reason: `Most recent homework scored ${Math.round(latest.score_pct)}%.`,
+        priority: 'high',
+      });
+    }
+  }
+
+  const order = { high: 0, medium: 1, low: 2 } as const;
+  return out.sort((a, b) => order[a.priority] - order[b.priority]).slice(0, 4);
+}
 
 interface StudentStruggle {
   topic: string;
@@ -59,13 +132,17 @@ export function TutorBriefing({
   const { data: recentEvents = [], isLoading: eventsLoading } = useLearningTimeline({
     userId: learnerId,
     schoolId,
-    limit: recentLimit,
+    limit: Math.max(recentLimit, 20),
     enabled: !!learnerId,
   });
 
-  const hasRecent = recentEvents.length > 0;
+  const visibleEvents = useMemo(() => recentEvents.slice(0, recentLimit), [recentEvents, recentLimit]);
+  const suggestions = useMemo(() => buildSuggestions(recentEvents), [recentEvents]);
 
-  if (!tutoringRecommended && struggles.length === 0 && !hasRecent && !eventsLoading) return null;
+  const hasRecent = visibleEvents.length > 0;
+  const hasSuggestions = suggestions.length > 0;
+
+  if (!tutoringRecommended && struggles.length === 0 && !hasRecent && !hasSuggestions && !eventsLoading) return null;
 
   return (
     <div className="space-y-4">
@@ -109,7 +186,7 @@ export function TutorBriefing({
             <div className="text-xs text-muted-foreground">Loading recent activity…</div>
           ) : (
             <ul className="space-y-2">
-              {recentEvents.map((ev) => {
+              {visibleEvents.map((ev) => {
                 const score = typeof ev.score_pct === 'number' ? Math.round(ev.score_pct) : null;
                 const scoreTone =
                   score === null
@@ -140,6 +217,54 @@ export function TutorBriefing({
           )}
         </div>
       )}
+
+      {/* Suggested Next Actions — derived locally from learning events, no AI call */}
+      {learnerId && hasSuggestions && (
+        <div className="p-5 rounded-2xl bg-card border border-border">
+          <div className="flex items-center gap-2 mb-3">
+            <Sparkles className="h-5 w-5 text-accent" />
+            <h3 className="font-bold text-foreground">Suggested Next Actions</h3>
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent">
+              FROM RECENT ACTIVITY
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            Derived from {studentName}'s last {recentEvents.length} learning event{recentEvents.length === 1 ? '' : 's'} — no AI required.
+          </p>
+          <ul className="space-y-2">
+            {suggestions.map((s) => {
+              const tone =
+                s.priority === 'high'
+                  ? 'border-destructive/40 bg-destructive/5'
+                  : s.priority === 'medium'
+                  ? 'border-yellow-500/40 bg-yellow-500/5'
+                  : 'border-green-500/40 bg-green-500/5';
+              const badgeTone =
+                s.priority === 'high'
+                  ? 'bg-destructive/15 text-destructive'
+                  : s.priority === 'medium'
+                  ? 'bg-yellow-500/20 text-yellow-700'
+                  : 'bg-green-500/15 text-green-600';
+              return (
+                <li key={s.id} className={`p-3 rounded-xl border ${tone}`}>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <ArrowRight className="h-4 w-4 text-foreground/70 shrink-0" />
+                      <p className="text-sm font-semibold text-foreground truncate">{s.title}</p>
+                    </div>
+                    <span className={`text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shrink-0 ${badgeTone}`}>
+                      {s.priority}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground pl-6">{s.reason}</p>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
+
+
 
       {/* Student Struggles - Tutor Preparation Guide */}
       {struggles.length > 0 && (
