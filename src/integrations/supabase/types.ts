@@ -1308,6 +1308,56 @@ export type Database = {
           },
         ]
       }
+      learning_events: {
+        Row: {
+          created_at: string
+          id: string
+          mastery_delta: number | null
+          occurred_at: string
+          payload: Json
+          school_id: string | null
+          score_pct: number | null
+          source: string
+          subject_id: string | null
+          topic_name: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mastery_delta?: number | null
+          occurred_at?: string
+          payload?: Json
+          school_id?: string | null
+          score_pct?: number | null
+          source: string
+          subject_id?: string | null
+          topic_name?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mastery_delta?: number | null
+          occurred_at?: string
+          payload?: Json
+          school_id?: string | null
+          score_pct?: number | null
+          source?: string
+          subject_id?: string | null
+          topic_name?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_events_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lesson_consents: {
         Row: {
           booking_id: string
