@@ -1,6 +1,79 @@
-import { GraduationCap, AlertTriangle, Lightbulb, Target, BookOpen, Activity } from 'lucide-react';
+import { GraduationCap, AlertTriangle, Lightbulb, Target, BookOpen, Activity, Sparkles, ArrowRight } from 'lucide-react';
+import { useMemo } from 'react';
 import { useLearningTimeline, type LearningEventRow } from '@/hooks/useLearningTimeline';
 import type { LearningEventSource } from '@/lib/learningEvents';
+
+interface SuggestedAction {
+  id: string;
+  title: string;
+  reason: string;
+  priority: 'high' | 'medium' | 'low';
+}
+
+/**
+ * Pure, deterministic (non-AI) suggestion builder from recent learning events.
+ * Heuristics:
+ *  - Any topic with avg score < 50% across recent events → high-priority review.
+ *  - Topic scored 50–74% → medium-priority practice.
+ *  - Topic appearing ≥2 times with avg ≥75% → low-priority "advance to next subtopic".
+ *  - If the most recent event is a school_homework with score < 60% → high-priority re-teach.
+ */
+function buildSuggestions(events: LearningEventRow[]): SuggestedAction[] {
+  if (!events.length) return [];
+  const byTopic = new Map<string, { sum: number; n: number; sources: Set<string> }>();
+  for (const ev of events) {
+    const t = ev.topic_name?.trim();
+    if (!t || typeof ev.score_pct !== 'number') continue;
+    const cur = byTopic.get(t) ?? { sum: 0, n: 0, sources: new Set<string>() };
+    cur.sum += ev.score_pct;
+    cur.n += 1;
+    cur.sources.add(ev.source);
+    byTopic.set(t, cur);
+  }
+
+  const out: SuggestedAction[] = [];
+  for (const [topic, { sum, n, sources }] of byTopic) {
+    const avg = sum / n;
+    if (avg < 50) {
+      out.push({
+        id: `review-${topic}`,
+        title: `Re-teach “${topic}” from the basics`,
+        reason: `Average ${Math.round(avg)}% across ${n} recent attempt${n > 1 ? 's' : ''} (${Array.from(sources).join(', ')}).`,
+        priority: 'high',
+      });
+    } else if (avg < 75) {
+      out.push({
+        id: `practice-${topic}`,
+        title: `Guided practice on “${topic}”`,
+        reason: `Sitting at ${Math.round(avg)}% — work through 2–3 exam-style questions together.`,
+        priority: 'medium',
+      });
+    } else if (n >= 2) {
+      out.push({
+        id: `advance-${topic}`,
+        title: `Advance “${topic}” to a harder subtopic`,
+        reason: `Consistently strong (${Math.round(avg)}% over ${n} attempts) — push toward exam-level questions.`,
+        priority: 'low',
+      });
+    }
+  }
+
+  const latest = events[0];
+  if (latest && latest.source === 'school_homework' && typeof latest.score_pct === 'number' && latest.score_pct < 60 && latest.topic_name) {
+    const already = out.find((s) => s.id === `review-${latest.topic_name}`);
+    if (!already) {
+      out.unshift({
+        id: `homework-${latest.id}`,
+        title: `Walk through the latest homework on “${latest.topic_name}”`,
+        reason: `Most recent homework scored ${Math.round(latest.score_pct)}%.`,
+        priority: 'high',
+      });
+    }
+  }
+
+  const order = { high: 0, medium: 1, low: 2 } as const;
+  return out.sort((a, b) => order[a.priority] - order[b.priority]).slice(0, 4);
+}
 
 interface StudentStruggle {
   topic: string;
