@@ -1,32 +1,40 @@
-## Problem
+## Goal
+Begin unifying the ecosystem by introducing a single learning timeline that every surface (learner, tutor, school) reads and writes. This is steps 1–4 of §4 from the audit and unlocks the rest of the cross-surface work.
 
-The teacher's "New classroom" dialog shows empty **Grade** and **Subject** dropdowns and has no **Curriculum** field at all. Root cause: `grades` and `school_subjects` are empty for the school (0 rows in both tables), and the schema never had a curriculum field on classes.
+## Scope of this first PR
 
-## Fix
+### 1. New `learning_events` table (migration)
+One append-only spine row per meaningful learning action.
 
-### 1. Schema (migration)
+Columns:
+- `id`, `user_id` (auth user), `school_id` (nullable), `subject_id` (nullable), `topic_name` (text, nullable)
+- `source` (enum-ish text: `topic_session`, `school_homework`, `lesson_reinforcement`, `school_quiz`, `daily_task`, `mock_exam`, `booking_completed`)
+- `score_pct` (numeric, nullable), `mastery_delta` (numeric, nullable)
+- `payload` (jsonb), `occurred_at` (timestamptz, default now())
 
-- `ALTER TABLE classes ADD COLUMN curriculum text` — so each classroom records its syllabus (ZIMSEC, CAPS, IEB, Cambridge, Other).
+RLS: user reads own rows; service_role full; school staff can read rows where `school_id` matches a school they belong to (via existing `has_school_role` helper). GRANTs in the same migration.
 
-### 2. Inline create in the dialog (`CreateClassroomDialog.tsx`)
+Index on `(user_id, occurred_at desc)` and `(school_id, occurred_at desc)`.
 
-- **Grade picker**: keep the existing `Select` of existing grades, with a sticky "➕ Add new grade…" item at the bottom. Picking it swaps the trigger for a small inline input ("Form 4", "Grade 10", …) + ✓/✕. On confirm, insert into `grades` (school-scoped) via the existing `useUpsertGrade` hook and auto-select the new row.
-- **Subject picker**: same pattern using `school_subjects` + `useUpsertSubject`.
-- **Curriculum picker**: new required `Select` with the four standard options + "Other". Saved onto the new `classes.curriculum` column.
-- Empty-state copy on the triggers becomes "Add your first grade" / "Add your first subject" so it's obvious that creating one is the next step.
+### 2. `logLearningEvent()` client helper
+`src/lib/learningEvents.ts` — single typed insert helper used everywhere. No throwing on failure (best-effort, logged).
 
-### 3. Wire-through
+### 3. Wire the first three writers
+- `useTopicSessionRunner.endSession()` — logs `topic_session` with accuracy + xp.
+- School homework submit (`useSchoolStudyMode` submit path) — logs `school_homework` with score.
+- Lesson reinforcement completion — logs `lesson_reinforcement` with quiz score.
 
-- `useUpsertClass` payload now includes `curriculum`.
-- `class_subjects` insert unchanged.
+### 4. Shared read hook
+`src/hooks/useLearningTimeline.ts` — `useLearningTimeline({ userId, schoolId?, limit? })` with one React Query key `['learning-timeline', userId, schoolId]`. Becomes the single source for future widgets (StudentBriefingCard, learner activity, school analytics).
 
-### Files touched
+## Out of scope (next PRs)
+- `<StudentBriefingCard>` in TutorHomeTab/VideoMeeting
+- Migrating `topic_mastery` reads to a shared key
+- Notification system consolidation
+- Subscription gating sweep
+- PayFast/Paystack adapter extraction
 
-- New migration: add `classes.curriculum`.
-- `src/components/school/CreateClassroomDialog.tsx` — inline-create UX + curriculum field.
-
-No other pages affected; the rest of the school workspace already reads grade/subject by id.
-
-### Out of scope
-
-- Auto-seeding a full standard grade/subject list per curriculum (we considered it, but inline-create gives the teacher control and avoids polluting schools that already curate their own lists).
+## Technical notes
+- No edge function changes needed yet — all writes happen client-side from existing hooks.
+- `learning_events` is additive; nothing in current code breaks.
+- Future server-side writers (edge functions awarding XP, SAIL) can insert with `service_role`.
