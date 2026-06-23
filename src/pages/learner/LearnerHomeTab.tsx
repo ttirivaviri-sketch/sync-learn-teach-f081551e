@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
+import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
+import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
@@ -99,22 +101,38 @@ export const LearnerHomeTab = ({
       " · " + d.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" });
   };
 
+  const hasImminentLesson = upcomingBookings.some((b) => {
+    if (b.status !== "confirmed") return false;
+    const start = new Date(b.scheduled_at).getTime();
+    return start - Date.now() < 15 * 60 * 1000 && start - Date.now() > -60 * 60 * 1000;
+  });
+
   return (
   <div className="space-y-4 p-4 mt-0">
     {/* School Workspace banner — only renders for school-enrolled learners */}
     <SchoolWorkspaceBanner />
 
+    {/* Smart contextual suggestion from learning gaps */}
+    <SmartSuggestionStrip
+      onSuggest={(topic) => {
+        onSearchChange(topic);
+      }}
+    />
+
     {/* My Lessons Button */}
     <Button
-      onClick={() => setLessonsOpen(true)}
-      className="w-full justify-between h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+      onClick={() => { haptic("light"); setLessonsOpen(true); }}
+      className="w-full justify-between h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md active:scale-[0.98] transition-transform"
     >
       <span className="flex items-center gap-2">
         <CalendarCheck className="h-5 w-5" />
         <span className="font-semibold">My Lessons</span>
       </span>
       {upcomingCount > 0 && (
-        <Badge variant="secondary" className="ml-2 bg-white/20 text-primary-foreground border-0">
+        <Badge
+          variant="secondary"
+          className={`ml-2 bg-white/20 text-primary-foreground border-0 ${hasImminentLesson ? "animate-pulse" : ""}`}
+        >
           {upcomingCount}
         </Badge>
       )}
@@ -229,7 +247,7 @@ export const LearnerHomeTab = ({
     {/* Quick Subject Filters */}
     <div className="flex gap-2 overflow-x-auto pb-2">
       {allSubjects.map((subject) => (
-        <Badge key={subject} variant={selectedSubject === subject ? "default" : "outline"} className="cursor-pointer whitespace-nowrap" onClick={() => onSelectSubject(selectedSubject === subject ? "" : subject)}>
+        <Badge key={subject} variant={selectedSubject === subject ? "default" : "outline"} className="cursor-pointer whitespace-nowrap active:scale-95 transition-transform" onClick={() => { haptic("selection"); onSelectSubject(selectedSubject === subject ? "" : subject); }}>
           {subject}
         </Badge>
       ))}
@@ -270,7 +288,7 @@ export const LearnerHomeTab = ({
         tutors.map((tutor) => {
           const online = isUserOnline(tutor.id);
           return (
-            <Card key={tutor.id} className="shadow-sm">
+            <Card key={tutor.id} className="shadow-sm animate-fade-in transition-all hover:shadow-md">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar>
@@ -317,15 +335,15 @@ export const LearnerHomeTab = ({
                     )}
 
                     <div className="grid grid-cols-3 gap-2 mt-3">
-                      <Button variant="outline" className="flex-1" onClick={() => onBookTutor(tutor)}>
+                      <Button variant="outline" className="flex-1 active:scale-95 transition-transform" onClick={() => { haptic("light"); onBookTutor(tutor); }}>
                         <MapPin className="h-3 w-3 mr-1" />
                         In-Person
                       </Button>
-                      <Button variant="default" className="flex-1" onClick={() => onBookTutor(tutor)}>
+                      <Button variant="default" className="flex-1 active:scale-95 transition-transform" onClick={() => { haptic("light"); onBookTutor(tutor); }}>
                         <Video className="h-4 w-4 mr-1" />
                         Book Online
                       </Button>
-                      <Button variant="secondary" className="flex-1" onClick={() => onStartChat(tutor)}>
+                      <Button variant="secondary" className="flex-1 active:scale-95 transition-transform" onClick={() => { haptic("selection"); onStartChat(tutor); }}>
                         <MessageCircle className="h-4 w-4 mr-1" />
                         Chat
                       </Button>

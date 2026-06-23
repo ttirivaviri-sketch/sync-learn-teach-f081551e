@@ -4,6 +4,7 @@
 import { ShoppingBag, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StudySyncLibrary from "@/components/StudySyncLibrary";
+import { StruggleRecRail } from "@/components/learner/StruggleRecRail";
 
 interface AcademicProfile {
   curriculum?: string | null;
@@ -42,6 +43,7 @@ export const LearnerLibraryTab = ({
 
   return (
     <div className="space-y-4 p-4 mt-0">
+      <StruggleRecRail />
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <ShoppingBag className="h-5 w-5 text-primary" />

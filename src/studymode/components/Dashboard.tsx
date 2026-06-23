@@ -22,6 +22,7 @@ const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ defa
 import { PredictedGradeCard } from './PredictedGradeCard';
 import { SchoolHomeworkRail } from './SchoolHomeworkRail';
 import { WeakTopicReport } from './WeakTopicReport';
+import { ContinueLearningBanner } from '@/components/learner/ContinueLearningBanner';
 import { useStudyContext } from '@/hooks/useStudyContext';
 import { Button } from '@/components/ui/button';
 import { StuckHelpPrompt } from '@/components/StuckHelpPrompt';
@@ -276,6 +277,13 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         open={!!topicStart}
         onOpenChange={(o) => { if (!o) setTopicStart(null); }}
         start={topicStart}
+      />
+
+      {/* Continue where you left off — last topic session within 72h */}
+      <ContinueLearningBanner
+        onResume={({ topic, subject, curriculum: c }) =>
+          setTopicStart({ subject: subject ?? topic, topic, curriculum: c ?? curriculum })
+        }
       />
 
       {/* AI Message */}
