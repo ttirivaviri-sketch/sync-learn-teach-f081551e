@@ -288,7 +288,7 @@ export const LearnerHomeTab = ({
         tutors.map((tutor) => {
           const online = isUserOnline(tutor.id);
           return (
-            <Card key={tutor.id} className="shadow-sm">
+            <Card key={tutor.id} className="shadow-sm animate-fade-in transition-all hover:shadow-md">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <Avatar>
@@ -335,15 +335,15 @@ export const LearnerHomeTab = ({
                     )}
 
                     <div className="grid grid-cols-3 gap-2 mt-3">
-                      <Button variant="outline" className="flex-1" onClick={() => onBookTutor(tutor)}>
+                      <Button variant="outline" className="flex-1 active:scale-95 transition-transform" onClick={() => { haptic("light"); onBookTutor(tutor); }}>
                         <MapPin className="h-3 w-3 mr-1" />
                         In-Person
                       </Button>
-                      <Button variant="default" className="flex-1" onClick={() => onBookTutor(tutor)}>
+                      <Button variant="default" className="flex-1 active:scale-95 transition-transform" onClick={() => { haptic("light"); onBookTutor(tutor); }}>
                         <Video className="h-4 w-4 mr-1" />
                         Book Online
                       </Button>
-                      <Button variant="secondary" className="flex-1" onClick={() => onStartChat(tutor)}>
+                      <Button variant="secondary" className="flex-1 active:scale-95 transition-transform" onClick={() => { haptic("selection"); onStartChat(tutor); }}>
                         <MessageCircle className="h-4 w-4 mr-1" />
                         Chat
                       </Button>
