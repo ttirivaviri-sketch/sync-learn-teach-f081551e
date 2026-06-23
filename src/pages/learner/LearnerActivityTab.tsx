@@ -1,14 +1,20 @@
 /**
  * LearnerActivityTab — Clean-first activity view with expandable sections.
+ * Now also surfaces the unified learning timeline (homework, topic sessions,
+ * lesson reinforcement) so bookings and study activity live in one place.
  */
-import { useState } from "react";
-import { ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronRight, Activity, Flame } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
 import { LessonNotesCard } from "@/components/lesson/LessonNotesCard";
+import { LearningEventRow } from "@/components/learner/LearningEventRow";
+import { useLearningTimeline } from "@/hooks/useLearningTimeline";
+import { supabase } from "@/integrations/supabase/client";
+import { haptic } from "@/lib/haptics";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface ReviewData {
@@ -44,6 +50,21 @@ export const LearnerActivityTab = ({
   const [showAllPending, setShowAllPending] = useState(false);
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
+  const [showAllLearning, setShowAllLearning] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null));
+  }, []);
+
+  const { data: timeline = [] } = useLearningTimeline({ userId, limit: 25 });
+
+  const todayWins = useMemo(() => {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return timeline.filter((e) => e.occurred_at.slice(0, 10) === todayStr).length;
+  }, [timeline]);
+
+  const displayedLearning = showAllLearning ? timeline : timeline.slice(0, 4);
 
   const upcomingBookings = bookings.filter(
     (b) => b.status !== "completed" && b.status !== "canceled"
@@ -62,7 +83,15 @@ export const LearnerActivityTab = ({
 
   return (
     <div className="space-y-6 p-4">
-      <h2 className="text-2xl font-bold">Activity</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold">Activity</h2>
+        {todayWins > 0 && (
+          <Badge variant="secondary" className="gap-1 animate-scale-in">
+            <Flame className="h-3.5 w-3.5 text-orange-500" />
+            {todayWins} today
+          </Badge>
+        )}
+      </div>
 
       {bookingsLoading ? (
         <div className="text-center py-8">
