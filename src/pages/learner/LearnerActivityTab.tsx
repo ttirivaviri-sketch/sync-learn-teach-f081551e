@@ -176,6 +176,30 @@ export const LearnerActivityTab = ({
             )}
           </section>
 
+          {/* Learning timeline — unified study activity feed */}
+          {timeline.length > 0 && (
+            <section className="space-y-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Activity className="h-4 w-4 text-primary" />
+                Recent learning
+              </h3>
+              <div className="space-y-2">
+                {displayedLearning.map((event) => (
+                  <LearningEventRow key={event.id} event={event} onClick={() => haptic("light")} />
+                ))}
+                {timeline.length > 4 && (
+                  <Button
+                    variant="ghost"
+                    className="w-full text-muted-foreground"
+                    onClick={() => setShowAllLearning(!showAllLearning)}
+                  >
+                    {showAllLearning ? "Show less" : `See all ${timeline.length} events`}
+                  </Button>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Past */}
           <section className="space-y-3">
             <h3 className="text-lg font-semibold">Past</h3>
