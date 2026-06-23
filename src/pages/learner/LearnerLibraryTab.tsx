@@ -4,6 +4,7 @@
 import { ShoppingBag, GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StudySyncLibrary from "@/components/StudySyncLibrary";
+import { StruggleRecRail } from "@/components/learner/StruggleRecRail";
 
 interface AcademicProfile {
   curriculum?: string | null;
