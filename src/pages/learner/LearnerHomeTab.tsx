@@ -247,7 +247,7 @@ export const LearnerHomeTab = ({
     {/* Quick Subject Filters */}
     <div className="flex gap-2 overflow-x-auto pb-2">
       {allSubjects.map((subject) => (
-        <Badge key={subject} variant={selectedSubject === subject ? "default" : "outline"} className="cursor-pointer whitespace-nowrap" onClick={() => onSelectSubject(selectedSubject === subject ? "" : subject)}>
+        <Badge key={subject} variant={selectedSubject === subject ? "default" : "outline"} className="cursor-pointer whitespace-nowrap active:scale-95 transition-transform" onClick={() => { haptic("selection"); onSelectSubject(selectedSubject === subject ? "" : subject); }}>
           {subject}
         </Badge>
       ))}
