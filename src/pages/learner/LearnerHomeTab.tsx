@@ -11,6 +11,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
+import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
+import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
 import { EmptyState } from "@/components/EmptyState";
@@ -99,22 +101,38 @@ export const LearnerHomeTab = ({
       " · " + d.toLocaleTimeString("en-ZA", { hour: "2-digit", minute: "2-digit" });
   };
 
+  const hasImminentLesson = upcomingBookings.some((b) => {
+    if (b.status !== "confirmed") return false;
+    const start = new Date(b.scheduled_at).getTime();
+    return start - Date.now() < 15 * 60 * 1000 && start - Date.now() > -60 * 60 * 1000;
+  });
+
   return (
   <div className="space-y-4 p-4 mt-0">
     {/* School Workspace banner — only renders for school-enrolled learners */}
     <SchoolWorkspaceBanner />
 
+    {/* Smart contextual suggestion from learning gaps */}
+    <SmartSuggestionStrip
+      onSuggest={(topic) => {
+        onSearchChange(topic);
+      }}
+    />
+
     {/* My Lessons Button */}
     <Button
-      onClick={() => setLessonsOpen(true)}
-      className="w-full justify-between h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md"
+      onClick={() => { haptic("light"); setLessonsOpen(true); }}
+      className="w-full justify-between h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md active:scale-[0.98] transition-transform"
     >
       <span className="flex items-center gap-2">
         <CalendarCheck className="h-5 w-5" />
         <span className="font-semibold">My Lessons</span>
       </span>
       {upcomingCount > 0 && (
-        <Badge variant="secondary" className="ml-2 bg-white/20 text-primary-foreground border-0">
+        <Badge
+          variant="secondary"
+          className={`ml-2 bg-white/20 text-primary-foreground border-0 ${hasImminentLesson ? "animate-pulse" : ""}`}
+        >
           {upcomingCount}
         </Badge>
       )}
