@@ -31,9 +31,9 @@ const TONE: Record<NextAction["kind"], string> = {
 };
 
 export function NextActionCard() {
-  const { user } = useAuth();
+  const { session } = useAuth();
   const navigate = useNavigate();
-  const { data, isLoading } = useNextAction(user?.id);
+  const { data, isLoading } = useNextAction(session?.user?.id);
 
   if (isLoading) {
     return (
