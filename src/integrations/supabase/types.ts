@@ -1269,6 +1269,57 @@ export type Database = {
         }
         Relationships: []
       }
+      learner_state: {
+        Row: {
+          attempts: number
+          avg_score_pct: number | null
+          created_at: string
+          ewma_score_pct: number | null
+          id: string
+          last_event_at: string | null
+          last_score_pct: number | null
+          mastery_pct: number
+          risk_level: string
+          sources: Json
+          subject_id: string | null
+          topic_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          attempts?: number
+          avg_score_pct?: number | null
+          created_at?: string
+          ewma_score_pct?: number | null
+          id?: string
+          last_event_at?: string | null
+          last_score_pct?: number | null
+          mastery_pct?: number
+          risk_level?: string
+          sources?: Json
+          subject_id?: string | null
+          topic_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          attempts?: number
+          avg_score_pct?: number | null
+          created_at?: string
+          ewma_score_pct?: number | null
+          id?: string
+          last_event_at?: string | null
+          last_score_pct?: number | null
+          mastery_pct?: number
+          risk_level?: string
+          sources?: Json
+          subject_id?: string | null
+          topic_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       learner_subjects: {
         Row: {
           created_at: string

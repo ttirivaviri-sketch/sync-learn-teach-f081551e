@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
 import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
+import { NextActionCard } from "@/components/learner/NextActionCard";
 import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
@@ -109,6 +110,9 @@ export const LearnerHomeTab = ({
 
   return (
   <div className="space-y-4 p-4 mt-0">
+    {/* Universal next-action card — one source of "do this now" */}
+    <NextActionCard />
+
     {/* School Workspace banner — only renders for school-enrolled learners */}
     <SchoolWorkspaceBanner />
 
