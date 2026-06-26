@@ -30,10 +30,13 @@ const TONE: Record<NextAction["kind"], string> = {
   onboard: "from-muted to-background border-border",
 };
 
+import { usePlanRebalance } from "@/hooks/usePlanRebalance";
+
 export function NextActionCard() {
   const { session } = useAuth();
   const navigate = useNavigate();
   const { data, isLoading } = useNextAction(session?.user?.id);
+  usePlanRebalance(session?.user?.id);
 
   if (isLoading) {
     return (
@@ -52,13 +55,15 @@ export function NextActionCard() {
   if (!primary) return null;
   const Icon = ICON[primary.kind] ?? Sparkles;
 
-  const handleClick = () => {
+  const go = (a: NextAction) => {
     haptic("medium");
-    if (primary.route) navigate(primary.route);
+    if (a.route) navigate(a.route);
   };
 
+  const secondary = (data?.actions ?? []).filter((a) => a !== primary).slice(0, 3);
+
   return (
-    <Card className={`bg-gradient-to-br ${TONE[primary.kind]} border shadow-sm overflow-hidden`}>
+    <Card className={`bg-gradient-to-br ${TONE[primary.kind]} border shadow-sm overflow-hidden animate-fade-in`}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="bg-background/60 text-[10px] font-semibold uppercase tracking-wide">
@@ -74,12 +79,26 @@ export function NextActionCard() {
             <div className="text-xs text-muted-foreground mt-0.5">{primary.reason}</div>
           </div>
         </div>
-        <Button onClick={handleClick} className="w-full active:scale-[0.98] transition-transform" size="sm">
+        <Button onClick={() => go(primary)} className="w-full active:scale-[0.98] transition-transform" size="sm">
           {primary.cta ?? "Start now"} <ArrowRight className="h-4 w-4 ml-1" />
         </Button>
-        {data && data.actions.length > 1 && (
-          <div className="text-[11px] text-muted-foreground text-center">
-            +{data.actions.length - 1} more queued
+        {secondary.length > 0 && (
+          <div className="pt-1 border-t border-border/40 space-y-1.5">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Also queued</div>
+            {secondary.map((a, i) => {
+              const SubIcon = ICON[a.kind] ?? Sparkles;
+              return (
+                <button
+                  key={i}
+                  onClick={() => go(a)}
+                  className="w-full flex items-center gap-2 text-left rounded-lg px-2 py-1.5 hover:bg-background/60 active:scale-[0.98] transition-all"
+                >
+                  <SubIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                  <span className="text-xs font-medium truncate flex-1">{a.title}</span>
+                  <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                </button>
+              );
+            })}
           </div>
         )}
       </CardContent>
