@@ -12,6 +12,7 @@ import { LiveBookingCard } from "@/components/LiveBookingCard";
 import { PendingPaymentCard } from "@/components/PendingPaymentCard";
 import { LessonNotesCard } from "@/components/lesson/LessonNotesCard";
 import { LearningEventRow } from "@/components/learner/LearningEventRow";
+import { MyWorkPanel } from "@/components/learner/MyWorkPanel";
 import { useLearningTimeline } from "@/hooks/useLearningTimeline";
 import { supabase } from "@/integrations/supabase/client";
 import { haptic } from "@/lib/haptics";
@@ -199,6 +200,9 @@ export const LearnerActivityTab = ({
               </div>
             </section>
           )}
+
+          {/* Learning Filesystem — personal artifact vault */}
+          <MyWorkPanel userId={userId} />
 
           {/* Past */}
           <section className="space-y-3">
