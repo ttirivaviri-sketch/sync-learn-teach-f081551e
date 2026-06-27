@@ -28,6 +28,7 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { analytics } from "@/utils/analytics";
 import { useRealtimeBookings } from "@/hooks/useRealtimeBookings";
 import { useHapticsSync } from "@/hooks/useHapticsSync";
+import { useLearningKernel } from "@/hooks/useLearningKernel";
 import { usePremiumMilestones } from "@/hooks/usePremiumMilestones";
 import { useTutorData, TutorProfile } from "@/hooks/useTutorData";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -123,6 +124,7 @@ const LearnerApp = () => {
 
   // Cross-device haptics pref + rare premium milestone moments
   useHapticsSync(userId);
+  useLearningKernel(userId);
   usePremiumMilestones(userId, "learner");
 
   const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
