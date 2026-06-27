@@ -7,14 +7,17 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, TrendingUp, Users, Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AlertTriangle, TrendingUp, Users, Sparkles, Wand2 } from "lucide-react";
 import { useClassKernel } from "@/hooks/useClassKernel";
 
 interface Props {
   classId: string;
+  /** Optional callback fired when a teacher clicks "Assign" on a struggling topic. */
+  onAssignRemediation?: (topic: string) => void;
 }
 
-export function ClassKernelPanel({ classId }: Props) {
+export function ClassKernelPanel({ classId, onAssignRemediation }: Props) {
   const { data, isLoading } = useClassKernel(classId);
 
   if (isLoading) {
@@ -76,8 +79,19 @@ export function ClassKernelPanel({ classId }: Props) {
                 <ul className="space-y-1">
                   {topStruggles.map((t) => (
                     <li key={`${t.subject_id}-${t.topic}`} className="flex items-center justify-between gap-2 text-xs rounded-md bg-background/60 px-2 py-1.5">
-                      <span className="truncate font-medium">{t.topic}</span>
+                      <span className="truncate font-medium flex-1 min-w-0">{t.topic}</span>
                       <span className="text-muted-foreground whitespace-nowrap">{t.studentsAffected} · {Math.round(t.avgScore)}%</span>
+                      {onAssignRemediation && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-6 px-2 text-[10px]"
+                          onClick={() => onAssignRemediation(t.topic)}
+                          title="Generate AI remediation homework for this topic"
+                        >
+                          <Wand2 className="h-3 w-3 mr-1" />Assign
+                        </Button>
+                      )}
                     </li>
                   ))}
                 </ul>
