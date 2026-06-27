@@ -20,6 +20,7 @@ import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
 import { AiHomeworkPanel } from "@/components/school/AiHomeworkPanel";
 import { ClassPerformancePanel } from "@/components/school/ClassPerformancePanel";
+import { ClassKernelPanel } from "@/components/school/ClassKernelPanel";
 import {
   useClass,
   useResources, useCreateResource, useDeleteResource,
@@ -83,6 +84,7 @@ export default function TeacherClassDetail() {
         <TabsContent value="students"><StudentsPanel classId={classId!} /></TabsContent>
         <TabsContent value="analytics">
           <div className="space-y-6 mt-3">
+            <ClassKernelPanel classId={classId!} />
             <ClassPerformancePanel classId={classId!} />
             <section>
               <h4 className="font-medium text-sm mb-2">Per-student deep dive</h4>
