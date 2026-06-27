@@ -2,6 +2,7 @@ import { useOutletContext } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Users, Mail, GraduationCap, ShieldCheck } from "lucide-react";
 import { useSchoolMemberships, useSchoolInvitations, type School } from "@/hooks/useSchools";
+import { SchoolKernelPanel } from "@/components/school/SchoolKernelPanel";
 
 export default function SchoolDashboard() {
   const { school } = useOutletContext<{ school: School }>();
@@ -41,6 +42,8 @@ export default function SchoolDashboard() {
           </Card>
         ))}
       </div>
+
+      <SchoolKernelPanel schoolId={school.id} />
 
       <Card className="p-5">
         <h2 className="font-medium mb-1">Getting started</h2>

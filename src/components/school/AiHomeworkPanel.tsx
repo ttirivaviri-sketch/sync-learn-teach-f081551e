@@ -3,7 +3,7 @@
  * document, review/edit it as a draft, then publish with a due date.
  * Lives inside the Homework tab of TeacherClassDetail.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,6 +28,22 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   const [count, setCount] = useState("5");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [openId, setOpenId] = useState<string | null>(null);
+  const generatorRef = useRef<HTMLDivElement | null>(null);
+
+  // Kernel-driven remediation: the ClassKernelPanel dispatches this when a
+  // teacher clicks "Assign" on a struggling topic. Prefill the title, scroll
+  // the generator into view, and toast so the action is obvious.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ topic?: string }>).detail;
+      if (!detail?.topic) return;
+      setTitle(`Remediation: ${detail.topic}`);
+      toast.message(`Prefilled remediation for "${detail.topic}" — pick a source document and generate.`);
+      generatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    window.addEventListener("los:prefill-homework", handler as EventListener);
+    return () => window.removeEventListener("los:prefill-homework", handler as EventListener);
+  }, []);
 
   const openRow = (list.data ?? []).find((h: any) => h.id === openId);
 
@@ -48,7 +64,7 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" ref={generatorRef}>
       <Card className="p-4 space-y-2 border-primary/30 bg-primary/5">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
