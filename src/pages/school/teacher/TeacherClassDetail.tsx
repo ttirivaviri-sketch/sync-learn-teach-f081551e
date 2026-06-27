@@ -48,13 +48,27 @@ export default function TeacherClassDetail() {
   const validTabs = ["stream", "materials", "homework", "quizzes", "students", "analytics"] as const;
   const initialTab = (validTabs.find((t) => t === search.get("tab")) ?? "stream") as typeof validTabs[number];
 
+  return <ClassDetailBody school={school} cls={cls.data} classId={classId!} initialTab={initialTab} />;
+}
+
+function ClassDetailBody({ school, cls, classId, initialTab }: { school: any; cls: any; classId: string; initialTab: string }) {
+  const [tab, setTab] = useState<string>(initialTab);
+
+  const handleAssignRemediation = (topic: string) => {
+    setTab("homework");
+    // AiHomeworkPanel listens to this and prefills the title with the topic.
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("los:prefill-homework", { detail: { topic } }));
+    }, 0);
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <Link to={`/school/${school.id}/teach`} className="text-sm text-muted-foreground hover:underline">← My classes</Link>
-        <h1 className="text-xl font-semibold mt-1">{cls.data.name}</h1>
+        <h1 className="text-xl font-semibold mt-1">{cls.name}</h1>
       </div>
-      <Tabs defaultValue={initialTab}>
+      <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="stream"><Megaphone className="h-4 w-4 mr-1" />Stream</TabsTrigger>
           <TabsTrigger value="materials"><FileText className="h-4 w-4 mr-1" />Materials</TabsTrigger>
@@ -63,8 +77,8 @@ export default function TeacherClassDetail() {
           <TabsTrigger value="students"><Users className="h-4 w-4 mr-1" />Students</TabsTrigger>
           <TabsTrigger value="analytics"><BarChart3 className="h-4 w-4 mr-1" />Analytics</TabsTrigger>
         </TabsList>
-        <TabsContent value="stream"><StreamPanel schoolId={school.id} classId={classId!} /></TabsContent>
-        <TabsContent value="materials"><MaterialsPanel schoolId={school.id} classId={classId!} /></TabsContent>
+        <TabsContent value="stream"><StreamPanel schoolId={school.id} classId={classId} /></TabsContent>
+        <TabsContent value="materials"><MaterialsPanel schoolId={school.id} classId={classId} /></TabsContent>
         <TabsContent value="homework">
           <div className="space-y-6 mt-3">
             <section>
@@ -72,23 +86,23 @@ export default function TeacherClassDetail() {
                 <Sparkles className="h-4 w-4 text-primary" />
                 <h3 className="font-semibold text-sm">AI homework</h3>
               </div>
-              <AiHomeworkPanel schoolId={school.id} classId={classId!} />
+              <AiHomeworkPanel schoolId={school.id} classId={classId} />
             </section>
             <section>
               <h3 className="font-semibold text-sm mb-2">Classic assignments</h3>
-              <HomeworkPanel schoolId={school.id} classId={classId!} />
+              <HomeworkPanel schoolId={school.id} classId={classId} />
             </section>
           </div>
         </TabsContent>
-        <TabsContent value="quizzes"><QuizzesPanel schoolId={school.id} classId={classId!} /></TabsContent>
-        <TabsContent value="students"><StudentsPanel classId={classId!} /></TabsContent>
+        <TabsContent value="quizzes"><QuizzesPanel schoolId={school.id} classId={classId} /></TabsContent>
+        <TabsContent value="students"><StudentsPanel classId={classId} /></TabsContent>
         <TabsContent value="analytics">
           <div className="space-y-6 mt-3">
-            <ClassKernelPanel classId={classId!} />
-            <ClassPerformancePanel classId={classId!} />
+            <ClassKernelPanel classId={classId} onAssignRemediation={handleAssignRemediation} />
+            <ClassPerformancePanel classId={classId} />
             <section>
               <h4 className="font-medium text-sm mb-2">Per-student deep dive</h4>
-              <ClassAnalyticsPanel classId={classId!} />
+              <ClassAnalyticsPanel classId={classId} />
             </section>
           </div>
         </TabsContent>
