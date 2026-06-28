@@ -54,11 +54,11 @@ export function useRemediationTracker(schoolId?: string) {
       for (const e of (enrRes.data ?? []) as any[]) {
         enrolledByClass.set(e.class_id, (enrolledByClass.get(e.class_id) ?? 0) + 1);
       }
-      const respByHw = new Map<string, { students: Set<string>; total: number; graded: number; scoreSum: number; scoreN: number }>();
+      const respByHw = new Map<string, { students: Set<string>; graded: Set<string>; scoreSum: number; scoreN: number }>();
       for (const r of (respRes.data ?? []) as any[]) {
-        const e = respByHw.get(r.homework_id) ?? { students: new Set<string>(), total: 0, graded: 0, scoreSum: 0, scoreN: 0 };
-        e.total += 1;
-        if (r.status === "graded" || r.status === "released") e.graded += 1;
+        const e = respByHw.get(r.homework_id) ?? { students: new Set<string>(), graded: new Set<string>(), scoreSum: 0, scoreN: 0 };
+        e.students.add(r.student_id);
+        if (r.status === "graded" || r.status === "released") e.graded.add(r.student_id);
         const score = r.teacher_score ?? r.ai_score;
         if (score != null) { e.scoreSum += Number(score); e.scoreN += 1; }
         respByHw.set(r.homework_id, e);
