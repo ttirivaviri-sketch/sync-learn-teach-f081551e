@@ -1,15 +1,19 @@
 /**
  * SchoolKernelPanel — school-wide rollup of the Learning Kernel for admins.
  * Same risk-distribution + struggle/mastery view as the ClassKernelPanel,
- * but scoped to every active student in the school.
+ * but scoped to every active student in the school. Clicking a struggling
+ * topic opens a drill-down showing exactly which students need follow-up.
  */
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, Users, Sparkles } from "lucide-react";
 import { useSchoolKernel } from "@/hooks/useSchoolKernel";
+import { TopicStudentsDialog } from "./TopicStudentsDialog";
 
 export function SchoolKernelPanel({ schoolId }: { schoolId: string }) {
+  const [drillTopic, setDrillTopic] = useState<string | null>(null);
   const { data, isLoading } = useSchoolKernel(schoolId);
 
   if (isLoading) {
