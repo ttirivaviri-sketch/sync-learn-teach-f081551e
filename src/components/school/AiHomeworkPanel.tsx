@@ -125,10 +125,22 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
             </Select>
           </div>
         </div>
+        {queue.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap text-[11px] text-muted-foreground">
+            <span className="font-semibold">Queued:</span>
+            {queue.map((q, i) => (
+              <Badge key={i} variant="secondary" className="text-[10px]">{q.topic}</Badge>
+            ))}
+            <Button size="sm" variant="ghost" className="h-6 px-2 text-[10px] ml-auto"
+              onClick={() => { setQueue([]); setActiveAlertId(undefined); }}>
+              Clear queue
+            </Button>
+          </div>
+        )}
         <div className="flex justify-end">
           <Button onClick={handleGenerate} disabled={gen.isPending}>
             {gen.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
-            Generate draft
+            Generate draft{queue.length > 0 ? ` (${queue.length + 1} left)` : ""}
           </Button>
         </div>
         {(docs.data ?? []).length === 0 && !docs.isLoading && (
