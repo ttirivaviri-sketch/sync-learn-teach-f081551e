@@ -62,6 +62,14 @@ function ClassDetailBody({ school, cls, classId, initialTab }: { school: any; cl
     }, 0);
   };
 
+  const handleBulkAssignRemediation = (topics: string[]) => {
+    if (!topics.length) return;
+    setTab("homework");
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("los:prefill-homework", { detail: { topics } }));
+    }, 0);
+  };
+
   return (
     <div className="space-y-4">
       <div>
