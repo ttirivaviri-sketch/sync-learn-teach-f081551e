@@ -44,7 +44,7 @@ export function useRemediationTracker(schoolId?: string) {
       const classIds = Array.from(new Set(rows.map((r) => r.class_id).filter(Boolean)));
 
       const [respRes, enrRes] = await Promise.all([
-        supabase.from("school_homework_responses").select("homework_id, status, ai_score, teacher_score").in("homework_id", ids),
+        supabase.from("school_homework_responses").select("homework_id, student_id, status, ai_score, teacher_score").in("homework_id", ids),
         classIds.length
           ? supabase.from("enrollments").select("class_id").in("class_id", classIds).eq("status", "active")
           : Promise.resolve({ data: [] as any[], error: null }),
