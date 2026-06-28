@@ -106,7 +106,7 @@ function ClassDetailBody({ school, cls, classId, initialTab }: { school: any; cl
         <TabsContent value="students"><StudentsPanel classId={classId} /></TabsContent>
         <TabsContent value="analytics">
           <div className="space-y-6 mt-3">
-            <ClassKernelPanel classId={classId} onAssignRemediation={handleAssignRemediation} />
+            <ClassKernelPanel classId={classId} onAssignRemediation={handleAssignRemediation} onBulkAssignRemediation={handleBulkAssignRemediation} />
             <ClassPerformancePanel classId={classId} />
             <section>
               <h4 className="font-medium text-sm mb-2">Per-student deep dive</h4>
