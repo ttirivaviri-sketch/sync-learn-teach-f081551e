@@ -1,24 +1,42 @@
 /**
  * ClassKernelPanel — teacher-facing view of the shared Learning Kernel
  * (learner_state). Shows class-wide risk distribution and the topics most
- * students are struggling with, so teachers can plan re-teaches grounded in
- * the same signal the learner Next-Action card uses.
+ * students are struggling with, lets the teacher drill into the affected
+ * students for any topic, and bulk-assigns remediation across multiple
+ * topics in a single click.
  */
+import { useState, useMemo } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, TrendingUp, Users, Sparkles, Wand2 } from "lucide-react";
 import { useClassKernel } from "@/hooks/useClassKernel";
+import { TopicStudentsDialog } from "./TopicStudentsDialog";
 
 interface Props {
   classId: string;
-  /** Optional callback fired when a teacher clicks "Assign" on a struggling topic. */
+  /** Called with a single topic when teacher clicks "Assign" on a row. */
   onAssignRemediation?: (topic: string) => void;
+  /** Called with multiple topics when teacher uses the bulk "Assign selected" button. */
+  onBulkAssignRemediation?: (topics: string[]) => void;
 }
 
-export function ClassKernelPanel({ classId, onAssignRemediation }: Props) {
+export function ClassKernelPanel({ classId, onAssignRemediation, onBulkAssignRemediation }: Props) {
   const { data, isLoading } = useClassKernel(classId);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [drillTopic, setDrillTopic] = useState<string | null>(null);
+
+  const toggle = (topic: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(topic)) next.delete(topic); else next.add(topic);
+      return next;
+    });
+  };
+
+  const selectedList = useMemo(() => Array.from(selected), [selected]);
 
   if (isLoading) {
     return (
@@ -75,11 +93,34 @@ export function ClassKernelPanel({ classId, onAssignRemediation }: Props) {
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <AlertTriangle className="h-3.5 w-3.5 text-destructive" />
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">Most-struggling topics</div>
+                  {onBulkAssignRemediation && selectedList.length > 0 && (
+                    <Button
+                      size="sm"
+                      className="ml-auto h-6 px-2 text-[10px]"
+                      onClick={() => { onBulkAssignRemediation(selectedList); setSelected(new Set()); }}
+                    >
+                      <Wand2 className="h-3 w-3 mr-1" />Assign {selectedList.length} selected
+                    </Button>
+                  )}
                 </div>
                 <ul className="space-y-1">
                   {topStruggles.map((t) => (
-                    <li key={`${t.subject_id}-${t.topic}`} className="flex items-center justify-between gap-2 text-xs rounded-md bg-background/60 px-2 py-1.5">
-                      <span className="truncate font-medium flex-1 min-w-0">{t.topic}</span>
+                    <li key={`${t.subject_id}-${t.topic}`} className="flex items-center gap-2 text-xs rounded-md bg-background/60 px-2 py-1.5">
+                      {onBulkAssignRemediation && (
+                        <Checkbox
+                          checked={selected.has(t.topic)}
+                          onCheckedChange={() => toggle(t.topic)}
+                          aria-label={`Select ${t.topic}`}
+                        />
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setDrillTopic(t.topic)}
+                        className="truncate font-medium flex-1 min-w-0 text-left hover:underline"
+                        title="See affected students"
+                      >
+                        {t.topic}
+                      </button>
                       <span className="text-muted-foreground whitespace-nowrap">{t.studentsAffected} · {Math.round(t.avgScore)}%</span>
                       {onAssignRemediation && (
                         <Button
@@ -117,6 +158,15 @@ export function ClassKernelPanel({ classId, onAssignRemediation }: Props) {
           </>
         )}
       </CardContent>
+
+      <TopicStudentsDialog
+        open={!!drillTopic}
+        onOpenChange={(v) => !v && setDrillTopic(null)}
+        scope="class"
+        scopeId={classId}
+        topic={drillTopic}
+        onAssign={onAssignRemediation ? () => { if (drillTopic) onAssignRemediation(drillTopic); setDrillTopic(null); } : undefined}
+      />
     </Card>
   );
 }
