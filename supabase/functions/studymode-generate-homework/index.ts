@@ -26,7 +26,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const body = await req.json();
-    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft } = body;
+    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft, is_remediation, remediation_topic, kernel_alert_id } = body;
     if (!school_id || !document_id || !class_id || !title) {
       return errorResponse("school_id, document_id, class_id, title required", 400);
     }
