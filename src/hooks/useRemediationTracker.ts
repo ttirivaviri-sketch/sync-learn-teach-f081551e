@@ -78,8 +78,8 @@ export function useRemediationTracker(schoolId?: string) {
           total_marks: r.total_marks,
           created_at: r.created_at,
           enrolled: r.class_id ? enrolledByClass.get(r.class_id) ?? 0 : 0,
-          responses: stats?.total ?? 0,
-          graded: stats?.graded ?? 0,
+          responses: stats?.students.size ?? 0,
+          graded: stats?.graded.size ?? 0,
           avgScorePct: stats && stats.scoreN && r.total_marks
             ? (stats.scoreSum / stats.scoreN) / Number(r.total_marks) * 100
             : null,
