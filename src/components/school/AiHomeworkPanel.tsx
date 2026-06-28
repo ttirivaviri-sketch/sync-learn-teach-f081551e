@@ -28,17 +28,27 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   const [count, setCount] = useState("5");
   const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [queue, setQueue] = useState<Array<{ topic: string; alertId?: string }>>([]);
+  const [activeAlertId, setActiveAlertId] = useState<string | undefined>(undefined);
   const generatorRef = useRef<HTMLDivElement | null>(null);
 
-  // Kernel-driven remediation: the ClassKernelPanel dispatches this when a
-  // teacher clicks "Assign" on a struggling topic. Prefill the title, scroll
-  // the generator into view, and toast so the action is obvious.
+  // Kernel-driven remediation: ClassKernelPanel / KernelAlertsPanel dispatch
+  // this event. Detail can be { topic } for a single prefill, or { topics }
+  // for a bulk queue. We surface the first topic in the form and queue the
+  // rest as chips so the teacher can step through them.
   useEffect(() => {
     const handler = (e: Event) => {
-      const detail = (e as CustomEvent<{ topic?: string }>).detail;
-      if (!detail?.topic) return;
-      setTitle(`Remediation: ${detail.topic}`);
-      toast.message(`Prefilled remediation for "${detail.topic}" — pick a source document and generate.`);
+      const detail = (e as CustomEvent<{ topic?: string; topics?: string[]; alertId?: string }>).detail || {};
+      const topics = detail.topics?.length ? detail.topics : detail.topic ? [detail.topic] : [];
+      if (!topics.length) return;
+      const [first, ...rest] = topics;
+      setTitle(`Remediation: ${first}`);
+      setActiveAlertId(detail.alertId);
+      setQueue(rest.map((t) => ({ topic: t })));
+      const msg = topics.length === 1
+        ? `Prefilled remediation for "${first}" — pick a source document and generate.`
+        : `Queued ${topics.length} remediation topics. Generating "${first}" first.`;
+      toast.message(msg);
       generatorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     };
     window.addEventListener("los:prefill-homework", handler as EventListener);
@@ -47,17 +57,30 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
 
   const openRow = (list.data ?? []).find((h: any) => h.id === openId);
 
+  const advanceQueue = () => {
+    setQueue((q) => {
+      if (q.length === 0) { setTitle(""); setActiveAlertId(undefined); return q; }
+      const [next, ...rest] = q;
+      setTitle(`Remediation: ${next.topic}`);
+      setActiveAlertId(next.alertId);
+      return rest;
+    });
+  };
+
   const handleGenerate = async () => {
     if (!docId) return toast.error("Pick a source document");
     if (!title.trim()) return toast.error("Title required");
+    const isRemediation = title.startsWith("Remediation: ");
+    const remediationTopic = isRemediation ? title.replace(/^Remediation:\s*/, "") : undefined;
     try {
       const res = await gen.mutateAsync({
         schoolId, classId, documentId: docId, title: title.trim(),
         difficulty, count: Number(count) || 5, asDraft: true,
+        isRemediation, remediationTopic, kernelAlertId: activeAlertId,
       });
       toast.success(`Generated ${res.count} questions — review before publishing`);
       setOpenId(res.homework_id);
-      setTitle("");
+      advanceQueue();
     } catch (e: any) {
       toast.error(e.message ?? "Generation failed");
     }
