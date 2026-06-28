@@ -3,6 +3,8 @@ import { Card } from "@/components/ui/card";
 import { Users, Mail, GraduationCap, ShieldCheck } from "lucide-react";
 import { useSchoolMemberships, useSchoolInvitations, type School } from "@/hooks/useSchools";
 import { SchoolKernelPanel } from "@/components/school/SchoolKernelPanel";
+import { KernelAlertsPanel } from "@/components/school/KernelAlertsPanel";
+import { RemediationTrackerPanel } from "@/components/school/RemediationTrackerPanel";
 
 export default function SchoolDashboard() {
   const { school } = useOutletContext<{ school: School }>();
@@ -44,6 +46,8 @@ export default function SchoolDashboard() {
       </div>
 
       <SchoolKernelPanel schoolId={school.id} />
+      <KernelAlertsPanel schoolId={school.id} />
+      <RemediationTrackerPanel schoolId={school.id} />
 
       <Card className="p-5">
         <h2 className="font-medium mb-1">Getting started</h2>

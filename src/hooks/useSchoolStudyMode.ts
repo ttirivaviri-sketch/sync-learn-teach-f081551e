@@ -153,16 +153,18 @@ export function useSaveSchoolQuizFromPreview() {
 export function useGenerateHomework() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { schoolId: string; documentId: string; classId: string; subjectId?: string; title: string; topic?: string; difficulty?: string; count?: number; dueAt?: string; instructions?: string; asDraft?: boolean; }) =>
+    mutationFn: async (args: { schoolId: string; documentId: string; classId: string; subjectId?: string; title: string; topic?: string; difficulty?: string; count?: number; dueAt?: string; instructions?: string; asDraft?: boolean; isRemediation?: boolean; remediationTopic?: string; kernelAlertId?: string; }) =>
       invokeWithContract<{ ok: boolean; homework_id: string; count: number; total_marks: number }>(() =>
         supabase.functions.invoke("studymode-generate-homework", {
-          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, difficulty: args.difficulty, count: args.count, due_at: args.dueAt, instructions: args.instructions, as_draft: args.asDraft },
+          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, difficulty: args.difficulty, count: args.count, due_at: args.dueAt, instructions: args.instructions, as_draft: args.asDraft, is_remediation: args.isRemediation, remediation_topic: args.remediationTopic, kernel_alert_id: args.kernelAlertId },
         }),
       ),
     onSuccess: (_d, v) => {
       qc.invalidateQueries({ queryKey: ["teacher-homework", v.schoolId] });
       qc.invalidateQueries({ queryKey: ["ai-homework-class", v.classId] });
       qc.invalidateQueries({ queryKey: ["student-homework"] });
+      qc.invalidateQueries({ queryKey: ["kernel-alerts", v.schoolId] });
+      qc.invalidateQueries({ queryKey: ["remediation-tracker", v.schoolId] });
     },
   });
 }

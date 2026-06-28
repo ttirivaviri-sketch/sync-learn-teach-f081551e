@@ -1239,6 +1239,78 @@ export type Database = {
         }
         Relationships: []
       }
+      kernel_alerts: {
+        Row: {
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          assigned_homework_id: string | null
+          avg_score: number | null
+          created_at: string
+          delta_students: number
+          detected_at: string
+          id: string
+          resolved_at: string | null
+          school_id: string
+          severity: string
+          status: string
+          students_affected: number
+          subject_id: string | null
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          assigned_homework_id?: string | null
+          avg_score?: number | null
+          created_at?: string
+          delta_students?: number
+          detected_at?: string
+          id?: string
+          resolved_at?: string | null
+          school_id: string
+          severity?: string
+          status?: string
+          students_affected?: number
+          subject_id?: string | null
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          assigned_homework_id?: string | null
+          avg_score?: number | null
+          created_at?: string
+          delta_students?: number
+          detected_at?: string
+          id?: string
+          resolved_at?: string | null
+          school_id?: string
+          severity?: string
+          status?: string
+          students_affected?: number
+          subject_id?: string | null
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "kernel_alerts_assigned_homework_id_fkey"
+            columns: ["assigned_homework_id"]
+            isOneToOne: false
+            referencedRelation: "school_homework"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kernel_alerts_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       landing_events: {
         Row: {
           created_at: string
@@ -3470,6 +3542,8 @@ export type Database = {
           due_at: string | null
           id: string
           instructions: string | null
+          is_remediation: boolean
+          remediation_topic: string | null
           school_id: string
           source_document_id: string | null
           status: string
@@ -3489,6 +3563,8 @@ export type Database = {
           due_at?: string | null
           id?: string
           instructions?: string | null
+          is_remediation?: boolean
+          remediation_topic?: string | null
           school_id: string
           source_document_id?: string | null
           status?: string
@@ -3508,6 +3584,8 @@ export type Database = {
           due_at?: string | null
           id?: string
           instructions?: string | null
+          is_remediation?: boolean
+          remediation_topic?: string | null
           school_id?: string
           source_document_id?: string | null
           status?: string
@@ -3697,6 +3775,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "school_invitations_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_kernel_snapshots: {
+        Row: {
+          avg_score: number | null
+          captured_at: string
+          id: string
+          school_id: string
+          students_affected: number
+          subject_id: string | null
+          topic: string
+        }
+        Insert: {
+          avg_score?: number | null
+          captured_at?: string
+          id?: string
+          school_id: string
+          students_affected?: number
+          subject_id?: string | null
+          topic: string
+        }
+        Update: {
+          avg_score?: number | null
+          captured_at?: string
+          id?: string
+          school_id?: string
+          students_affected?: number
+          subject_id?: string | null
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "school_kernel_snapshots_school_id_fkey"
             columns: ["school_id"]
             isOneToOne: false
             referencedRelation: "schools"
@@ -5986,7 +6102,22 @@ export type Database = {
           used: number
         }[]
       }
+      class_topic_affected_students: {
+        Args: { _class_id: string; _topic: string }
+        Returns: {
+          attempts: number
+          email: string
+          ewma_score_pct: number
+          full_name: string
+          last_event_at: string
+          mastery_pct: number
+          risk_level: string
+          student_id: string
+        }[]
+      }
       current_school_ids: { Args: never; Returns: string[] }
+      detect_kernel_alerts: { Args: { _school_id: string }; Returns: number }
+      detect_kernel_alerts_all: { Args: never; Returns: number }
       expire_stale_topic_sessions: { Args: never; Returns: number }
       generate_allocation_bookings: {
         Args: { p_allocation_id: string }
@@ -6216,6 +6347,18 @@ export type Database = {
         }
       }
       school_storage_used_mb: { Args: { _school_id: string }; Returns: number }
+      school_topic_affected_students: {
+        Args: { _school_id: string; _topic: string }
+        Returns: {
+          class_names: string
+          email: string
+          ewma_score_pct: number
+          full_name: string
+          mastery_pct: number
+          risk_level: string
+          student_id: string
+        }[]
+      }
       set_subscription_plan: {
         Args: { p_plan: string }
         Returns: {

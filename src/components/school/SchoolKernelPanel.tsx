@@ -1,15 +1,19 @@
 /**
  * SchoolKernelPanel — school-wide rollup of the Learning Kernel for admins.
  * Same risk-distribution + struggle/mastery view as the ClassKernelPanel,
- * but scoped to every active student in the school.
+ * but scoped to every active student in the school. Clicking a struggling
+ * topic opens a drill-down showing exactly which students need follow-up.
  */
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { AlertTriangle, TrendingUp, Users, Sparkles } from "lucide-react";
 import { useSchoolKernel } from "@/hooks/useSchoolKernel";
+import { TopicStudentsDialog } from "./TopicStudentsDialog";
 
 export function SchoolKernelPanel({ schoolId }: { schoolId: string }) {
+  const [drillTopic, setDrillTopic] = useState<string | null>(null);
   const { data, isLoading } = useSchoolKernel(schoolId);
 
   if (isLoading) {
@@ -74,7 +78,14 @@ export function SchoolKernelPanel({ schoolId }: { schoolId: string }) {
                   <ul className="space-y-1">
                     {topStruggles.map((t) => (
                       <li key={`${t.subject_id}-${t.topic}`} className="flex items-center justify-between gap-2 text-xs rounded-md bg-background/60 px-2 py-1.5">
-                        <span className="truncate font-medium">{t.topic}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDrillTopic(t.topic)}
+                          className="truncate font-medium text-left hover:underline flex-1 min-w-0"
+                          title="See affected students across the school"
+                        >
+                          {t.topic}
+                        </button>
                         <span className="text-muted-foreground whitespace-nowrap">{t.studentsAffected} · {Math.round(t.avgScore)}%</span>
                       </li>
                     ))}
@@ -102,6 +113,14 @@ export function SchoolKernelPanel({ schoolId }: { schoolId: string }) {
           </>
         )}
       </CardContent>
+
+      <TopicStudentsDialog
+        open={!!drillTopic}
+        onOpenChange={(v) => !v && setDrillTopic(null)}
+        scope="school"
+        scopeId={schoolId}
+        topic={drillTopic}
+      />
     </Card>
   );
 }
