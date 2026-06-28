@@ -21,8 +21,17 @@ function useSchoolClassesLite(schoolId?: string) {
     queryKey: ["school-classes-lite", schoolId],
     enabled: !!schoolId,
     queryFn: async () => {
-      const { data } = await supabase.from("classes").select("id,name,subject_id").eq("school_id", schoolId!);
-      return data ?? [];
+      const [clsRes, csRes] = await Promise.all([
+        supabase.from("classes").select("id,name").eq("school_id", schoolId!),
+        supabase.from("class_subjects").select("class_id,subject_id").eq("school_id", schoolId!),
+      ]);
+      const subjectByClass = new Map<string, string[]>();
+      for (const cs of (csRes.data ?? []) as any[]) {
+        const arr = subjectByClass.get(cs.class_id) ?? [];
+        arr.push(cs.subject_id);
+        subjectByClass.set(cs.class_id, arr);
+      }
+      return ((clsRes.data ?? []) as any[]).map((c) => ({ ...c, subject_ids: subjectByClass.get(c.id) ?? [] }));
     },
   });
 }
@@ -37,8 +46,8 @@ export function KernelAlertsPanel({ schoolId }: { schoolId: string }) {
   const list = (alerts.data ?? []) as KernelAlertRow[];
 
   const goAssign = (a: KernelAlertRow) => {
-    // Pick the first class that matches the alert subject, fallback to first.
-    const cls = (classes.data ?? []).find((c: any) => c.subject_id === a.subject_id) ?? (classes.data ?? [])[0];
+    const all = (classes.data ?? []) as any[];
+    const cls = all.find((c) => a.subject_id && c.subject_ids.includes(a.subject_id)) ?? all[0];
     if (!cls) return;
     navigate(`/school/${schoolId}/classes/${cls.id}?tab=homework`);
     setTimeout(() => {
