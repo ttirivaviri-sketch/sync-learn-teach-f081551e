@@ -72,8 +72,16 @@ serve(async (req) => {
       due_at: due_at ?? null, total_marks: totalMarks,
       auto_release_grades: autoGrades, auto_release_feedback: autoFeedback,
       status: startStatus,
+      is_remediation: is_remediation === true,
+      remediation_topic: remediation_topic ?? (is_remediation ? topic ?? null : null),
     }).select().single();
     if (hwErr || !hw) return errorResponse(`Homework insert failed: ${hwErr?.message}`, 500);
+
+    if (kernel_alert_id) {
+      await auth.svc.from("kernel_alerts")
+        .update({ status: "assigned", assigned_homework_id: hw.id, acknowledged_by: auth.userId, acknowledged_at: new Date().toISOString() })
+        .eq("id", kernel_alert_id);
+    }
 
     const qRows = questions.map((q, i) => ({
       homework_id: hw.id, school_id, ord: i,
