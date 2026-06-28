@@ -78,7 +78,14 @@ export function SchoolKernelPanel({ schoolId }: { schoolId: string }) {
                   <ul className="space-y-1">
                     {topStruggles.map((t) => (
                       <li key={`${t.subject_id}-${t.topic}`} className="flex items-center justify-between gap-2 text-xs rounded-md bg-background/60 px-2 py-1.5">
-                        <span className="truncate font-medium">{t.topic}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDrillTopic(t.topic)}
+                          className="truncate font-medium text-left hover:underline flex-1 min-w-0"
+                          title="See affected students across the school"
+                        >
+                          {t.topic}
+                        </button>
                         <span className="text-muted-foreground whitespace-nowrap">{t.studentsAffected} · {Math.round(t.avgScore)}%</span>
                       </li>
                     ))}
