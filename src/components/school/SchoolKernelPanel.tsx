@@ -113,6 +113,14 @@ export function SchoolKernelPanel({ schoolId }: { schoolId: string }) {
           </>
         )}
       </CardContent>
+
+      <TopicStudentsDialog
+        open={!!drillTopic}
+        onOpenChange={(v) => !v && setDrillTopic(null)}
+        scope="school"
+        scopeId={schoolId}
+        topic={drillTopic}
+      />
     </Card>
   );
 }
