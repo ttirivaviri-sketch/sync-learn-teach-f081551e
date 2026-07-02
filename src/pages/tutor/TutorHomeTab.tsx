@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { TeacherWorkspaceBanner } from "@/components/school/TeacherWorkspaceBanner";
+import { TutorWorkspaceLinkCard } from "@/components/school/TutorWorkspaceLinkCard";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface TodayStats {
@@ -107,6 +108,8 @@ export const TutorHomeTab = ({
 
       {/* Teacher workspace shortcut (visible only to school teachers/admins) */}
       <TeacherWorkspaceBanner />
+      <TutorWorkspaceLinkCard />
+
 
 
 
