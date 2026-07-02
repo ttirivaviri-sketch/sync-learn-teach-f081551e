@@ -13,6 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
 import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
 import { NextActionCard } from "@/components/learner/NextActionCard";
+import { MasteryIntelligenceCard } from "@/components/learner/MasteryIntelligenceCard";
 import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
@@ -115,6 +116,9 @@ export const LearnerHomeTab = ({
 
     {/* School Workspace banner — only renders for school-enrolled learners */}
     <SchoolWorkspaceBanner />
+
+    {/* Mastery intelligence — top strengths and at-risk topics from learner_state */}
+    <MasteryIntelligenceCard />
 
     {/* Smart contextual suggestion from learning gaps */}
     <SmartSuggestionStrip
