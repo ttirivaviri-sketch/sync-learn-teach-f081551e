@@ -23,6 +23,8 @@ const LearnerOnboarding = lazy(() => import("./pages/LearnerOnboarding"));
 const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
 const PaymentCancelled = lazy(() => import("./pages/PaymentCancelled"));
 const AdminAuth = lazy(() => import("./pages/AdminAuth"));
+const TeacherCommandCenterPage = lazy(() => import("./pages/TeacherCommandCenterPage"));
+const SchoolAdminPage = lazy(() => import("./pages/SchoolAdminPage"));
 
 // Admin sub-pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
@@ -117,6 +119,10 @@ const App = () => (
               {/* Payment routes */}
               <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+
+              {/* Learning Operating System entry points */}
+              <Route path="/teacher" element={<TeacherCommandCenterPage />} />
+              <Route path="/school" element={<SchoolAdminPage />} />
 
               {/* Admin routes */}
               <Route path="/admin/auth" element={<AdminAuth />} />
