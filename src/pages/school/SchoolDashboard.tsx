@@ -51,6 +51,7 @@ export default function SchoolDashboard() {
       <SchoolKernelPanel schoolId={school.id} />
       <KernelAlertsPanel schoolId={school.id} />
       <RemediationTrackerPanel schoolId={school.id} />
+      <RemediationEffectivenessPanel schoolId={school.id} />
 
       <Card className="p-5">
         <h2 className="font-medium mb-1">Getting started</h2>
