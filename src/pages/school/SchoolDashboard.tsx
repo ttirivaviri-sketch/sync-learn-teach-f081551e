@@ -12,6 +12,7 @@ export default function SchoolDashboard() {
   const { school } = useOutletContext<{ school: School }>();
   const members = useSchoolMemberships(school.id);
   const invitations = useSchoolInvitations(school.id);
+  useSchoolKernelRealtime(school.id);
 
   const teachers = (members.data ?? []).filter((m) => m.role === "school_teacher").length;
   const students = (members.data ?? []).filter((m) => m.role === "school_student").length;
