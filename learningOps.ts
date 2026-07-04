@@ -19,7 +19,11 @@ import {
   losFrom,
   losSupabase,
   losView,
+  type LosAutomationCadence,
+  type LosAutomationJobName,
   type LosAutomationRunRow,
+  type LosAutomationScheduleRow,
+  type LosConceptIngestionStagingRow,
   type LosConceptTrendRow,
   type LosInterventionOutcomeRow,
   type LosInterventionQueueRow,
@@ -37,6 +41,9 @@ import {
   type LosWorkspaceRow,
   type LosWorkspaceType,
 } from '@/integrations/supabase/learning-os-types';
+
+export type AutomationJobName = LosAutomationJobName;
+export type AutomationCadence = LosAutomationCadence;
 
 // Re-export the canonical LOS types so consumers can import everything from one place.
 export type WorkspaceRole = LosWorkspaceRole;
@@ -1120,6 +1127,240 @@ export async function loadTeacherCommandCenter(workspaceId: string): Promise<Tea
       createdAt: row.created_at,
     })),
   };
+}
+
+// ─── Phase 3.1: automation runtime ───────────────────────────────────────────
+
+export interface AutomationScheduleSummary {
+  id: string;
+  jobName: AutomationJobName;
+  cadence: AutomationCadence;
+  enabled: boolean;
+  lastRunAt: string | null;
+  lastStatus: 'succeeded' | 'failed' | 'partial' | null;
+  lastError: string | null;
+  nextRunAt: string | null;
+}
+
+export async function loadAutomationSchedule(workspaceId: string): Promise<AutomationScheduleSummary[]> {
+  const { data, error } = await losFrom('learning_ops_automation_schedule')
+    .select('id, job_name, cadence, enabled, last_run_at, last_status, last_error, next_run_at')
+    .eq('workspace_id', workspaceId)
+    .order('job_name', { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    jobName: row.job_name,
+    cadence: row.cadence,
+    enabled: row.enabled,
+    lastRunAt: row.last_run_at,
+    lastStatus: row.last_status,
+    lastError: row.last_error,
+    nextRunAt: row.next_run_at,
+  }));
+}
+
+export async function upsertAutomationSchedule(args: {
+  workspaceId: string;
+  jobName: AutomationJobName;
+  cadence: AutomationCadence;
+  enabled?: boolean;
+}): Promise<AutomationScheduleSummary> {
+  const { data, error } = await losFrom('learning_ops_automation_schedule')
+    .upsert(
+      {
+        workspace_id: args.workspaceId,
+        job_name: args.jobName,
+        cadence: args.cadence,
+        enabled: args.enabled ?? true,
+      },
+      { onConflict: 'workspace_id,job_name' },
+    )
+    .select('id, job_name, cadence, enabled, last_run_at, last_status, last_error, next_run_at')
+    .single();
+
+  if (error) throw error;
+
+  return {
+    id: data.id,
+    jobName: data.job_name,
+    cadence: data.cadence,
+    enabled: data.enabled,
+    lastRunAt: data.last_run_at,
+    lastStatus: data.last_status,
+    lastError: data.last_error,
+    nextRunAt: data.next_run_at,
+  };
+}
+
+export async function runNightlyInterventionSweep(workspaceId: string) {
+  const { data, error } = await losSupabase.rpc('run_nightly_intervention_sweep', {
+    p_workspace_id: workspaceId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export async function runWeeklyCohortRollup(workspaceId: string) {
+  const { data, error } = await losSupabase.rpc('run_weekly_cohort_rollup', {
+    p_workspace_id: workspaceId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+// ─── Phase 3.1: concept ingestion staging ────────────────────────────────────
+
+export interface ConceptIngestionCandidate {
+  conceptName: string;
+  subtopicName?: string | null;
+  prerequisites?: string[];
+  commandWords?: string[];
+  objectiveType?: ObjectiveType;
+  confidence?: number;
+}
+
+export interface StagedConceptRecord {
+  id: string;
+  workspaceId: string | null;
+  sourceDocumentId: string | null;
+  sourceKind: 'syllabus' | 'past_paper' | 'notes' | 'manual' | 'topic_seed';
+  subjectId: string | null;
+  subjectName: string;
+  topicName: string;
+  conceptName: string;
+  subtopicName: string | null;
+  prerequisites: string[];
+  commandWords: string[];
+  confidence: number;
+  status: 'pending' | 'approved' | 'rejected' | 'promoted';
+  reviewNote: string | null;
+  reviewedAt: string | null;
+  promotedCatalogId: string | null;
+  createdAt: string;
+}
+
+function toStagedRecord(row: LosConceptIngestionStagingRow): StagedConceptRecord {
+  return {
+    id: row.id,
+    workspaceId: row.workspace_id,
+    sourceDocumentId: row.source_document_id,
+    sourceKind: row.source_kind,
+    subjectId: row.subject_id,
+    subjectName: row.subject_name,
+    topicName: row.topic_name,
+    conceptName: row.concept_name,
+    subtopicName: row.subtopic_name,
+    prerequisites: row.prerequisites ?? [],
+    commandWords: row.command_words ?? [],
+    confidence: Number(row.confidence ?? 0),
+    status: row.status,
+    reviewNote: row.review_note,
+    reviewedAt: row.reviewed_at,
+    promotedCatalogId: row.promoted_catalog_id,
+    createdAt: row.created_at,
+  };
+}
+
+export async function stageConceptIngestionBatch(args: {
+  workspaceId: string | null;
+  sourceDocumentId?: string | null;
+  sourceKind: 'syllabus' | 'past_paper' | 'notes' | 'manual' | 'topic_seed';
+  curriculum: string;
+  subjectId?: string | null;
+  subjectName: string;
+  topicName: string;
+  candidates: ConceptIngestionCandidate[];
+}): Promise<{ staged: number; records: StagedConceptRecord[] }> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const rows = args.candidates
+    .filter((candidate) => candidate.conceptName && candidate.conceptName.trim().length > 0)
+    .map((candidate) => ({
+      workspace_id: args.workspaceId,
+      submitted_by_user_id: user?.id ?? null,
+      source_document_id: args.sourceDocumentId ?? null,
+      source_kind: args.sourceKind,
+      curriculum: args.curriculum,
+      subject_id: args.subjectId ?? null,
+      subject_name: args.subjectName,
+      topic_name: args.topicName,
+      subtopic_name: candidate.subtopicName ?? candidate.conceptName,
+      concept_name: candidate.conceptName.trim(),
+      objective_type: candidate.objectiveType ?? 'knowledge',
+      command_words: dedupe(candidate.commandWords ?? []),
+      prerequisites: dedupe(candidate.prerequisites ?? []),
+      confidence: Math.max(0, Math.min(1, candidate.confidence ?? 0.6)),
+    }));
+
+  if (rows.length === 0) return { staged: 0, records: [] };
+
+  const { data, error } = await losFrom('learning_concept_ingestion_staging')
+    .insert(rows)
+    .select('*');
+
+  if (error) throw error;
+
+  const records = (data ?? []).map(toStagedRecord);
+  return { staged: records.length, records };
+}
+
+export async function loadStagedConceptIngestions(args: {
+  workspaceId: string | null;
+  status?: 'pending' | 'approved' | 'rejected' | 'promoted';
+  limit?: number;
+}): Promise<StagedConceptRecord[]> {
+  let query = losFrom('learning_concept_ingestion_staging')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(args.limit ?? 50);
+
+  if (args.workspaceId) {
+    query = query.eq('workspace_id', args.workspaceId);
+  } else {
+    query = query.is('workspace_id', null);
+  }
+  if (args.status) {
+    query = query.eq('status', args.status);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  return (data ?? []).map(toStagedRecord);
+}
+
+export async function reviewStagedConceptIngestion(args: {
+  stagingId: string;
+  status: 'approved' | 'rejected';
+  reviewNote?: string;
+}): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { error } = await losFrom('learning_concept_ingestion_staging')
+    .update({
+      status: args.status,
+      review_note: args.reviewNote ?? null,
+      reviewed_by_user_id: user?.id ?? null,
+      reviewed_at: new Date().toISOString(),
+    })
+    .eq('id', args.stagingId);
+
+  if (error) throw error;
+}
+
+export async function promoteStagedConceptIngestion(stagingId: string): Promise<string> {
+  const { data, error } = await losSupabase.rpc('promote_concept_ingestion', {
+    p_staging_id: stagingId,
+  });
+  if (error) throw error;
+  return data;
 }
 
 // Re-export the typed client for advanced callsites if they need it.

@@ -30,6 +30,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useSchoolWorkspace } from '../hooks/useSchoolWorkspace';
 import type { WorkspaceRole } from '../lib/learningOps';
+import { ConceptIngestionPanel } from './ConceptIngestionPanel';
 
 function formatDate(value?: string | null) {
   if (!value) return '—';
@@ -320,6 +321,8 @@ export function SchoolAdminConsole() {
           </div>
         </div>
       )}
+
+      <ConceptIngestionPanel workspaceId={workspace.id} canManage={canManage} />
 
       <div className="rounded-2xl border border-border bg-card p-5 space-y-3">
         <div className="flex items-center justify-between gap-3">

@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useTeacherCommandCenter } from '../hooks/useTeacherCommandCenter';
 import type { WorkspaceRole } from '../lib/learningOps';
+import { AutomationControlPanel } from './AutomationControlPanel';
 
 function severityClass(priority: 'high' | 'medium' | 'low') {
   if (priority === 'high') return 'border-destructive/30 bg-destructive/10 text-destructive';
@@ -69,11 +70,13 @@ export function TeacherCommandCenter() {
     isLoading,
     error,
     refresh,
+    workspaceId,
     acknowledgeIntervention,
     resolveIntervention,
     dismissIntervention,
     reassignIntervention,
   } = useTeacherCommandCenter();
+  const canManageAutomation = role === 'owner' || role === 'admin' || role === 'teacher';
   const { toast } = useToast();
   const [busyId, setBusyId] = useState<string | null>(null);
   const [cohortFilter, setCohortFilter] = useState<string>('all');
@@ -234,6 +237,8 @@ export function TeacherCommandCenter() {
           </div>
         )}
       </div>
+
+      <AutomationControlPanel workspaceId={workspaceId} canManage={canManageAutomation} />
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="rounded-2xl bg-card border border-border p-5 space-y-3">

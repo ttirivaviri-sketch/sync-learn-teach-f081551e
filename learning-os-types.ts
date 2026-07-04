@@ -291,6 +291,67 @@ export type LosAutomationRunInsert = Partial<LosAutomationRunRow> & {
   job_name: string;
 };
 
+export type LosAutomationJobName =
+  | 'nightly_intervention_sweep'
+  | 'weekly_cohort_rollup'
+  | 'guardian_digest'
+  | 'concept_ingestion';
+
+export type LosAutomationCadence = 'daily' | 'weekly' | 'manual';
+
+export interface LosAutomationScheduleRow {
+  id: string;
+  workspace_id: string | null;
+  job_name: LosAutomationJobName;
+  cadence: LosAutomationCadence;
+  enabled: boolean;
+  last_run_at: string | null;
+  last_status: 'succeeded' | 'failed' | 'partial' | null;
+  last_error: string | null;
+  next_run_at: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LosAutomationScheduleInsert = Partial<LosAutomationScheduleRow> & {
+  job_name: LosAutomationJobName;
+};
+
+export interface LosConceptIngestionStagingRow {
+  id: string;
+  workspace_id: string | null;
+  submitted_by_user_id: string | null;
+  source_document_id: string | null;
+  source_kind: 'syllabus' | 'past_paper' | 'notes' | 'manual' | 'topic_seed';
+  curriculum: string;
+  subject_id: string | null;
+  subject_name: string;
+  topic_name: string;
+  concept_name: string;
+  subtopic_name: string | null;
+  objective_type: string;
+  command_words: string[];
+  prerequisites: string[];
+  confidence: number;
+  status: 'pending' | 'approved' | 'rejected' | 'promoted';
+  review_note: string | null;
+  reviewed_by_user_id: string | null;
+  reviewed_at: string | null;
+  promoted_catalog_id: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LosConceptIngestionStagingInsert = Partial<LosConceptIngestionStagingRow> & {
+  source_kind: LosConceptIngestionStagingRow['source_kind'];
+  curriculum: string;
+  subject_name: string;
+  topic_name: string;
+  concept_name: string;
+};
+
 export interface LosConceptTrendRow {
   user_id: string;
   subject_id: string | null;
@@ -336,6 +397,18 @@ export interface LearningOpsFunctions {
   accept_workspace_invitation: {
     Args: { p_token: string };
     Returns: string;
+  };
+  promote_concept_ingestion: {
+    Args: { p_staging_id: string };
+    Returns: string;
+  };
+  run_nightly_intervention_sweep: {
+    Args: { p_workspace_id: string };
+    Returns: Json;
+  };
+  run_weekly_cohort_rollup: {
+    Args: { p_workspace_id: string };
+    Returns: Json;
   };
 }
 
@@ -396,6 +469,16 @@ export interface LearningOpsTables {
     Row: LosAutomationRunRow;
     Insert: LosAutomationRunInsert;
     Update: Partial<LosAutomationRunRow>;
+  };
+  learning_ops_automation_schedule: {
+    Row: LosAutomationScheduleRow;
+    Insert: LosAutomationScheduleInsert;
+    Update: Partial<LosAutomationScheduleRow>;
+  };
+  learning_concept_ingestion_staging: {
+    Row: LosConceptIngestionStagingRow;
+    Insert: LosConceptIngestionStagingInsert;
+    Update: Partial<LosConceptIngestionStagingRow>;
   };
 }
 
