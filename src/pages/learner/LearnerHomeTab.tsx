@@ -14,6 +14,7 @@ import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner
 import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
 import { NextActionCard } from "@/components/learner/NextActionCard";
 import { MasteryIntelligenceCard } from "@/components/learner/MasteryIntelligenceCard";
+import { WeeklyDigestCard } from "@/components/learner/WeeklyDigestCard";
 import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
@@ -119,6 +120,9 @@ export const LearnerHomeTab = ({
 
     {/* Mastery intelligence — top strengths and at-risk topics from learner_state */}
     <MasteryIntelligenceCard />
+
+    {/* 7-day weekly digest — momentum snapshot */}
+    <WeeklyDigestCard />
 
     {/* Smart contextual suggestion from learning gaps */}
     <SmartSuggestionStrip

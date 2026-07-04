@@ -5,6 +5,8 @@ import { useSchoolMemberships, useSchoolInvitations, type School } from "@/hooks
 import { SchoolKernelPanel } from "@/components/school/SchoolKernelPanel";
 import { KernelAlertsPanel } from "@/components/school/KernelAlertsPanel";
 import { RemediationTrackerPanel } from "@/components/school/RemediationTrackerPanel";
+import { RemediationEffectivenessPanel } from "@/components/school/RemediationEffectivenessPanel";
+import { useSchoolKernelRealtime } from "@/hooks/useSchoolKernelRealtime";
 
 export default function SchoolDashboard() {
   const { school } = useOutletContext<{ school: School }>();
