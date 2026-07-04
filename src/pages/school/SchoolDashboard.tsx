@@ -5,11 +5,14 @@ import { useSchoolMemberships, useSchoolInvitations, type School } from "@/hooks
 import { SchoolKernelPanel } from "@/components/school/SchoolKernelPanel";
 import { KernelAlertsPanel } from "@/components/school/KernelAlertsPanel";
 import { RemediationTrackerPanel } from "@/components/school/RemediationTrackerPanel";
+import { RemediationEffectivenessPanel } from "@/components/school/RemediationEffectivenessPanel";
+import { useSchoolKernelRealtime } from "@/hooks/useSchoolKernelRealtime";
 
 export default function SchoolDashboard() {
   const { school } = useOutletContext<{ school: School }>();
   const members = useSchoolMemberships(school.id);
   const invitations = useSchoolInvitations(school.id);
+  useSchoolKernelRealtime(school.id);
 
   const teachers = (members.data ?? []).filter((m) => m.role === "school_teacher").length;
   const students = (members.data ?? []).filter((m) => m.role === "school_student").length;
@@ -48,6 +51,7 @@ export default function SchoolDashboard() {
       <SchoolKernelPanel schoolId={school.id} />
       <KernelAlertsPanel schoolId={school.id} />
       <RemediationTrackerPanel schoolId={school.id} />
+      <RemediationEffectivenessPanel schoolId={school.id} />
 
       <Card className="p-5">
         <h2 className="font-medium mb-1">Getting started</h2>

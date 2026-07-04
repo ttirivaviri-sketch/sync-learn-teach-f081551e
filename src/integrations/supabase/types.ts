@@ -2904,6 +2904,54 @@ export type Database = {
           },
         ]
       }
+      remediation_baselines: {
+        Row: {
+          baseline_ewma: number | null
+          baseline_risk: string | null
+          captured_at: string
+          homework_id: string
+          id: string
+          school_id: string
+          student_id: string
+          topic: string
+        }
+        Insert: {
+          baseline_ewma?: number | null
+          baseline_risk?: string | null
+          captured_at?: string
+          homework_id: string
+          id?: string
+          school_id: string
+          student_id: string
+          topic: string
+        }
+        Update: {
+          baseline_ewma?: number | null
+          baseline_risk?: string | null
+          captured_at?: string
+          homework_id?: string
+          id?: string
+          school_id?: string
+          student_id?: string
+          topic?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remediation_baselines_homework_id_fkey"
+            columns: ["homework_id"]
+            isOneToOne: false
+            referencedRelation: "school_homework"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "remediation_baselines_school_id_fkey"
+            columns: ["school_id"]
+            isOneToOne: false
+            referencedRelation: "schools"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           booking_id: string | null
@@ -6081,6 +6129,7 @@ export type Database = {
           total_regens: number
         }[]
       }
+      auto_resolve_kernel_alerts: { Args: never; Returns: number }
       check_and_increment_ai_usage: {
         Args: {
           _amount?: number
@@ -6225,6 +6274,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      learner_weekly_digest: {
+        Args: { _user_id: string }
+        Returns: {
+          avg_score_7d: number
+          events_7d: number
+          top_strength: string
+          top_struggle: string
+          topics_at_risk: number
+          topics_mastered: number
+        }[]
+      }
       log_security_event: {
         Args: {
           _action: string
@@ -6309,6 +6369,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      remediation_effectiveness: {
+        Args: { _school_id: string }
+        Returns: {
+          avg_delta: number
+          avg_ewma_after: number
+          avg_ewma_before: number
+          class_id: string
+          created_at: string
+          homework_id: string
+          students_improved: number
+          students_total: number
+          students_worsened: number
+          title: string
+          topic: string
+        }[]
       }
       request_tutor_withdrawal: {
         Args: {
