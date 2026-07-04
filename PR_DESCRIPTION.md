@@ -1,95 +1,122 @@
-# feat(learning-ops): Phase 3.1 — automation runtime + document-to-concept ingestion
+# feat(learning-ops): Phase 3.2 — prerequisite DAG, predictive risk, per-teacher routing, plan optimizer, class detail
 
 ## Summary
 
-Phase 3.1 turns the automation and concept-graph surfaces shipped in Phase 3 into an **executable, closed-loop runtime**, so schools can actually schedule, run, audit, and act on LOS jobs — and grow the concept graph from real documents with provenance and human review.
+Phase 3.2 hits five of the ten open items from the "Still remaining for full shipment" list, delivered as a coherent LOS increment:
 
-**Highlights**
+- **#3 Prerequisite/knowledge graph** — real DAG edges + recursive upstream traversal
+- **#4 Predictive risk (7-day forward)** — EWMA/slope-based projected risk view
+- **#2 Per-teacher alert routing** — assigns open interventions to cohort lead teachers
+- **#5 Study plan optimizer** — nightly-capable job that stages plan proposals for review
+- **#7 Teacher command center parity for classes** — new `/teacher/class/:cohortId` surface
 
-- **Automation runtime.** New per-workspace `learning_ops_automation_schedule` (cadence + enabled + next_run_at) plus SECURITY DEFINER RPCs (`run_nightly_intervention_sweep`, `run_weekly_cohort_rollup`) that both do the work and write into `learning_ops_automation_runs` so the Teacher Command Center's cadence panel becomes a real audit trail.
-- **`run-learning-ops-automation` edge function.** Single entry point invoked either from pg_cron (autopilot: picks every enabled + due job across every workspace) or from the UI (targeted: `{ workspace_id, job }`). Handles `nightly_intervention_sweep`, `weekly_cohort_rollup`, and `guardian_digest` (delegates to `send-guardian-report`).
-- **Document-to-concept ingestion.** New `learning_concept_ingestion_staging` table (staging → review → promotion), with RLS restricted to submitters + workspace admins/teachers. Ingestion never writes directly to `learning_concept_catalog` — it goes through review.
-- **`ingest-document-concepts` edge function.** Reads a processed `documents.parsed_content` row (tolerating multiple parser shapes) and stages concept candidates with per-candidate `confidence`, prerequisites, and full provenance (`source_document_id`, `source_kind`).
-- **`promote_concept_ingestion(uuid)` RPC.** Atomically promotes a staged row into `learning_concept_catalog` with `on conflict` upsert on `(curriculum, subject_name, topic_name, subtopic_name, concept_name)` and marks the staging row `promoted`.
-- **Typed LOS surface expanded.** `learning-os-types.ts` now types the new tables and RPCs; `losFrom()` and `losSupabase.rpc(...)` remain the sole typed access points — **no new `as any` casts anywhere**.
-- **UI wiring.** New `AutomationControlPanel` mounted inside `TeacherCommandCenter` (change cadence, enable/disable, run-now, last-run status). New `ConceptIngestionPanel` mounted inside `SchoolAdminConsole` (pick a processed document, run extraction, review pending, approve/reject/promote).
+Everything wires into the existing Phase 3.1 automation runtime, so it's schedulable, auditable, and available from both UI and cron.
 
 ## Migration
 
-`supabase/migrations/20260702101500_learning_ops_phase3_1_automation_runtime_and_ingestion.sql`
+`supabase/migrations/20260705093000_learning_ops_phase3_2_dag_predictive_risk_class_scoped.sql`
 
-Adds:
+1. **`learning_concept_prerequisite_edges`** — DAG edges over `learning_concept_catalog` with `weight`, `source_kind` (`manual` / `ingested` / `inferred` / `template`), RLS (all authenticated read, staff manage), and a `no_self_edge` check constraint.
+2. **`materialize_concept_prerequisite_edges(subject_name?)`** — resolves `learning_concept_catalog.prerequisites text[]` (Phase 3 provenance data) into real graph edges by matching concept names within the same subject + curriculum. Idempotent via `on conflict do nothing`.
+3. **`get_upstream_prerequisites(concept_id, max_depth)`** — recursive CTE walking upstream through the DAG, returning `(concept_id, concept_name, subject_name, topic_name, depth, weight)` up to `max_depth` (default 3).
+4. **`learner_projected_risk` view** — 14-day per-user/per-subject rollup with:
+   - `recent_avg_delta` (mastery ledger `score_delta`)
+   - `slope_per_day` (covariance-based slope over the 14-day window)
+   - `avg_confidence`
+   - `projected_risk` (0..100, higher = worse) = `50 − avg_delta·1.4 − slope·20 − avg_confidence·20 + evidence_penalty`
+5. **`learning_class_at_risk` view** — cohort × learner rollup joining projected risk with open intervention counts, so class detail can render one row per learner.
+6. **`workspace_class_teachers(workspace_id, user_ids?)`** — returns `(user_id, cohort_id, teacher_user_id)` mapping learners to their cohort's `lead_user_id`.
+7. **`route_interventions_to_teachers(workspace_id)`** — assigns `assigned_to_user_id = teacher_user_id` and `assigned_role = 'teacher'` on every open/acknowledged intervention where the learner has a cohort lead. Idempotent.
+8. **`learning_ops_plan_proposals`** — staging table for optimizer output (`user_id`, `subject_name`, `topic_name`, `proposed_for`, `duration_minutes`, `reason`, `projected_risk`, `status`, `applied_schedule_id`). RLS: learners see their own; workspace staff see all in their workspace.
+9. **`run_study_plan_optimizer(workspace_id)`** — writes proposals from (a) open interventions (weighted by priority) and (b) learners with `projected_risk ≥ 65`. Deduped on `(user_id, subject_name, topic_name, proposed_for=tomorrow, status='proposed')`. Emits a `study_plan_optimizer` run into `learning_ops_automation_runs` for cadence audit.
+10. Grants for `authenticated` on all new RPCs and views.
 
-1. `learning_ops_automation_schedule` (`workspace_id`, `job_name`, `cadence`, `enabled`, `last_run_at`, `last_status`, `last_error`, `next_run_at`) with unique `(workspace_id, job_name)`, RLS, admin-manage policy, `set_timestamp` trigger.
-2. `learning_concept_ingestion_staging` (`workspace_id`, `source_document_id`, `source_kind`, `curriculum`, `subject_*`, `topic_name`, `concept_name`, `subtopic_name`, `objective_type`, `command_words`, `prerequisites`, `confidence`, `status`, `review_note`, `reviewed_by_user_id`, `reviewed_at`, `promoted_catalog_id`) with staging RLS and workspace-scoped indexes.
-3. RPCs: `record_automation_run_start`, `record_automation_run_finish` (updates schedule too), `promote_concept_ingestion`, `run_nightly_intervention_sweep`, `run_weekly_cohort_rollup`.
-4. Grants for `authenticated` on the new RPCs.
+## Automation runtime — new jobs
 
-The nightly sweep auto-resolves interventions older than 21 days with zero post-evidence and updates `learning_ops_automation_runs` counts. The weekly rollup aggregates cohort-level intervention pressure + 7-day mastery delta into `details` JSON so the cadence panel can display real numbers.
+`supabase/functions/run-learning-ops-automation/index.ts` now handles two additional jobs alongside the Phase 3.1 ones:
 
-## New surface
+- `study_plan_optimizer` — dispatches `run_study_plan_optimizer` and returns `proposals_created`
+- `route_interventions_to_teachers` — dispatches routing RPC, wrapped in `record_automation_run_start` / `record_automation_run_finish` so it appears in the cadence audit
 
-- Migration: `supabase/migrations/20260702101500_learning_ops_phase3_1_automation_runtime_and_ingestion.sql`
-- Edge functions:
-  - `supabase/functions/run-learning-ops-automation/index.ts`
-  - `supabase/functions/ingest-document-concepts/index.ts`
-- Service:
-  - `src/studymode/lib/learningOps.ts` (added: `loadAutomationSchedule`, `upsertAutomationSchedule`, `runNightlyInterventionSweep`, `runWeeklyCohortRollup`, `stageConceptIngestionBatch`, `loadStagedConceptIngestions`, `reviewStagedConceptIngestion`, `promoteStagedConceptIngestion`, plus `AutomationScheduleSummary`, `StagedConceptRecord`, `ConceptIngestionCandidate`)
-- Hooks:
-  - `src/studymode/hooks/useAutomationRuntime.ts`
-  - `src/studymode/hooks/useConceptIngestion.ts`
-- UI:
-  - `src/studymode/components/AutomationControlPanel.tsx` — mounted in `TeacherCommandCenter.tsx`
-  - `src/studymode/components/ConceptIngestionPanel.tsx` — mounted in `SchoolAdminConsole.tsx`
+`learning_ops_automation_schedule` now legally accepts these two `job_name` values, so cron-driven autopilot picks them up alongside the sweep and rollup jobs.
 
-## Type contract
+## Typed LOS surface
 
-`src/integrations/supabase/learning-os-types.ts`
+`src/integrations/supabase/learning-os-types.ts`:
 
-- Adds `LosAutomationScheduleRow` / `Insert`, `LosConceptIngestionStagingRow` / `Insert`, and `LosAutomationJobName` / `LosAutomationCadence` unions.
-- Registers `learning_ops_automation_schedule` and `learning_concept_ingestion_staging` in `LearningOpsTables`.
-- Declares `promote_concept_ingestion`, `run_nightly_intervention_sweep`, and `run_weekly_cohort_rollup` in `LearningOpsFunctions`, so `losSupabase.rpc()` is fully typed.
+- New unions: `LosAutomationJobName` extended with `study_plan_optimizer` and `route_interventions_to_teachers`
+- New row types: `LosPrerequisiteEdgeRow` / `Insert`, `LosPlanProposalRow` / `Insert`
+- New view types: `LosProjectedRiskRow`, `LosClassAtRiskRow` (added to `LearningOpsViews`)
+- Registered `learning_concept_prerequisite_edges` and `learning_ops_plan_proposals` in `LearningOpsTables`
+- New RPC declarations in `LearningOpsFunctions`: `materialize_concept_prerequisite_edges`, `get_upstream_prerequisites`, `route_interventions_to_teachers`, `run_study_plan_optimizer`
 
-## Cron wiring (recommended)
+No new `as any` casts. `losFrom()`, `losView()`, and `losSupabase.rpc()` remain the sole typed access points.
 
-```sql
--- Every night at 02:15 UTC
-select cron.schedule(
-  'los-nightly-automation',
-  '15 2 * * *',
-  $$
-    select net.http_post(
-      url := concat(current_setting('app.settings.supabase_url'), '/functions/v1/run-learning-ops-automation'),
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', concat('Bearer ', current_setting('app.settings.service_role_key'))
-      ),
-      body := '{}'::jsonb
-    );
-  $$
-);
-```
+## Service layer
 
-`run-learning-ops-automation` picks up every enabled + due `learning_ops_automation_schedule` row and executes it, so cadence stays a data concern — not a code concern.
+`src/studymode/lib/learningOps.ts` — added:
+
+- `materializeConceptPrerequisiteEdges(subjectName?)`
+- `loadUpstreamPrerequisites(conceptId, maxDepth=3)` returning `UpstreamPrerequisite[]`
+- `loadProjectedRiskForUsers(userIds)` returning `ProjectedRiskRow[]`
+- `loadClassAtRisk(workspaceId, cohortId?)` returning `ClassAtRiskRow[]`
+- `routeInterventionsToTeachers(workspaceId)` returning routed count
+- `runStudyPlanOptimizer(workspaceId)` returning RPC payload
+- `loadPlanProposals({ workspaceId?, userId?, status? })` returning `PlanProposalSummary[]`
+- `updatePlanProposalStatus({ proposalId, status })`
+
+## Hooks + UI
+
+- **`src/studymode/hooks/useClassAtRisk.ts`** — cohort-scoped risk load + route/optimize actions
+- **`src/studymode/hooks/usePlanProposals.ts`** — proposals list with accept/dismiss
+- **`src/studymode/components/TeacherClassDetail.tsx`** — class-scoped panel: KPI tiles (students, open interventions, high projected risk), roster with projected risk chips, plan proposals with accept/dismiss, action buttons for route + optimize
+- **`src/pages/TeacherClassDetailPage.tsx`** — mounted at `/teacher/class/:cohortId` with auth + workspace guard
+- **`src/App.tsx`** — new lazy import + route
+- **`src/studymode/components/AutomationControlPanel.tsx`** — `study_plan_optimizer` and `route_interventions_to_teachers` visible as first-class jobs in the automation panel
+
+## Gap analysis vs the 10 open items
+
+| # | Item | Status after 3.2 |
+|---|---|---|
+| 1 | Guardian portal (RLS + weekly digest cron) | Still open — planned for 3.3 |
+| 2 | Per-teacher alert routing | **✅ shipped** (`route_interventions_to_teachers` + automation job) |
+| 3 | Prerequisite/knowledge graph DAG | **✅ shipped** (edges table + traversal RPC + `materialize_concept_prerequisite_edges`) |
+| 4 | Predictive risk (7-day forward) | **✅ shipped** (`learner_projected_risk` view + service surface) |
+| 5 | Study plan optimizer | **✅ shipped** (`run_study_plan_optimizer` + proposals staging + accept/dismiss UI) |
+| 6 | Mobile density pass | Still open — planned for 3.3 |
+| 7 | Teacher command center parity in class detail | **✅ shipped** (`TeacherClassDetail` + `/teacher/class/:cohortId`) |
+| 8 | Cross-school SuperAdmin analytics | Still open — planned for 3.3 |
+| 9 | Instrumentation coverage audit | Still open — planned for 3.3 |
+| 10 | A/B evaluation with control cohort | Still open — planned for 3.3 |
 
 ## Validation
 
-- Full test suite passes: `node tests/suite.mjs` → **74 passed / 0 failed**
-- Section 12 (**Learning Operating System Phase 3.1**) adds 5 new tests:
-  1. Migration adds automation runtime + ingestion staging
-  2. LOS type contract exposes Phase 3.1 tables and RPCs
-  3. `learningOps` exposes the full service surface
-  4. Automation + ingestion edge functions exist and handle expected job types
-  5. Automation and ingestion panels are mounted in the dashboards + hook invokes the ingestion function
+Full test suite passes: `node tests/suite.mjs` → **79 passed / 0 failed**.
+
+Section 13 (**Learning Operating System Phase 3.2**) adds 5 new tests:
+1. Migration adds DAG, predictive risk, optimizer surface
+2. LOS type contract exposes Phase 3.2 tables, views, and RPCs
+3. `learningOps` exposes the Phase 3.2 service surface
+4. Automation runtime + hook handle the two new jobs
+5. Teacher class detail route and UI are mounted
+
+## Cron wiring (recommended)
+
+Add the two new jobs to your existing schedule. From your Supabase project SQL editor, per workspace you want on autopilot:
+
+```sql
+insert into public.learning_ops_automation_schedule (workspace_id, job_name, cadence, enabled)
+values
+  ('<workspace_uuid>', 'study_plan_optimizer',            'daily',  true),
+  ('<workspace_uuid>', 'route_interventions_to_teachers', 'daily',  true)
+on conflict (workspace_id, job_name) do update set enabled = excluded.enabled;
+```
+
+The existing `run-learning-ops-automation` cron already picks up every due schedule row — no additional cron entry required.
 
 ## Backwards compatibility
 
-- Existing invitation, mastery, and intervention data is untouched.
-- Automation and ingestion are opt-in: no schedule rows means no jobs run, and no ingestion happens until a document is explicitly submitted.
-- No `as any` casts introduced. `losFrom()` and `losSupabase.rpc(...)` remain the sole typed access points.
-
-## Next (Phase 3.2 preview)
-
-1. Concept-trend charts drilldown in the Teacher Command Center (per-concept confidence over time via the `learning_concept_trends` view).
-2. Intervention attribution UI — link resolved interventions to the concept + evidence that closed them.
-3. Guardian workspace deep link into cohort/intervention detail for opted-in guardians.
+- No columns dropped, no policies loosened.
+- New tables and views are additive.
+- The optimizer never overwrites `study_schedule` directly — it stages proposals; existing schedule logic is untouched.
+- No new `as any` casts.

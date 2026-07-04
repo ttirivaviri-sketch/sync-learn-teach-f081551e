@@ -1,46 +1,67 @@
-# Manual edits — Phase 3.1
+# Manual edits — Phase 3.2
 
-Only one file needs an in-place edit; everything else is a straight file copy from this bundle.
+Two files need in-place edits; everything else is a straight file copy.
 
 ---
 
-## `tests/suite.mjs`
+## 1) `src/App.tsx`
 
-Insert a new **Section 12** block immediately before the `SUMMARY` divider at the bottom of the file. Paste this exact block:
+Add the lazy import next to the existing LOS page imports:
+
+```diff
+ const SchoolInvitationPage = lazy(() => import("./pages/SchoolInvitationPage"));
++const TeacherClassDetailPage = lazy(() => import("./pages/TeacherClassDetailPage"));
+```
+
+And the route, right after `/school/join`:
+
+```diff
+               <Route path="/school/join" element={<SchoolInvitationPage />} />
++              <Route path="/teacher/class/:cohortId" element={<TeacherClassDetailPage />} />
+```
+
+---
+
+## 2) `tests/suite.mjs`
+
+Append a new Section 13 immediately before the SUMMARY divider:
 
 ```js
 // ─────────────────────────────────────────────────────────────────────────────
-// 12. LEARNING OPERATING SYSTEM PHASE 3.1
+// 13. LEARNING OPERATING SYSTEM PHASE 3.2
 // ─────────────────────────────────────────────────────────────────────────────
-suite('12. Learning Operating System Phase 3.1');
+suite('13. Learning Operating System Phase 3.2');
 
-await test('Phase 3.1 migration adds automation runtime and ingestion staging', () => {
-  const mig = readFileSync(path.join(__dirname, '../supabase/migrations/20260702101500_learning_ops_phase3_1_automation_runtime_and_ingestion.sql'), 'utf8');
+await test('Phase 3.2 migration adds DAG, predictive risk, and optimizer surface', () => {
+  const mig = readFileSync(path.join(__dirname, '../supabase/migrations/20260705093000_learning_ops_phase3_2_dag_predictive_risk_class_scoped.sql'), 'utf8');
   const required = [
-    'learning_ops_automation_schedule',
-    'learning_concept_ingestion_staging',
-    'record_automation_run_start',
-    'record_automation_run_finish',
-    'promote_concept_ingestion',
-    'run_nightly_intervention_sweep',
-    'run_weekly_cohort_rollup',
+    'learning_concept_prerequisite_edges',
+    'materialize_concept_prerequisite_edges',
+    'get_upstream_prerequisites',
+    'learner_projected_risk',
+    'learning_class_at_risk',
+    'route_interventions_to_teachers',
+    'run_study_plan_optimizer',
+    'learning_ops_plan_proposals',
   ];
   for (const marker of required) {
-    assert.ok(mig.includes(marker), `Missing Phase 3.1 marker: ${marker}`);
+    assert.ok(mig.includes(marker), `Missing Phase 3.2 marker: ${marker}`);
   }
   return Promise.resolve();
 });
 
-await test('LOS type contract exposes Phase 3.1 tables and RPCs', () => {
+await test('LOS type contract exposes Phase 3.2 tables, views, and RPCs', () => {
   const content = readFileSync(path.join(SRC_DIR, 'integrations/supabase/learning-os-types.ts'), 'utf8');
   const required = [
-    'learning_ops_automation_schedule',
-    'learning_concept_ingestion_staging',
-    'LosAutomationScheduleRow',
-    'LosConceptIngestionStagingRow',
-    'promote_concept_ingestion',
-    'run_nightly_intervention_sweep',
-    'run_weekly_cohort_rollup',
+    'learning_concept_prerequisite_edges',
+    'learning_ops_plan_proposals',
+    'learner_projected_risk',
+    'learning_class_at_risk',
+    'materialize_concept_prerequisite_edges',
+    'get_upstream_prerequisites',
+    'route_interventions_to_teachers',
+    'run_study_plan_optimizer',
+    'study_plan_optimizer',
   ];
   for (const marker of required) {
     assert.ok(content.includes(marker), `Missing LOS type marker: ${marker}`);
@@ -48,17 +69,17 @@ await test('LOS type contract exposes Phase 3.1 tables and RPCs', () => {
   return Promise.resolve();
 });
 
-await test('learningOps exposes automation + ingestion service surface', () => {
+await test('learningOps exposes Phase 3.2 service surface', () => {
   const content = readFileSync(path.join(SRC_DIR, 'studymode/lib/learningOps.ts'), 'utf8');
   const required = [
-    'export async function loadAutomationSchedule',
-    'export async function upsertAutomationSchedule',
-    'export async function runNightlyInterventionSweep',
-    'export async function runWeeklyCohortRollup',
-    'export async function stageConceptIngestionBatch',
-    'export async function loadStagedConceptIngestions',
-    'export async function reviewStagedConceptIngestion',
-    'export async function promoteStagedConceptIngestion',
+    'export async function materializeConceptPrerequisiteEdges',
+    'export async function loadUpstreamPrerequisites',
+    'export async function loadProjectedRiskForUsers',
+    'export async function loadClassAtRisk',
+    'export async function routeInterventionsToTeachers',
+    'export async function runStudyPlanOptimizer',
+    'export async function loadPlanProposals',
+    'export async function updatePlanProposalStatus',
   ];
   for (const marker of required) {
     assert.ok(content.includes(marker), `Missing LOS service marker: ${marker}`);
@@ -66,28 +87,23 @@ await test('learningOps exposes automation + ingestion service surface', () => {
   return Promise.resolve();
 });
 
-await test('Automation edge function and ingestion edge function exist', () => {
-  const automation = readFileSync(path.join(__dirname, '../supabase/functions/run-learning-ops-automation/index.ts'), 'utf8');
-  const ingestion = readFileSync(path.join(__dirname, '../supabase/functions/ingest-document-concepts/index.ts'), 'utf8');
-  assert.ok(automation.includes('nightly_intervention_sweep'), 'Automation function must handle nightly sweep');
-  assert.ok(automation.includes('weekly_cohort_rollup'), 'Automation function must handle weekly rollup');
-  assert.ok(automation.includes('guardian_digest'), 'Automation function must handle guardian digest');
-  assert.ok(ingestion.includes('learning_concept_ingestion_staging'), 'Ingestion function must write to staging table');
-  assert.ok(ingestion.includes('record_automation_run_start'), 'Ingestion function must log run start');
+await test('Automation runtime handles new Phase 3.2 jobs', () => {
+  const fn = readFileSync(path.join(__dirname, '../supabase/functions/run-learning-ops-automation/index.ts'), 'utf8');
+  assert.ok(fn.includes('study_plan_optimizer'), 'Automation must handle study_plan_optimizer job');
+  assert.ok(fn.includes('route_interventions_to_teachers'), 'Automation must handle route_interventions_to_teachers job');
+  const hook = readFileSync(path.join(SRC_DIR, 'studymode/hooks/useAutomationRuntime.ts'), 'utf8');
+  assert.ok(hook.includes('runStudyPlanOptimizer'), 'Hook must dispatch optimizer');
+  assert.ok(hook.includes('routeInterventionsToTeachers'), 'Hook must dispatch routing');
   return Promise.resolve();
 });
 
-await test('Automation and ingestion panels are mounted in dashboards', () => {
-  const teacher = readFileSync(path.join(SRC_DIR, 'studymode/components/TeacherCommandCenter.tsx'), 'utf8');
-  const admin = readFileSync(path.join(SRC_DIR, 'studymode/components/SchoolAdminConsole.tsx'), 'utf8');
-  const automationPanel = readFileSync(path.join(SRC_DIR, 'studymode/components/AutomationControlPanel.tsx'), 'utf8');
-  const ingestionPanel = readFileSync(path.join(SRC_DIR, 'studymode/components/ConceptIngestionPanel.tsx'), 'utf8');
-  assert.ok(teacher.includes('<AutomationControlPanel'), 'Teacher dashboard must mount AutomationControlPanel');
-  assert.ok(admin.includes('<ConceptIngestionPanel'), 'School admin must mount ConceptIngestionPanel');
-  assert.ok(automationPanel.includes('nightly_intervention_sweep'), 'Automation panel must reference sweep job');
-  const ingestionHook = readFileSync(path.join(SRC_DIR, 'studymode/hooks/useConceptIngestion.ts'), 'utf8');
-  assert.ok(ingestionHook.includes('ingest-document-concepts'), 'Ingestion hook must invoke ingest-document-concepts function');
-  assert.ok(ingestionPanel.includes('useConceptIngestion'), 'Ingestion panel must use ingestion hook');
+await test('Teacher class detail route and UI are mounted', () => {
+  const app = readFileSync(path.join(SRC_DIR, 'App.tsx'), 'utf8');
+  const page = readFileSync(path.join(SRC_DIR, 'pages/TeacherClassDetailPage.tsx'), 'utf8');
+  const comp = readFileSync(path.join(SRC_DIR, 'studymode/components/TeacherClassDetail.tsx'), 'utf8');
+  assert.ok(app.includes('/teacher/class/:cohortId'), 'App must expose /teacher/class/:cohortId route');
+  assert.ok(page.includes('TeacherClassDetail'), 'Page must render TeacherClassDetail');
+  assert.ok(comp.includes('useClassAtRisk') && comp.includes('usePlanProposals'), 'Class detail must use both new hooks');
   return Promise.resolve();
 });
 ```
@@ -96,33 +112,20 @@ await test('Automation and ingestion panels are mounted in dashboards', () => {
 
 ## Verification
 
-After copying files and applying the edit:
-
 ```bash
 node tests/suite.mjs
 ```
 
-Expected: **74 passed / 0 failed** (Section 12 shows 5 additional passing tests).
+Expected: **79 passed / 0 failed** (Section 13 shows 5 additional passing tests).
 
-## Optional: cron wiring for autopilot
-
-In your Supabase project SQL editor (once the migration is applied and env is set):
+## Optional: enable the new jobs per workspace
 
 ```sql
-select cron.schedule(
-  'los-nightly-automation',
-  '15 2 * * *',
-  $$
-    select net.http_post(
-      url := concat(current_setting('app.settings.supabase_url'), '/functions/v1/run-learning-ops-automation'),
-      headers := jsonb_build_object(
-        'Content-Type', 'application/json',
-        'Authorization', concat('Bearer ', current_setting('app.settings.service_role_key'))
-      ),
-      body := '{}'::jsonb
-    );
-  $$
-);
+insert into public.learning_ops_automation_schedule (workspace_id, job_name, cadence, enabled)
+values
+  ('<workspace_uuid>', 'study_plan_optimizer',            'daily',  true),
+  ('<workspace_uuid>', 'route_interventions_to_teachers', 'daily',  true)
+on conflict (workspace_id, job_name) do update set enabled = excluded.enabled;
 ```
 
-The edge function will iterate every enabled + due `learning_ops_automation_schedule` row and run the matching job.
+The existing `run-learning-ops-automation` cron picks up every due schedule row — no additional cron entry required.

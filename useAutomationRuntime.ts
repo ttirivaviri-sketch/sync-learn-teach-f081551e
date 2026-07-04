@@ -15,7 +15,9 @@ import {
   AutomationJobName,
   AutomationScheduleSummary,
   loadAutomationSchedule,
+  routeInterventionsToTeachers,
   runNightlyInterventionSweep,
+  runStudyPlanOptimizer,
   runWeeklyCohortRollup,
   upsertAutomationSchedule,
 } from '../lib/learningOps';
@@ -96,6 +98,20 @@ export function useAutomationRuntime({ workspaceId }: Args) {
           jobName,
           status: 'succeeded',
           rowsProcessed: Array.isArray(data?.cohorts) ? data!.cohorts!.length : 0,
+        });
+      } else if (jobName === 'study_plan_optimizer') {
+        const data = (await runStudyPlanOptimizer(workspaceId)) as { proposals_created?: number } | null;
+        setLastResult({
+          jobName,
+          status: 'succeeded',
+          rowsProcessed: Number(data?.proposals_created ?? 0),
+        });
+      } else if (jobName === 'route_interventions_to_teachers') {
+        const routed = await routeInterventionsToTeachers(workspaceId);
+        setLastResult({
+          jobName,
+          status: 'succeeded',
+          rowsProcessed: routed,
         });
       } else {
         // guardian_digest and concept_ingestion are dispatched through the edge

@@ -1363,5 +1363,170 @@ export async function promoteStagedConceptIngestion(stagingId: string): Promise<
   return data;
 }
 
+// ─── Phase 3.2: prerequisite DAG, predictive risk, plan optimizer ───────────
+
+export interface UpstreamPrerequisite {
+  conceptId: string;
+  conceptName: string;
+  subjectName: string;
+  topicName: string;
+  depth: number;
+  weight: number;
+}
+
+export async function materializeConceptPrerequisiteEdges(subjectName?: string | null): Promise<number> {
+  const { data, error } = await losSupabase.rpc('materialize_concept_prerequisite_edges', {
+    p_subject_name: subjectName ?? null,
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export async function loadUpstreamPrerequisites(conceptId: string, maxDepth = 3): Promise<UpstreamPrerequisite[]> {
+  const { data, error } = await losSupabase.rpc('get_upstream_prerequisites', {
+    p_concept_id: conceptId,
+    p_max_depth: maxDepth,
+  });
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    conceptId: row.concept_id,
+    conceptName: row.concept_name,
+    subjectName: row.subject_name,
+    topicName: row.topic_name,
+    depth: Number(row.depth ?? 1),
+    weight: Number(row.weight ?? 1),
+  }));
+}
+
+export interface ProjectedRiskRow {
+  userId: string;
+  subjectId: string | null;
+  subjectName: string;
+  recentAvgDelta: number;
+  slopePerDay: number;
+  avgConfidence: number;
+  totalEvidence: number;
+  projectedRisk: number;
+}
+
+export async function loadProjectedRiskForUsers(userIds: string[]): Promise<ProjectedRiskRow[]> {
+  if (userIds.length === 0) return [];
+  const { data, error } = await losView('learner_projected_risk')
+    .select('*')
+    .in('user_id', userIds);
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    userId: row.user_id,
+    subjectId: row.subject_id,
+    subjectName: row.subject_name,
+    recentAvgDelta: Number(row.recent_avg_delta ?? 0),
+    slopePerDay: Number(row.slope_per_day ?? 0),
+    avgConfidence: Number(row.avg_confidence ?? 0),
+    totalEvidence: Number(row.total_evidence ?? 0),
+    projectedRisk: Number(row.projected_risk ?? 50),
+  }));
+}
+
+export interface ClassAtRiskRow {
+  workspaceId: string;
+  cohortId: string;
+  cohortName: string;
+  userId: string;
+  openCount: number;
+  highCount: number;
+  lastAlertAt: string | null;
+  projectedRisk: number;
+}
+
+export async function loadClassAtRisk(workspaceId: string, cohortId?: string): Promise<ClassAtRiskRow[]> {
+  let query = losView('learning_class_at_risk')
+    .select('*')
+    .eq('workspace_id', workspaceId)
+    .order('projected_risk', { ascending: false });
+  if (cohortId) query = query.eq('cohort_id', cohortId);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    workspaceId: row.workspace_id,
+    cohortId: row.cohort_id,
+    cohortName: row.cohort_name,
+    userId: row.user_id,
+    openCount: Number(row.open_count ?? 0),
+    highCount: Number(row.high_count ?? 0),
+    lastAlertAt: row.last_alert_at,
+    projectedRisk: Number(row.projected_risk ?? 50),
+  }));
+}
+
+export async function routeInterventionsToTeachers(workspaceId: string): Promise<number> {
+  const { data, error } = await losSupabase.rpc('route_interventions_to_teachers', {
+    p_workspace_id: workspaceId,
+  });
+  if (error) throw error;
+  return Number(data ?? 0);
+}
+
+export async function runStudyPlanOptimizer(workspaceId: string) {
+  const { data, error } = await losSupabase.rpc('run_study_plan_optimizer', {
+    p_workspace_id: workspaceId,
+  });
+  if (error) throw error;
+  return data;
+}
+
+export interface PlanProposalSummary {
+  id: string;
+  userId: string;
+  workspaceId: string | null;
+  subjectName: string;
+  topicName: string;
+  proposedFor: string;
+  durationMinutes: number;
+  reason: string;
+  projectedRisk: number | null;
+  status: 'proposed' | 'accepted' | 'dismissed' | 'applied';
+  createdAt: string;
+}
+
+export async function loadPlanProposals(args: {
+  workspaceId?: string | null;
+  userId?: string | null;
+  status?: 'proposed' | 'accepted' | 'dismissed' | 'applied';
+  limit?: number;
+}): Promise<PlanProposalSummary[]> {
+  let query = losFrom('learning_ops_plan_proposals')
+    .select('id, user_id, workspace_id, subject_name, topic_name, proposed_for, duration_minutes, reason, projected_risk, status, created_at')
+    .order('proposed_for', { ascending: true })
+    .limit(args.limit ?? 50);
+  if (args.workspaceId) query = query.eq('workspace_id', args.workspaceId);
+  if (args.userId) query = query.eq('user_id', args.userId);
+  if (args.status) query = query.eq('status', args.status);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    userId: row.user_id,
+    workspaceId: row.workspace_id,
+    subjectName: row.subject_name,
+    topicName: row.topic_name,
+    proposedFor: row.proposed_for,
+    durationMinutes: Number(row.duration_minutes ?? 30),
+    reason: row.reason,
+    projectedRisk: row.projected_risk,
+    status: row.status,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function updatePlanProposalStatus(args: {
+  proposalId: string;
+  status: 'accepted' | 'dismissed' | 'applied';
+}): Promise<void> {
+  const { error } = await losFrom('learning_ops_plan_proposals')
+    .update({ status: args.status })
+    .eq('id', args.proposalId);
+  if (error) throw error;
+}
+
 // Re-export the typed client for advanced callsites if they need it.
 export { losSupabase };

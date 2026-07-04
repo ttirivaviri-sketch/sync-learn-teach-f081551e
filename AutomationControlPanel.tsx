@@ -36,9 +36,23 @@ const JOB_LABELS: Record<AutomationJobName, { label: string; description: string
     label: 'Concept ingestion',
     description: 'Managed from the School Admin Console — documents move through review before promotion.',
   },
+  study_plan_optimizer: {
+    label: 'Study plan optimizer',
+    description: 'Nightly: proposes new schedule slots based on projected risk and open interventions.',
+  },
+  route_interventions_to_teachers: {
+    label: 'Per-teacher alert routing',
+    description: 'Assigns open intervention queue rows to the cohort lead teacher responsible for the learner.',
+  },
 };
 
-const DEFAULT_JOBS: AutomationJobName[] = ['nightly_intervention_sweep', 'weekly_cohort_rollup', 'guardian_digest'];
+const DEFAULT_JOBS: AutomationJobName[] = [
+  'nightly_intervention_sweep',
+  'weekly_cohort_rollup',
+  'guardian_digest',
+  'study_plan_optimizer',
+  'route_interventions_to_teachers',
+];
 
 function statusClass(status: 'succeeded' | 'failed' | 'partial' | null) {
   if (status === 'failed') return 'border-destructive/30 bg-destructive/10 text-destructive';

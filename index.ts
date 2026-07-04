@@ -30,7 +30,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 type JobName =
   | "nightly_intervention_sweep"
   | "weekly_cohort_rollup"
-  | "guardian_digest";
+  | "guardian_digest"
+  | "study_plan_optimizer"
+  | "route_interventions_to_teachers";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -115,6 +117,40 @@ async function runJobForWorkspace(
         rows_processed: cohorts.length,
         details: data,
       };
+    }
+
+    if (job === "study_plan_optimizer") {
+      if (!workspaceId) {
+        return { workspace_id: null, job, status: "skipped", rows_processed: 0, error: "workspace_id required" };
+      }
+      const { data, error } = await supabase.rpc("run_study_plan_optimizer", { p_workspace_id: workspaceId });
+      if (error) throw error;
+      const created = Number((data as { proposals_created?: number })?.proposals_created ?? 0);
+      return { workspace_id: workspaceId, job, status: "succeeded", rows_processed: created, details: data };
+    }
+
+    if (job === "route_interventions_to_teachers") {
+      if (!workspaceId) {
+        return { workspace_id: null, job, status: "skipped", rows_processed: 0, error: "workspace_id required" };
+      }
+      const startResp = await supabase.rpc("record_automation_run_start", {
+        p_job_name: "route_interventions_to_teachers",
+        p_workspace_id: workspaceId,
+        p_details: {},
+      });
+      if (startResp.error) throw startResp.error;
+      const runId = startResp.data as string;
+      const { data, error } = await supabase.rpc("route_interventions_to_teachers", { p_workspace_id: workspaceId });
+      const routed = Number(data ?? 0);
+      await supabase.rpc("record_automation_run_finish", {
+        p_run_id: runId,
+        p_status: error ? "failed" : "succeeded",
+        p_rows_processed: routed,
+        p_error_message: error?.message ?? null,
+        p_details: { routed },
+      });
+      if (error) throw error;
+      return { workspace_id: workspaceId, job, status: "succeeded", rows_processed: routed, details: { routed } };
     }
 
     if (job === "guardian_digest") {

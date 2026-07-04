@@ -295,7 +295,9 @@ export type LosAutomationJobName =
   | 'nightly_intervention_sweep'
   | 'weekly_cohort_rollup'
   | 'guardian_digest'
-  | 'concept_ingestion';
+  | 'concept_ingestion'
+  | 'study_plan_optimizer'
+  | 'route_interventions_to_teachers';
 
 export type LosAutomationCadence = 'daily' | 'weekly' | 'manual';
 
@@ -380,12 +382,81 @@ export interface LosInterventionOutcomeRow {
   post_evidence_count: number | null;
 }
 
+export interface LosPrerequisiteEdgeRow {
+  id: string;
+  concept_id: string;
+  prerequisite_concept_id: string;
+  weight: number;
+  source_kind: 'manual' | 'ingested' | 'inferred' | 'template' | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LosPrerequisiteEdgeInsert = Partial<LosPrerequisiteEdgeRow> & {
+  concept_id: string;
+  prerequisite_concept_id: string;
+};
+
+export interface LosPlanProposalRow {
+  id: string;
+  user_id: string;
+  workspace_id: string | null;
+  subject_id: string | null;
+  subject_name: string;
+  topic_name: string;
+  proposed_for: string;
+  duration_minutes: number;
+  reason: string;
+  projected_risk: number | null;
+  status: 'proposed' | 'accepted' | 'dismissed' | 'applied';
+  applied_schedule_id: string | null;
+  metadata: Json;
+  created_at: string;
+  updated_at: string;
+}
+
+export type LosPlanProposalInsert = Partial<LosPlanProposalRow> & {
+  user_id: string;
+  subject_name: string;
+  topic_name: string;
+  proposed_for: string;
+};
+
+export interface LosProjectedRiskRow {
+  user_id: string;
+  subject_id: string | null;
+  subject_name: string;
+  recent_avg_delta: number;
+  slope_per_day: number;
+  avg_confidence: number;
+  total_evidence: number;
+  projected_risk: number;
+}
+
+export interface LosClassAtRiskRow {
+  workspace_id: string;
+  cohort_id: string;
+  cohort_name: string;
+  user_id: string;
+  open_count: number;
+  high_count: number;
+  last_alert_at: string | null;
+  projected_risk: number;
+}
+
 export interface LearningOpsViews {
   learning_concept_trends: {
     Row: LosConceptTrendRow;
   };
   learning_intervention_outcomes: {
     Row: LosInterventionOutcomeRow;
+  };
+  learner_projected_risk: {
+    Row: LosProjectedRiskRow;
+  };
+  learning_class_at_risk: {
+    Row: LosClassAtRiskRow;
   };
 }
 
@@ -407,6 +478,29 @@ export interface LearningOpsFunctions {
     Returns: Json;
   };
   run_weekly_cohort_rollup: {
+    Args: { p_workspace_id: string };
+    Returns: Json;
+  };
+  materialize_concept_prerequisite_edges: {
+    Args: { p_subject_name: string | null };
+    Returns: number;
+  };
+  get_upstream_prerequisites: {
+    Args: { p_concept_id: string; p_max_depth: number };
+    Returns: Array<{
+      concept_id: string;
+      concept_name: string;
+      subject_name: string;
+      topic_name: string;
+      depth: number;
+      weight: number;
+    }>;
+  };
+  route_interventions_to_teachers: {
+    Args: { p_workspace_id: string };
+    Returns: number;
+  };
+  run_study_plan_optimizer: {
     Args: { p_workspace_id: string };
     Returns: Json;
   };
@@ -479,6 +573,16 @@ export interface LearningOpsTables {
     Row: LosConceptIngestionStagingRow;
     Insert: LosConceptIngestionStagingInsert;
     Update: Partial<LosConceptIngestionStagingRow>;
+  };
+  learning_concept_prerequisite_edges: {
+    Row: LosPrerequisiteEdgeRow;
+    Insert: LosPrerequisiteEdgeInsert;
+    Update: Partial<LosPrerequisiteEdgeRow>;
+  };
+  learning_ops_plan_proposals: {
+    Row: LosPlanProposalRow;
+    Insert: LosPlanProposalInsert;
+    Update: Partial<LosPlanProposalRow>;
   };
 }
 
