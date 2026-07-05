@@ -11,6 +11,8 @@
     "lint": "node scripts/lint.mjs",
     "preview": "vite preview",
     "test": "node tests/suite.mjs",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "test:types": "tsc --noEmit --skipLibCheck",
     "sandbox": "vite --host 0.0.0.0 --port 4173 --strictPort",
     "audit:images": "node scripts/audit-images.mjs"
@@ -92,6 +94,7 @@
   "devDependencies": {
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
+    "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/file-saver": "^2.0.7",
