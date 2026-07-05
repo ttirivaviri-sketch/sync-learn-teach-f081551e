@@ -1,216 +1,151 @@
 # StudySync Platform Architecture
 
-## System Overview
+StudySync started as a tutoring marketplace and has grown into a full
+**Learning Operating System (LOS)** for individual learners, tutors, and
+whole schools. It combines a 1:1 marketplace, an adaptive AI Study Mode,
+an autonomous background agent runtime (SAIL), and a school workspace
+(classes, homework, kernel telemetry, remediation loops).
 
-StudySync is a modern tutoring platform built with React, TypeScript, and Supabase, featuring real-time communication, geolocation services, and comprehensive user management.
+## High-level layers
 
-## Frontend Architecture
-
-### Core Technologies
-- **React 18** with hooks and functional components
-- **TypeScript** for type safety and developer experience
-- **Vite** for fast development and optimized builds
-- **Tailwind CSS** with custom design system
-- **shadcn/ui** for consistent UI components
-
-### State Management
-- **React Query** for server state and caching
-- **React Context** for global UI state
-- **Local Storage** for client-side persistence
-- **Real-time subscriptions** via Supabase
-
-### Routing & Navigation
-- **React Router v6** with nested routes
-- **Lazy loading** for code splitting
-- **Protected routes** with authentication guards
-
-## Backend Architecture (Supabase)
-
-### Database Schema
-
-#### Core Tables
-```sql
--- User profiles with authentication integration
-profiles (id, email, full_name, user_type, phone, bio, avatar_url, online_status, location_lat, location_lng, study_level)
-
--- Tutor subject expertise and pricing
-tutor_subjects (id, user_id, subject, level, hourly_rate)
-
--- Session bookings and scheduling
-bookings (id, learner_id, tutor_id, tutor_subject_id, scheduled_at, duration_minutes, status, price)
-
--- Real-time messaging system
-conversations (id, tutor_id, learner_id, last_message_at)
-messages (id, conversation_id, sender_id, content, message_type, read_at)
-
--- Reviews and ratings
-reviews (id, booking_id, reviewer_id, reviewed_id, rating, comment)
-
--- Payment processing
-payments (id, booking_id, payer_id, amount, status, currency, provider, provider_ref)
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│  Frontend (React 18 + Vite + TS + Tailwind + shadcn)                │
+│  ┌──────────┬──────────┬────────────┬───────────┬──────────────┐   │
+│  │ Learner  │ Tutor    │ Study Mode │ School    │ Admin        │   │
+│  │ App      │ App      │ (adaptive) │ workspace │ console      │   │
+│  └────┬─────┴────┬─────┴─────┬──────┴─────┬─────┴──────┬───────┘   │
+│       │          │           │            │            │           │
+│       ▼          ▼           ▼            ▼            ▼           │
+│                React Query + realtime channels                     │
+└─────────────────────────────┬────────────────────────────────────────┘
+                              │
+┌─────────────────────────────▼────────────────────────────────────────┐
+│  Supabase                                                           │
+│  - Auth (JWT, roles via user_roles + has_role())                    │
+│  - Postgres (RLS on every table)                                    │
+│  - Storage (documents, avatars, lesson recordings)                  │
+│  - Realtime (bookings, messages, kernel snapshots, alerts)          │
+│  - Edge Functions (AI, ingestion, automation, payments)             │
+│  - pg_cron (nightly rebalance, alert auto-resolve, LOS automation)  │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Supporting Tables
-```sql
--- User role management
-user_roles (id, user_id, role)
+## Core surfaces
 
--- Tutor verification process
-tutor_verifications (id, user_id, id_number, id_document_url, profile_photo_url, police_clearance_url, verification_status)
-verification_reviews (id, verification_id, reviewer_id, decision, notes)
+### 1. Tutoring marketplace (original MVP)
+- `profiles`, `tutor_subjects`, `tutor_availability`, `bookings`,
+  `payments`, `payout_requests`, `conversations` / `messages`, `reviews`,
+  `tutor_verifications` / `qualifications`.
+- Geolocation-based discovery (Haversine), 30-min slot bookings,
+  Jitsi video conferencing, PayFast/Paystack payments via edge functions.
+- Offline reach through `offline_booking_requests`, `ussd_sessions`,
+  `location_codes`, `message_logs`.
 
--- Educational qualifications
-qualifications (id, user_id, qualification_type, institution, year_obtained, document_url)
+### 2. Adaptive Study Mode (`src/studymode/`)
+- Subject-level academic profile (`academic_profiles`,
+  `learner_subjects`, `subjects`, `curriculum_topic_templates`).
+- Concept mastery & spaced repetition: `concepts`, `concept_attempts`,
+  `topic_mastery`, `flashcards`, `weak_concepts`, `subject_xp`.
+- Daily tasks / topic sessions: `daily_tasks`, `daily_task_attempts`,
+  `daily_task_concepts`, `topic_sessions`, `topic_session_questions`,
+  `study_schedule`, `study_activity`.
+- Mock exams and paper generation: `mock_exam_attempts`, `exam_patterns`,
+  `paper_blueprints`, `subject_exams`, `exam_settings`,
+  `quizzes` / `quiz_questions` / `quiz_attempts`.
+- AI edge functions: `generate-quiz`, `generate-daily-task`,
+  `generate-mock-paper`, `photo-solve-grade`, `explain-answer`,
+  `generate-flashcards`, `ai-tutor`, `studymode-context-retrieve`,
+  `studymode-detect-gaps`, `personalise-curriculum-deep-dive`, and more.
 
--- Support system
-support_tickets (id, creator_id, assignee_id, status, priority, subject, message)
+### 3. SAIL — autonomous background agents (`src/sail/`)
+- Event-driven system that detects issues (`sail_detection_signals`),
+  spawns tasks (`sail_tasks`), runs agent pipelines (`sail_pipelines`,
+  `sail_agent_logs`), and logs outcomes (`sail_events`).
+- Deploy pipeline and subscription-aware monetization gating.
+- Edge function: `sail-agent`.
 
--- Location and offline support
-location_codes (code, name, city, region, latitude, longitude, active)
-offline_booking_requests (id, channel, learner_msisdn, tutor_msisdn, subject_code, location_code, status)
-ussd_sessions (id, msisdn, provider_session_id, current_step, data, is_active)
-message_logs (id, channel, direction, from_msisdn, to_msisdn, body, provider_message_id, error)
-```
+### 4. Schools & classroom layer (`src/pages/school/`)
+- Tenancy: `schools`, `school_memberships` (owner/admin/teacher/
+  student), `school_invitations`, `school_audit_logs`, `school_subjects`,
+  `classes`, `class_subjects`, `enrollments`, `timetables` /
+  `timetable_slots`, `assignments`, `grades`, `announcements`.
+- Teacher tools: `school_homework` (+ `school_homework_questions` /
+  `_responses`), `school_quiz_attempts`, `submissions`,
+  `teacher_ai_settings`, `school_ai_documents` / `school_ai_chunks`.
+- Live delivery & consent: `lesson_recordings`, `lesson_transcripts`,
+  `lesson_consents`, `lesson_retention_settings`,
+  `lesson_reinforcement_sets`, `lesson_topic_mapping`, `lesson_notes`.
+- Analytics: `school_analytics_daily`, `student_analytics_daily`,
+  `analytics_reports`, `progress_reports`.
 
-### Row Level Security (RLS)
+### 5. Learning Operating System kernel (Phase 4–6)
+- `learning_events` — canonical event log (photo-solve, flashcards,
+  quiz, mock exam, tutor chat, lesson).
+- `learner_state` — unified EWMA / risk vector per learner + subject.
+- `student_context_snapshots` and `topic_tutor_rankings` — the substrate
+  the next-action engine and school kernel read from.
+- Kernel rollups: `school_kernel_snapshots`, `kernel_alerts`,
+  `remediation_baselines` (+ `remediation_effectiveness` RPC).
+- Automation: `auto_resolve_kernel_alerts()` (hourly), plan rebalance
+  (`learning-plan-rebalance`), next-action engine
+  (`learning-next-action`), and `send-guardian-report`.
+- Hooks: `useLearningKernel`, `useLearnerArtifacts`, `useNextAction`,
+  `useLearningGaps`, `useLearningTimeline`, `useClassKernel`,
+  `useSchoolKernel`, `useSchoolKernelRealtime`, `useKernelAlerts`,
+  `useRemediationTracker`, `useRemediationEffectiveness`,
+  `useLearnerWeeklyDigest`, `usePlanRebalance`.
+- UI: `MasteryIntelligenceCard`, `WeeklyDigestCard`,
+  `GuardianWorkspaceCard`, `NextActionCard`, `SmartSuggestionStrip`,
+  `StruggleRecRail`, `ClassKernelPanel`, `SchoolKernelPanel`,
+  `KernelAlertsPanel`, `RemediationTrackerPanel`,
+  `RemediationEffectivenessPanel`.
 
-All tables implement comprehensive RLS policies:
-- **User isolation** - Users can only access their own data
-- **Role-based access** - Admin privileges for management operations
-- **Public discovery** - Tutor profiles visible for learner searching
-- **Booking participation** - Access limited to booking participants
+### 6. Phase 3.x LOS bundle (`src/studymode/{lib,hooks,components}/`)
+A parallel, workspace-scoped LOS layer (workspaces, memberships,
+concept catalog, mastery ledger, intervention queue, plan proposals,
+prerequisite DAG, predictive risk, per-teacher routing, plan optimizer).
+It ships behind a hand-typed contract (`learning-os-types.ts`) and the
+`run-learning-ops-automation` edge function; a class-scoped detail
+page is mounted at `/teacher/class/:cohortId`. The rest of the bundle
+is kept in-tree for future integration but is not wired into the live
+school pages, which currently use the `school_*` schema above.
 
-### Real-time Features
-- **Live presence tracking** for online/offline status
-- **Instant messaging** with conversation threads
-- **Booking notifications** for status changes
-- **Location updates** for proximity search
+## Frontend conventions
 
-## Key Features Implementation
+- **State**: React Query for server data + realtime; Context for global
+  UI state; localStorage for lightweight persistence.
+- **Routing**: React Router v6 with lazy routes and role-gated redirects.
+- **Design**: glass mesh internal theme, white-dominant landing; strict
+  logo rules; KaTeX for all math; `safeJsonParse` on AI JSON.
+- **PWA**: manifest, service worker, offline indicators.
 
-### 1. Geolocation & Proximity Search
-```typescript
-// Haversine formula for distance calculation
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
-  const R = 6371; // Earth's radius in kilometers
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-  return R * c;
-};
-```
+## Backend conventions
 
-### 2. Real-time Communication
-```typescript
-// Supabase real-time subscriptions
-const subscription = supabase
-  .channel('conversations')
-  .on('postgres_changes', {
-    event: '*',
-    schema: 'public',
-    table: 'messages'
-  }, handleNewMessage)
-  .subscribe();
-```
+- Every public table has RLS + explicit GRANTs to
+  `authenticated` / `service_role` (+ `anon` only for public data).
+- Roles live in `user_roles` and are checked via
+  `public.has_role(uid, role)` (SECURITY DEFINER).
+- Edge functions validate JWTs in code (`verify_jwt = false` in TOML),
+  validate input with Zod, and never accept SQL from clients.
+- Secrets are only read via `Deno.env.get(...)`; the service-role key
+  never leaves an edge function.
+- Realtime subscriptions are always mounted in `useEffect` and cleaned
+  up with `removeChannel`.
 
-### 3. Authentication Flow
-- **Supabase Auth** with email/password
-- **Automatic profile creation** via database triggers
-- **Role-based routing** (learner/tutor/admin)
-- **Session persistence** with automatic refresh
+## Deployment
 
-### 4. Progressive Web App (PWA)
-- **Service worker** for offline functionality
-- **App manifest** for installation
-- **Offline indicators** and graceful degradation
-- **Background sync** for critical operations
+- Vite build; Supabase manages DB, storage, functions.
+- Env: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`,
+  `VITE_SUPABASE_PROJECT_ID` (auto-populated).
+- Cron: hourly (`auto_resolve_kernel_alerts`), nightly plan rebalance,
+  workspace-scheduled LOS automation via `run-learning-ops-automation`.
+- Monitoring via Supabase dashboard, error boundaries, and Web Vitals.
 
-## Security Implementation
+## Security
 
-### Authentication & Authorization
-- **JWT tokens** with automatic refresh
-- **Row Level Security** on all database tables
-- **Input validation** with Zod schemas
-- **XSS protection** through React's built-in sanitization
-
-### Data Protection
-- **Encrypted sensitive data** (documents, personal info)
-- **Secure file storage** with Supabase Storage
-- **GDPR compliance** ready structure
-- **Audit trails** for admin actions
-
-### API Security
-- **Rate limiting** on Supabase edges
-- **CORS configuration** for domain restrictions
-- **Environment variables** for sensitive config
-- **Database connection pooling**
-
-## Performance Optimizations
-
-### Frontend
-- **Code splitting** with React.lazy()
-- **Image optimization** with proper formats and lazy loading
-- **Memoization** of expensive calculations
-- **Virtual scrolling** for large lists (when needed)
-- **Bundle analysis** and tree shaking
-
-### Backend
-- **Database indexing** on frequently queried columns
-- **Query optimization** with proper JOINs
-- **Caching strategies** with React Query
-- **CDN integration** for static assets
-
-### Real-time Efficiency
-- **Selective subscriptions** to minimize bandwidth
-- **Message batching** for high-frequency updates
-- **Connection pooling** for WebSocket management
-- **Graceful fallbacks** for connectivity issues
-
-## Deployment & DevOps
-
-### Build Process
-```bash
-# Development
-npm run dev          # Vite dev server with HMR
-
-# Production
-npm run build        # TypeScript compilation + Vite bundling
-npm run preview      # Preview production build locally
-```
-
-### Environment Configuration
-```env
-# Supabase Configuration
-VITE_SUPABASE_PROJECT_ID=uynoykcratwbcdzmsxfw
-VITE_SUPABASE_URL=https://uynoykcratwbcdzmsxfw.supabase.co
-VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
-
-### Monitoring & Analytics
-- **Error tracking** with built-in error boundaries
-- **Performance monitoring** via Web Vitals
-- **User analytics** through Supabase analytics
-- **Database monitoring** via Supabase dashboard
-
-## Future Scalability Considerations
-
-### Horizontal Scaling
-- **Microservices architecture** ready
-- **API Gateway** for service orchestration
-- **Load balancing** strategies
-- **Geographic distribution**
-
-### Feature Extensions
-- **Mobile apps** with React Native
-- **Advanced scheduling** with calendar integrations
-- **Payment gateway** diversification
-- **AI-powered tutor matching**
-
-### Data Architecture Evolution
-- **Data warehousing** for analytics
-- **Event sourcing** for audit compliance
-- **CQRS pattern** for read/write optimization
-- **Message queuing** for async processing
+- RLS on every table, SECURITY DEFINER helpers with locked
+  `search_path`, per-user AI quota (`ai_usage_daily`,
+  `school_ai_usage_daily`), and `security_audit_logs` for admin actions.
+- Sensitive documents live in Supabase Storage with signed URLs and
+  short retention (`lesson_retention_settings`, `purge-expired-lesson-data`).
