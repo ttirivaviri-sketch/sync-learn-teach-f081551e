@@ -1,431 +1,197 @@
-# Database Schema Documentation
+# Database Schema
 
-## Overview
+StudySync runs on Supabase Postgres with Row Level Security enabled on
+**every** public table. This document groups the ~115 live tables into
+functional domains. For column-level detail, use `supabase--read_query`
+against `information_schema.columns` or open the table in the Supabase
+dashboard — this file focuses on *what lives where and why*.
 
-StudySync uses Supabase (PostgreSQL) with Row Level Security (RLS) for data protection and real-time subscriptions for live updates.
+Conventions used everywhere:
 
-## Core Tables
+- `id uuid primary key default gen_random_uuid()` unless a natural key
+  (`profiles.id = auth.users.id`, `location_codes.code`).
+- `created_at` / `updated_at timestamptz default now()` with an
+  `update_updated_at_column()` trigger where the row is mutable.
+- RLS ON + explicit `GRANT` per role. `authenticated` gets scoped CRUD,
+  `service_role` gets `ALL`, `anon` only where the surface is public.
+- Roles live in `user_roles(app_role)`; check with
+  `public.has_role(uid, role)` (SECURITY DEFINER, `search_path=public`).
 
-### profiles
-User profile information and preferences.
+---
 
-```sql
-CREATE TABLE public.profiles (
-  id uuid PRIMARY KEY,  -- Links to auth.users.id
-  email text NOT NULL,
-  full_name text,
-  user_type text NOT NULL DEFAULT 'learner',
-  phone text,
-  bio text,
-  avatar_url text,
-  online_status boolean DEFAULT false,
-  location_lat numeric,
-  location_lng numeric,
-  study_level study_level_enum,
-  last_seen timestamptz DEFAULT now(),
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
+## 1. Identity, roles, verification
 
-**RLS Policies:**
-- Users can view/update their own profile
-- Tutor profiles are publicly viewable for discovery
-- Profile creation restricted to authenticated users
+| Table | Purpose |
+|---|---|
+| `profiles` | Extends `auth.users`. Basic profile + `user_type`, location, `online_status`, `study_level`, avatar. |
+| `user_roles` | `(user_id, app_role)`. `app_role` enum: `admin`, `support`, `moderator`. |
+| `academic_profiles` | Learner curriculum context (board, year, targets, exam date, subjects seeded). |
+| `learner_subjects` | Per-learner subject enrollment. |
+| `tutor_subjects` | Tutor expertise + hourly rate. |
+| `tutor_teaching_profile`, `tutor_availability` | Tutor onboarding surface & 30-min slot windows. |
+| `tutor_verifications`, `verification_reviews`, `qualifications` | ID / police-clearance / academic docs and admin decisions. |
+| `user_preferences`, `notification_preferences`, `device_push_tokens` | Personal settings & push tokens. |
 
-### tutor_subjects
-Tutor expertise areas with pricing information.
+---
 
-```sql
-CREATE TABLE public.tutor_subjects (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  subject text NOT NULL,
-  level text NOT NULL,
-  hourly_rate numeric,
-  created_at timestamptz DEFAULT now()
-);
-```
+## 2. Marketplace: bookings, payments, comms
 
-**RLS Policies:**
-- Users can manage their own subjects
-- All subjects publicly viewable for tutor discovery
+| Table | Purpose |
+|---|---|
+| `bookings` | 30-min session bookings (`booking_status` enum). |
+| `payments` | Session payments (`payment_status` enum, provider ref). |
+| `saved_payment_methods` | PayFast/Paystack tokenised methods. |
+| `payout_requests`, `withdrawals` | Tutor payouts. |
+| `refund_requests` | Learner refund flow. |
+| `conversations`, `messages` | 1:1 chat threads (RLS scopes to participants). |
+| `reviews` | Post-session rating + comment. |
+| `tutor_booking_insights` | AI-generated tutor-facing insight per booking. |
+| `location_codes`, `offline_booking_requests`, `ussd_sessions`, `message_logs` | Offline (SMS/USSD/WhatsApp) reach. |
+| `fx_rates` | Cross-currency display. |
 
-### bookings
-Session booking management with status tracking.
+---
 
-```sql
-CREATE TABLE public.bookings (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  learner_id uuid NOT NULL,
-  tutor_id uuid NOT NULL,
-  tutor_subject_id uuid NOT NULL,
-  scheduled_at timestamptz NOT NULL,
-  duration_minutes integer NOT NULL,
-  status booking_status DEFAULT 'requested',
-  price numeric NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
+## 3. Adaptive Study Mode
 
-**Status Enum:** `requested`, `accepted`, `declined`, `in_progress`, `completed`, `cancelled`
+| Group | Tables |
+|---|---|
+| Curriculum | `subjects`, `curriculum_topic_templates`, `subject_coverage_audit` |
+| Session runtime | `daily_tasks`, `daily_task_attempts`, `daily_task_concepts`, `topic_sessions`, `topic_session_questions`, `study_schedule`, `study_activity` |
+| Concept mastery | `concepts`, `concept_attempts`, `topic_mastery`, `weak_concepts`, `flashcards`, `subject_xp`, `user_progress` |
+| Quizzes & exams | `quizzes`, `quiz_questions`, `quiz_attempts`, `mock_exam_attempts`, `subject_exams`, `exam_patterns`, `exam_settings`, `paper_blueprints` |
+| AI memory | `study_memory_events`, `study_memory_daily`, `study_memory_summary`, `question_fingerprints`, `ai_response_cache`, `ai_usage_daily` |
+| Notifications | `notifications`, `notification_preferences` |
 
-**RLS Policies:**
-- Learners can create bookings
-- Participants (learner/tutor) can view and update status
-- Admin can manage all bookings
+---
 
-## Communication Tables
+## 4. SAIL — autonomous agents
 
-### conversations
-Chat conversation threads between users.
+| Table | Purpose |
+|---|---|
+| `sail_detection_signals` | Signals raised by the detection system. |
+| `sail_tasks` | Queue of agent tasks (with risk classification). |
+| `sail_pipelines` | Higher-order pipelines composed of tasks. |
+| `sail_agent_logs`, `sail_events` | Per-run audit trail. |
 
-```sql
-CREATE TABLE public.conversations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  tutor_id uuid NOT NULL,
-  learner_id uuid NOT NULL,
-  last_message_at timestamptz DEFAULT now(),
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
+---
 
-### messages
-Individual messages within conversations.
+## 5. Schools & classroom layer
 
-```sql
-CREATE TABLE public.messages (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  conversation_id uuid NOT NULL,
-  sender_id uuid NOT NULL,
-  content text NOT NULL,
-  message_type text DEFAULT 'text',
-  read_at timestamptz,
-  created_at timestamptz DEFAULT now()
-);
-```
+| Group | Tables |
+|---|---|
+| Tenancy | `schools`, `school_memberships`, `school_invitations`, `school_audit_logs`, `school_subjects` |
+| Classroom | `classes`, `class_subjects`, `enrollments`, `timetables`, `timetable_slots`, `assignments`, `grades`, `announcements` |
+| Homework & submissions | `school_homework`, `school_homework_questions`, `school_homework_responses`, `school_quiz_attempts`, `submissions`, `homework_reminder_sent` |
+| AI over school content | `school_ai_documents`, `school_ai_chunks`, `school_ai_usage_daily`, `teacher_ai_settings`, `documents` |
+| Content library | `library_system_resources`, `library_saved_items`, `library_access_log`, `school_resources`, `school_videos` |
+| Live lessons | `lesson_recordings`, `lesson_transcripts`, `lesson_consents`, `lesson_retention_settings`, `lesson_reinforcement_sets`, `lesson_topic_mapping`, `lesson_notes` |
+| Analytics | `school_analytics_daily`, `student_analytics_daily`, `analytics_reports`, `progress_reports`, `student_context_snapshots` |
 
-**RLS Policies:**
-- Participants can view messages in their conversations
-- Participants can send messages
-- Users can mark messages as read
+---
 
-## Review System
+## 6. Learning OS kernel (cross-cutting)
 
-### reviews
-User ratings and feedback for completed sessions.
+| Table | Purpose |
+|---|---|
+| `learning_events` | Canonical event log across every learning surface. |
+| `learner_state` | Per-learner + subject EWMA / risk vector. |
+| `topic_tutor_rankings` | Tutor ranking per topic derived from outcomes. |
+| `school_kernel_snapshots` | Rolled-up school-level kernel state. |
+| `kernel_alerts` | Actionable risk cohorts (statuses: `new`, `acknowledged`, `assigned`, `resolved`, `dismissed`). |
+| `remediation_baselines` | Baseline EWMA/risk captured when a remediation homework is created. |
+| `scheduled_insight_runs`, `seeding_jobs` | Async processing state. |
+| `security_audit_logs` | Admin & sensitive action audit. |
+| `landing_events` | Public marketing funnel analytics. |
+| `subscriptions` | Subscription state + trial gating. |
 
-```sql
-CREATE TABLE public.reviews (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id uuid,
-  reviewer_id uuid NOT NULL,
-  reviewed_id uuid NOT NULL,
-  rating integer NOT NULL CHECK (rating >= 1 AND rating <= 5),
-  comment text,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
+### Key kernel functions
 
-**RLS Policies:**
-- Users can create reviews for their completed bookings
-- Users can view reviews about themselves
-- Users can update their own reviews
+| Function | Notes |
+|---|---|
+| `has_role(uid, role)` | SECURITY DEFINER role check used by all RLS. |
+| `handle_new_user()` | Trigger on `auth.users` → seeds `profiles`. |
+| `capture_remediation_baseline()` | Trigger on `school_homework` insert when `is_remediation`. |
+| `remediation_effectiveness(school_id)` | Before/after EWMA comparison per remediation homework. |
+| `auto_resolve_kernel_alerts()` | Hourly `pg_cron` job that closes alerts once the cohort shrinks. |
+| `learner_weekly_digest(user_id)` | 7-day rollup for the learner Home tab + guardian digest. |
+| Study-mode analytics RPCs | `get_student_analytics`, `detect_learning_gaps`, all SECURITY DEFINER + locked `search_path`. |
 
-## Payment System
+---
 
-### payments
-Transaction records for session payments.
+## 7. LOS Phase 3.x extension (workspace model)
 
-```sql
-CREATE TABLE public.payments (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id uuid NOT NULL,
-  payer_id uuid NOT NULL,
-  amount numeric NOT NULL,
-  currency text DEFAULT 'USD',
-  status payment_status DEFAULT 'pending',
-  provider text,
-  provider_ref text,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
+A parallel workspace-scoped LOS layer defined in
+`src/integrations/supabase/learning-os-types.ts` and
+`src/studymode/lib/learningOps.ts`. Migrations for it live at the
+project root (`20260623113000_…`, `20260627143000_…`,
+`20260628090000_…`, `20260702101500_…`, `20260705093000_…`) and are
+**not** applied on this Supabase project — the school layer above is
+used instead. The bundle is kept in-tree for future integration and is
+consumed only by the class-scoped route `/teacher/class/:cohortId` via
+`useClassAtRisk` + `usePlanProposals`.
 
-**Status Enum:** `pending`, `processing`, `completed`, `failed`, `refunded`
+Concepts in that bundle:
 
-## Verification System
+- `learning_workspaces`, `workspace_memberships`, `workspace_cohorts`,
+  `workspace_invitations`, `workspace_member_cohort_assignments`
+- `concept_catalog`, `mastery_evidence_ledger`
+- `intervention_queue`, `intervention_events`
+- `learning_ops_automation_schedule`, `learning_ops_automation_runs`,
+  `learning_ops_concept_ingestions`, `learning_ops_plan_proposals`
+- Views: `learning_class_at_risk`, `learner_projected_risk`
+- Prerequisite DAG: `learning_concept_prerequisite_edges` +
+  `materialize_concept_prerequisite_edges()` / `get_upstream_prerequisites()`
+- RPCs: `route_interventions_to_teachers`, `run_study_plan_optimizer`
 
-### tutor_verifications
-Document verification for tutor onboarding.
+---
+
+## 8. Custom enums (selected)
 
 ```sql
-CREATE TABLE public.tutor_verifications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  id_number text,
-  id_document_url text,
-  profile_photo_url text,
-  police_clearance_url text,
-  verification_status text DEFAULT 'pending',
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
+booking_status         -- requested, accepted, declined, in_progress, completed, cancelled
+payment_status         -- pending, processing, completed, failed, refunded
+study_level            -- primary, secondary, tertiary, professional
+app_role               -- admin, support, moderator
+support_status         -- open, in_progress, resolved, closed
+priority_level         -- low, medium, high, urgent
+verification_decision  -- approved, rejected, needs_revision
+offline_channel        -- sms, ussd, whatsapp
+message_channel        -- sms, ussd, whatsapp, email
+message_direction      -- inbound, outbound
 ```
 
-### verification_reviews
-Admin reviews of verification documents.
+School membership roles are stored as text (`school_admin`,
+`school_teacher`, `school_student`) on `school_memberships.role`; LOS
+workspace roles (`owner`, `admin`, `teacher`, `tutor`, `student`) live
+on the Phase 3.x contract in `learning-os-types.ts`.
 
-```sql
-CREATE TABLE public.verification_reviews (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  verification_id uuid NOT NULL,
-  reviewer_id uuid NOT NULL,
-  decision verification_decision NOT NULL,
-  notes text,
-  created_at timestamptz DEFAULT now()
-);
-```
+---
 
-### qualifications
-Educational background documentation.
+## 9. Realtime channels
 
-```sql
-CREATE TABLE public.qualifications (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  qualification_type text NOT NULL,
-  institution text NOT NULL,
-  year_obtained integer,
-  document_url text,
-  created_at timestamptz DEFAULT now()
-);
-```
+Tables published to `supabase_realtime`:
 
-## Admin & Support Tables
+- `bookings`, `messages`, `conversations` (marketplace)
+- `notifications` (learner + tutor)
+- `kernel_alerts`, `school_kernel_snapshots` (LOS kernel)
+- `learning_events`, `learner_state` where used by `useLearningKernel`
 
-### user_roles
-Role-based access control system.
+All subscriptions are mounted inside `useEffect` and torn down with
+`supabase.removeChannel(channel)`.
 
-```sql
-CREATE TABLE public.user_roles (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  role app_role NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-```
+---
 
-**Role Enum:** `admin`, `support`, `moderator`
+## 10. Security posture
 
-### support_tickets
-Customer support ticket system.
-
-```sql
-CREATE TABLE public.support_tickets (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  creator_id uuid NOT NULL,
-  assignee_id uuid,
-  status support_status DEFAULT 'open',
-  priority priority_level DEFAULT 'medium',
-  subject text NOT NULL,
-  message text NOT NULL,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-## Location & Offline Support
-
-### location_codes
-Predefined location codes for offline bookings.
-
-```sql
-CREATE TABLE public.location_codes (
-  code text PRIMARY KEY,
-  name text NOT NULL,
-  city text,
-  region text,
-  latitude numeric,
-  longitude numeric,
-  active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-### offline_booking_requests
-SMS/USSD booking requests from offline channels.
-
-```sql
-CREATE TABLE public.offline_booking_requests (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  channel offline_channel NOT NULL,
-  learner_msisdn text NOT NULL,
-  tutor_msisdn text,
-  subject_code text,
-  location_code text,
-  cell_tower_id text,
-  location_pin text,
-  scheduled_at timestamptz,
-  status offline_request_status DEFAULT 'received',
-  raw_payload jsonb,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-### ussd_sessions
-USSD session state management.
-
-```sql
-CREATE TABLE public.ussd_sessions (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  msisdn text NOT NULL,
-  provider_session_id text NOT NULL,
-  current_step text,
-  data jsonb,
-  is_active boolean DEFAULT true,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-```
-
-### message_logs
-Audit trail for SMS/USSD communications.
-
-```sql
-CREATE TABLE public.message_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  channel message_channel NOT NULL,
-  direction message_direction NOT NULL,
-  from_msisdn text,
-  to_msisdn text,
-  body text NOT NULL,
-  provider_message_id text,
-  related_request_id uuid,
-  error text,
-  created_at timestamptz DEFAULT now()
-);
-```
-
-## Custom Enums
-
-```sql
--- Booking status progression
-CREATE TYPE booking_status AS ENUM ('requested', 'accepted', 'declined', 'in_progress', 'completed', 'cancelled');
-
--- Payment transaction states
-CREATE TYPE payment_status AS ENUM ('pending', 'processing', 'completed', 'failed', 'refunded');
-
--- Study level categories
-CREATE TYPE study_level AS ENUM ('primary', 'secondary', 'tertiary', 'professional');
-
--- Support ticket management
-CREATE TYPE support_status AS ENUM ('open', 'in_progress', 'resolved', 'closed');
-CREATE TYPE priority_level AS ENUM ('low', 'medium', 'high', 'urgent');
-
--- Verification process
-CREATE TYPE verification_decision AS ENUM ('approved', 'rejected', 'needs_revision');
-
--- User roles and permissions
-CREATE TYPE app_role AS ENUM ('admin', 'support', 'moderator');
-
--- Offline booking channels
-CREATE TYPE offline_channel AS ENUM ('sms', 'ussd', 'whatsapp');
-CREATE TYPE offline_request_status AS ENUM ('received', 'processing', 'matched', 'confirmed', 'failed');
-
--- Message logging
-CREATE TYPE message_channel AS ENUM ('sms', 'ussd', 'whatsapp', 'email');
-CREATE TYPE message_direction AS ENUM ('inbound', 'outbound');
-```
-
-## Database Functions
-
-### handle_new_user()
-Automatically creates profile when user registers.
-
-```sql
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, full_name, user_type)
-  VALUES (
-    NEW.id, 
-    NEW.email, 
-    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
-    COALESCE(NEW.raw_user_meta_data->>'user_type', 'learner')
-  );
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-```
-
-### has_role(user_id, role)
-Checks if user has specific role for RLS policies.
-
-```sql
-CREATE OR REPLACE FUNCTION public.has_role(_user_id uuid, _role app_role)
-RETURNS boolean AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.user_roles
-    WHERE user_id = _user_id AND role = _role
-  );
-$$ LANGUAGE sql STABLE SECURITY DEFINER;
-```
-
-### update_updated_at_column()
-Automatically updates timestamp on row changes.
-
-```sql
-CREATE OR REPLACE FUNCTION public.update_updated_at_column()
-RETURNS trigger AS $$
-BEGIN
-  NEW.updated_at = now();
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-## Indexes for Performance
-
-```sql
--- User lookups
-CREATE INDEX idx_profiles_user_type ON profiles(user_type);
-CREATE INDEX idx_profiles_online_status ON profiles(online_status) WHERE online_status = true;
-CREATE INDEX idx_profiles_location ON profiles(location_lat, location_lng) WHERE location_lat IS NOT NULL;
-
--- Booking queries
-CREATE INDEX idx_bookings_tutor_status ON bookings(tutor_id, status);
-CREATE INDEX idx_bookings_learner_status ON bookings(learner_id, status);
-CREATE INDEX idx_bookings_scheduled_at ON bookings(scheduled_at);
-
--- Message performance
-CREATE INDEX idx_messages_conversation ON messages(conversation_id, created_at);
-CREATE INDEX idx_conversations_participants ON conversations(tutor_id, learner_id);
-
--- Search optimization
-CREATE INDEX idx_tutor_subjects_search ON tutor_subjects(subject, level);
-CREATE INDEX idx_location_codes_active ON location_codes(active) WHERE active = true;
-```
-
-## Real-time Subscriptions
-
-Tables enabled for real-time updates:
-- `profiles` - Online status changes
-- `bookings` - Status updates
-- `messages` - New messages
-- `conversations` - Last message timestamps
-- `tutor_subjects` - Availability changes
-
-## Security Considerations
-
-1. **Row Level Security** enforced on all tables
-2. **Function security** with SECURITY DEFINER where needed
-3. **Input validation** at application and database levels
-4. **Audit trails** through message_logs and timestamps
-5. **Sensitive data encryption** in storage buckets
-6. **Role-based access** with has_role() function
+- **RLS on every table.** Public reads (e.g. tutor discovery) are
+  explicitly modelled with narrow policies + `GRANT SELECT TO anon`.
+- **Roles never live on `profiles`.** Only in `user_roles`; checked via
+  `has_role()` to avoid recursive RLS.
+- **AI quota** enforced per user (`ai_usage_daily`) and per school
+  (`school_ai_usage_daily`).
+- **Sensitive endpoints** (`studymode-detect-gaps`, `school-analytics`,
+  `school-ingest-document`, `school-search`) require JWT, scope all
+  queries to the caller, and never accept a client-supplied `user_id`.
+- **Audit trails** in `school_audit_logs` and `security_audit_logs`.
+- **Lesson data retention** governed by `lesson_retention_settings` and
+  the `purge-expired-lesson-data` cron function.
