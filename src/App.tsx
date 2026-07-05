@@ -25,6 +25,7 @@ const PaymentCancelled = lazy(() => import("./pages/PaymentCancelled"));
 const AdminAuth = lazy(() => import("./pages/AdminAuth"));
 const TeacherCommandCenterPage = lazy(() => import("./pages/TeacherCommandCenterPage"));
 const SchoolAdminPage = lazy(() => import("./pages/SchoolAdminPage"));
+const TeacherClassDetailPage = lazy(() => import("./pages/TeacherClassDetailPage"));
 
 // Admin sub-pages
 const AdminLayout = lazy(() => import("./pages/admin/AdminLayout"));
