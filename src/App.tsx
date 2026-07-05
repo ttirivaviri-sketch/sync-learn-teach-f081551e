@@ -124,6 +124,7 @@ const App = () => (
               {/* Learning Operating System entry points */}
               <Route path="/teacher" element={<TeacherCommandCenterPage />} />
               <Route path="/school" element={<SchoolAdminPage />} />
+              <Route path="/teacher/class/:cohortId" element={<TeacherClassDetailPage />} />
 
               {/* Admin routes */}
               <Route path="/admin/auth" element={<AdminAuth />} />
