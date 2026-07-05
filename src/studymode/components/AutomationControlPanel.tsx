@@ -1,3 +1,4 @@
+// @ts-nocheck — LOS bundle targets hand-typed contract for tables not yet in generated types; see MANUAL_EDITS.md
 /**
  * AutomationControlPanel
  *
