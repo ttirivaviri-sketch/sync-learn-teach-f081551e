@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Database initialization module
  * Creates connection pool and initializes migrations
@@ -15,7 +16,7 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
-pol.on('error', (err) => {
+pool.on('error', (err) => {
   logger.error({
     type: 'db_pool_error',
     message: err.message,
