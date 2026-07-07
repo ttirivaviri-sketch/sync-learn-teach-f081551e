@@ -7,7 +7,7 @@
  */
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { Home, BookOpen, Activity, User, MessageCircle } from "lucide-react";
+import { Home, BookOpen, Activity, User, MessageCircle, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { AppShell } from "@/components/layout/AppShell";
@@ -42,6 +42,7 @@ const LearnerHomeTab = lazy(() => import("./learner/LearnerHomeTab").then(m => (
 const LearnerLibraryTab = lazy(() => import("./learner/LearnerLibraryTab").then(m => ({ default: m.LearnerLibraryTab })));
 const LearnerActivityTab = lazy(() => import("./learner/LearnerActivityTab").then(m => ({ default: m.LearnerActivityTab })));
 const LearnerProfileTab = lazy(() => import("./learner/LearnerProfileTab").then(m => ({ default: m.LearnerProfileTab })));
+const StudyModeWrapper = lazy(() => import("@/studymode/StudyModeWrapper").then(m => ({ default: m.StudyModeWrapper })));
 import { logger } from "@/utils/logger";
 import { PaymentMethodsModal } from "@/components/learner-modals/PaymentMethodsModal";
 import { PaymentHistoryModal } from "@/components/learner-modals/PaymentHistoryModal";
@@ -446,6 +447,7 @@ const LearnerApp = () => {
   const navItems = [
     { id: "home",     label: "Home",     icon: <Home     className="h-5 w-5" /> },
     { id: "library",  label: "Library",  icon: <BookOpen className="h-5 w-5" /> },
+    { id: "study",    label: "Study",    icon: <Brain    className="h-5 w-5" /> },
     { id: "activity", label: "Activity", icon: <Activity className="h-5 w-5" /> },
     { id: "profile",  label: "Profile",  icon: <User     className="h-5 w-5" /> },
   ];
@@ -515,6 +517,19 @@ const LearnerApp = () => {
                   onShowAcademicSetup={() => setShowAcademicSetup(true)}
                   onBookTutor={handleLibraryBookTutor}
                   onNeedHelp={() => setActiveTab("home")}
+                />
+              </Suspense>
+            )}
+          </TabsContent>
+
+          <TabsContent value="study" hidden={activeTab !== "study"}>
+            {activeTab === "study" && (
+              <Suspense fallback={<TabFallback />}>
+                <StudyModeWrapper
+                  onDeactivate={() => setActiveTab("home")}
+                  onNeedHelp={() => setActiveTab("home")}
+                  onBrowseLibrary={() => setActiveTab("library")}
+                  academicProfile={academicProfile}
                 />
               </Suspense>
             )}
