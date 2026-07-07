@@ -113,7 +113,6 @@ const StudySyncLibrary = ({
 
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
-    { id: "tutorials", name: "Tutorials", icon: Video, color: "text-emerald-600" },
     { id: "books", name: "Books", icon: Book, color: "text-secondary" },
     { id: "papers", name: "Past Papers", icon: FileText, color: "text-accent" },
     { id: "mylibrary", name: "My Library", icon: Archive, color: "text-purple-600" },
@@ -302,7 +301,7 @@ const StudySyncLibrary = ({
         <>
           {/* ── Library Tabs ── */}
           <Tabs value={activeCategory} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 text-xs">
+            <TabsList className="grid w-full grid-cols-4 text-xs">
               {categories.map((category) => (
                 <TabsTrigger key={category.id} value={category.id} className="text-xs">
                   <category.icon className={`h-4 w-4 mr-1 ${category.color}`} />
