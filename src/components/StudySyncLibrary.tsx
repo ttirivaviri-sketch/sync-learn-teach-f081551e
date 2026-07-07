@@ -1,15 +1,13 @@
-import { useState, lazy, Suspense } from "react";
+import { useState } from "react";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, GraduationCap, Sparkles, X, Play,
+  Archive, Brain, Loader2, GraduationCap, Sparkles, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { TopicTutorRack } from "@/components/TopicTutorRack";
 import { useLibraryResources } from "@/hooks/useLibraryResources";
 import type { AcademicProfile, LibraryResource } from "@/types/academicProfile";
@@ -25,10 +23,7 @@ import { PosterCard } from "@/components/library/PosterCard";
 import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
 import { MatchExplanation } from "@/components/library/MatchExplanation";
 
-// Lazy-load Study Mode only when the toggle is activated
-const StudyModeWrapper = lazy(() =>
-  import("@/studymode/StudyModeWrapper").then((m) => ({ default: m.StudyModeWrapper }))
-);
+// Study Mode is a top-level nav tab now — no in-Library toggle needed.
 
 interface StudySyncLibraryProps {
   academicProfile?: AcademicProfile | null;
