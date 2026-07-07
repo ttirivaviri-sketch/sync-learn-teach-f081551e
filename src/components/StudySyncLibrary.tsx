@@ -1,15 +1,13 @@
-import { useState, lazy, Suspense } from "react";
+import { useState } from "react";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, GraduationCap, Sparkles, X, Play,
+  Archive, Brain, Loader2, GraduationCap, Sparkles, X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { TopicTutorRack } from "@/components/TopicTutorRack";
 import { useLibraryResources } from "@/hooks/useLibraryResources";
 import type { AcademicProfile, LibraryResource } from "@/types/academicProfile";
@@ -25,10 +23,7 @@ import { PosterCard } from "@/components/library/PosterCard";
 import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
 import { MatchExplanation } from "@/components/library/MatchExplanation";
 
-// Lazy-load Study Mode only when the toggle is activated
-const StudyModeWrapper = lazy(() =>
-  import("@/studymode/StudyModeWrapper").then((m) => ({ default: m.StudyModeWrapper }))
-);
+// Study Mode is a top-level nav tab now — no in-Library toggle needed.
 
 interface StudySyncLibraryProps {
   academicProfile?: AcademicProfile | null;
@@ -45,7 +40,7 @@ const StudySyncLibrary = ({
 }: StudySyncLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [myLibraryItems, setMyLibraryItems] = useState<string[]>([]);
-  const [studyModeActive, setStudyModeActive] = useState(false);
+  // studyModeActive removed — Study Mode is a top-level nav tab now.
   const [activeCategory, setActiveCategory] = useState("all");
   const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
@@ -118,7 +113,6 @@ const StudySyncLibrary = ({
 
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
-    { id: "tutorials", name: "Tutorials", icon: Video, color: "text-emerald-600" },
     { id: "books", name: "Books", icon: Book, color: "text-secondary" },
     { id: "papers", name: "Past Papers", icon: FileText, color: "text-accent" },
     { id: "mylibrary", name: "My Library", icon: Archive, color: "text-purple-600" },
@@ -218,27 +212,6 @@ const StudySyncLibrary = ({
 
   const rackProps = { myLibraryItems, ...cardActions };
 
-  // ── StudyMode full-screen ───────────────────────────────────────────────
-  if (studyModeActive) {
-    return (
-      <Suspense
-        fallback={
-          <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p className="text-sm text-muted-foreground">Loading Study Mode…</p>
-          </div>
-        }
-      >
-        <StudyModeWrapper
-          onDeactivate={() => setStudyModeActive(false)}
-          onNeedHelp={onNeedHelp}
-          onBrowseLibrary={() => { setStudyModeActive(false); setActiveCategory("all"); }}
-          academicProfile={academicProfile}
-        />
-      </Suspense>
-    );
-  }
-
   const myLibraryResources = allResources.filter((r) =>
     myLibraryItems.includes(String(r.id))
   );
@@ -246,35 +219,7 @@ const StudySyncLibrary = ({
   // ── Main render ─────────────────────────────────────────────────────────
   return (
     <div className="space-y-4">
-      {/* ── Study Mode Banner ── */}
-      <Card className="bg-gradient-to-r from-violet-500/10 via-primary/10 to-blue-500/10 border-primary/30">
-        <CardContent className="p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="rounded-xl bg-primary/10 p-2 shrink-0">
-                <Brain className="h-6 w-6 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <h3 className="font-semibold text-sm leading-tight">Study Mode</h3>
-                <p className="text-xs text-muted-foreground leading-tight truncate">
-                  AI-powered coaching, tasks &amp; exam prep
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <Label htmlFor="study-mode-toggle" className="text-xs font-medium cursor-pointer select-none">
-                {studyModeActive ? "On" : "Off"}
-              </Label>
-              <Switch
-                id="study-mode-toggle"
-                checked={studyModeActive}
-                onCheckedChange={setStudyModeActive}
-                className="data-[state=checked]:bg-primary"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+
 
       {/* ── Academic Profile Badge ── */}
       {academicProfile && (
@@ -349,14 +294,14 @@ const StudySyncLibrary = ({
           searchResults={searchResults}
           myLibraryItems={myLibraryItems}
           onNeedHelp={onNeedHelp}
-          onEnterStudyMode={() => setStudyModeActive(true)}
+          onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")}
           {...cardActions}
         />
       ) : (
         <>
           {/* ── Library Tabs ── */}
           <Tabs value={activeCategory} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 text-xs">
+            <TabsList className="grid w-full grid-cols-4 text-xs">
               {categories.map((category) => (
                 <TabsTrigger key={category.id} value={category.id} className="text-xs">
                   <category.icon className={`h-4 w-4 mr-1 ${category.color}`} />
@@ -404,7 +349,7 @@ const StudySyncLibrary = ({
               )}
               <ContentRack title="Past Exam Papers" items={pastPapers.slice(0, 4)} icon={FileText} {...rackProps} />
               <ContentRack title="All Resources" items={allResources.slice(0, 4)} icon={BookOpen} {...rackProps} />
-              <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
+              <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")} />
             </TabsContent>
 
             {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel).
