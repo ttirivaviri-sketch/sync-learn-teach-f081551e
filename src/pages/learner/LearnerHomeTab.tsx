@@ -2,7 +2,7 @@
  * LearnerHomeTab — Search, subject filters, location, tutor cards.
  */
 import { useState } from "react";
-import { MapPin, Video, MessageCircle, Search, Award, CalendarCheck, Clock } from "lucide-react";
+import { MapPin, Video, MessageCircle, Search, Award, CalendarCheck, Clock, ChevronDown, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
 import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
 import { NextActionCard } from "@/components/learner/NextActionCard";
@@ -112,43 +113,53 @@ export const LearnerHomeTab = ({
 
   return (
   <div className="space-y-4 p-4 mt-0">
-    {/* Universal next-action card — one source of "do this now" */}
+    {/* Hero: single "do this now" card — the one obvious primary action */}
     <NextActionCard />
 
-    {/* School Workspace banner — only renders for school-enrolled learners */}
-    <SchoolWorkspaceBanner />
+    {/* Compact action strip — My Lessons + At-a-glance toggle */}
+    <div className="flex gap-2 items-stretch">
+      <Button
+        onClick={() => { haptic("light"); setLessonsOpen(true); }}
+        variant="outline"
+        className="flex-1 h-10 justify-between px-3 border-primary/30 hover:bg-primary/5"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium">
+          <CalendarCheck className="h-4 w-4 text-primary" />
+          My Lessons
+        </span>
+        {upcomingCount > 0 && (
+          <Badge
+            variant="default"
+            className={`ml-2 h-5 px-1.5 text-[10px] ${hasImminentLesson ? "animate-pulse" : ""}`}
+          >
+            {upcomingCount}
+          </Badge>
+        )}
+      </Button>
+    </div>
 
-    {/* Mastery intelligence — top strengths and at-risk topics from learner_state */}
-    <MasteryIntelligenceCard />
-
-    {/* 7-day weekly digest — momentum snapshot */}
-    <WeeklyDigestCard />
-
-    {/* Smart contextual suggestion from learning gaps */}
-    <SmartSuggestionStrip
-      onSuggest={(topic) => {
-        onSearchChange(topic);
-      }}
-    />
-
-    {/* My Lessons Button */}
-    <Button
-      onClick={() => { haptic("light"); setLessonsOpen(true); }}
-      className="w-full justify-between h-12 bg-primary hover:bg-primary/90 text-primary-foreground shadow-md active:scale-[0.98] transition-transform"
-    >
-      <span className="flex items-center gap-2">
-        <CalendarCheck className="h-5 w-5" />
-        <span className="font-semibold">My Lessons</span>
-      </span>
-      {upcomingCount > 0 && (
-        <Badge
-          variant="secondary"
-          className={`ml-2 bg-white/20 text-primary-foreground border-0 ${hasImminentLesson ? "animate-pulse" : ""}`}
-        >
-          {upcomingCount}
-        </Badge>
-      )}
-    </Button>
+    {/* At-a-glance — insight cards collapsed into one expandable strip */}
+    <Collapsible>
+      <CollapsibleTrigger asChild>
+        <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 transition-colors text-left group">
+          <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+            <Sparkles className="h-3.5 w-3.5" />
+            At a glance — progress, digest & suggestions
+          </span>
+          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="space-y-3 pt-3">
+        <SchoolWorkspaceBanner />
+        <MasteryIntelligenceCard />
+        <WeeklyDigestCard />
+        <SmartSuggestionStrip
+          onSuggest={(topic) => {
+            onSearchChange(topic);
+          }}
+        />
+      </CollapsibleContent>
+    </Collapsible>
 
     {/* Lessons Bottom Sheet */}
     <Sheet open={lessonsOpen} onOpenChange={setLessonsOpen}>
@@ -247,6 +258,8 @@ export const LearnerHomeTab = ({
         )}
       </SheetContent>
     </Sheet>
+
+    
 
     
 
