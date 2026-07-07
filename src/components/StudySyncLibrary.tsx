@@ -295,7 +295,7 @@ const StudySyncLibrary = ({
           searchResults={searchResults}
           myLibraryItems={myLibraryItems}
           onNeedHelp={onNeedHelp}
-          onEnterStudyMode={() => setStudyModeActive(true)}
+          onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")}
           {...cardActions}
         />
       ) : (
@@ -350,7 +350,7 @@ const StudySyncLibrary = ({
               )}
               <ContentRack title="Past Exam Papers" items={pastPapers.slice(0, 4)} icon={FileText} {...rackProps} />
               <ContentRack title="All Resources" items={allResources.slice(0, 4)} icon={BookOpen} {...rackProps} />
-              <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => setStudyModeActive(true)} />
+              <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")} />
             </TabsContent>
 
             {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel).
