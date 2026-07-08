@@ -490,28 +490,69 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </TabsContent>
 
         {/* ===== TAB 2: PROGRESS ===== */}
-        <TabsContent value="progress" className="mt-4 space-y-6">
+        <TabsContent value="progress" className="mt-4 space-y-4">
+          {/* Primary summary — always visible */}
           <PredictedGradeCard subjects={subjects.map((s) => ({ id: s.id, name: s.name }))} />
-          <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
-            <AIProgressInsights
-              subjects={subjects.map(s => ({
-                name: s.name,
-                currentTopic: s.currentTopic.name,
-                mastery: s.currentTopic.mastery,
-              }))}
-              dailyStats={dailyStats}
-              streak={progress?.streak || 0}
-              xp={progress?.xp || 0}
-              quizHistory={topicStats.map(s => ({
-                topic_name: s.topic_name,
-                accuracy: s.accuracy,
-                total_attempts: s.total_attempts,
-                due_for_review: s.due_for_review,
-              }))}
-              masteryData={[]}
-            />
-            <ProgressCharts />
-          </Suspense>
+
+          {/* AI insights — compact, expandable */}
+          <Collapsible>
+            <Card className="rounded-2xl">
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm">AI insights</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4">
+                  <Suspense fallback={<Skeleton className="h-40 rounded-xl" />}>
+                    <AIProgressInsights
+                      subjects={subjects.map(s => ({
+                        name: s.name,
+                        currentTopic: s.currentTopic.name,
+                        mastery: s.currentTopic.mastery,
+                      }))}
+                      dailyStats={dailyStats}
+                      streak={progress?.streak || 0}
+                      xp={progress?.xp || 0}
+                      quizHistory={topicStats.map(s => ({
+                        topic_name: s.topic_name,
+                        accuracy: s.accuracy,
+                        total_attempts: s.total_attempts,
+                        due_for_review: s.due_for_review,
+                      }))}
+                      masteryData={[]}
+                    />
+                  </Suspense>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Charts — collapsed by default so the tab doesn't stack into a long scroll */}
+          <Collapsible>
+            <Card className="rounded-2xl">
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm">Charts & trends</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4">
+                  <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
+                    <ProgressCharts />
+                  </Suspense>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         </TabsContent>
 
         {/* ===== TAB 3: CALENDAR ===== */}
