@@ -590,53 +590,103 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           </Suspense>
         </TabsContent>
 
-        {/* ===== TAB 4: EXAMS (Spaced Repetition + Mock Exams) ===== */}
+        {/* ===== TAB 4: EXAMS — primary: mock exam CTA + review widget. Secondary content in More sheet. ===== */}
         <TabsContent value="exams" className="mt-4">
          <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
           <div className="space-y-4">
+            {/* Primary: Mock exam */}
             <MockExamSection />
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">Spaced Repetition</h2>
-              <span className="text-xs text-muted-foreground">
-                Powered by SM-2 algorithm
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Smart review system that automatically re-quizzes you on topics you're struggling with.
-            </p>
-            <AIWeakTopicAlerts
-              topicStats={topicStats}
-              subjects={subjects.map(s => ({
-                name: s.name,
-                currentTopic: s.currentTopic.name,
-                mastery: s.currentTopic.mastery,
-              }))}
-              onStartReview={(topicName) => {
-                const matchingSubject = subjects.find(s =>
-                  s.topics.some(t => t.name === topicName) ||
-                  s.currentTopic.name === topicName
-                );
-                if (matchingSubject) setSelectedSubject(matchingSubject);
-              }}
-            />
 
-            {strugglingTopics.length > 1 && (
-              <StuckHelpPrompt
-                topic={strugglingTopics[0]?.topic_name}
-                subject={subjects[0]?.name}
-                failedAttempts={strugglingTopics.length}
-                variant="after-quiz"
-                onWatchMore={onBrowseLibrary}
-                onBookTutor={onNeedHelp}
-                onBrowseLibrary={onBrowseLibrary}
-              />
-            )}
+            {/* Primary: Spaced repetition review widget */}
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xl font-bold text-foreground truncate">Review Queue</h2>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                    More
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl overflow-y-auto">
+                  <SheetHeader className="mb-4">
+                    <SheetTitle>More exam tools</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 pb-8">
+                    <p className="text-sm text-muted-foreground">
+                      Smart review system that automatically re-quizzes you on topics you're struggling with —
+                      powered by the SM-2 algorithm.
+                    </p>
+
+                    <AIWeakTopicAlerts
+                      topicStats={topicStats}
+                      subjects={subjects.map(s => ({
+                        name: s.name,
+                        currentTopic: s.currentTopic.name,
+                        mastery: s.currentTopic.mastery,
+                      }))}
+                      onStartReview={(topicName) => {
+                        const matchingSubject = subjects.find(s =>
+                          s.topics.some(t => t.name === topicName) ||
+                          s.currentTopic.name === topicName
+                        );
+                        if (matchingSubject) setSelectedSubject(matchingSubject);
+                      }}
+                    />
+
+                    {strugglingTopics.length > 1 && (
+                      <StuckHelpPrompt
+                        topic={strugglingTopics[0]?.topic_name}
+                        subject={subjects[0]?.name}
+                        failedAttempts={strugglingTopics.length}
+                        variant="after-quiz"
+                        onWatchMore={onBrowseLibrary}
+                        onBookTutor={onNeedHelp}
+                        onBrowseLibrary={onBrowseLibrary}
+                      />
+                    )}
+
+                    {topicStats.length > 0 && (
+                      <div className="p-4 rounded-2xl bg-card border border-border">
+                        <h3 className="font-semibold text-foreground mb-3">Your Quiz History</h3>
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {topicStats.map((stat, index) => (
+                            <div
+                              key={`${stat.subject_id}-${stat.topic_name}-${index}`}
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{stat.topic_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {stat.total_attempts} attempts
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className={cn(
+                                  "text-sm font-bold",
+                                  stat.accuracy >= 70 ? "text-success" :
+                                  stat.accuracy >= 50 ? "text-warning" : "text-destructive"
+                                )}>
+                                  {stat.accuracy}%
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {stat.due_for_review ? 'Due now' : `Next: ${stat.next_review_date}`}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
 
             <SpacedRepetitionWidget
               strugglingTopics={strugglingTopics}
               topicsDueToday={topicsDueToday}
               onStartReview={(topic) => {
-                const matchingSubject = subjects.find(s => 
+                const matchingSubject = subjects.find(s =>
                   s.topics.some(t => t.name === topic.topic_name) ||
                   s.currentTopic.name === topic.topic_name
                 );
@@ -645,42 +695,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 }
               }}
             />
-            
-            {topicStats.length > 0 && (
-              <div className="p-4 rounded-2xl bg-card border border-border">
-                <h3 className="font-semibold text-foreground mb-3">Your Quiz History</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {topicStats.map((stat, index) => (
-                    <div 
-                      key={`${stat.subject_id}-${stat.topic_name}-${index}`}
-                      className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{stat.topic_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {stat.total_attempts} attempts
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={cn(
-                          "text-sm font-bold",
-                          stat.accuracy >= 70 ? "text-success" :
-                          stat.accuracy >= 50 ? "text-warning" : "text-destructive"
-                        )}>
-                          {stat.accuracy}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {stat.due_for_review ? 'Due now' : `Next: ${stat.next_review_date}`}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
          </Suspense>
         </TabsContent>
+
 
         {/* ===== TAB 5: PROFILE (academic profile, syllabus, documents, daily progress) ===== */}
         <TabsContent value="setup" className="mt-4 space-y-4">
