@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
@@ -374,8 +376,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               {hasSubjects ? (
                 <>
                   <div className="flex items-center justify-between mb-1 gap-2">
-                    <h2 className="text-xl font-bold text-foreground">Your Subjects</h2>
-                    <div className="flex items-center gap-1.5">
+                    <h2 className="text-xl font-bold text-foreground truncate">Your Subjects</h2>
+                    {/* Desktop: inline actions. Mobile: single overflow menu to prevent header overflow. */}
+                    <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -383,8 +386,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                         className="gap-1.5 border-primary/40 hover:bg-primary/10"
                       >
                         <Sparkles className="h-4 w-4 text-primary" />
-                        <span className="hidden sm:inline">Start by Topic</span>
-                        <span className="sm:hidden">Topic</span>
+                        Start by Topic
                       </Button>
                       <Button
                         variant="outline"
@@ -393,9 +395,26 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                         className="gap-1.5 border-accent/40 hover:bg-accent/10"
                       >
                         <Trophy className="h-4 w-4 text-accent" />
-                        <span className="hidden sm:inline">Global</span>
+                        Global
                       </Button>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild className="sm:hidden">
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="More subject actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setShowTopicPicker(true)}>
+                          <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                          Start by Topic
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowGlobalLeaderboard(true)}>
+                          <Trophy className="mr-2 h-4 w-4 text-accent" />
+                          Global Leaderboard
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   {profileExamDates.length > 0 && (
                     <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
@@ -415,23 +434,23 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                           style={{ animationDelay: `${index * 100}ms` }}
                           className="animate-fade-in relative"
                         >
-                          {daysUntil !== null && daysUntil > 0 && daysUntil <= 30 && (
+                          {/* Cap to one badge per card: exam countdown wins; else upload-docs prompt. */}
+                          {daysUntil !== null && daysUntil > 0 && daysUntil <= 30 ? (
                             <Badge
                               variant="destructive"
                               className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
                             >
                               {daysUntil}d to exam
                             </Badge>
-                          )}
-                          {hasDocuments === false && (
+                          ) : hasDocuments === false ? (
                             <Badge
                               variant="secondary"
-                              className="absolute -top-2 -left-2 z-10 text-[10px] px-1.5 py-0"
+                              className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
                             >
                               <Lock className="h-2.5 w-2.5 mr-0.5" />
                               Upload docs
                             </Badge>
-                          )}
+                          ) : null}
                           <SubjectCard
                             subject={subject}
                             tasksCount={4}
@@ -471,28 +490,69 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         </TabsContent>
 
         {/* ===== TAB 2: PROGRESS ===== */}
-        <TabsContent value="progress" className="mt-4 space-y-6">
+        <TabsContent value="progress" className="mt-4 space-y-4">
+          {/* Primary summary — always visible */}
           <PredictedGradeCard subjects={subjects.map((s) => ({ id: s.id, name: s.name }))} />
-          <Suspense fallback={<Skeleton className="h-64 rounded-2xl" />}>
-            <AIProgressInsights
-              subjects={subjects.map(s => ({
-                name: s.name,
-                currentTopic: s.currentTopic.name,
-                mastery: s.currentTopic.mastery,
-              }))}
-              dailyStats={dailyStats}
-              streak={progress?.streak || 0}
-              xp={progress?.xp || 0}
-              quizHistory={topicStats.map(s => ({
-                topic_name: s.topic_name,
-                accuracy: s.accuracy,
-                total_attempts: s.total_attempts,
-                due_for_review: s.due_for_review,
-              }))}
-              masteryData={[]}
-            />
-            <ProgressCharts />
-          </Suspense>
+
+          {/* AI insights — compact, expandable */}
+          <Collapsible>
+            <Card className="rounded-2xl">
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm">AI insights</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4">
+                  <Suspense fallback={<Skeleton className="h-40 rounded-xl" />}>
+                    <AIProgressInsights
+                      subjects={subjects.map(s => ({
+                        name: s.name,
+                        currentTopic: s.currentTopic.name,
+                        mastery: s.currentTopic.mastery,
+                      }))}
+                      dailyStats={dailyStats}
+                      streak={progress?.streak || 0}
+                      xp={progress?.xp || 0}
+                      quizHistory={topicStats.map(s => ({
+                        topic_name: s.topic_name,
+                        accuracy: s.accuracy,
+                        total_attempts: s.total_attempts,
+                        due_for_review: s.due_for_review,
+                      }))}
+                      masteryData={[]}
+                    />
+                  </Suspense>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+
+          {/* Charts — collapsed by default so the tab doesn't stack into a long scroll */}
+          <Collapsible>
+            <Card className="rounded-2xl">
+              <CollapsibleTrigger asChild>
+                <button className="w-full flex items-center justify-between p-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-sm">Charts & trends</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4">
+                  <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
+                    <ProgressCharts />
+                  </Suspense>
+                </div>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
         </TabsContent>
 
         {/* ===== TAB 3: CALENDAR ===== */}
@@ -530,53 +590,103 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           </Suspense>
         </TabsContent>
 
-        {/* ===== TAB 4: EXAMS (Spaced Repetition + Mock Exams) ===== */}
+        {/* ===== TAB 4: EXAMS — primary: mock exam CTA + review widget. Secondary content in More sheet. ===== */}
         <TabsContent value="exams" className="mt-4">
          <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
           <div className="space-y-4">
+            {/* Primary: Mock exam */}
             <MockExamSection />
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">Spaced Repetition</h2>
-              <span className="text-xs text-muted-foreground">
-                Powered by SM-2 algorithm
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Smart review system that automatically re-quizzes you on topics you're struggling with.
-            </p>
-            <AIWeakTopicAlerts
-              topicStats={topicStats}
-              subjects={subjects.map(s => ({
-                name: s.name,
-                currentTopic: s.currentTopic.name,
-                mastery: s.currentTopic.mastery,
-              }))}
-              onStartReview={(topicName) => {
-                const matchingSubject = subjects.find(s =>
-                  s.topics.some(t => t.name === topicName) ||
-                  s.currentTopic.name === topicName
-                );
-                if (matchingSubject) setSelectedSubject(matchingSubject);
-              }}
-            />
 
-            {strugglingTopics.length > 1 && (
-              <StuckHelpPrompt
-                topic={strugglingTopics[0]?.topic_name}
-                subject={subjects[0]?.name}
-                failedAttempts={strugglingTopics.length}
-                variant="after-quiz"
-                onWatchMore={onBrowseLibrary}
-                onBookTutor={onNeedHelp}
-                onBrowseLibrary={onBrowseLibrary}
-              />
-            )}
+            {/* Primary: Spaced repetition review widget */}
+            <div className="flex items-center justify-between gap-2">
+              <h2 className="text-xl font-bold text-foreground truncate">Review Queue</h2>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-1.5 shrink-0">
+                    <MoreHorizontal className="h-4 w-4" />
+                    More
+                  </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl overflow-y-auto">
+                  <SheetHeader className="mb-4">
+                    <SheetTitle>More exam tools</SheetTitle>
+                  </SheetHeader>
+                  <div className="space-y-4 pb-8">
+                    <p className="text-sm text-muted-foreground">
+                      Smart review system that automatically re-quizzes you on topics you're struggling with —
+                      powered by the SM-2 algorithm.
+                    </p>
+
+                    <AIWeakTopicAlerts
+                      topicStats={topicStats}
+                      subjects={subjects.map(s => ({
+                        name: s.name,
+                        currentTopic: s.currentTopic.name,
+                        mastery: s.currentTopic.mastery,
+                      }))}
+                      onStartReview={(topicName) => {
+                        const matchingSubject = subjects.find(s =>
+                          s.topics.some(t => t.name === topicName) ||
+                          s.currentTopic.name === topicName
+                        );
+                        if (matchingSubject) setSelectedSubject(matchingSubject);
+                      }}
+                    />
+
+                    {strugglingTopics.length > 1 && (
+                      <StuckHelpPrompt
+                        topic={strugglingTopics[0]?.topic_name}
+                        subject={subjects[0]?.name}
+                        failedAttempts={strugglingTopics.length}
+                        variant="after-quiz"
+                        onWatchMore={onBrowseLibrary}
+                        onBookTutor={onNeedHelp}
+                        onBrowseLibrary={onBrowseLibrary}
+                      />
+                    )}
+
+                    {topicStats.length > 0 && (
+                      <div className="p-4 rounded-2xl bg-card border border-border">
+                        <h3 className="font-semibold text-foreground mb-3">Your Quiz History</h3>
+                        <div className="space-y-2 max-h-96 overflow-y-auto">
+                          {topicStats.map((stat, index) => (
+                            <div
+                              key={`${stat.subject_id}-${stat.topic_name}-${index}`}
+                              className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
+                            >
+                              <div>
+                                <p className="text-sm font-medium text-foreground">{stat.topic_name}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {stat.total_attempts} attempts
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className={cn(
+                                  "text-sm font-bold",
+                                  stat.accuracy >= 70 ? "text-success" :
+                                  stat.accuracy >= 50 ? "text-warning" : "text-destructive"
+                                )}>
+                                  {stat.accuracy}%
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {stat.due_for_review ? 'Due now' : `Next: ${stat.next_review_date}`}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
 
             <SpacedRepetitionWidget
               strugglingTopics={strugglingTopics}
               topicsDueToday={topicsDueToday}
               onStartReview={(topic) => {
-                const matchingSubject = subjects.find(s => 
+                const matchingSubject = subjects.find(s =>
                   s.topics.some(t => t.name === topic.topic_name) ||
                   s.currentTopic.name === topic.topic_name
                 );
@@ -585,42 +695,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 }
               }}
             />
-            
-            {topicStats.length > 0 && (
-              <div className="p-4 rounded-2xl bg-card border border-border">
-                <h3 className="font-semibold text-foreground mb-3">Your Quiz History</h3>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {topicStats.map((stat, index) => (
-                    <div 
-                      key={`${stat.subject_id}-${stat.topic_name}-${index}`}
-                      className="flex items-center justify-between p-2 rounded-lg bg-muted/50"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{stat.topic_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {stat.total_attempts} attempts
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className={cn(
-                          "text-sm font-bold",
-                          stat.accuracy >= 70 ? "text-success" :
-                          stat.accuracy >= 50 ? "text-warning" : "text-destructive"
-                        )}>
-                          {stat.accuracy}%
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {stat.due_for_review ? 'Due now' : `Next: ${stat.next_review_date}`}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
          </Suspense>
         </TabsContent>
+
 
         {/* ===== TAB 5: PROFILE (academic profile, syllabus, documents, daily progress) ===== */}
         <TabsContent value="setup" className="mt-4 space-y-4">
@@ -699,11 +777,21 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                     </div>
                     {aiIntelligence.learningProfile.persistentWeakAreas.length > 0 && (
                       <div className="mt-1.5">
-                        <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Areas:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {aiIntelligence.learningProfile.persistentWeakAreas.slice(0, 4).map((t) => (
-                            <Badge key={t} variant="destructive" className="text-[9px] px-1 py-0">{t}</Badge>
-                          ))}
+                        <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Area:</p>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {/* Cap to one badge; overflow count opens details in AI insights on Progress tab. */}
+                          <Badge variant="destructive" className="text-[9px] px-1 py-0">
+                            {aiIntelligence.learningProfile.persistentWeakAreas[0]}
+                          </Badge>
+                          {aiIntelligence.learningProfile.persistentWeakAreas.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('progress')}
+                              className="text-[9px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                            >
+                              +{aiIntelligence.learningProfile.persistentWeakAreas.length - 1} more
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
