@@ -376,8 +376,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               {hasSubjects ? (
                 <>
                   <div className="flex items-center justify-between mb-1 gap-2">
-                    <h2 className="text-xl font-bold text-foreground">Your Subjects</h2>
-                    <div className="flex items-center gap-1.5">
+                    <h2 className="text-xl font-bold text-foreground truncate">Your Subjects</h2>
+                    {/* Desktop: inline actions. Mobile: single overflow menu to prevent header overflow. */}
+                    <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
@@ -385,8 +386,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                         className="gap-1.5 border-primary/40 hover:bg-primary/10"
                       >
                         <Sparkles className="h-4 w-4 text-primary" />
-                        <span className="hidden sm:inline">Start by Topic</span>
-                        <span className="sm:hidden">Topic</span>
+                        Start by Topic
                       </Button>
                       <Button
                         variant="outline"
@@ -395,9 +395,26 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                         className="gap-1.5 border-accent/40 hover:bg-accent/10"
                       >
                         <Trophy className="h-4 w-4 text-accent" />
-                        <span className="hidden sm:inline">Global</span>
+                        Global
                       </Button>
                     </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild className="sm:hidden">
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="More subject actions">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setShowTopicPicker(true)}>
+                          <Sparkles className="mr-2 h-4 w-4 text-primary" />
+                          Start by Topic
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setShowGlobalLeaderboard(true)}>
+                          <Trophy className="mr-2 h-4 w-4 text-accent" />
+                          Global Leaderboard
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                   {profileExamDates.length > 0 && (
                     <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
