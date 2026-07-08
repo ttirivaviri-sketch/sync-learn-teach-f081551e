@@ -434,23 +434,23 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                           style={{ animationDelay: `${index * 100}ms` }}
                           className="animate-fade-in relative"
                         >
-                          {daysUntil !== null && daysUntil > 0 && daysUntil <= 30 && (
+                          {/* Cap to one badge per card: exam countdown wins; else upload-docs prompt. */}
+                          {daysUntil !== null && daysUntil > 0 && daysUntil <= 30 ? (
                             <Badge
                               variant="destructive"
                               className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
                             >
                               {daysUntil}d to exam
                             </Badge>
-                          )}
-                          {hasDocuments === false && (
+                          ) : hasDocuments === false ? (
                             <Badge
                               variant="secondary"
-                              className="absolute -top-2 -left-2 z-10 text-[10px] px-1.5 py-0"
+                              className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
                             >
                               <Lock className="h-2.5 w-2.5 mr-0.5" />
                               Upload docs
                             </Badge>
-                          )}
+                          ) : null}
                           <SubjectCard
                             subject={subject}
                             tasksCount={4}
