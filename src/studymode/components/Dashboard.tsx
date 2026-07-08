@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles, MoreHorizontal } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { SubjectCard } from './SubjectCard';
