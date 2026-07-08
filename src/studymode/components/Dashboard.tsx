@@ -777,11 +777,21 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                     </div>
                     {aiIntelligence.learningProfile.persistentWeakAreas.length > 0 && (
                       <div className="mt-1.5">
-                        <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Areas:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {aiIntelligence.learningProfile.persistentWeakAreas.slice(0, 4).map((t) => (
-                            <Badge key={t} variant="destructive" className="text-[9px] px-1 py-0">{t}</Badge>
-                          ))}
+                        <p className="text-[10px] text-destructive font-medium mb-0.5">Focus Area:</p>
+                        <div className="flex flex-wrap items-center gap-1">
+                          {/* Cap to one badge; overflow count opens details in AI insights on Progress tab. */}
+                          <Badge variant="destructive" className="text-[9px] px-1 py-0">
+                            {aiIntelligence.learningProfile.persistentWeakAreas[0]}
+                          </Badge>
+                          {aiIntelligence.learningProfile.persistentWeakAreas.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('progress')}
+                              className="text-[9px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                            >
+                              +{aiIntelligence.learningProfile.persistentWeakAreas.length - 1} more
+                            </button>
+                          )}
                         </div>
                       </div>
                     )}
