@@ -100,7 +100,7 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
     return (
       <div className="p-5 rounded-2xl bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/20">
         <div className="flex items-center gap-2 mb-3">
-          <Sparkles className="h-5 w-5 text-accent" />
+          <Sparkles className="h-5 w-5 text-accent-foreground" />
           <h3 className="font-bold text-foreground">AI Study Coach</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
@@ -118,7 +118,7 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
     <div className="p-5 rounded-2xl bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/20">
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-accent" />
+          <Sparkles className="h-5 w-5 text-accent-foreground" />
           <h3 className="font-bold text-foreground">AI Study Coach</h3>
         </div>
         {hasGenerated && !isLoading && (
@@ -145,7 +145,7 @@ export function AIProgressInsights({ subjects, dailyStats, streak, xp, quizHisto
         </div>
       ) : (
         <div className="flex items-center gap-2 py-4">
-          <Loader2 className="h-5 w-5 animate-spin text-accent" />
+          <Loader2 className="h-5 w-5 animate-spin text-accent-foreground" />
           <p className="text-sm text-muted-foreground">Analyzing your performance...</p>
         </div>
       )}

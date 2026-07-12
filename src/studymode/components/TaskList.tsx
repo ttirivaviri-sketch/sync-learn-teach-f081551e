@@ -88,7 +88,7 @@ export function TaskList({ tasks, onTaskClick, onAddBonusTask }: TaskListProps) 
               <div className="flex items-center gap-2 mb-0.5">
                 <Icon className={cn(
                   "h-4 w-4",
-                  task.isCompleted ? "text-success" : effectiveLocked ? "text-muted-foreground" : "text-accent"
+                  task.isCompleted ? "text-success" : effectiveLocked ? "text-muted-foreground" : "text-accent-foreground"
                 )} />
                 <h4 className={cn(
                   "font-semibold",
@@ -133,7 +133,7 @@ export function TaskList({ tasks, onTaskClick, onAddBonusTask }: TaskListProps) 
       {allCompleted && onAddBonusTask && (
         <button
           onClick={onAddBonusTask}
-          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent font-semibold"
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent-foreground font-semibold"
         >
           <RotateCcw className="h-4 w-4" />
           Practice More — Add Another Task

@@ -122,14 +122,14 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
   if (engine.isGenerating && engine.questions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 animate-fade-in">
-        <Brain className="h-12 w-12 text-accent animate-pulse" />
+        <Brain className="h-12 w-12 text-accent-foreground animate-pulse" />
         <h3 className="text-lg font-bold text-foreground">Generating Your Questions</h3>
         <p className="text-sm text-muted-foreground text-center max-w-xs">
           Creating {10} personalised questions based on your syllabus and performance...
         </p>
         <div className="flex gap-2">
           {engine.difficulty === 'foundation' && <Badge variant="outline" className="text-success">Foundation Level</Badge>}
-          {engine.difficulty === 'standard' && <Badge variant="outline" className="text-accent">Standard Level</Badge>}
+          {engine.difficulty === 'standard' && <Badge variant="outline" className="text-accent-foreground">Standard Level</Badge>}
           {engine.difficulty === 'advanced' && <Badge variant="outline" className="text-destructive">Advanced Level</Badge>}
         </div>
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -179,7 +179,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
             <CardContent className="p-5">
               <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-accent">{stats.questionsAnswered}</p>
+                  <p className="text-2xl font-bold text-accent-foreground">{stats.questionsAnswered}</p>
                   <p className="text-xs text-muted-foreground">Questions</p>
                 </div>
                 <div>
@@ -210,7 +210,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
           <Card>
             <CardContent className="p-5 space-y-3">
               <h3 className="font-bold text-foreground flex items-center gap-2">
-                <Target className="h-5 w-5 text-accent" />
+                <Target className="h-5 w-5 text-accent-foreground" />
                 Mastery Updates
               </h3>
               {masteries.map(m => (
@@ -336,7 +336,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
           <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-bold text-foreground truncate flex items-center gap-2">
-                <Brain className="h-5 w-5 text-accent shrink-0" />
+                <Brain className="h-5 w-5 text-accent-foreground shrink-0" />
                 Active Recall
               </h3>
               <span className="text-sm font-medium text-muted-foreground shrink-0">
@@ -357,7 +357,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
             "text-xs",
             engine.difficulty === 'foundation' ? "border-success/30 text-success" :
             engine.difficulty === 'advanced' ? "border-destructive/30 text-destructive" :
-            "border-accent/30 text-accent"
+            "border-accent/30 text-accent-foreground"
           )}>
             {engine.difficulty === 'foundation' ? 'Foundation' : engine.difficulty === 'advanced' ? 'Advanced' : 'Standard'}
           </Badge>
@@ -382,7 +382,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
               Question {engine.progress.current}
             </span>
-            <Badge variant="outline" className="text-accent">
+            <Badge variant="outline" className="text-accent-foreground">
               {q.marks} marks
             </Badge>
           </div>
@@ -479,7 +479,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
       {/* Evaluating Phase */}
       {phase === 'evaluating' && (
         <div className="flex flex-col items-center py-8 gap-3">
-          <Loader2 className="h-8 w-8 animate-spin text-accent" />
+          <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
           <p className="text-sm font-medium text-foreground">AI is evaluating your answer...</p>
           <p className="text-xs text-muted-foreground">Analysing key concepts, reasoning, and accuracy</p>
         </div>
@@ -590,7 +590,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
           {evaluation?.feedback.lostMarksExplanation && (
             <div className="p-4 rounded-xl bg-accent/5 border border-accent/20">
               <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-accent" /> Mark Explanation
+                <Lightbulb className="h-4 w-4 text-accent-foreground" /> Mark Explanation
               </h4>
               <p className="text-sm text-muted-foreground">{evaluation.feedback.lostMarksExplanation}</p>
             </div>
@@ -600,7 +600,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
           {evaluation?.improvementTips && evaluation.improvementTips.length > 0 && (
             <div className="p-4 rounded-xl bg-accent/5 border border-accent/20">
               <h4 className="text-sm font-bold text-foreground mb-2 flex items-center gap-2">
-                <Zap className="h-4 w-4 text-accent" /> Tips for Next Time
+                <Zap className="h-4 w-4 text-accent-foreground" /> Tips for Next Time
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
                 {evaluation.improvementTips.map((tip, i) => <li key={i}>- {tip}</li>)}

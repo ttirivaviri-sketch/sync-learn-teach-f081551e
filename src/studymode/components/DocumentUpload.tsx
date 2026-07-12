@@ -347,7 +347,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
         />
         <Upload className={cn(
           "h-10 w-10 mb-3 transition-colors",
-          isDragging ? "text-accent" : "text-muted-foreground"
+          isDragging ? "text-accent-foreground" : "text-muted-foreground"
         )} />
         <p className="text-sm font-medium text-foreground mb-1">
           Drop PDF files here or click to browse
@@ -365,7 +365,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
               key={index}
               className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 border border-border"
             >
-              <FileText className="h-5 w-5 text-accent shrink-0" />
+              <FileText className="h-5 w-5 text-accent-foreground shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
                   {uploadedFile.file.name}
@@ -387,7 +387,7 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
               )}
               
               {uploadedFile.status === 'uploading' && (
-                <Loader2 className="h-5 w-5 text-accent animate-spin shrink-0" />
+                <Loader2 className="h-5 w-5 text-accent-foreground animate-spin shrink-0" />
               )}
               
               {uploadedFile.status === 'processing' && (

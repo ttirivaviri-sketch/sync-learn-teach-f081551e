@@ -141,7 +141,7 @@ export function StudyModeWidget({ onOpenStudyMode, onOpenChat }: StudyModeWidget
                   {assignments.length > 0 && (
                     <div className="pt-2 border-t border-border">
                       <div className="flex items-center gap-1.5 mb-2">
-                        <GraduationCap className="h-3 w-3 text-accent" />
+                        <GraduationCap className="h-3 w-3 text-accent-foreground" />
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                           Tutor Focus Areas
                         </span>

@@ -41,9 +41,9 @@ export function SpacedRepetitionWidget({
       {hasReviewsDue && (
         <div className="p-4 rounded-2xl bg-accent/10 border border-accent/30">
           <div className="flex items-center gap-2 mb-3">
-            <Calendar className="h-5 w-5 text-accent" />
+            <Calendar className="h-5 w-5 text-accent-foreground" />
             <h3 className="font-semibold text-foreground">Reviews Due Today</h3>
-            <span className="ml-auto px-2 py-0.5 rounded-full bg-accent/20 text-accent text-xs font-bold">
+            <span className="ml-auto px-2 py-0.5 rounded-full bg-accent/20 text-accent-foreground text-xs font-bold">
               {topicsDueToday.length}
             </span>
           </div>

@@ -62,7 +62,32 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'setup'>('subjects');
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'setup'>(() => {
+    // Deep-link support: Library "Edit Profile" / Profile "Academic" jump
+    // straight to Study → Settings (the single Academic Profile source of truth).
+    try {
+      const initial = sessionStorage.getItem('studymode:initialTab');
+      if (initial) {
+        sessionStorage.removeItem('studymode:initialTab');
+        if (['subjects', 'calendar', 'exams', 'progress', 'setup'].includes(initial)) {
+          return initial as 'subjects' | 'calendar' | 'exams' | 'progress' | 'setup';
+        }
+      }
+    } catch { /* SSR / storage blocked */ }
+    return 'subjects';
+  });
+
+  // Allow other parts of the app to switch Study Mode tabs while mounted.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const tab = (e as CustomEvent).detail?.tab;
+      if (['subjects', 'calendar', 'exams', 'progress', 'setup'].includes(tab)) {
+        setActiveTab(tab);
+      }
+    };
+    window.addEventListener('studymode-open-tab', handler);
+    return () => window.removeEventListener('studymode-open-tab', handler);
+  }, []);
   const [userId, setUserId] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
   const [showQuizHistory, setShowQuizHistory] = useState(false);
@@ -291,7 +316,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
       {/* AI Message */}
       <div className="p-4 rounded-2xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20">
         <p className="text-sm text-foreground">
-          <span className="font-semibold text-accent">AI Tutor:</span>{' '}
+          <span className="font-semibold text-accent-foreground">AI Tutor:</span>{' '}
           {getReadinessMessage()}
         </p>
       </div>
@@ -301,7 +326,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
         <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="subjects">
             <BookOpen className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Subjects</span>
+            <span className="hidden sm:inline text-xs">Overview</span>
           </TabsTrigger>
           <TabsTrigger value="progress">
             <TrendingUp className="mr-1 h-4 w-4" />
@@ -322,7 +347,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           </TabsTrigger>
           <TabsTrigger value="setup">
             <Settings className="mr-1 h-4 w-4" />
-            <span className="hidden sm:inline text-xs">Setup</span>
+            <span className="hidden sm:inline text-xs">Settings</span>
           </TabsTrigger>
         </TabsList>
 
@@ -361,7 +386,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                   )}
                   {currentHour >= 20 && todayIncomplete.length > 0 && yesterdayIncomplete.length === 0 && (
                     <div className="mb-4 p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-start gap-3">
-                      <Clock className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+                      <Clock className="h-5 w-5 text-accent-foreground shrink-0 mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm font-medium text-foreground">
                           Don't forget to finish today's {todayIncomplete.length} remaining task{todayIncomplete.length > 1 ? 's' : ''} before midnight!
@@ -394,7 +419,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                         onClick={() => setShowGlobalLeaderboard(true)}
                         className="gap-1.5 border-accent/40 hover:bg-accent/10"
                       >
-                        <Trophy className="h-4 w-4 text-accent" />
+                        <Trophy className="h-4 w-4 text-accent-foreground" />
                         Global
                       </Button>
                     </div>
@@ -410,7 +435,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                           Start by Topic
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setShowGlobalLeaderboard(true)}>
-                          <Trophy className="mr-2 h-4 w-4 text-accent" />
+                          <Trophy className="mr-2 h-4 w-4 text-accent-foreground" />
                           Global Leaderboard
                         </DropdownMenuItem>
                       </DropdownMenuContent>
@@ -453,7 +478,6 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                           ) : null}
                           <SubjectCard
                             subject={subject}
-                            tasksCount={4}
                             onClick={() => {
                               if (hasDocuments === false) {
                                 window.dispatchEvent(
@@ -736,7 +760,17 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                   </div>
                   <div>
                     <span className="text-muted-foreground">Exam Year</span>
-                    <p className="font-medium text-foreground">{academicProfile.exam_year || '—'}</p>
+                    {academicProfile.exam_year ? (
+                      <p className="font-medium text-foreground">{academicProfile.exam_year}</p>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => window.dispatchEvent(new CustomEvent('open-academic-setup'))}
+                        className="font-medium text-primary underline underline-offset-2 hover:text-primary/80"
+                      >
+                        + Set
+                      </button>
+                    )}
                   </div>
                 </div>
                 {academicProfile.subjects && academicProfile.subjects.length > 0 && (
@@ -759,11 +793,12 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                         <p className="text-[10px] text-muted-foreground">Understanding</p>
                       </div>
                       <div>
-                        <p className="font-bold text-accent capitalize">{aiIntelligence.learningProfile.learningPace}</p>
+                        {/* accent token is near-white in light mode — use accent-foreground for AA contrast */}
+                        <p className="font-bold text-accent-foreground capitalize">{aiIntelligence.learningProfile.learningPace}</p>
                         <p className="text-[10px] text-muted-foreground">Pace</p>
                       </div>
                       <div>
-                        <p className="font-bold text-warning capitalize">{aiIntelligence.learningProfile.recommendedDifficulty}</p>
+                        <p className="font-bold text-amber-600 dark:text-amber-400 capitalize">{aiIntelligence.learningProfile.recommendedDifficulty}</p>
                         <p className="text-[10px] text-muted-foreground">Level</p>
                       </div>
                       <div>
@@ -825,7 +860,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           {hasDocuments === false && (
             <Card className="border-accent/30 bg-accent/5">
               <CardContent className="p-5 text-center">
-                <FileText className="h-10 w-10 mx-auto text-accent mb-2" />
+                <FileText className="h-10 w-10 mx-auto text-accent-foreground mb-2" />
                 <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
                 <p className="text-sm text-muted-foreground mb-4">
                   Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
@@ -847,7 +882,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
           {/* Exam date prompt if no exams set */}
           {hasSubjects && subjectExams.length === 0 && (
             <div className="p-5 rounded-2xl bg-accent/10 border border-accent/30 text-center">
-              <GraduationCap className="h-10 w-10 mx-auto text-accent mb-2" />
+              <GraduationCap className="h-10 w-10 mx-auto text-accent-foreground mb-2" />
               <h3 className="font-bold text-foreground mb-1">Set Your Exam Dates</h3>
               <p className="text-sm text-muted-foreground mb-3">
                 Add exam dates for each subject in the Calendar tab to get countdowns and smarter study scheduling.

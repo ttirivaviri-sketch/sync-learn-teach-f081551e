@@ -50,7 +50,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
 
   const getMasteryColor = (mastery: number) => {
     if (mastery >= 95) return 'text-success';
-    if (mastery >= 70) return 'text-accent';
+    if (mastery >= 70) return 'text-accent-foreground';
     if (mastery >= 50) return 'text-warning';
     return 'text-destructive';
   };
@@ -318,7 +318,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
           onClick={() => setShowLeaderboard(true)}
           className="shrink-0 gap-1.5 border-accent/40 hover:bg-accent/10"
         >
-          <Trophy className="h-4 w-4 text-accent" />
+          <Trophy className="h-4 w-4 text-accent-foreground" />
           <span className="hidden sm:inline">Leaderboard</span>
         </Button>
       </div>
@@ -334,10 +334,10 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
       <div className="p-5 rounded-2xl bg-card border border-border">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-accent" />
+            <Target className="h-5 w-5 text-accent-foreground" />
             <span className="font-medium text-foreground">Today's Focus</span>
           </div>
-          <span className="text-xs px-2 py-1 rounded-full bg-accent/10 text-accent font-medium">
+          <span className="text-xs px-2 py-1 rounded-full bg-accent/60 text-accent-foreground font-medium dark:bg-accent/15">
             {subject.currentTopic.examWeight}% exam weight
           </span>
         </div>
@@ -412,7 +412,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
           variant="outline"
           className="w-full mt-3 gap-2 border-accent/30 hover:bg-accent/10"
         >
-          <Target className="h-4 w-4 text-accent" />
+          <Target className="h-4 w-4 text-accent-foreground" />
           Check My Prerequisites
         </Button>
 
@@ -456,7 +456,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
           variant="outline"
           className="h-auto py-4 flex-col gap-2 border-accent/30 hover:bg-accent/10"
         >
-          <Target className="h-6 w-6 text-accent" />
+          <Target className="h-6 w-6 text-accent-foreground" />
           <div className="text-center">
             <p className="text-sm font-bold text-foreground">Mastery Tracker</p>
             <p className="text-[10px] text-muted-foreground">Per-topic progress</p>
@@ -467,7 +467,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
           variant="outline"
           className="h-auto py-4 flex-col gap-2 border-accent/30 hover:bg-accent/10"
         >
-          <BarChart3 className="h-6 w-6 text-accent" />
+          <BarChart3 className="h-6 w-6 text-accent-foreground" />
           <div className="text-center">
             <p className="text-sm font-bold text-foreground">Insights</p>
             <p className="text-[10px] text-muted-foreground">Analytics & trends</p>
@@ -610,7 +610,7 @@ function BundleLauncher({ subject, curriculum, onAddBonusTask }: BundleLauncherP
       {completedToday && onAddBonusTask && (
         <button
           onClick={onAddBonusTask}
-          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent font-semibold"
+          className="w-full flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-accent/30 bg-accent/5 hover:bg-accent/10 hover:border-accent/50 transition-all duration-200 text-accent-foreground font-semibold"
         >
           <Sparkles className="h-4 w-4" />
           Practice More — Bonus Task

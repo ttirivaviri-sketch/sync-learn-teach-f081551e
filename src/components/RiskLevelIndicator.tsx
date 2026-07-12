@@ -10,27 +10,27 @@ interface RiskLevelIndicatorProps {
   compact?: boolean;
 }
 
-const RISK_CONFIG: Record<RiskLevel, { label: string; emoji: string; color: string; bgColor: string; borderColor: string }> = {
+const RISK_CONFIG: Record<RiskLevel, { label: string; dotColor: string; color: string; bgColor: string; borderColor: string }> = {
   on_track: {
-    label: "On Track",
-    emoji: "OT",
-    color: "text-green-700",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
+    label: "On track",
+    dotColor: "bg-green-500",
+    color: "text-green-700 dark:text-green-300",
+    bgColor: "bg-green-50 dark:bg-green-950/40",
+    borderColor: "border-green-200 dark:border-green-800",
   },
   needs_attention: {
-    label: "Needs Attention",
-    emoji: "NA",
-    color: "text-yellow-700",
-    bgColor: "bg-yellow-50",
-    borderColor: "border-yellow-200",
+    label: "Needs attention",
+    dotColor: "bg-amber-500",
+    color: "text-amber-700 dark:text-amber-300",
+    bgColor: "bg-amber-50 dark:bg-amber-950/40",
+    borderColor: "border-amber-200 dark:border-amber-800",
   },
   at_risk: {
-    label: "At Risk",
-    emoji: "AR",
-    color: "text-red-700",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
+    label: "At risk",
+    dotColor: "bg-red-500",
+    color: "text-red-700 dark:text-red-300",
+    bgColor: "bg-red-50 dark:bg-red-950/40",
+    borderColor: "border-red-200 dark:border-red-800",
   },
 };
 
@@ -45,8 +45,18 @@ export function calculateRiskLevel(params: {
 }): RiskLevel {
   const { daysUntilExam, averageScore, tasksCompleted, tasksMissed } = params;
 
-  // No exam date set = default to needs_attention
-  if (daysUntilExam === null) return "needs_attention";
+  // No exam date set: judge on activity alone rather than blanket-flagging
+  // every subject as "needs attention" (which made all pills identical).
+  if (daysUntilExam === null) {
+    const cr =
+      tasksCompleted + tasksMissed > 0
+        ? tasksCompleted / (tasksCompleted + tasksMissed)
+        : null;
+    if (averageScore !== null && averageScore < 40) return "at_risk";
+    if ((averageScore !== null && averageScore < 60) || (cr !== null && cr < 0.4))
+      return "needs_attention";
+    return "on_track";
+  }
 
   const completionRate =
     tasksCompleted + tasksMissed > 0
@@ -126,12 +136,16 @@ export function RiskLevelIndicator({
   const config = RISK_CONFIG[riskLevel];
 
   if (compact) {
+    // Always name the subject — a bare tier label ("Needs attention") six
+    // times in a row tells the student nothing.
     return (
       <Badge
         variant="outline"
-        className={`text-[10px] px-1.5 py-0 ${config.bgColor} ${config.borderColor} ${config.color}`}
+        className={`text-[10px] px-1.5 py-0 gap-1 ${config.bgColor} ${config.borderColor} ${config.color}`}
       >
-        {config.emoji} {config.label}
+        <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${config.dotColor}`} />
+        <span className="font-semibold">{subject}</span>
+        <span className="opacity-80">· {config.label}</span>
       </Badge>
     );
   }
@@ -143,7 +157,8 @@ export function RiskLevelIndicator({
           variant="outline"
           className={`text-xs px-2 py-0.5 ${config.bgColor} ${config.borderColor} ${config.color}`}
         >
-          {config.emoji} {subject}: {config.label}
+          <span className={`h-2 w-2 rounded-full inline-block mr-1 ${config.dotColor}`} />
+          {subject}: {config.label}
         </Badge>
       </TooltipTrigger>
       <TooltipContent>

@@ -333,7 +333,7 @@ export function ExamQuestionPanel({
   if (quizGenerator?.isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-12 animate-fade-in gap-3">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
         <p className="text-sm font-medium text-foreground">Generating exam question...</p>
         <p className="text-xs text-muted-foreground">
           {quizGenerator.hasCurriculumData
@@ -341,7 +341,7 @@ export function ExamQuestionPanel({
             : '⚡ Using topic knowledge'}
         </p>
         {quizGenerator.recommendedDifficulty !== 'medium' && (
-          <p className="text-xs text-accent">
+          <p className="text-xs text-accent-foreground">
             Difficulty: {quizGenerator.recommendedDifficulty} (based on your performance)
           </p>
         )}
@@ -385,7 +385,7 @@ export function ExamQuestionPanel({
       {/* Topic test prompt (shown before the question if threshold met) */}
       {quizGenerator?.shouldTriggerTopicTest && phase === 'read' && (
         <div className="p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-start gap-3">
-          <Trophy className="h-5 w-5 text-accent shrink-0 mt-0.5" />
+          <Trophy className="h-5 w-5 text-accent-foreground shrink-0 mt-0.5" />
           <div>
             <p className="text-sm font-semibold text-foreground">Topic Test Unlocked!</p>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -404,7 +404,7 @@ export function ExamQuestionPanel({
             </span>
             {/* Curriculum source badges */}
             {quizGenerator?.hasCurriculumData && (
-              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/25">
+              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground border border-accent/25">
                 <BookOpen className="h-2.5 w-2.5" />
                 Syllabus-based
               </span>
@@ -434,7 +434,7 @@ export function ExamQuestionPanel({
         )}
         {quizGenerator?.question?.commandWord && (
           <p className="text-xs text-muted-foreground mt-2">
-            Command word: <span className="font-medium text-accent">{quizGenerator.question.commandWord}</span>
+            Command word: <span className="font-medium text-accent-foreground">{quizGenerator.question.commandWord}</span>
             {quizGenerator.question.conceptsTested?.length ? (
               <> · Concepts: {quizGenerator.question.conceptsTested.slice(0, 3).join(', ')}</>
             ) : null}
@@ -512,7 +512,7 @@ export function ExamQuestionPanel({
         <div className="space-y-4">
           <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
             <div className="flex items-center gap-2 mb-2">
-              <Eye className="h-5 w-5 text-accent" />
+              <Eye className="h-5 w-5 text-accent-foreground" />
               <h4 className="font-semibold text-foreground">Question Analysis Protocol</h4>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -644,7 +644,7 @@ export function ExamQuestionPanel({
               <ul className="space-y-1">
                 {generatedKeyPoints.map((point, i) => (
                   <li key={i} className="text-sm text-foreground flex items-start gap-2">
-                    <span className="text-accent mt-0.5">•</span> {point}
+                    <span className="text-accent-foreground mt-0.5">•</span> {point}
                   </li>
                 ))}
               </ul>
@@ -686,7 +686,7 @@ export function ExamQuestionPanel({
       {/* Phase: AI Marking in progress */}
       {phase === 'marking' && (
         <div className="flex flex-col items-center justify-center py-12 animate-fade-in gap-3">
-          <LoaderIcon className="h-8 w-8 animate-spin text-accent" />
+          <LoaderIcon className="h-8 w-8 animate-spin text-accent-foreground" />
           <p className="text-sm font-medium text-foreground">AI is marking your answer...</p>
           <p className="text-xs text-muted-foreground">Comparing against marking scheme and model answer</p>
         </div>
@@ -720,7 +720,7 @@ export function ExamQuestionPanel({
                 )}>
                   {mcqResult.correct ? activeQuestion.marks : 0}/{activeQuestion.marks}
                 </p>
-                <p className="text-xs text-accent mt-2">
+                <p className="text-xs text-accent-foreground mt-2">
                   +{mcqResult.correct ? 15 : 5} XP earned
                 </p>
               </div>
@@ -757,7 +757,7 @@ export function ExamQuestionPanel({
               {quizGenerator?.question?.explanation && (
                 <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
                   <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                    <Lightbulb className="h-4 w-4 text-accent" />
+                    <Lightbulb className="h-4 w-4 text-accent-foreground" />
                     Explanation
                   </h4>
                   <div className="text-sm text-foreground prose prose-sm dark:prose-invert max-w-none">
@@ -781,7 +781,7 @@ export function ExamQuestionPanel({
                 {markResult.score}/{markResult.totalMarks}
               </p>
               <p className="text-sm text-muted-foreground mt-1">{markResult.percentage}%</p>
-              <p className="text-xs text-accent mt-2">
+              <p className="text-xs text-accent-foreground mt-2">
                 +{Math.max(5, Math.round(markResult.percentage * 0.3))} XP earned
               </p>
             </div>
@@ -800,7 +800,7 @@ export function ExamQuestionPanel({
                   : `0/${activeQuestion.marks}`}
               </p>
               <p className="text-sm text-muted-foreground mt-1">marks</p>
-              <p className="text-xs text-accent mt-2">
+              <p className="text-xs text-accent-foreground mt-2">
                 +{selfAssessment === 'correct' ? 25 : 10} XP earned
               </p>
             </div>
@@ -834,7 +834,7 @@ export function ExamQuestionPanel({
           {markResult?.feedback && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
               <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-accent" />
+                <MessageCircle className="h-4 w-4 text-accent-foreground" />
                 AI Feedback
               </h4>
               <p className="text-sm text-foreground">{markResult.feedback}</p>
@@ -855,7 +855,7 @@ export function ExamQuestionPanel({
           {markResult?.improvementTips && markResult.improvementTips.length > 0 && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
               <h4 className="font-semibold text-foreground mb-2 flex items-center gap-2">
-                <Lightbulb className="h-4 w-4 text-accent" />
+                <Lightbulb className="h-4 w-4 text-accent-foreground" />
                 Improvement Tips
               </h4>
               <ul className="text-sm text-muted-foreground space-y-1">
@@ -868,7 +868,7 @@ export function ExamQuestionPanel({
           {selfAssessment === 'incorrect' && (
             <div className="p-4 rounded-xl bg-accent/10 border border-accent/30">
               <h4 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-                <MessageCircle className="h-4 w-4 text-accent" />
+                <MessageCircle className="h-4 w-4 text-accent-foreground" />
                 AI Tutor Explanation
               </h4>
 
@@ -884,7 +884,7 @@ export function ExamQuestionPanel({
                   {explanationError}
                   <Button
                     variant="link"
-                    className="text-accent p-0 h-auto ml-2"
+                    className="text-accent-foreground p-0 h-auto ml-2"
                     onClick={requestExplanation}
                   >
                     Try again

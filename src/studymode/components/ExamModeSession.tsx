@@ -41,7 +41,7 @@ interface ExamModeSessionProps {
 function getGrade(percentage: number): { grade: string; label: string; color: string } {
   if (percentage >= 90) return { grade: 'A*', label: 'Outstanding', color: 'text-success' };
   if (percentage >= 80) return { grade: 'A', label: 'Excellent', color: 'text-success' };
-  if (percentage >= 70) return { grade: 'B', label: 'Good', color: 'text-accent' };
+  if (percentage >= 70) return { grade: 'B', label: 'Good', color: 'text-accent-foreground' };
   if (percentage >= 60) return { grade: 'C', label: 'Satisfactory', color: 'text-warning' };
   if (percentage >= 50) return { grade: 'D', label: 'Below Average', color: 'text-warning' };
   if (percentage >= 40) return { grade: 'E', label: 'Weak', color: 'text-destructive' };
@@ -259,7 +259,7 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
   if (phase === 'marking') {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-4 animate-fade-in">
-        <Brain className="h-12 w-12 text-accent animate-pulse" />
+        <Brain className="h-12 w-12 text-accent-foreground animate-pulse" />
         <h3 className="text-lg font-bold text-foreground">AI Examiner Marking</h3>
         <p className="text-sm text-muted-foreground text-center max-w-xs">
           Evaluating each answer against the marking scheme...
@@ -312,7 +312,7 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
         <Card>
           <CardContent className="p-5 space-y-4">
             <h3 className="font-bold text-foreground flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-accent" />
+              <BarChart3 className="h-5 w-5 text-accent-foreground" />
               Question-by-Question Results
             </h3>
             {engine.questions.map((q, i) => {
@@ -717,7 +717,7 @@ function QuestionResult({
           {/* Examiner's overall comment */}
           {evaluation?.examinerComment && (
             <div className="p-3 rounded-lg bg-accent/10 border border-accent/30">
-              <p className="text-[11px] font-bold uppercase tracking-wider text-accent mb-1">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-accent-foreground mb-1">
                 Examiner's Comment
               </p>
               <MathMarkdown className="text-foreground text-xs leading-relaxed italic [&_p]:my-0">
@@ -777,7 +777,7 @@ function QuestionResult({
                   </div>
                   {item.whyExpected && (
                     <div className="text-[11px] text-muted-foreground italic border-l-2 border-accent/30 ml-1 pl-2">
-                      <span className="font-semibold not-italic text-accent">Why expected: </span>
+                      <span className="font-semibold not-italic text-accent-foreground">Why expected: </span>
                       <MathMarkdown className="inline [&_p]:inline [&_p]:my-0">
                         {item.whyExpected}
                       </MathMarkdown>
@@ -832,7 +832,7 @@ function QuestionResult({
 
           {modelAnswer && (
             <details className="text-xs">
-              <summary className="cursor-pointer font-medium text-accent">View model answer</summary>
+              <summary className="cursor-pointer font-medium text-accent-foreground">View model answer</summary>
               <div className="mt-1 text-muted-foreground prose prose-sm dark:prose-invert max-w-none">
                 <MathMarkdown>{modelAnswer}</MathMarkdown>
               </div>

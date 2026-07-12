@@ -12,6 +12,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
+import { MasteryRing } from '@/components/ui/mastery-ring';
 import { cn } from '@/lib/utils';
 import { SubjectExamWithReadiness } from '../hooks/useSubjectExams';
 import { Subject } from '../types/study';
@@ -25,24 +26,38 @@ interface MultiExamCountdownProps {
 }
 
 function getUrgencyConfig(days: number) {
+  if (days < 0) return { color: 'text-muted-foreground', bg: 'bg-muted/40', border: 'border-border', icon: CheckCircle2, label: 'Exam passed' };
   if (days <= 3) return { color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30', icon: Flame, label: 'CRITICAL' };
   if (days <= 7) return { color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30', icon: AlertTriangle, label: 'Exam Mode' };
-  if (days <= 14) return { color: 'text-accent', bg: 'bg-accent/10', border: 'border-accent/30', icon: Target, label: 'Focused Study' };
+  if (days <= 14) return { color: 'text-accent-foreground', bg: 'bg-accent/10', border: 'border-accent/30', icon: Target, label: 'Focused Study' };
   if (days <= 30) return { color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30', icon: Brain, label: 'Steady Progress' };
   return { color: 'text-success', bg: 'bg-success/10', border: 'border-success/30', icon: Shield, label: 'On Track' };
 }
 
+// Spec: readiness colour-coded red <30%, amber 30–70%, green >70%.
 function getReadinessColor(readiness: number) {
-  if (readiness >= 80) return 'text-success';
-  if (readiness >= 60) return 'text-primary';
-  if (readiness >= 40) return 'text-accent';
-  return 'text-destructive';
+  if (readiness > 70) return 'text-emerald-600 dark:text-emerald-400';
+  if (readiness >= 30) return 'text-amber-600 dark:text-amber-400';
+  return 'text-red-600 dark:text-red-400';
+}
+
+function getReadinessBarClass(readiness: number) {
+  if (readiness > 70) return 'bg-emerald-500';
+  if (readiness >= 30) return 'bg-amber-500';
+  return 'bg-red-500';
 }
 
 function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const urgency = getUrgencyConfig(exam.daysRemaining);
   const UrgencyIcon = urgency.icon;
+  const isPast = exam.daysRemaining < 0;
+  // Never show a signed negative countdown — "-80 days" reads as a bug.
+  const daysLabel = isPast
+    ? `Exam was ${Math.abs(exam.daysRemaining)} day${Math.abs(exam.daysRemaining) === 1 ? '' : 's'} ago`
+    : exam.daysRemaining === 0
+      ? 'TODAY'
+      : `${exam.daysRemaining} days`;
 
   return (
     <motion.div
@@ -55,8 +70,8 @@ function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete
       {/* Header row */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl font-bold text-2xl shrink-0', urgency.bg)}>
-            <span className={urgency.color}>{exam.daysRemaining}</span>
+          <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl font-bold shrink-0', urgency.bg, isPast ? 'text-lg' : 'text-2xl')}>
+            <span className={urgency.color}>{isPast ? '✓' : exam.daysRemaining}</span>
           </div>
           <div className="min-w-0">
             <p className="font-bold text-foreground text-sm truncate">
@@ -69,7 +84,7 @@ function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete
             <div className="flex items-center gap-1.5 mt-1">
               <UrgencyIcon className={cn('h-3 w-3', urgency.color)} />
               <span className={cn('text-xs font-semibold', urgency.color)}>
-                {exam.daysRemaining === 0 ? 'TODAY' : `${exam.daysRemaining} days`}
+                {daysLabel}
               </span>
               <span className="text-xs text-muted-foreground">• {urgency.label}</span>
             </div>
@@ -86,28 +101,22 @@ function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete
         </div>
       </div>
 
-      {/* Readiness bar */}
-      <div className="mt-3 space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground">Overall Readiness</span>
-          <span className={cn('font-bold', getReadinessColor(exam.topicReadiness))}>{exam.topicReadiness}%</span>
-        </div>
-        <Progress value={exam.topicReadiness} className="h-2" />
-      </div>
-
-      {/* Quick stats */}
-      <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-        <div className="p-2 rounded-lg bg-background/50">
-          <p className="text-xs text-muted-foreground">Topics</p>
-          <p className="text-sm font-bold text-foreground">{exam.topicBreakdown.length}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-background/50">
-          <p className="text-xs text-muted-foreground">Quizzes</p>
-          <p className="text-sm font-bold text-foreground">{exam.quizAttempts}</p>
-        </div>
-        <div className="p-2 rounded-lg bg-background/50">
-          <p className="text-xs text-muted-foreground">Accuracy</p>
-          <p className={cn('text-sm font-bold', getReadinessColor(exam.avgAccuracy))}>{exam.avgAccuracy}%</p>
+      {/* Readiness ring + quick stats — rings, never thin horizontal bars */}
+      <div className="mt-3 flex items-center gap-3">
+        <MasteryRing value={exam.topicReadiness} size={64} label="ready" />
+        <div className="flex-1 grid grid-cols-3 gap-2 text-center">
+          <div className="p-2 rounded-lg bg-background/50">
+            <p className="text-xs text-muted-foreground">Topics</p>
+            <p className="text-sm font-bold text-foreground">{exam.topicBreakdown.length}</p>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50">
+            <p className="text-xs text-muted-foreground">Quizzes</p>
+            <p className="text-sm font-bold text-foreground">{exam.quizAttempts}</p>
+          </div>
+          <div className="p-2 rounded-lg bg-background/50">
+            <p className="text-xs text-muted-foreground">Accuracy</p>
+            <p className={cn('text-sm font-bold', getReadinessColor(exam.avgAccuracy))}>{exam.avgAccuracy}%</p>
+          </div>
         </div>
       </div>
 
@@ -135,7 +144,11 @@ function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete
                             {topic.mastery}%
                           </span>
                         </div>
-                        <Progress value={topic.mastery} className="h-1" />
+                        <Progress
+                          value={topic.mastery}
+                          className="h-1"
+                          indicatorClassName={getReadinessBarClass(topic.mastery)}
+                        />
                       </div>
                       {topic.mastery >= 80 ? (
                         <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
@@ -189,7 +202,7 @@ export function MultiExamCountdown({ exams, subjects, onAddExam, onDeleteExam, i
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <GraduationCap className="h-5 w-5 text-accent" />
+          <GraduationCap className="h-5 w-5 text-accent-foreground" />
           <h2 className="text-lg font-bold text-foreground">Exam Countdowns</h2>
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowAdd(!showAdd)}>

@@ -135,7 +135,7 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
       {/* Calendar Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <CalendarIcon className="h-5 w-5 text-accent" />
+          <CalendarIcon className="h-5 w-5 text-accent-foreground" />
           <h2 className="text-lg font-bold text-foreground">Study Calendar</h2>
         </div>
         <div className="flex items-center gap-2">
@@ -210,7 +210,7 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
               >
                 <div className={cn(
                   'text-xs font-medium mb-1',
-                  isToday(day) && 'text-accent font-bold'
+                  isToday(day) && 'text-accent-foreground font-bold'
                 )}>
                   {format(day, 'd')}
                   {hasAnyExam && <span className="ml-1 text-destructive">📝</span>}

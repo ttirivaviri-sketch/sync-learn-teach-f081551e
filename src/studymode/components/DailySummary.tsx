@@ -21,7 +21,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
       icon: Target,
       label: 'Tasks Completed',
       value: `${dailyStats.tasksCompletedToday}/${dailyStats.totalTasksToday || 0}`,
-      color: 'text-accent',
+      color: 'text-accent-foreground',
       bgColor: 'bg-accent/10',
     },
     {
@@ -148,7 +148,7 @@ export function DailySummary({ onClose }: DailySummaryProps) {
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20">
-              <Trophy className="h-5 w-5 text-accent" />
+              <Trophy className="h-5 w-5 text-accent-foreground" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">Today's Summary</h2>
@@ -165,8 +165,8 @@ export function DailySummary({ onClose }: DailySummaryProps) {
         {/* AI Personalized Message */}
         <div className="p-3 rounded-xl bg-gradient-to-r from-accent/10 to-primary/10 border border-accent/20 mb-6">
           <div className="flex items-center gap-1.5 mb-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-accent" />
-            <span className="text-xs font-medium text-accent">AI Coach</span>
+            <Sparkles className="h-3.5 w-3.5 text-accent-foreground" />
+            <span className="text-xs font-medium text-accent-foreground">AI Coach</span>
           </div>
           {isGenerating && !aiMessage ? (
             <div className="flex items-center gap-2">

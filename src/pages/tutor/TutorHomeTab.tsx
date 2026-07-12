@@ -168,9 +168,9 @@ export const TutorHomeTab = ({
 
         <Card>
           <CardContent className="p-4 text-center">
-            <Clock className="h-8 w-8 mx-auto text-accent mb-2" />
+            <Clock className="h-8 w-8 mx-auto text-accent-foreground mb-2" />
             {statsLoading ? <Skeleton className="h-8 w-12 mx-auto" /> : (
-              <p className="text-2xl font-bold text-accent">{todayStats.hours}h</p>
+              <p className="text-2xl font-bold text-accent-foreground">{todayStats.hours}h</p>
             )}
             <p className="text-sm text-muted-foreground">Hours Taught</p>
           </CardContent>

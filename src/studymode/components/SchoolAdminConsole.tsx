@@ -196,7 +196,7 @@ export function SchoolAdminConsole() {
             <div className="flex items-center gap-2 mb-1">
               <Building2 className="h-4 w-4 text-primary" />
               <h2 className="text-base font-bold text-foreground">{workspace.name}</h2>
-              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent border border-accent/30 uppercase">
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30 uppercase">
                 {workspace.role ?? 'member'}
               </span>
             </div>

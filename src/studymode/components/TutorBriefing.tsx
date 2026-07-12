@@ -222,9 +222,9 @@ export function TutorBriefing({
       {learnerId && hasSuggestions && (
         <div className="p-5 rounded-2xl bg-card border border-border">
           <div className="flex items-center gap-2 mb-3">
-            <Sparkles className="h-5 w-5 text-accent" />
+            <Sparkles className="h-5 w-5 text-accent-foreground" />
             <h3 className="font-bold text-foreground">Suggested Next Actions</h3>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent">
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground">
               FROM RECENT ACTIVITY
             </span>
           </div>
@@ -270,9 +270,9 @@ export function TutorBriefing({
       {struggles.length > 0 && (
         <div className="p-5 rounded-2xl bg-card border border-border">
           <div className="flex items-center gap-2 mb-4">
-            <BookOpen className="h-5 w-5 text-accent" />
+            <BookOpen className="h-5 w-5 text-accent-foreground" />
             <h3 className="font-bold text-foreground">Tutor Preparation Brief</h3>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent">
+            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground">
               FOR TUTORS
             </span>
           </div>
@@ -302,7 +302,7 @@ export function TutorBriefing({
                     </p>
                   </div>
                   <div className="flex items-start gap-1.5">
-                    <Lightbulb className="h-3 w-3 text-accent mt-0.5 shrink-0" />
+                    <Lightbulb className="h-3 w-3 text-accent-foreground mt-0.5 shrink-0" />
                     <p className="text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">Suggested approach:</span> {s.suggestedApproach}
                     </p>

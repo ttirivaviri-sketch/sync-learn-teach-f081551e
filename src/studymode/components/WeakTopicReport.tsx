@@ -11,7 +11,7 @@ import { useLearningGaps, type WeakTopic } from "@/hooks/useLearningGaps";
 const sevConfig: Record<WeakTopic["severity"], { icon: any; label: string; cls: string }> = {
   critical: { icon: ShieldAlert, label: "Critical", cls: "text-destructive bg-destructive/10 border-destructive/30" },
   warning: { icon: AlertTriangle, label: "Needs work", cls: "text-warning bg-warning/10 border-warning/30" },
-  watch: { icon: Eye, label: "Watch", cls: "text-accent bg-accent/10 border-accent/30" },
+  watch: { icon: Eye, label: "Watch", cls: "text-accent-foreground bg-accent/10 border-accent/30" },
 };
 
 export function WeakTopicReport({
@@ -29,7 +29,7 @@ export function WeakTopicReport({
   if (isLoading) {
     return (
       <div className="p-4 rounded-2xl bg-accent/10 border border-accent/20 flex items-center gap-2">
-        <Loader2 className="h-4 w-4 animate-spin text-accent" />
+        <Loader2 className="h-4 w-4 animate-spin text-accent-foreground" />
         <p className="text-sm text-muted-foreground">Scanning your school work for weak topics…</p>
       </div>
     );

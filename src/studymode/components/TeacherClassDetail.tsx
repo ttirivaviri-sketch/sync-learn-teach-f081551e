@@ -63,9 +63,9 @@ export function TeacherClassDetail({ workspaceId, cohortId, cohortName, canManag
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2">
-              <Compass className="h-5 w-5 text-accent" />
+              <Compass className="h-5 w-5 text-accent-foreground" />
               <h2 className="text-lg font-bold text-foreground">{cohortName}</h2>
-              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent border border-accent/30 uppercase">
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30 uppercase">
                 Class detail
               </span>
             </div>

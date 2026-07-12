@@ -12,6 +12,14 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
 import { evaluateSchoolContract, isContractLive, contractMessage, BILLING_CONTACT_EMAIL } from "@/lib/schoolContract";
+import { ArrowLeft } from "lucide-react";
+
+/** "trial" → "Trial plan", "per_seat" → "Per seat plan" — no raw enum slugs in UI. */
+function formatPlanLabel(plan?: string | null): string {
+  if (!plan) return "";
+  const words = String(plan).replace(/[_-]+/g, " ").trim().toLowerCase();
+  return words ? `${words.charAt(0).toUpperCase()}${words.slice(1)} plan` : "";
+}
 import { applySchoolTheme } from "@/lib/schoolBranding";
 
 export default function SchoolLayout() {
@@ -99,7 +107,9 @@ export default function SchoolLayout() {
           <ShieldAlert className="h-10 w-10 mx-auto mb-2 text-destructive" />
           <h1 className="text-lg font-semibold">{msg.title}</h1>
           <p className="text-sm text-muted-foreground mt-1">{msg.body}</p>
-          <p className="text-xs text-muted-foreground mt-3">{current.school.name} · plan {current.school.plan}</p>
+          <p className="text-xs text-muted-foreground mt-3">
+            {current.school.name}{formatPlanLabel(current.school.plan) ? ` · ${formatPlanLabel(current.school.plan)}` : ""}
+          </p>
           <div className="flex flex-wrap gap-2 justify-center mt-4">
             <Button asChild size="sm" variant="default">
               <a href={`mailto:${BILLING_CONTACT_EMAIL}?subject=${encodeURIComponent(`Restore access — ${current.school.name}`)}`}>Contact billing</a>
@@ -147,6 +157,7 @@ function SchoolShell({
   schoolId, current, role, isAdmin, tabs, gate, all, navigate,
 }: any) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const isStudentRole = role === "school_student";
   useEffect(() => {
     applySchoolTheme(rootRef.current, current.school.brand_color);
     return () => applySchoolTheme(rootRef.current, null);
@@ -157,6 +168,17 @@ function SchoolShell({
       <header className="sticky top-0 z-40 border-b bg-background/80 backdrop-blur">
         <div className="px-4 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
+            {/* Students get an explicit exit back to the learner app — the logo
+                alone wasn't a discoverable way out of My School. */}
+            {isStudentRole && (
+              <button
+                onClick={() => navigate("/learner")}
+                className="shrink-0 flex h-9 w-9 items-center justify-center rounded-full hover:bg-muted transition-colors"
+                aria-label="Back to StudySync home"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+            )}
             <Link to="/" className="shrink-0 flex items-center gap-2">
               {current.school.logo_url ? (
                 <img src={current.school.logo_url} alt={current.school.name} className="h-10 w-10 object-contain rounded-md border bg-card" />
@@ -198,7 +220,9 @@ function SchoolShell({
           ))}
         </nav>
       </header>
-      {(gate.state === "trial" || gate.state === "expiring_soon") && (
+      {/* Billing/contract banners are admin & teacher concerns — students never
+          see seat counts, trials or renewal prompts (spec: student-scoped only). */}
+      {!isStudentRole && (gate.state === "trial" || gate.state === "expiring_soon") && (
         <div className="border-b bg-amber-500/10 text-amber-900 dark:text-amber-200">
           <div className="px-4 py-2 text-xs flex flex-wrap items-center gap-2">
             <Clock3 className="h-3.5 w-3.5" />

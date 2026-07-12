@@ -114,7 +114,7 @@ const StudySyncLibrary = ({
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
     { id: "books", name: "Books", icon: Book, color: "text-secondary" },
-    { id: "papers", name: "Past Papers", icon: FileText, color: "text-accent" },
+    { id: "papers", name: "Past Papers", icon: FileText, color: "text-accent-foreground" },
     { id: "mylibrary", name: "My Library", icon: Archive, color: "text-purple-600" },
   ];
 

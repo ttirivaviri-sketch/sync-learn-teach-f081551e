@@ -18,6 +18,7 @@ import {
   useQuizzes, useQuiz, useQuizQuestions, useStartQuizAttempt, useSubmitQuizAttempt, useMyQuizAttempts,
   useResources, useAnnouncements,
 } from "@/hooks/useSchoolAcademics";
+import { MathMarkdown } from "@/studymode/components/MathMarkdown";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
 import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
@@ -198,7 +199,7 @@ function AssignmentView({ id, schoolId, onBack }: { id: string; schoolId: string
       {a.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : a.data && (
         <>
           <h1 className="text-xl font-semibold">{a.data.title}</h1>
-          <p className="text-xs text-muted-foreground">{a.data.due_at ? `Due ${new Date(a.data.due_at).toLocaleString()}` : "No due date"} · /{a.data.max_score}</p>
+          <p className="text-xs text-muted-foreground">{a.data.due_at ? `Due ${new Date(a.data.due_at).toLocaleString()}` : "No due date"}{a.data.max_score ? ` · ${a.data.max_score} marks` : ""}</p>
           {a.data.instructions && <Card className="p-3 text-sm whitespace-pre-wrap">{a.data.instructions}</Card>}
 
           <Card className="p-3">
@@ -297,11 +298,14 @@ function QuizView({ id, schoolId, onBack }: { id: string; schoolId: string; onBa
       <h1 className="text-lg font-semibold">{q.data.title}</h1>
       {qs.data?.map((qq) => (
         <Card key={qq.id} className="p-3 space-y-2">
-          <div className="font-medium text-sm">{qq.ord}. {qq.prompt}</div>
+          <div className="font-medium text-sm flex gap-1.5">
+            <span>{qq.ord}.</span>
+            <MathMarkdown className="[&_p]:my-0">{String(qq.prompt ?? "")}</MathMarkdown>
+          </div>
           {qq.type === "mcq" && Array.isArray(qq.options) && qq.options.map((opt: string) => (
             <label key={opt} className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="radio" name={qq.id} checked={answers[qq.id] === opt} onChange={() => setAnswers((p) => ({ ...p, [qq.id]: opt }))} />
-              {opt}
+              <MathMarkdown className="inline [&_p]:inline [&_p]:my-0">{String(opt)}</MathMarkdown>
             </label>
           ))}
           {qq.type === "tf" && ["true","false"].map((v) => (

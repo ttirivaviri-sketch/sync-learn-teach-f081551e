@@ -44,7 +44,7 @@ import { AutomationControlPanel } from './AutomationControlPanel';
 function severityClass(priority: 'high' | 'medium' | 'low') {
   if (priority === 'high') return 'border-destructive/30 bg-destructive/10 text-destructive';
   if (priority === 'medium') return 'border-warning/30 bg-warning/10 text-warning';
-  return 'border-accent/30 bg-accent/10 text-accent';
+  return 'border-accent/30 bg-accent/10 text-accent-foreground';
 }
 
 function formatRelative(dateLike: string | null) {
@@ -90,7 +90,7 @@ export function TeacherCommandCenter() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3">
-        <Loader2 className="h-7 w-7 animate-spin text-accent" />
+        <Loader2 className="h-7 w-7 animate-spin text-accent-foreground" />
         <p className="text-sm text-muted-foreground">Loading Teacher Command Center…</p>
       </div>
     );
@@ -108,7 +108,7 @@ export function TeacherCommandCenter() {
     return (
       <div className="p-5 rounded-2xl border border-border bg-card space-y-2">
         <div className="flex items-center gap-2">
-          <Radar className="h-4 w-4 text-accent" />
+          <Radar className="h-4 w-4 text-accent-foreground" />
           <h3 className="font-bold text-foreground">Teacher Command Center</h3>
         </div>
         <p className="text-sm text-muted-foreground">
@@ -158,9 +158,9 @@ export function TeacherCommandCenter() {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Radar className="h-5 w-5 text-accent" />
+              <Radar className="h-5 w-5 text-accent-foreground" />
               <h2 className="text-lg font-bold text-foreground">Teacher Command Center</h2>
-              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent border border-accent/30 uppercase">
+              <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30 uppercase">
                 {role ?? 'staff'}
               </span>
             </div>
@@ -184,7 +184,7 @@ export function TeacherCommandCenter() {
           </div>
           <div className="rounded-xl border border-border bg-muted/40 p-4 space-y-1">
             <div className="flex items-center gap-2 text-xs font-semibold text-foreground">
-              <ClipboardList className="h-3.5 w-3.5 text-accent" />
+              <ClipboardList className="h-3.5 w-3.5 text-accent-foreground" />
               Open queue
             </div>
             <p className="text-2xl font-bold text-foreground">{snapshot.totalOpenInterventions}</p>
@@ -255,7 +255,7 @@ export function TeacherCommandCenter() {
                 <div key={run.id} className="rounded-xl border border-border bg-background/60 p-3 space-y-1">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
-                      <Bot className="h-4 w-4 text-accent" />
+                      <Bot className="h-4 w-4 text-accent-foreground" />
                       <p className="text-sm font-semibold text-foreground capitalize">{run.jobName.replace(/_/g, ' ')}</p>
                     </div>
                     <span className={cn('text-[10px] font-semibold px-2 py-1 rounded-full border uppercase', run.status === 'failed' ? 'border-destructive/30 bg-destructive/10 text-destructive' : run.status === 'partial' ? 'border-warning/30 bg-warning/10 text-warning' : 'border-success/30 bg-success/10 text-success')}>
@@ -480,7 +480,7 @@ export function TeacherCommandCenter() {
             {snapshot.recentInterventionEvents.map((event) => (
               <div key={event.id} className="rounded-lg border border-border bg-background/60 p-3 text-sm">
                 <div className="flex items-start gap-2">
-                  <Sparkles className="h-4 w-4 text-accent mt-0.5" />
+                  <Sparkles className="h-4 w-4 text-accent-foreground mt-0.5" />
                   <div>
                     <p className="text-foreground capitalize font-medium">{event.actionType.replace(/-/g, ' ')}</p>
                     <p className="text-xs text-muted-foreground">{formatRelative(event.createdAt)}</p>

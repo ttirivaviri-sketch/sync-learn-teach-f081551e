@@ -230,7 +230,7 @@ export function PrerequisiteRemediationFlow({
         <div className="text-center space-y-6">
           <div className="flex justify-center">
             <div className="h-16 w-16 rounded-full bg-accent/10 flex items-center justify-center animate-pulse">
-              <Brain className="h-8 w-8 text-accent" />
+              <Brain className="h-8 w-8 text-accent-foreground" />
             </div>
           </div>
           <div>
@@ -285,7 +285,7 @@ export function PrerequisiteRemediationFlow({
         ) : (
           <div className="prose prose-sm max-w-none mb-6">
             <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-              <BookOpen className="h-5 w-5 text-accent" />
+              <BookOpen className="h-5 w-5 text-accent-foreground" />
               {currentGap?.topic} - Quick Review
             </h2>
             <div className="text-foreground">

@@ -278,7 +278,7 @@ export function PhotoSolvePanel({
             variant="outline"
             className="h-auto py-5 flex-col gap-2 border-accent/30"
           >
-            <Upload className="h-6 w-6 text-accent" />
+            <Upload className="h-6 w-6 text-accent-foreground" />
             <span className="text-sm font-bold">Upload Image</span>
           </Button>
         </div>
@@ -312,7 +312,7 @@ export function PhotoSolvePanel({
       {/* Loading */}
       {loading && (
         <div className="p-5 rounded-xl bg-card border border-border text-center">
-          <Loader2 className="h-6 w-6 animate-spin text-accent mx-auto mb-2" />
+          <Loader2 className="h-6 w-6 animate-spin text-accent-foreground mx-auto mb-2" />
           <p className="text-sm font-medium text-foreground">Reading your working…</p>
           <p className="text-xs text-muted-foreground">
             AI is checking each step and the final answer.
@@ -404,7 +404,7 @@ export function PhotoSolvePanel({
                   )}
                   {s.correction && s.verdict !== 'correct' && (
                     <div className="mt-2 p-2 rounded-lg bg-accent/10 border border-accent/20 text-xs">
-                      <span className="font-semibold text-accent">Should be: </span>
+                      <span className="font-semibold text-accent-foreground">Should be: </span>
                       <span className="text-foreground">
                         <MathMarkdown>{s.correction}</MathMarkdown>
                       </span>
@@ -433,9 +433,9 @@ export function PhotoSolvePanel({
           {/* Next hint */}
           {result.next_hint && (
             <div className="p-3 rounded-xl bg-accent/10 border border-accent/30 flex items-start gap-2">
-              <Lightbulb className="h-4 w-4 text-accent shrink-0 mt-0.5" />
+              <Lightbulb className="h-4 w-4 text-accent-foreground shrink-0 mt-0.5" />
               <div>
-                <p className="text-xs font-semibold text-accent mb-0.5">Next hint</p>
+                <p className="text-xs font-semibold text-accent-foreground mb-0.5">Next hint</p>
                 <div className="text-sm text-foreground">
                   <MathMarkdown>{result.next_hint}</MathMarkdown>
                 </div>

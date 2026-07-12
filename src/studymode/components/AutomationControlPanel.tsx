@@ -75,7 +75,7 @@ export function AutomationControlPanel({ workspaceId, canManage }: Props) {
     return (
       <div className="rounded-2xl border border-border bg-card p-5 space-y-2">
         <div className="flex items-center gap-2">
-          <Bot className="h-4 w-4 text-accent" />
+          <Bot className="h-4 w-4 text-accent-foreground" />
           <h3 className="text-sm font-bold text-foreground">Automation control</h3>
         </div>
         <p className="text-sm text-muted-foreground">Connect a workspace first to configure LOS automation.</p>
@@ -95,7 +95,7 @@ export function AutomationControlPanel({ workspaceId, canManage }: Props) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <Bot className="h-4 w-4 text-accent" />
+            <Bot className="h-4 w-4 text-accent-foreground" />
             <h3 className="text-sm font-bold text-foreground">Automation control</h3>
           </div>
           <p className="text-xs text-muted-foreground">Schedule, run, and audit LOS jobs for this workspace.</p>

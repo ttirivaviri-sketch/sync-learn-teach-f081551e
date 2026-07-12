@@ -39,7 +39,7 @@ interface LearningOpsOverviewProps {
 function severityClass(severity: 'high' | 'medium' | 'low') {
   if (severity === 'high') return 'border-destructive/30 bg-destructive/10 text-destructive';
   if (severity === 'medium') return 'border-warning/30 bg-warning/10 text-warning';
-  return 'border-accent/30 bg-accent/10 text-accent';
+  return 'border-accent/30 bg-accent/10 text-accent-foreground';
 }
 
 function splitSubjectNames(value: string) {
@@ -230,14 +230,14 @@ export function LearningOpsOverview({ subject }: LearningOpsOverviewProps) {
         <div className="flex items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <Radar className="h-5 w-5 text-accent" />
+              <Radar className="h-5 w-5 text-accent-foreground" />
               <h3 className="font-bold text-foreground">Learning Mission Control</h3>
             </div>
             <p className="text-sm text-muted-foreground">
               Operational guidance across mastery, readiness, interventions, school coordination, and concept governance.
             </p>
           </div>
-          <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent border border-accent/30">
+          <span className="text-[10px] font-semibold px-2 py-1 rounded-full bg-accent/15 text-accent-foreground border border-accent/30">
             LOS BETA
           </span>
         </div>
@@ -280,7 +280,7 @@ export function LearningOpsOverview({ subject }: LearningOpsOverviewProps) {
 
           <div className="p-4 rounded-xl bg-muted/40 border border-border space-y-2">
             <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-              <GraduationCap className="h-4 w-4 text-accent" />
+              <GraduationCap className="h-4 w-4 text-accent-foreground" />
               Exam readiness
             </div>
             {readinessLoading ? (

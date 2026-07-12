@@ -52,7 +52,7 @@ export function StudentAnalyticsPanel({ userId, title }: { userId?: string | nul
         value: r?.homework ?? 0,
         icon: ClipboardList,
         trend: daily.map((d) => d.homework_completed),
-        accent: "text-accent",
+        accent: "text-accent-foreground",
       },
       {
         label: "Quiz avg",

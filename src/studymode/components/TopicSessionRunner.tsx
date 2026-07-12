@@ -99,7 +99,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
               <h2 className="text-sm font-semibold truncate">{runner.topic}</h2>
             </div>
             <div className="flex items-center gap-2">
-              <Badge className="bg-accent/15 text-accent border-accent/30">
+              <Badge className="bg-accent/15 text-accent-foreground border-accent/30">
                 +{runner.sessionXP} XP
               </Badge>
               <Badge variant="outline">
@@ -208,7 +208,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                               {result.level === 'exam_ready' ? 'Exam Ready ✨' : result.level.replace('_', ' ')}
                             </span>
                           </div>
-                          <Badge className={result.xp_delta >= 0 ? 'bg-accent/15 text-accent' : 'bg-destructive/15 text-destructive'}>
+                          <Badge className={result.xp_delta >= 0 ? 'bg-accent/15 text-accent-foreground' : 'bg-destructive/15 text-destructive'}>
                             {result.xp_delta >= 0 ? '+' : ''}{result.xp_delta} XP
                           </Badge>
                         </div>
@@ -261,7 +261,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
           <div className="space-y-4 pt-2">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" />
+              <Sparkles className="h-4 w-4 text-accent-foreground" />
               <h3 className="font-semibold">{reviewDepth === 'quick' ? 'Quick Review' : 'Full Explanation'}</h3>
             </div>
 

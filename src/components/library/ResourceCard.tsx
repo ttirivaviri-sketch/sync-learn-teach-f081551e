@@ -110,7 +110,7 @@ export function ResourceCard({
           )}
 
           {/* Grade */}
-          <p className="text-xs text-accent">{resource.gradeLevel}</p>
+          <p className="text-xs text-accent-foreground">{resource.gradeLevel}</p>
 
           {/* Rating */}
           <div className="flex items-center gap-1">

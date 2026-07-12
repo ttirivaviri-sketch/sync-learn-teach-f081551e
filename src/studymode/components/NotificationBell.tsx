@@ -75,7 +75,7 @@ export function NotificationBell() {
         {!permissionGranted && (
           <button
             onClick={requestPermission}
-            className="w-full px-3 py-2 text-xs text-accent hover:bg-accent/10 transition-colors text-left border-b border-border"
+            className="w-full px-3 py-2 text-xs text-accent-foreground hover:bg-accent/10 transition-colors text-left border-b border-border"
           >
             🔔 Enable browser notifications for reminders outside the app
           </button>

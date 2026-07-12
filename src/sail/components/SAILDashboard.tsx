@@ -276,7 +276,7 @@ function OverviewTab({
       {/* Subscription Status */}
       {!canAccessStudyMode && !subscription && (
         <div className="p-4 rounded-lg border border-accent/30 bg-accent/5 text-center">
-          <Zap className="h-8 w-8 mx-auto text-accent mb-2" />
+          <Zap className="h-8 w-8 mx-auto text-accent-foreground mb-2" />
           <h3 className="font-semibold text-sm mb-1">Start Your Free Trial</h3>
           <p className="text-xs text-muted-foreground mb-3">
             Get 7 days of full access to Study Mode, AI tutoring, and all premium features.
