@@ -78,7 +78,7 @@ export function Leaderboard({ open, onOpenChange, curriculum, subject, title }: 
       <SheetContent side="right" className="w-full sm:max-w-md flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-accent" />
+            <Trophy className="h-5 w-5 text-accent-foreground" />
             {heading}
           </SheetTitle>
           <div className="flex items-center gap-2 pt-1">

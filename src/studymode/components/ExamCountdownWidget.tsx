@@ -52,7 +52,7 @@ export function ExamCountdownWidget({ examDate, examName, readiness, onSettingsC
      moderate: {
        label: 'Steady Progress',
        description: 'Balanced learning with regular practice',
-       color: 'text-accent',
+       color: 'text-accent-foreground',
        bgColor: 'bg-accent/10',
        borderColor: 'border-accent/30',
        sessions: '2-3 sessions',
@@ -84,7 +84,7 @@ export function ExamCountdownWidget({ examDate, examName, readiness, onSettingsC
    const getUrgencyColor = () => {
      if (daysRemaining <= 7) return 'text-destructive';
      if (daysRemaining <= 14) return 'text-warning';
-     if (daysRemaining <= 30) return 'text-accent';
+     if (daysRemaining <= 30) return 'text-accent-foreground';
      return 'text-success';
    };
  

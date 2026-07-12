@@ -258,7 +258,7 @@ export function InsightsDashboardPanel({ subjectId, subjectName, topicName, onBa
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3 animate-fade-in">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
         <p className="text-sm text-muted-foreground">Loading your insights...</p>
       </div>
     );
@@ -273,7 +273,7 @@ export function InsightsDashboardPanel({ subjectId, subjectName, topicName, onBa
         </Button>
         <div>
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <BarChart3 className="h-6 w-6 text-accent" />
+            <BarChart3 className="h-6 w-6 text-accent-foreground" />
             Learning Insights
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -317,7 +317,7 @@ export function InsightsDashboardPanel({ subjectId, subjectName, topicName, onBa
       <Card>
         <CardContent className="p-5 space-y-3">
           <h3 className="font-bold text-foreground flex items-center gap-2">
-            <Target className="h-5 w-5 text-accent" />
+            <Target className="h-5 w-5 text-accent-foreground" />
             Mastery Distribution
           </h3>
           <div className="flex gap-2 h-4 rounded-full overflow-hidden bg-muted">
@@ -359,7 +359,7 @@ export function InsightsDashboardPanel({ subjectId, subjectName, topicName, onBa
         <Card>
           <CardContent className="p-5 space-y-3">
             <h3 className="font-bold text-foreground flex items-center gap-2">
-              <Brain className="h-5 w-5 text-accent" />
+              <Brain className="h-5 w-5 text-accent-foreground" />
               AI Insights
             </h3>
             {insights.map(insight => (
@@ -380,7 +380,7 @@ export function InsightsDashboardPanel({ subjectId, subjectName, topicName, onBa
                   {insight.type === 'weakness' && <XCircle className="h-4 w-4 text-destructive shrink-0" />}
                   {insight.type === 'pattern' && <AlertTriangle className="h-4 w-4 text-warning shrink-0" />}
                   {insight.type === 'strength' && <CheckCircle className="h-4 w-4 text-success shrink-0" />}
-                  {insight.type === 'recommendation' && <Lightbulb className="h-4 w-4 text-accent shrink-0" />}
+                  {insight.type === 'recommendation' && <Lightbulb className="h-4 w-4 text-accent-foreground shrink-0" />}
                   <p className="font-medium text-foreground">{insight.title}</p>
                 </div>
                 <p className="text-xs text-muted-foreground">{insight.description}</p>
@@ -394,7 +394,7 @@ export function InsightsDashboardPanel({ subjectId, subjectName, topicName, onBa
       <Card>
         <CardContent className="p-5 space-y-3">
           <h3 className="font-bold text-foreground flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-accent" />
+            <TrendingUp className="h-5 w-5 text-accent-foreground" />
             Topic Breakdown
           </h3>
 

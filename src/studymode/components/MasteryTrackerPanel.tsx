@@ -205,7 +205,7 @@ export function MasteryTrackerPanel({ subject, onBack, onStartRecall, onStartExa
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-16 gap-3 animate-fade-in">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
         <p className="text-sm text-muted-foreground">Loading mastery data...</p>
       </div>
     );
@@ -220,7 +220,7 @@ export function MasteryTrackerPanel({ subject, onBack, onStartRecall, onStartExa
         </Button>
         <div>
           <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
-            <Target className="h-6 w-6 text-accent" />
+            <Target className="h-6 w-6 text-accent-foreground" />
             Mastery Tracker
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -234,7 +234,7 @@ export function MasteryTrackerPanel({ subject, onBack, onStartRecall, onStartExa
         <CardContent className="p-5 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-foreground">Subject Mastery</span>
-            <span className="text-sm font-bold text-accent">
+            <span className="text-sm font-bold text-accent-foreground">
               {totalTopics > 0 ? Math.round((masteredCount / totalTopics) * 100) : 0}%
             </span>
           </div>
@@ -338,7 +338,7 @@ export function MasteryTrackerPanel({ subject, onBack, onStartRecall, onStartExa
                         "text-xs font-bold capitalize",
                         row.recommendedDifficulty === 'foundation' ? "text-success" :
                         row.recommendedDifficulty === 'advanced' ? "text-destructive" :
-                        "text-accent"
+                        "text-accent-foreground"
                       )}>
                         {row.recommendedDifficulty}
                       </p>

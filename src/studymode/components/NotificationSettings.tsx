@@ -104,7 +104,7 @@ export function NotificationSettings() {
     <div className="p-6 rounded-2xl bg-card border border-border space-y-6">
       <div className="flex items-center gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20">
-          <Bell className="h-5 w-5 text-accent" />
+          <Bell className="h-5 w-5 text-accent-foreground" />
         </div>
         <div>
           <h2 className="text-lg font-bold text-foreground">Notification Preferences</h2>

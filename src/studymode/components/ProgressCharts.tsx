@@ -30,7 +30,7 @@ export function ProgressCharts() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
-        <TrendingUp className="h-5 w-5 text-accent" />
+        <TrendingUp className="h-5 w-5 text-accent-foreground" />
         <h2 className="text-xl font-bold text-foreground">Mastery Trends</h2>
       </div>
       <p className="text-sm text-muted-foreground">

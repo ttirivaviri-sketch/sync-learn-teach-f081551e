@@ -13,6 +13,7 @@ import { useSubjectXP } from '../hooks/useSubjectXP';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
+import { TopicRefresherView, parseRefresherContent } from './TopicRefresherView';
 
 interface TaskContentPanelProps {
   task: DailyTask;
@@ -58,6 +59,10 @@ export function TaskContentPanel(props: TaskContentPanelProps) {
 
 function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack }: TaskContentPanelProps) {
   const { content, isLoading, error, generateContent, reset } = useTaskContent();
+  // Structured card rendering for Topic Refresher (micro-revision) content
+  const refresher = task.type === 'micro-revision' && content
+    ? parseRefresherContent(content)
+    : null;
   const { addXp, updateStreak } = useUserProgress();
   const { awardXP } = useSubjectXP();
   const isReplay = !!task.isCompleted;
@@ -201,7 +206,7 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack 
       {(hasCurriculumData || hasPastPapers || hasExamPatterns) && (
         <div className="flex flex-wrap gap-2 px-1">
           {hasCurriculumData && (
-            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/60 text-accent-foreground border border-accent-foreground/30 dark:bg-accent/15 dark:border-accent/30">
               <BookOpen className="h-3 w-3" />
               Using your syllabus
             </span>
@@ -232,7 +237,7 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack 
       {/* Loading — waiting for context */}
       {!contextLoaded && (
         <div className="flex flex-col items-center gap-3 py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-accent" />
+          <Loader2 className="h-6 w-6 animate-spin text-accent-foreground" />
           <p className="text-sm text-muted-foreground">Loading your curriculum data...</p>
         </div>
       )}
@@ -325,20 +330,24 @@ function LegacyTaskContentPanel({ task, subject, curriculum, onComplete, onBack 
               </Button>
             </div>
           ) : content ? (
+            refresher?.ok ? (
+              <TopicRefresherView parsed={refresher} isLoading={isLoading} />
+            ) : (
             <div
               className={cn(
                 'prose prose-sm dark:prose-invert max-w-none',
                 '[&_details]:mt-1 [&_details]:rounded-lg [&_details]:bg-muted/50 [&_details]:p-3',
-                '[&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:text-accent',
+                '[&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:text-accent-foreground',
                 '[&_blockquote]:border-l-accent [&_blockquote]:bg-accent/5 [&_blockquote]:rounded-r-lg',
                 isLoading && 'animate-pulse',
               )}
             >
               <MathMarkdown>{content}</MathMarkdown>
             </div>
+            )
           ) : (
             <div className="flex flex-col items-center gap-3 py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-accent" />
+              <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
               <p className="text-sm text-muted-foreground">
                 Generating your {taskLabels[task.type]?.toLowerCase() || 'content'}...
               </p>

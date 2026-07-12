@@ -145,7 +145,7 @@ function FlashcardView({ card, index, total, onResult }: FlashcardViewProps) {
         className="w-full rounded-2xl border border-border shadow-md p-6 flex flex-col items-center justify-center text-center bg-gradient-to-br from-accent/10 to-accent/5"
         style={{ minHeight: 180 }}
       >
-        <Layers className="h-5 w-5 text-accent mb-3 opacity-50" />
+        <Layers className="h-5 w-5 text-accent-foreground mb-3 opacity-50" />
         <div className="text-lg font-semibold text-foreground leading-relaxed prose prose-sm dark:prose-invert max-w-none">
           <MathMarkdown>{card.front}</MathMarkdown>
         </div>
@@ -462,7 +462,7 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
       {/* Context badges */}
       <div className="flex flex-wrap gap-2 px-1">
         {syllabusContext && (
-          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+          <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-accent/60 text-accent-foreground border border-accent-foreground/30 dark:bg-accent/15 dark:border-accent/30">
             📚 Syllabus aligned
           </span>
         )}
@@ -485,7 +485,7 @@ export function FlashcardPanel({ task, subject, onComplete, onBack }: FlashcardP
           </div>
         ) : isLoading || !contextLoaded ? (
           <div className="flex flex-col items-center gap-3 py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
             <p className="text-sm text-muted-foreground">
               {!contextLoaded ? 'Loading syllabus context…' : 'Generating exam-style flashcards…'}
             </p>

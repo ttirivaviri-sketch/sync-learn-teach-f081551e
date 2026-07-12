@@ -17,6 +17,7 @@ import ChatInterface from "@/components/ChatInterface";
 import ReviewModal from "@/components/ReviewModal";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { NotificationCenter } from "@/components/NotificationCenter";
+import { SchoolBackpackButton } from "@/components/school/SchoolBackpackButton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { QuickBookingModal } from "@/components/QuickBookingModal";
 import { PaymentCheckout } from "@/components/PaymentCheckout";
@@ -164,6 +165,21 @@ const LearnerApp = () => {
 
   // ── Profile & analytics ────────────────────────────────────────────────
   useEffect(() => { analytics.pageView("learner-app"); }, []);
+
+  // Single Academic Profile home: Library "Edit Profile" and Profile
+  // "Academic" both land on Study → Settings instead of a duplicate modal.
+  const openStudySettings = () => {
+    try { sessionStorage.setItem("studymode:initialTab", "setup"); } catch { /* noop */ }
+    window.dispatchEvent(new CustomEvent("studymode-open-tab", { detail: { tab: "setup" } }));
+    setActiveTab("study");
+  };
+
+  // Study → Settings "+ Set" exam-year affordance opens the edit modal.
+  useEffect(() => {
+    const handler = () => setShowAcademicSetup(true);
+    window.addEventListener("open-academic-setup", handler);
+    return () => window.removeEventListener("open-academic-setup", handler);
+  }, []);
 
   useEffect(() => {
     if (session?.user) {
@@ -468,6 +484,7 @@ const LearnerApp = () => {
       }
       headerRight={
         <>
+          <SchoolBackpackButton />
           <NotificationCenter />
           <Button variant="ghost" size="sm" onClick={() => setShowChat(true)} className="h-9 w-9 rounded-full p-0 text-white hover:bg-white/15" aria-label="Open Chat">
             <MessageCircle className="h-5 w-5" />
@@ -504,6 +521,8 @@ const LearnerApp = () => {
                   onJoinVideoSession={handleJoinVideoSession}
                   onPayNow={handlePayNow}
                   onStartCheckout={handleStartCheckout}
+                  displayName={profile?.full_name || session?.user?.email?.split("@")[0]}
+                  onNavigateTab={setActiveTab}
                 />
               </Suspense>
             )}
@@ -514,7 +533,7 @@ const LearnerApp = () => {
               <Suspense fallback={<TabFallback />}>
                 <LearnerLibraryTab
                   academicProfile={academicProfile}
-                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+                  onShowAcademicSetup={openStudySettings}
                   onBookTutor={handleLibraryBookTutor}
                   onNeedHelp={() => setActiveTab("home")}
                 />
@@ -566,7 +585,7 @@ const LearnerApp = () => {
                   academicProfile={academicProfile}
                   bookings={bookings}
                   onRefreshProfile={loadUserProfile}
-                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+                  onShowAcademicSetup={openStudySettings}
                   onShowPaymentMethods={() => setShowPaymentMethods(true)}
                   onShowAllPayments={() => setShowAllPayments(true)}
                   onNavigateTab={setActiveTab}

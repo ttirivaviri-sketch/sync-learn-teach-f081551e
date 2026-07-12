@@ -55,7 +55,7 @@ export function TopicPicker({ open, onOpenChange, curriculum, onPick }: TopicPic
       <SheetContent side="bottom" className="h-[85vh] rounded-t-2xl p-0 flex flex-col">
         <SheetHeader className="px-5 pt-5 pb-3 border-b">
           <SheetTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-accent" />
+            <Sparkles className="h-5 w-5 text-accent-foreground" />
             Start by Topic
             <Badge variant="secondary" className="ml-2 text-[10px]">{curriculum}</Badge>
           </SheetTitle>

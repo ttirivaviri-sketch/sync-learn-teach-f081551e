@@ -48,7 +48,7 @@ export function ExamSetupCard({ currentExamName, currentExamDate, onSave, isSavi
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20">
-              <GraduationCap className="h-5 w-5 text-accent" />
+              <GraduationCap className="h-5 w-5 text-accent-foreground" />
             </div>
             <div>
               <p className="font-semibold text-foreground text-sm">{currentExamName}</p>
@@ -56,7 +56,7 @@ export function ExamSetupCard({ currentExamName, currentExamDate, onSave, isSavi
                 {format(currentExamDate, 'PPP')} • <span className={cn(
                   'font-semibold',
                   daysUntil && daysUntil <= 14 ? 'text-destructive' :
-                  daysUntil && daysUntil <= 30 ? 'text-accent' : 'text-success'
+                  daysUntil && daysUntil <= 30 ? 'text-accent-foreground' : 'text-success'
                 )}>{daysUntil} days away</span>
               </p>
             </div>
@@ -78,7 +78,7 @@ export function ExamSetupCard({ currentExamName, currentExamDate, onSave, isSavi
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/20">
-            <GraduationCap className="h-5 w-5 text-accent" />
+            <GraduationCap className="h-5 w-5 text-accent-foreground" />
           </div>
           <div>
             <h3 className="font-bold text-foreground">

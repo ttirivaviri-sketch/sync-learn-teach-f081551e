@@ -178,7 +178,7 @@ export function ConceptIngestionPanel({ workspaceId, canManage, defaultCurriculu
       )}
 
       {lastRun && (
-        <div className="rounded-lg border border-accent/30 bg-accent/10 text-accent text-xs p-2">
+        <div className="rounded-lg border border-accent/30 bg-accent/10 text-accent-foreground text-xs p-2">
           Last run · {lastRun.staged} staged · {lastRun.rejected} skipped
         </div>
       )}

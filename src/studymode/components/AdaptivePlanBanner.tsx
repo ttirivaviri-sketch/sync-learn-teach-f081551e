@@ -123,7 +123,7 @@ export function AdaptivePlanBanner() {
         <div className="flex items-center gap-2">
           <div className={cn(
             'p-1.5 rounded-lg',
-            planNeedsUpdate ? 'bg-accent/20 text-accent' : 'bg-muted text-muted-foreground'
+            planNeedsUpdate ? 'bg-accent/20 text-accent-foreground' : 'bg-muted text-muted-foreground'
           )}>
             <Brain className="h-4 w-4" />
           </div>

@@ -104,7 +104,7 @@ export function ReadinessCheck({ onComplete }: ReadinessCheckProps) {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Battery className="h-5 w-5 text-accent" />
+                <Battery className="h-5 w-5 text-accent-foreground" />
                 <span className="font-medium">Energy Level</span>
               </div>
               <div className="flex items-center gap-2">

@@ -84,7 +84,7 @@ export function ChatPanel({ subject, subjectId, topic, className }: ChatPanelPro
               <p className="text-xs text-muted-foreground">
                 {subject}{topic ? ` • ${topic}` : ''}
                 {curriculumContext && (
-                  <span className="ml-1 text-accent inline-flex items-center gap-0.5">
+                  <span className="ml-1 text-accent-foreground inline-flex items-center gap-0.5">
                     <BookOpen className="h-2.5 w-2.5" /> syllabus loaded
                   </span>
                 )}
@@ -109,7 +109,7 @@ export function ChatPanel({ subject, subjectId, topic, className }: ChatPanelPro
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-8">
             <div className="p-3 rounded-full bg-accent/10 mb-4">
-              <Bot className="h-8 w-8 text-accent" />
+              <Bot className="h-8 w-8 text-accent-foreground" />
             </div>
             <h4 className="font-semibold text-foreground mb-2">Ask me anything!</h4>
             <p className="text-sm text-muted-foreground mb-6 max-w-xs">

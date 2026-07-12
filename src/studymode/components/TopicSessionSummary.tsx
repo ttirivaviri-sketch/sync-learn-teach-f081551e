@@ -22,7 +22,7 @@ export function TopicSessionSummary({ open, onOpenChange, subject, topic, sessio
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-accent" />
+            <Sparkles className="h-5 w-5 text-accent-foreground" />
             Session complete
           </DialogTitle>
         </DialogHeader>
@@ -35,7 +35,7 @@ export function TopicSessionSummary({ open, onOpenChange, subject, topic, sessio
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardContent className="p-3 text-center">
-                <Trophy className="h-4 w-4 text-accent mx-auto mb-1" />
+                <Trophy className="h-4 w-4 text-accent-foreground mx-auto mb-1" />
                 <p className="text-xs text-muted-foreground">XP</p>
                 <p className="text-lg font-bold">+{sessionXP}</p>
               </CardContent>

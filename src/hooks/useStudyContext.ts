@@ -71,7 +71,9 @@ export function useStudyContext() {
       if (snap.school_id) {
         // Pull friendly names in parallel.
         const [schoolRow, gradeRow] = await Promise.all([
-          supabase.from("schools").select("name").eq("id", snap.school_id).maybeSingle(),
+          // Students can't read public.schools directly (RLS is staff-only);
+          // the member directory view exposes identity-safe columns to any member.
+          supabase.from("school_member_directory" as any).select("name").eq("id", snap.school_id).maybeSingle(),
           snap.grade_id
             ? supabase.from("grades").select("name").eq("id", snap.grade_id).maybeSingle()
             : Promise.resolve({ data: null }),

@@ -94,7 +94,7 @@ export function ExamReadinessWidget() {
 
                 {p.weakestQuestionTypes.length > 0 && (
                   <div className="flex items-start gap-1.5 text-xs">
-                    <TrendingUp className="h-3.5 w-3.5 text-accent mt-0.5 shrink-0" />
+                    <TrendingUp className="h-3.5 w-3.5 text-accent-foreground mt-0.5 shrink-0" />
                     <p className="text-muted-foreground">
                       Practice more:{" "}
                       {p.weakestQuestionTypes.map((q) => q.question_type).join(", ")}

@@ -273,8 +273,18 @@ export function useMySchoolMemberships() {
       const memberships = (data ?? []) as unknown as SchoolMembership[];
       const ids = Array.from(new Set(memberships.map((m) => m.school_id)));
       if (!ids.length) return [];
+      // Staff (admin/teacher) can read the full schools row; students are
+      // restricted by RLS to the identity-safe member directory view.
       const { data: schools } = await supabase.from("schools" as any).select("*").in("id", ids);
       const sMap = new Map(((schools ?? []) as any[]).map((s) => [s.id, s as School]));
+      const missing = ids.filter((id) => !sMap.has(id));
+      if (missing.length) {
+        const { data: dir } = await supabase
+          .from("school_member_directory" as any)
+          .select("*")
+          .in("id", missing);
+        for (const s of (dir ?? []) as any[]) sMap.set(s.id, s as School);
+      }
       return memberships
         .map((m) => ({ membership: m, school: sMap.get(m.school_id) as School | undefined }))
         .filter((x) => x.school) as { membership: SchoolMembership; school: School }[];

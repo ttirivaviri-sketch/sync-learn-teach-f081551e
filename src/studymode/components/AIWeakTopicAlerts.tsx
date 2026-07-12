@@ -54,7 +54,7 @@ const severityConfig = {
   watch: {
     icon: Eye,
     label: 'Watch',
-    color: 'text-accent',
+    color: 'text-accent-foreground',
     bgColor: 'bg-accent/10',
     borderColor: 'border-accent/30',
     badgeBg: 'bg-accent/20',
@@ -96,7 +96,7 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
     return (
       <div className="p-4 rounded-2xl bg-gradient-to-br from-accent/10 to-warning/10 border border-accent/20">
         <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="h-5 w-5 text-accent" />
+          <Sparkles className="h-5 w-5 text-accent-foreground" />
           <h3 className="font-semibold text-foreground">AI Weak Topic Detection</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-3">
@@ -120,7 +120,7 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
     return (
       <div className="p-4 rounded-2xl bg-accent/10 border border-accent/20">
         <div className="flex items-center gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-accent" />
+          <Loader2 className="h-5 w-5 animate-spin text-accent-foreground" />
           <p className="text-sm text-muted-foreground">Analyzing your quiz performance...</p>
         </div>
       </div>
@@ -147,7 +147,7 @@ export function AIWeakTopicAlerts({ topicStats, subjects, onStartReview }: AIWea
       <div className="p-4 rounded-2xl bg-gradient-to-br from-accent/10 to-primary/10 border border-accent/20">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-accent" />
+            <Sparkles className="h-5 w-5 text-accent-foreground" />
             <h3 className="font-semibold text-foreground">AI Topic Analysis</h3>
           </div>
           <Button variant="ghost" size="sm" onClick={analyze} className="gap-1 text-muted-foreground h-7">

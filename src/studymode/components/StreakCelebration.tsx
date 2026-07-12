@@ -145,8 +145,8 @@ export function StreakCelebration() {
           {/* AI personalized message */}
           <div className="p-3 rounded-xl bg-gradient-to-r from-accent/10 to-warning/10 border border-accent/20 mb-5">
             <div className="flex items-center gap-1.5 mb-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-accent" />
-              <span className="text-xs font-medium text-accent">AI Coach</span>
+              <Sparkles className="h-3.5 w-3.5 text-accent-foreground" />
+              <span className="text-xs font-medium text-accent-foreground">AI Coach</span>
             </div>
             {isLoading ? (
               <div className="flex items-center gap-2">

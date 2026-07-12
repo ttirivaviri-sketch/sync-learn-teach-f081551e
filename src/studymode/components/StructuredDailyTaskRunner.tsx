@@ -72,7 +72,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
   if (isLoading || (!task && !error)) {
     return (
       <div className="flex flex-col items-center gap-3 py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+        <Loader2 className="h-8 w-8 animate-spin text-accent-foreground" />
         <p className="text-sm text-muted-foreground">Building your syllabus-grounded task…</p>
       </div>
     );
@@ -194,7 +194,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
             {task.topic}{task.subtopic ? ` · ${task.subtopic}` : ''}
           </p>
           {isReplay && (
-            <span className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+            <span className="inline-block mt-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground border border-accent/30">
               Replay practice — reduced XP
             </span>
           )}
@@ -214,7 +214,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
       {task.concepts.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {task.concepts.map((c) => (
-            <span key={c} className="text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent border border-accent/30">
+            <span key={c} className="text-xs px-2 py-0.5 rounded-full bg-accent/15 text-accent-foreground border border-accent/30">
               {c}
             </span>
           ))}
@@ -257,7 +257,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
       {step === 'learn' && (
         <div className="space-y-3">
           <div className="p-5 rounded-2xl bg-card border border-border">
-            <p className="text-xs font-bold uppercase tracking-wide text-accent mb-2">Concept Learning</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-accent-foreground mb-2">Concept Learning</p>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <MathMarkdown>{task.blocks.concept_learning}</MathMarkdown>
             </div>
@@ -270,7 +270,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
       {step === 'review' && (
         <div className="space-y-3">
           <div className="p-5 rounded-2xl bg-card border border-border">
-            <p className="text-xs font-bold uppercase tracking-wide text-accent mb-2">Quick Review</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-accent-foreground mb-2">Quick Review</p>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <MathMarkdown>{task.blocks.quick_review}</MathMarkdown>
             </div>
@@ -372,7 +372,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
           </div>
 
           <div className="p-5 rounded-2xl bg-card border border-border space-y-3">
-            <p className="text-xs font-semibold text-accent">{currentQ.concept}</p>
+            <p className="text-xs font-semibold text-accent-foreground">{currentQ.concept}</p>
             <div className="prose prose-sm dark:prose-invert max-w-none">
               <MathMarkdown>{currentQ.question}</MathMarkdown>
             </div>
@@ -441,7 +441,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
         <div className="space-y-3">
           <div className="p-5 rounded-2xl bg-card border border-border space-y-3">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-bold uppercase tracking-wide text-accent">Exam Question</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-accent-foreground">Exam Question</p>
               <span className="text-xs px-2 py-0.5 rounded-full bg-muted">
                 {task.blocks.exam_question.marks} marks
               </span>
@@ -467,7 +467,7 @@ export function StructuredDailyTaskRunner({ task: dailyTask, subject, curriculum
 
             {examRevealed && (
               <div className="p-3 rounded-lg border border-accent/30 bg-accent/5 space-y-2">
-                <p className="text-xs font-semibold text-accent">Mark-scheme steps — tick what you covered:</p>
+                <p className="text-xs font-semibold text-accent-foreground">Mark-scheme steps — tick what you covered:</p>
                 {task.blocks.exam_question.expected_steps.map((s, i) => (
                   <label key={i} className="flex items-start gap-2 text-sm cursor-pointer">
                     <Checkbox
