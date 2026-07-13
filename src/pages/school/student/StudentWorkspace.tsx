@@ -3,7 +3,7 @@
  * classes) plus per-class drill-down, assignment submit, and quiz runner.
  * Uses internal routing via `view` state to avoid creating many route files.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useOutletContext, Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { useStudentAnalytics } from "@/hooks/useStudentAnalytics";
 import { MathMarkdown } from "@/studymode/components/MathMarkdown";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
+import { LearningCompanion } from "@/components/learner/LearningCompanion";
 import { cn } from "@/lib/utils";
 
 const BRAND_GRADIENT = "linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))";
@@ -62,6 +63,10 @@ type HomeTab = "overview" | "classes" | "announcements";
 
 function HomeView({ school, onOpen }: { school: any; onOpen: (v: View) => void }) {
   const [tab, setTab] = useState<HomeTab>("overview");
+  const [userId, setUserId] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setUserId(data.session?.user?.id ?? null));
+  }, []);
   const today = useStudentTodayFeed(school.id);
   const classes = useMyEnrolledClasses(school.id);
   const announcements = useAnnouncements({ schoolId: school.id });
@@ -120,6 +125,9 @@ function HomeView({ school, onOpen }: { school: any; onOpen: (v: View) => void }
               <div className="text-[11px] text-muted-foreground">{(classes.data?.length ?? 0) === 1 ? "class" : "classes"}</div>
             </Card>
           </div>
+
+          {/* Study Companion — context-aware book/video suggestions from live study signals */}
+          <LearningCompanion userId={userId} />
 
           <section className="space-y-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Due soon</h2>

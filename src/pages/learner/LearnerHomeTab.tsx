@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeTodayHero } from "@/components/learner/HomeTodayHero";
 import { HomeContinueLearning } from "@/components/learner/HomeContinueLearning";
+import { LearningCompanion } from "@/components/learner/LearningCompanion";
 import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
@@ -65,6 +66,10 @@ interface LearnerHomeTabProps {
   onStartCheckout?: (booking: any) => void;
   displayName?: string | null;
   onNavigateTab?: (tab: string) => void;
+  /** Signed-in learner id — powers the Study Companion suggestions. */
+  userId?: string | null;
+  /** Book a tutor suggested by the Study Companion (id + name contract). */
+  onBookTutorById?: (tutorId: string, tutorName: string) => void;
 }
 
 // ── Component ───────────────────────────────────────────────────────────────
@@ -90,6 +95,8 @@ export const LearnerHomeTab = ({
   onStartCheckout,
   displayName,
   onNavigateTab,
+  userId,
+  onBookTutorById,
 }: LearnerHomeTabProps) => {
   // "Find a tutor" teaser (mockup) — expands to the full marketplace below.
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
@@ -109,6 +116,13 @@ export const LearnerHomeTab = ({
       upcomingBookings={upcomingBookings}
       onOpenStudy={() => onNavigateTab?.("study")}
       onOpenActivity={() => onNavigateTab?.("activity")}
+    />
+
+    {/* STUDY COMPANION — sentient, context-aware book/video/tutor suggestions */}
+    <LearningCompanion
+      userId={userId}
+      onBookTutor={onBookTutorById}
+      onOpenLibrary={() => onNavigateTab?.("library")}
     />
 
     {/* CONTINUE LEARNING — per-subject mastery rings → Study */}
