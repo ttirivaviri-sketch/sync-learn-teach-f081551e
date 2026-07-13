@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react';
 import { format, differenceInDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Calendar as CalendarIcon, GraduationCap, Plus, Trash2, ChevronDown, ChevronUp,
-  Target, Brain, Flame, Shield, AlertTriangle, CheckCircle2, Clock
+  Calendar as CalendarIcon, GraduationCap, Plus, Trash2,
+  AlertTriangle, CheckCircle2, Clock
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,6 @@ import { Label } from '@/components/ui/label';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Progress } from '@/components/ui/progress';
 import { MasteryRing } from '@/components/ui/mastery-ring';
 import { cn } from '@/lib/utils';
 import { SubjectExamWithReadiness } from '../hooks/useSubjectExams';
@@ -25,13 +24,18 @@ interface MultiExamCountdownProps {
   isAdding?: boolean;
 }
 
-function getUrgencyConfig(days: number) {
-  if (days < 0) return { color: 'text-muted-foreground', bg: 'bg-muted/40', border: 'border-border', icon: CheckCircle2, label: 'Exam passed' };
-  if (days <= 3) return { color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30', icon: Flame, label: 'CRITICAL' };
-  if (days <= 7) return { color: 'text-destructive', bg: 'bg-destructive/10', border: 'border-destructive/30', icon: AlertTriangle, label: 'Exam Mode' };
-  if (days <= 14) return { color: 'text-accent-foreground', bg: 'bg-accent/10', border: 'border-accent/30', icon: Target, label: 'Focused Study' };
-  if (days <= 30) return { color: 'text-primary', bg: 'bg-primary/10', border: 'border-primary/30', icon: Brain, label: 'Steady Progress' };
-  return { color: 'text-success', bg: 'bg-success/10', border: 'border-success/30', icon: Shield, label: 'On Track' };
+// Days badge tint follows urgency; severity pill follows readiness (spec p.8 mockup).
+function getDaysBadgeClass(days: number) {
+  if (days < 0) return 'bg-muted text-muted-foreground';
+  if (days <= 14) return 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400';
+  if (days <= 60) return 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400';
+  return 'bg-primary/10 text-primary';
+}
+
+function getSeverityPill(readiness: number) {
+  if (readiness > 70) return { label: 'On track · good readiness', cls: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400' };
+  if (readiness >= 30) return { label: 'Building · keep going', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-400' };
+  return { label: 'Critical · low readiness', cls: 'bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400' };
 }
 
 // Spec: readiness colour-coded red <30%, amber 30–70%, green >70%.
@@ -41,23 +45,14 @@ function getReadinessColor(readiness: number) {
   return 'text-red-600 dark:text-red-400';
 }
 
-function getReadinessBarClass(readiness: number) {
-  if (readiness > 70) return 'bg-emerald-500';
-  if (readiness >= 30) return 'bg-amber-500';
-  return 'bg-red-500';
-}
+const TOPICS_PREVIEW_COUNT = 3;
 
 function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const urgency = getUrgencyConfig(exam.daysRemaining);
-  const UrgencyIcon = urgency.icon;
+  const [showAllTopics, setShowAllTopics] = useState(false);
   const isPast = exam.daysRemaining < 0;
-  // Never show a signed negative countdown — "-80 days" reads as a bug.
-  const daysLabel = isPast
-    ? `Exam was ${Math.abs(exam.daysRemaining)} day${Math.abs(exam.daysRemaining) === 1 ? '' : 's'} ago`
-    : exam.daysRemaining === 0
-      ? 'TODAY'
-      : `${exam.daysRemaining} days`;
+  const severity = getSeverityPill(exam.topicReadiness);
+  const visibleTopics = showAllTopics ? exam.topicBreakdown : exam.topicBreakdown.slice(0, TOPICS_PREVIEW_COUNT);
+  const hiddenCount = exam.topicBreakdown.length - TOPICS_PREVIEW_COUNT;
 
   return (
     <motion.div
@@ -65,106 +60,95 @@ function ExamCard({ exam, onDelete }: { exam: SubjectExamWithReadiness; onDelete
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
-      className={cn('rounded-2xl border p-4', urgency.bg, urgency.border)}
+      className="rounded-2xl border border-border bg-card p-4 shadow-sm"
     >
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3 flex-1 min-w-0">
-          <div className={cn('flex h-12 w-12 items-center justify-center rounded-xl font-bold shrink-0', urgency.bg, isPast ? 'text-lg' : 'text-2xl')}>
-            <span className={urgency.color}>{isPast ? '✓' : exam.daysRemaining}</span>
-          </div>
-          <div className="min-w-0">
-            <p className="font-bold text-foreground text-sm truncate">
-              {exam.exam_name || exam.subject?.name || 'Exam'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {format(new Date(exam.exam_date), 'EEE, dd MMM yyyy')}
-              {exam.paper_number && ` • Paper ${exam.paper_number}`}
-            </p>
-            <div className="flex items-center gap-1.5 mt-1">
-              <UrgencyIcon className={cn('h-3 w-3', urgency.color)} />
-              <span className={cn('text-xs font-semibold', urgency.color)}>
-                {daysLabel}
-              </span>
-              <span className="text-xs text-muted-foreground">• {urgency.label}</span>
+      {/* Header row — days badge block, title + date + severity pill, delete */}
+      <div className="flex items-start gap-3">
+        <div className={cn('flex h-14 w-14 flex-col items-center justify-center rounded-xl shrink-0', getDaysBadgeClass(exam.daysRemaining))}>
+          {isPast ? (
+            <CheckCircle2 className="h-5 w-5" />
+          ) : (
+            <>
+              {/* Never show a signed negative countdown — "-80 days" reads as a bug. */}
+              <span className="text-xl font-extrabold leading-none">{exam.daysRemaining}</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider mt-0.5">days</span>
+            </>
+          )}
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-foreground text-sm truncate">
+            {exam.exam_name || exam.subject?.name || 'Exam'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {format(new Date(exam.exam_date), 'EEE, dd MMM yyyy')}
+            {exam.paper_number && ` • Paper ${exam.paper_number}`}
+            {isPast && ` • ${Math.abs(exam.daysRemaining)} day${Math.abs(exam.daysRemaining) === 1 ? '' : 's'} ago`}
+            {exam.daysRemaining === 0 && ' • TODAY'}
+          </p>
+          <span className={cn('inline-block mt-1.5 rounded-md px-2 py-0.5 text-[10px] font-semibold', severity.cls)}>
+            {severity.label}
+          </span>
+        </div>
+        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive" onClick={onDelete}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+
+      {/* Overall readiness ring + quick stats — rings, never thin horizontal bars */}
+      <div className="mt-3 flex items-center gap-4">
+        <MasteryRing value={exam.topicReadiness} size={56} strokeWidth={5} />
+        <div className="flex-1">
+          <p className="text-xs text-muted-foreground mb-1">Overall readiness</p>
+          <div className="flex items-baseline gap-5">
+            <div>
+              <span className="text-sm font-bold text-foreground">{exam.topicBreakdown.length}</span>
+              <span className="block text-[10px] text-muted-foreground">topics</span>
+            </div>
+            <div>
+              <span className="text-sm font-bold text-foreground">{exam.quizAttempts}</span>
+              <span className="block text-[10px] text-muted-foreground">quizzes</span>
+            </div>
+            <div>
+              <span className={cn('text-sm font-bold', getReadinessColor(exam.avgAccuracy))}>{exam.avgAccuracy}%</span>
+              <span className="block text-[10px] text-muted-foreground">accuracy</span>
             </div>
           </div>
         </div>
-
-        <div className="flex items-center gap-1 shrink-0">
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setExpanded(!expanded)}>
-            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-          </Button>
-          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" onClick={onDelete}>
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
       </div>
 
-      {/* Readiness ring + quick stats — rings, never thin horizontal bars */}
-      <div className="mt-3 flex items-center gap-3">
-        <MasteryRing value={exam.topicReadiness} size={64} label="ready" />
-        <div className="flex-1 grid grid-cols-3 gap-2 text-center">
-          <div className="p-2 rounded-lg bg-background/50">
-            <p className="text-xs text-muted-foreground">Topics</p>
-            <p className="text-sm font-bold text-foreground">{exam.topicBreakdown.length}</p>
+      {/* Topic readiness — always visible list rows with warnings, per mockup */}
+      <div className="mt-3 pt-3 border-t border-border/60">
+        <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Topic Readiness</p>
+        {exam.topicBreakdown.length === 0 ? (
+          <p className="text-xs text-muted-foreground italic">No topics found for this subject.</p>
+        ) : (
+          <div className="divide-y divide-border/50">
+            {visibleTopics.map((topic, i) => (
+              <div key={i} className="flex items-center justify-between gap-2 py-1.5">
+                <span className="text-xs text-foreground truncate">{topic.name}</span>
+                <span className={cn('flex items-center gap-1 text-xs font-semibold shrink-0', getReadinessColor(topic.mastery))}>
+                  {topic.mastery >= 80 ? (
+                    <CheckCircle2 className="h-3 w-3" />
+                  ) : topic.mastery < 40 ? (
+                    <AlertTriangle className="h-3 w-3" />
+                  ) : (
+                    <Clock className="h-3 w-3" />
+                  )}
+                  {topic.mastery}%
+                </span>
+              </div>
+            ))}
           </div>
-          <div className="p-2 rounded-lg bg-background/50">
-            <p className="text-xs text-muted-foreground">Quizzes</p>
-            <p className="text-sm font-bold text-foreground">{exam.quizAttempts}</p>
-          </div>
-          <div className="p-2 rounded-lg bg-background/50">
-            <p className="text-xs text-muted-foreground">Accuracy</p>
-            <p className={cn('text-sm font-bold', getReadinessColor(exam.avgAccuracy))}>{exam.avgAccuracy}%</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Expanded topic breakdown */}
-      <AnimatePresence>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
-            <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Topic Readiness</p>
-              {exam.topicBreakdown.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">No topics found for this subject.</p>
-              ) : (
-                <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                  {exam.topicBreakdown.map((topic, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <span className="text-xs text-foreground truncate">{topic.name}</span>
-                          <span className={cn('text-xs font-semibold ml-2', getReadinessColor(topic.mastery))}>
-                            {topic.mastery}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={topic.mastery}
-                          className="h-1"
-                          indicatorClassName={getReadinessBarClass(topic.mastery)}
-                        />
-                      </div>
-                      {topic.mastery >= 80 ? (
-                        <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
-                      ) : topic.mastery < 40 ? (
-                        <AlertTriangle className="h-3.5 w-3.5 text-destructive shrink-0" />
-                      ) : (
-                        <Clock className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </motion.div>
         )}
-      </AnimatePresence>
+        {hiddenCount > 0 && (
+          <button
+            onClick={() => setShowAllTopics(!showAllTopics)}
+            className="mt-1.5 text-xs font-semibold text-primary hover:underline"
+          >
+            {showAllTopics ? 'Show fewer topics' : `+${hiddenCount} more topics`}
+          </button>
+        )}
+      </div>
     </motion.div>
   );
 }
@@ -201,12 +185,9 @@ export function MultiExamCountdown({ exams, subjects, onAddExam, onDeleteExam, i
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <GraduationCap className="h-5 w-5 text-accent-foreground" />
-          <h2 className="text-lg font-bold text-foreground">Exam Countdowns</h2>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => setShowAdd(!showAdd)}>
-          {showAdd ? 'Cancel' : <><Plus className="h-4 w-4 mr-1" /> Add Exam</>}
+        <h2 className="text-lg font-bold text-foreground">Exam countdowns</h2>
+        <Button variant="outline" size="sm" className="rounded-full text-primary border-primary/30 hover:bg-primary/5" onClick={() => setShowAdd(!showAdd)}>
+          {showAdd ? 'Cancel' : <><Plus className="h-4 w-4 mr-1" /> Add exam</>}
         </Button>
       </div>
 

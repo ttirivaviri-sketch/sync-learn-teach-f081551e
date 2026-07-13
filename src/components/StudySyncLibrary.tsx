@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, GraduationCap, Sparkles, X,
+  Archive, Brain, Loader2, Sparkles, X, ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,11 +111,13 @@ const StudySyncLibrary = ({
     setActiveCategory(next);
   };
 
+  // Content-type switcher — spec p.4: Books / Clips / Papers / Saved pills (+ Browse home)
   const categories = [
     { id: "all", name: "Browse", icon: BookOpen, color: "text-primary" },
     { id: "books", name: "Books", icon: Book, color: "text-secondary" },
-    { id: "papers", name: "Past Papers", icon: FileText, color: "text-accent-foreground" },
-    { id: "mylibrary", name: "My Library", icon: Archive, color: "text-purple-600" },
+    { id: "tutorials", name: "Clips", icon: Video, color: "text-rose-500" },
+    { id: "papers", name: "Papers", icon: FileText, color: "text-accent-foreground" },
+    { id: "mylibrary", name: "Saved", icon: Archive, color: "text-purple-600" },
   ];
 
   // ── Handlers ─────────────────────────────────────────────────────────────
@@ -221,27 +223,6 @@ const StudySyncLibrary = ({
     <div className="space-y-4">
 
 
-      {/* ── Academic Profile Badge ── */}
-      {academicProfile && (
-        <Card className="bg-gradient-to-r from-primary/5 to-secondary/5 border-primary/10">
-          <CardContent className="p-3">
-            <div className="flex items-center gap-2">
-              <GraduationCap className="h-4 w-4 text-primary flex-shrink-0" />
-              <div className="flex flex-wrap gap-1.5 flex-1">
-                <Badge variant="secondary" className="text-xs">{academicProfile.curriculum}</Badge>
-                <Badge variant="secondary" className="text-xs">{academicProfile.grade}</Badge>
-                {academicProfile.subjects.slice(0, 3).map((s) => (
-                  <Badge key={s} variant="outline" className="text-xs">{s}</Badge>
-                ))}
-                {academicProfile.subjects.length > 3 && (
-                  <Badge variant="outline" className="text-xs">+{academicProfile.subjects.length - 3}</Badge>
-                )}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
       {/* ── Search Bar ── */}
       <div className="flex gap-2">
         <div className="relative flex-1">
@@ -263,15 +244,15 @@ const StudySyncLibrary = ({
         </Button>
       </div>
 
-      {/* ── Quick Curriculum Filters ── */}
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none">
+      {/* ── Single filter row — spec p.4: curriculum/grade context + subject chips merged into one row ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
         {academicProfile ? (
           <>
-            <Badge variant="default" className="whitespace-nowrap cursor-default">
+            <Badge variant="default" className="whitespace-nowrap cursor-default shrink-0">
               {academicProfile.curriculum} · {academicProfile.grade}
             </Badge>
             {academicProfile.subjects.map((s) => (
-              <Badge key={s} variant="outline" className="whitespace-nowrap cursor-pointer" onClick={() => handleSearch(s)}>
+              <Badge key={s} variant="outline" className="whitespace-nowrap cursor-pointer shrink-0" onClick={() => handleSearch(s)}>
                 {s}
               </Badge>
             ))}
@@ -301,11 +282,14 @@ const StudySyncLibrary = ({
         <>
           {/* ── Library Tabs ── */}
           <Tabs value={activeCategory} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 text-xs">
+            <TabsList className="flex w-full justify-start gap-1.5 overflow-x-auto bg-transparent p-0 h-auto scrollbar-none">
               {categories.map((category) => (
-                <TabsTrigger key={category.id} value={category.id} className="text-xs">
-                  <category.icon className={`h-4 w-4 mr-1 ${category.color}`} />
-                  <span className="hidden sm:inline">{category.name}</span>
+                <TabsTrigger
+                  key={category.id}
+                  value={category.id}
+                  className="rounded-full border border-border bg-card px-4 py-1.5 text-xs font-medium shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:border-primary"
+                >
+                  {category.name}
                 </TabsTrigger>
               ))}
             </TabsList>
@@ -317,6 +301,30 @@ const StudySyncLibrary = ({
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               )}
+
+              {/* Continue Reading — gradient banner (spec p.4) */}
+              {(() => {
+                const continueBook =
+                  myLibraryResources.find(isBookish) ?? personalizedResources.find(isBookish);
+                if (!continueBook) return null;
+                return (
+                  <button
+                    onClick={() => openResource(continueBook)}
+                    className="w-full flex items-center gap-3 rounded-2xl px-4 py-4 text-left shadow-md transition-transform active:scale-[0.99]"
+                    style={{ background: 'linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))' }}
+                  >
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 shrink-0">
+                      <Book className="h-5 w-5 text-white" />
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[10px] font-bold uppercase tracking-widest text-white/70">Continue reading</span>
+                      <span className="block text-sm font-semibold text-white truncate">{continueBook.title}</span>
+                    </span>
+                    <ChevronRight className="h-5 w-5 text-white/80 shrink-0" />
+                  </button>
+                );
+              })()}
+
               {academicProfile && (
                 <ContentRack title="Recommended for You" items={personalizedResources.slice(0, 4)} icon={Sparkles} {...rackProps} />
               )}
@@ -337,7 +345,7 @@ const StudySyncLibrary = ({
                   (r.tags?.subject || "").toLowerCase().includes("study skill")
               ).length > 0 && (
                 <ContentRack
-                  title="How to Study & Study Skills"
+                  title="How to Study"
                   items={allResources.filter(
                     (r) =>
                       (r.category || "").toLowerCase().includes("study skill") ||

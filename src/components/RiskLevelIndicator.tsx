@@ -181,40 +181,43 @@ export function RiskLevelSummary({ risks }: { risks: SubjectRisk[] }) {
 
   const atRisk = risks.filter((r) => r.riskLevel === "at_risk");
   const needsAttention = risks.filter((r) => r.riskLevel === "needs_attention");
-  const onTrack = risks.filter((r) => r.riskLevel === "on_track");
+
+  // Header counter: surface the most urgent tier (mockup: "2 need attention")
+  const headerNote =
+    atRisk.length > 0
+      ? { text: `${atRisk.length} at risk`, cls: "text-red-600 dark:text-red-400" }
+      : needsAttention.length > 0
+        ? { text: `${needsAttention.length} need attention`, cls: "text-amber-600 dark:text-amber-400" }
+        : { text: "All on track", cls: "text-green-600 dark:text-green-400" };
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xs font-semibold text-foreground">Subject Risk Levels</h4>
-      <div className="flex flex-wrap gap-1.5">
-        {risks
-          .sort((a, b) => {
-            const order: Record<RiskLevel, number> = { at_risk: 0, needs_attention: 1, on_track: 2 };
-            return order[a.riskLevel] - order[b.riskLevel];
-          })
-          .map((risk) => (
-            <RiskLevelIndicator
-              key={risk.subject}
-              subject={risk.subject}
-              riskLevel={risk.riskLevel}
-              daysUntilExam={risk.daysUntilExam}
-              averageScore={risk.averageScore}
-              compact
-            />
-          ))}
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-foreground">Subject risk levels</h4>
+        <span className={`text-xs font-medium ${headerNote.cls}`}>{headerNote.text}</span>
       </div>
-      <div className="text-[10px] text-muted-foreground">
-        {atRisk.length > 0 && (
-          <span className="text-red-600 font-medium">{atRisk.length} at risk</span>
-        )}
-        {atRisk.length > 0 && needsAttention.length > 0 && " | "}
-        {needsAttention.length > 0 && (
-          <span className="text-yellow-600">{needsAttention.length} need attention</span>
-        )}
-        {(atRisk.length > 0 || needsAttention.length > 0) && onTrack.length > 0 && " | "}
-        {onTrack.length > 0 && (
-          <span className="text-green-600">{onTrack.length} on track</span>
-        )}
+      {/* Full-width tinted rows — subject left, tier right (mockup p.10) */}
+      <div className="space-y-1.5">
+        {risks.map((risk) => {
+          const config = RISK_CONFIG[risk.riskLevel];
+          return (
+            <Tooltip key={risk.subject}>
+              <TooltipTrigger asChild>
+                <div className={`flex items-center justify-between rounded-lg px-3 py-2 ${config.bgColor}`}>
+                  <span className={`text-sm font-medium ${config.color}`}>{risk.subject}</span>
+                  <span className={`text-xs ${config.color}`}>{config.label}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs space-y-1">
+                  <p className="font-medium">{risk.subject} - {config.label}</p>
+                  {risk.daysUntilExam !== null && <p>{risk.daysUntilExam} days until exam</p>}
+                  {risk.averageScore !== null && <p>Average score: {risk.averageScore}%</p>}
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          );
+        })}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles, MoreHorizontal } from 'lucide-react';
+import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles, MoreHorizontal, MessageCircle, Send, Award, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Subject, ReadinessCheck as ReadinessCheckType, DailyTask } from '../types/study';
@@ -19,6 +19,7 @@ const AIProgressInsights = lazy(() => import('./AIProgressInsights').then(m => (
 const AIWeakTopicAlerts = lazy(() => import('./AIWeakTopicAlerts').then(m => ({ default: m.AIWeakTopicAlerts })));
 const DailySummary = lazy(() => import('./DailySummary').then(m => ({ default: m.DailySummary })));
 const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => ({ default: m.AdaptivePlanBanner })));
+const AchievementsTab = lazy(() => import('./AchievementsTab').then(m => ({ default: m.AchievementsTab })));
 const LessonReinforcementBanner = lazy(() => import('./LessonReinforcementBanner').then(m => ({ default: m.LessonReinforcementBanner })));
 const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
 import { PredictedGradeCard } from './PredictedGradeCard';
@@ -62,15 +63,15 @@ interface DashboardProps {
 
 export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, onBrowseLibrary, academicProfile }: DashboardProps) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
-  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'setup'>(() => {
+  const [activeTab, setActiveTab] = useState<'subjects' | 'calendar' | 'exams' | 'progress' | 'achievements' | 'setup'>(() => {
     // Deep-link support: Library "Edit Profile" / Profile "Academic" jump
     // straight to Study → Settings (the single Academic Profile source of truth).
     try {
       const initial = sessionStorage.getItem('studymode:initialTab');
       if (initial) {
         sessionStorage.removeItem('studymode:initialTab');
-        if (['subjects', 'calendar', 'exams', 'progress', 'setup'].includes(initial)) {
-          return initial as 'subjects' | 'calendar' | 'exams' | 'progress' | 'setup';
+        if (['subjects', 'calendar', 'exams', 'progress', 'achievements', 'setup'].includes(initial)) {
+          return initial as 'subjects' | 'calendar' | 'exams' | 'progress' | 'achievements' | 'setup';
         }
       }
     } catch { /* SSR / storage blocked */ }
@@ -81,7 +82,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   useEffect(() => {
     const handler = (e: Event) => {
       const tab = (e as CustomEvent).detail?.tab;
-      if (['subjects', 'calendar', 'exams', 'progress', 'setup'].includes(tab)) {
+      if (['subjects', 'calendar', 'exams', 'progress', 'achievements', 'setup'].includes(tab)) {
         setActiveTab(tab);
       }
     };
@@ -323,7 +324,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="subjects">
             <BookOpen className="mr-1 h-4 w-4" />
             <span className="hidden sm:inline text-xs">Overview</span>
@@ -344,6 +345,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 {topicsDueToday.length + strugglingTopics.length}
               </span>
             )}
+          </TabsTrigger>
+          <TabsTrigger value="achievements">
+            <Award className="mr-1 h-4 w-4" />
+            <span className="hidden sm:inline text-xs">Achievements</span>
           </TabsTrigger>
           <TabsTrigger value="setup">
             <Settings className="mr-1 h-4 w-4" />
@@ -400,8 +405,19 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               {/* Exam Readiness moved to Progress tab; Mock Exams moved to Exams tab */}
               {hasSubjects ? (
                 <>
-                  <div className="flex items-center justify-between mb-1 gap-2">
-                    <h2 className="text-xl font-bold text-foreground truncate">Your Subjects</h2>
+                  {/* "Ask AI tutor" compose bar — spec p.5 mockup */}
+                  <button
+                    onClick={() => onOpenChat?.(sortedSubjects[0]?.name ?? '', sortedSubjects[0]?.currentTopic?.name ?? '')}
+                    className="w-full mb-4 flex items-center gap-3 rounded-2xl px-4 py-3 text-left shadow-md transition-transform active:scale-[0.99]"
+                    style={{ background: 'linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))' }}
+                  >
+                    <MessageCircle className="h-4 w-4 text-white/90 shrink-0" />
+                    <span className="flex-1 text-sm font-medium text-white/95">Ask anything, or start today's plan</span>
+                    <Send className="h-4 w-4 text-white/80 shrink-0" />
+                  </button>
+
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground truncate">Your Subjects</h2>
                     {/* Desktop: inline actions. Mobile: single overflow menu to prevent header overflow. */}
                     <div className="hidden sm:flex items-center gap-1.5 shrink-0">
                       <Button
@@ -441,10 +457,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  {profileExamDates.length > 0 && (
-                    <p className="text-xs text-muted-foreground mb-4">Sorted by nearest exam date</p>
-                  )}
-                  <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2.5">
                     {sortedSubjects.map((subject, index) => {
                       const examEntry = profileExamDates.find(
                         (e) => e.subject.toLowerCase() === subject.name.toLowerCase()
@@ -497,6 +510,9 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                       );
                     })}
                   </div>
+                  <p className="text-[11px] text-muted-foreground mt-3">
+                    What's due today lives on Home — this list is just your subjects and where each one stands.
+                  </p>
                 </>
               ) : (
                 <div className="p-8 text-center rounded-2xl border border-dashed border-border">
@@ -563,7 +579,10 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 <button className="w-full flex items-center justify-between p-4 text-left">
                   <div className="flex items-center gap-2">
                     <BarChart3 className="h-4 w-4 text-primary" />
-                    <span className="font-semibold text-sm">Charts & trends</span>
+                    <div>
+                      <span className="font-semibold text-sm block">Mastery trends</span>
+                      <span className="text-xs text-muted-foreground">Quiz accuracy over time, across subjects.</span>
+                    </div>
                   </div>
                   <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
                 </button>
@@ -577,6 +596,31 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               </CollapsibleContent>
             </Card>
           </Collapsible>
+
+          {/* One-line teasers — spec p.7: achievement unlocks + reviews due link out, not full lists */}
+          <button
+            onClick={() => setActiveTab('achievements')}
+            className="w-full flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-left shadow-sm transition-colors hover:bg-muted/40"
+          >
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 shrink-0">
+              <Trophy className="h-4 w-4 text-primary" />
+            </span>
+            <span className="flex-1 text-sm text-foreground truncate">
+              {Math.max(0, 10 - (progress?.badges?.length ?? 0))} more badge{Math.max(0, 10 - (progress?.badges?.length ?? 0)) === 1 ? '' : 's'} to unlock — see Achievements
+            </span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+          </button>
+          {topicStats.filter(s => s.due_for_review).length > 0 && (
+            <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-4 py-3 shadow-sm">
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-red-50 dark:bg-red-950/40 shrink-0">
+                <Clock className="h-4 w-4 text-red-500" />
+              </span>
+              <span className="flex-1 text-sm text-foreground truncate">
+                {topicStats.filter(s => s.due_for_review).length} review{topicStats.filter(s => s.due_for_review).length === 1 ? '' : 's'} due today
+              </span>
+              <span className="text-xs font-semibold text-primary shrink-0">See on Home</span>
+            </div>
+          )}
         </TabsContent>
 
         {/* ===== TAB 3: CALENDAR ===== */}
@@ -611,6 +655,13 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
               examDate={getNextExam()?.exam_date ? new Date(getNextExam()!.exam_date) : examDate}
               subjectExams={subjectExams}
             />
+          </Suspense>
+        </TabsContent>
+
+        {/* ===== TAB: ACHIEVEMENTS — level/XP ring, badges earned grid, next-up progress (spec p.9) ===== */}
+        <TabsContent value="achievements" className="mt-4">
+          <Suspense fallback={<Skeleton className="h-96 rounded-2xl" />}>
+            <AchievementsTab />
           </Suspense>
         </TabsContent>
 

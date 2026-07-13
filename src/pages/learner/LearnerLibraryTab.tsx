@@ -1,7 +1,7 @@
 /**
  * LearnerLibraryTab — StudySyncLibrary with academic-profile gating.
  */
-import { ShoppingBag, GraduationCap } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import StudySyncLibrary from "@/components/StudySyncLibrary";
 import { StruggleRecRail } from "@/components/learner/StruggleRecRail";
@@ -44,27 +44,28 @@ export const LearnerLibraryTab = ({
   return (
     <div className="space-y-4 p-4 mt-0">
       <StruggleRecRail />
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <ShoppingBag className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">StudySync Library</h3>
+      {/* Header — spec p.4 mockup: bold "Library" + one context line */}
+      <div className="flex items-end justify-between gap-2">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold text-foreground">Library</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {academicProfile
+              ? `${academicProfile.curriculum ?? ""}${academicProfile.grade ? ` · ${academicProfile.grade}` : ""}${academicProfile.subjects?.length ? ` · ${academicProfile.subjects.length} subjects` : ""}`
+              : "Browsing and reference material for your curriculum"}
+          </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={onShowAcademicSetup}
-        >
-          <GraduationCap className="h-3.5 w-3.5 mr-1" />
-          {academicProfile ? "Edit Profile" : "Set Profile"}
-        </Button>
+        {!academicProfile && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs shrink-0"
+            onClick={onShowAcademicSetup}
+          >
+            <GraduationCap className="h-3.5 w-3.5 mr-1" />
+            Set Profile
+          </Button>
+        )}
       </div>
-      {academicProfile && (
-        <p className="text-xs text-muted-foreground -mt-2">
-          Showing {academicProfile.curriculum} · {academicProfile.grade}
-          {academicProfile.subjects?.length ? ` · ${academicProfile.subjects.length} subjects` : ""}
-        </p>
-      )}
       <StudySyncLibrary
         key={profileKey}
         academicProfile={academicProfile as any}
