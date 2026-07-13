@@ -523,6 +523,8 @@ const LearnerApp = () => {
                   onStartCheckout={handleStartCheckout}
                   displayName={profile?.full_name || session?.user?.email?.split("@")[0]}
                   onNavigateTab={setActiveTab}
+                  userId={userId}
+                  onBookTutorById={handleLibraryBookTutor}
                 />
               </Suspense>
             )}
