@@ -9,19 +9,38 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { Loader2, ClipboardList, FileText, ExternalLink } from "lucide-react";
+import { Loader2, ClipboardList, FileText, ExternalLink, ChevronRight, GraduationCap, ChevronDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
-  useMyEnrolledClasses, useStudentTodayFeed,
+  useMyEnrolledClasses, useStudentTodayFeed, useGrades,
   useAssignments, useAssignment, useMySubmission, useSubmitAssignment, uploadSubmissionFile,
   useQuizzes, useQuiz, useQuizQuestions, useStartQuizAttempt, useSubmitQuizAttempt, useMyQuizAttempts,
   useResources, useAnnouncements,
 } from "@/hooks/useSchoolAcademics";
+import { useStudentAnalytics } from "@/hooks/useStudentAnalytics";
 import { MathMarkdown } from "@/studymode/components/MathMarkdown";
 import { SubmissionTimeline } from "@/components/school/SubmissionTimeline";
 import { SchoolFileLink } from "@/components/school/SchoolFileLink";
-import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel";
+import { cn } from "@/lib/utils";
+
+const BRAND_GRADIENT = "linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))";
+
+function timeAgo(iso: string) {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (days <= 0) return "Today";
+  if (days === 1) return "1 day ago";
+  return `${days} days ago`;
+}
+
+function dueInLabel(iso: string | null) {
+  if (!iso) return "No due date";
+  const days = Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+  if (days < 0) return "Overdue";
+  if (days === 0) return "due today";
+  if (days === 1) return "due tomorrow";
+  return `due in ${days} days`;
+}
 
 type View =
   | { kind: "home" }
@@ -39,57 +58,198 @@ export default function StudentWorkspace() {
   return <HomeView school={school} onOpen={setView} />;
 }
 
+type HomeTab = "overview" | "classes" | "announcements";
+
 function HomeView({ school, onOpen }: { school: any; onOpen: (v: View) => void }) {
+  const [tab, setTab] = useState<HomeTab>("overview");
   const today = useStudentTodayFeed(school.id);
   const classes = useMyEnrolledClasses(school.id);
+  const announcements = useAnnouncements({ schoolId: school.id });
+  const grades = useGrades(school.id);
+  const analytics = useStudentAnalytics(undefined, 30);
+
+  const gradeName = (id: string | null) => grades.data?.find((g) => g.id === id)?.name ?? "";
+
+  const weekMs = 7 * 86400000;
+  const dueThisWeek =
+    (today.data?.assignments.filter((a) => a.due_at && new Date(a.due_at).getTime() - Date.now() < weekMs && new Date(a.due_at).getTime() > Date.now() - 86400000).length ?? 0) +
+    (today.data?.quizzes.filter((q) => q.due_at && new Date(q.due_at).getTime() - Date.now() < weekMs && new Date(q.due_at).getTime() > Date.now() - 86400000).length ?? 0);
+  const quizPct = analytics.data?.rollup_30d?.quiz_pct ?? 0;
+  const rollup = analytics.data?.rollup_30d;
+  const latest = announcements.data?.[0];
+
+  const tabs: { id: HomeTab; label: string }[] = [
+    { id: "overview", label: "Overview" },
+    { id: "classes", label: "My classes" },
+    { id: "announcements", label: "Announce." },
+  ];
+
   return (
-    <div className="space-y-6">
-      <StudentAnalyticsPanel title="Your learning" />
-      <section>
-        <h2 className="text-lg font-semibold mb-2">Due soon</h2>
-        {today.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
-          <div className="space-y-2">
-            {today.data?.assignments.length === 0 && today.data?.quizzes.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nothing due right now. 🎉</p>
+    <div className="space-y-4">
+      {/* Pill tab nav — mockup p.17 */}
+      <div className="flex gap-2">
+        {tabs.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "rounded-full px-4 py-1.5 text-sm font-medium border transition-colors",
+              tab === t.id ? "text-white border-transparent" : "bg-card text-muted-foreground hover:text-foreground",
             )}
-            {today.data?.assignments.map((a) => (
-              <Card key={a.id} role="button" onClick={() => onOpen({ kind: "assignment", id: a.id, schoolId: school.id })} className="p-3 cursor-pointer hover:bg-muted/40">
-                <div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{a.title}</div>
-                    <div className="text-xs text-muted-foreground">{a.due_at ? `Due ${new Date(a.due_at).toLocaleString()}` : "No due date"}</div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-            {today.data?.quizzes.map((q) => (
-              <Card key={q.id} role="button" onClick={() => onOpen({ kind: "quiz", id: q.id, schoolId: school.id })} className="p-3 cursor-pointer hover:bg-muted/40">
-                <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary" />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{q.title}</div>
-                    <div className="text-xs text-muted-foreground">Quiz {q.due_at ? `· due ${new Date(q.due_at).toLocaleString()}` : ""}</div>
-                  </div>
-                </div>
-              </Card>
-            ))}
+            style={tab === t.id ? { background: BRAND_GRADIENT } : undefined}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "overview" && (
+        <div className="space-y-4">
+          {/* Stats trio — mockup p.17 */}
+          <div className="grid grid-cols-3 gap-2">
+            <Card className="p-3 text-center">
+              <div className="text-xl font-bold text-red-500">{dueThisWeek}</div>
+              <div className="text-[11px] text-muted-foreground">due this week</div>
+            </Card>
+            <Card className="p-3 text-center">
+              <div className="text-xl font-bold text-emerald-600">{quizPct}%</div>
+              <div className="text-[11px] text-muted-foreground">quiz avg</div>
+            </Card>
+            <Card className="p-3 text-center">
+              <div className="text-xl font-bold text-primary">{classes.data?.length ?? 0}</div>
+              <div className="text-[11px] text-muted-foreground">{(classes.data?.length ?? 0) === 1 ? "class" : "classes"}</div>
+            </Card>
           </div>
-        )}
-      </section>
-      <section>
-        <h2 className="text-lg font-semibold mb-2">My classes</h2>
-        {classes.data?.length === 0 ? (
-          <p className="text-sm text-muted-foreground">You aren't enrolled in any classes yet.</p>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {classes.data?.map((c) => (
-              <Card key={c.id} role="button" onClick={() => onOpen({ kind: "class", classId: c.id })} className="p-3 cursor-pointer hover:bg-muted/40">
-                <div className="font-medium">{c.name}</div>
-                <div className="text-xs text-muted-foreground">Class</div>
+
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Due soon</h2>
+            {today.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+              <div className="space-y-2">
+                {today.data?.assignments.length === 0 && today.data?.quizzes.length === 0 && (
+                  <p className="text-sm text-muted-foreground">Nothing due right now. 🎉</p>
+                )}
+                {today.data?.assignments.map((a) => (
+                  <Card key={a.id} role="button" onClick={() => onOpen({ kind: "assignment", id: a.id, schoolId: school.id })} className="p-3 cursor-pointer hover:bg-muted/40">
+                    <div className="flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0 text-sm">
+                        <span className="font-medium">{a.title}</span>
+                        <span className="text-muted-foreground"> — Homework, {dueInLabel(a.due_at)}</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </Card>
+                ))}
+                {today.data?.quizzes.map((q) => (
+                  <Card key={q.id} role="button" onClick={() => onOpen({ kind: "quiz", id: q.id, schoolId: school.id })} className="p-3 cursor-pointer hover:bg-muted/40">
+                    <div className="flex items-center gap-2"><FileText className="h-4 w-4 text-primary shrink-0" />
+                      <div className="flex-1 min-w-0 text-sm">
+                        <span className="font-medium">{q.title}</span>
+                        <span className="text-muted-foreground"> — Quiz, {dueInLabel(q.due_at)}</span>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Latest announcement</h2>
+            {latest ? (
+              <Card className="p-3">
+                <div className="font-semibold text-sm">{latest.title}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {timeAgo(latest.created_at)}
+                  {latest.grade_id ? ` · ${gradeName(latest.grade_id)}` : latest.audience === "school" ? " · School-wide" : ""}
+                </p>
               </Card>
-            ))}
-          </div>
-        )}
-      </section>
+            ) : (
+              <p className="text-sm text-muted-foreground">No announcements yet.</p>
+            )}
+          </section>
+        </div>
+      )}
+
+      {tab === "classes" && (
+        <div className="space-y-4">
+          {/* Personal activity stats — mockup p.18: every stat is the student's own */}
+          {rollup && (
+            <Card className="p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Your activity</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="font-bold">{rollup.tasks ?? 0}</div>
+                  <div className="text-[11px] text-muted-foreground">Tasks (30d)</div>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="font-bold">{rollup.homework ?? 0}</div>
+                  <div className="text-[11px] text-muted-foreground">Homework</div>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="font-bold">{rollup.quiz_pct ?? 0}%</div>
+                  <div className="text-[11px] text-muted-foreground">Quiz avg</div>
+                </div>
+                <div className="rounded-lg bg-muted/50 p-3">
+                  <div className="font-bold">{rollup.flashcards ?? 0}</div>
+                  <div className="text-[11px] text-muted-foreground">Flashcards</div>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          <section className="space-y-2">
+            <h2 className="text-sm font-semibold">My classes</h2>
+            {classes.data?.length === 0 ? (
+              <p className="text-sm text-muted-foreground">You aren't enrolled in any classes yet.</p>
+            ) : (
+              <div className="space-y-2">
+                {classes.data?.map((c) => (
+                  <Card key={c.id} role="button" onClick={() => onOpen({ kind: "class", classId: c.id })} className="p-3 cursor-pointer hover:bg-muted/40">
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 rounded-full bg-amber-100 dark:bg-amber-950/50 flex items-center justify-center shrink-0">
+                        <GraduationCap className="h-4 w-4 text-amber-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">{c.name}</div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {school.name}{c.grade_id && gradeName(c.grade_id) ? ` · ${gradeName(c.grade_id)}` : ""}
+                        </div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+        </div>
+      )}
+
+      {tab === "announcements" && (
+        <div className="space-y-3">
+          <button className="flex items-center gap-1 text-xs text-muted-foreground">
+            Filter: All <ChevronDown className="h-3 w-3" />
+          </button>
+          {announcements.isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : (
+            <div className="space-y-2">
+              {(announcements.data?.length ?? 0) === 0 && (
+                <p className="text-sm text-muted-foreground">No announcements yet.</p>
+              )}
+              {announcements.data?.map((a) => (
+                <Card key={a.id} className="p-3">
+                  <div className="font-semibold text-sm">{a.title}</div>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {timeAgo(a.created_at)}
+                    {a.grade_id ? ` · ${gradeName(a.grade_id)}` : a.audience === "school" ? " · School-wide" : ""}
+                  </p>
+                  <p className="text-sm mt-1.5 whitespace-pre-wrap">{a.body}</p>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

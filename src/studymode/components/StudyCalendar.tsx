@@ -130,6 +130,14 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
 
   const selectedDateSchedule = selectedDate ? getScheduleForDate(selectedDate) : [];
 
+  // Per-subject dot colours for the calendar grid + legend (spec p.8 mockup).
+  const dotPalette = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-purple-500', 'bg-rose-500', 'bg-cyan-500', 'bg-indigo-500', 'bg-orange-500'];
+  const subjectDotColor = (subjectId: string | null): string => {
+    if (!subjectId) return 'bg-slate-400';
+    const idx = subjects.findIndex(s => s.id === subjectId);
+    return idx >= 0 ? dotPalette[idx % dotPalette.length] : 'bg-slate-400';
+  };
+
   return (
     <div className="space-y-4">
       {/* Calendar Header */}
@@ -159,16 +167,17 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
         </div>
       </div>
 
-      {/* Generate Schedule Button */}
-      {subjects.length > 0 && schedule.length === 0 && (
-        <Button
+      {/* Generate Schedule Button — full-width gradient pill, always available (spec p.8) */}
+      {subjects.length > 0 && (
+        <button
           onClick={handleGenerateSchedule}
           disabled={generateSchedule.isPending}
-          className="w-full gradient-primary"
+          className="w-full flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold text-white shadow-md transition-transform active:scale-[0.99] disabled:opacity-60"
+          style={{ background: 'linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))' }}
         >
-          <CalendarIcon className="mr-2 h-4 w-4" />
-          {generateSchedule.isPending ? 'Generating...' : 'Generate Study Schedule'}
-        </Button>
+          <CalendarIcon className="h-4 w-4" />
+          {generateSchedule.isPending ? 'Generating…' : 'Generate study schedule'}
+        </button>
       )}
 
       {/* Calendar Grid */}
@@ -186,7 +195,7 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
         <div className="grid grid-cols-7">
           {paddedDays.map((day, index) => {
             if (!day) {
-              return <div key={`empty-${index}`} className="p-2 min-h-[80px] bg-muted/20" />;
+              return <div key={`empty-${index}`} className="min-h-[52px]" />;
             }
 
             const daySchedule = getScheduleForDate(day);
@@ -196,53 +205,50 @@ export function StudyCalendar({ subjects, examDate, subjectExams, onGenerateSche
             const subjectExamsOnDay = (subjectExams || []).filter(e => isSameDay(new Date(e.exam_date), day));
             const hasAnyExam = hasExam || subjectExamsOnDay.length > 0;
 
+            // Distinct subjects scheduled that day → coloured dots (max 4 shown)
+            const daySubjectIds = Array.from(new Set(daySchedule.map(i => i.subject_id ?? '')));
+
             return (
-              <div
+              <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
                 className={cn(
-                  'p-1 min-h-[80px] border-r border-b border-border cursor-pointer transition-colors',
-                  !isSameMonth(day, currentMonth) && 'bg-muted/30 text-muted-foreground',
-                  isToday(day) && 'bg-accent/10',
-                  isSelected && 'ring-2 ring-accent ring-inset',
-                  hasAnyExam && 'bg-destructive/10'
+                  'flex flex-col items-center gap-1 py-2 min-h-[52px] cursor-pointer transition-colors',
+                  !isSameMonth(day, currentMonth) && 'text-muted-foreground/50',
+                  isSelected && 'bg-primary/5'
                 )}
               >
-                <div className={cn(
-                  'text-xs font-medium mb-1',
-                  isToday(day) && 'text-accent-foreground font-bold'
-                )}>
-                  {format(day, 'd')}
-                  {hasAnyExam && <span className="ml-1 text-destructive">📝</span>}
-                </div>
-                {subjectExamsOnDay.length > 0 && (
-                  <div className="text-[10px] px-1 py-0.5 rounded bg-destructive/20 text-destructive border border-destructive/30 truncate mb-0.5">
-                    {subjectExamsOnDay.map(e => e.subject?.name || e.exam_name).join(', ')}
-                  </div>
-                )}
-                <div className="space-y-0.5">
-                  {daySchedule.slice(0, 2).map(item => (
-                    <div
-                      key={item.id}
-                      className={cn(
-                        'text-[10px] px-1 py-0.5 rounded truncate border',
-                        taskTypeColors[item.task_type] || taskTypeColors.revision,
-                        item.is_completed && 'opacity-50 line-through'
-                      )}
-                    >
-                      {item.topic_name.split(':').pop()?.trim() || item.topic_name}
-                    </div>
-                  ))}
-                  {daySchedule.length > 2 && (
-                    <div className="text-[10px] text-muted-foreground pl-1">
-                      +{daySchedule.length - 2} more
-                    </div>
+                <span
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded-full text-xs font-medium',
+                    isToday(day) && 'text-white font-bold',
+                    !isToday(day) && hasAnyExam && 'bg-destructive/15 text-destructive font-semibold'
                   )}
-                </div>
-              </div>
+                  style={isToday(day) ? { background: 'linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))' } : undefined}
+                >
+                  {format(day, 'd')}
+                </span>
+                <span className="flex items-center gap-0.5 h-1.5">
+                  {daySubjectIds.slice(0, 4).map((sid, i) => (
+                    <span key={i} className={cn('h-1.5 w-1.5 rounded-full', subjectDotColor(sid || null))} />
+                  ))}
+                </span>
+              </button>
             );
           })}
         </div>
+
+        {/* Subject legend — which dot colour belongs to which subject (spec p.8) */}
+        {subjects.length > 0 && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border px-3 py-2">
+            {subjects.slice(0, 6).map((s, i) => (
+              <span key={s.id} className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <span className={cn('h-1.5 w-1.5 rounded-full', dotPalette[i % dotPalette.length])} />
+                {s.name}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Selected Date Details */}

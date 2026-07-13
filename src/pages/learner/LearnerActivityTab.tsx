@@ -52,6 +52,7 @@ export const LearnerActivityTab = ({
   const [showAllUpcoming, setShowAllUpcoming] = useState(false);
   const [showAllPast, setShowAllPast] = useState(false);
   const [showAllLearning, setShowAllLearning] = useState(false);
+  const [view, setView] = useState<"upcoming" | "past">("upcoming");
   const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -80,7 +81,20 @@ export const LearnerActivityTab = ({
   const displayedUpcoming = showAllUpcoming
     ? upcomingBookings
     : upcomingBookings.slice(0, 1);
-  const displayedPast = showAllPast ? pastBookings : pastBookings.slice(0, 2);
+  const displayedPast = showAllPast ? pastBookings : pastBookings.slice(0, 4);
+
+  // "Starts in 2h 15m" pill for the featured next session (spec p.11 mockup)
+  const startsInLabel = (iso: string): string => {
+    const diffMs = new Date(iso).getTime() - Date.now();
+    if (diffMs <= 0) return "Starting now";
+    const mins = Math.round(diffMs / 60000);
+    if (mins < 60) return `Starts in ${mins}m`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    if (h < 24) return m > 0 ? `Starts in ${h}h ${m}m` : `Starts in ${h}h`;
+    const d = Math.floor(h / 24);
+    return `Starts in ${d} day${d === 1 ? "" : "s"}`;
+  };
 
   return (
     <div className="space-y-6 p-4">
@@ -94,6 +108,32 @@ export const LearnerActivityTab = ({
         )}
       </div>
 
+      {/* Upcoming / Past pill toggle — spec p.11 */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => setView("upcoming")}
+          className={
+            view === "upcoming"
+              ? "rounded-full px-4 py-1.5 text-xs font-semibold text-white shadow-sm"
+              : "rounded-full px-4 py-1.5 text-xs font-medium text-muted-foreground bg-card border border-border"
+          }
+          style={view === "upcoming" ? { background: "linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))" } : undefined}
+        >
+          Upcoming
+        </button>
+        <button
+          onClick={() => setView("past")}
+          className={
+            view === "past"
+              ? "rounded-full px-4 py-1.5 text-xs font-semibold text-white shadow-sm"
+              : "rounded-full px-4 py-1.5 text-xs font-medium text-muted-foreground bg-card border border-border"
+          }
+          style={view === "past" ? { background: "linear-gradient(135deg, hsl(228 89% 60%), hsl(248 88% 64%))" } : undefined}
+        >
+          Past
+        </button>
+      </div>
+
       {bookingsLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
@@ -101,10 +141,10 @@ export const LearnerActivityTab = ({
         </div>
       ) : (
         <>
+          {view === "upcoming" && (
+          <>
           {/* Upcoming */}
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold">Upcoming</h3>
-
             {/* Pending payments subsection */}
             {bookingsNeedingPayment.length > 0 && (
               <div className="space-y-2">
@@ -151,7 +191,55 @@ export const LearnerActivityTab = ({
               </Card>
             ) : (
               <div className="space-y-3">
-                {displayedUpcoming.map((booking) => (
+                {/* Featured NEXT SESSION card — dark indigo, Chat + emerald Join (spec p.11) */}
+                {!showAllUpcoming && upcomingBookings[0] && (() => {
+                  const next = upcomingBookings[0];
+                  const tutorName = next.tutor_profile?.full_name || "Tutor";
+                  return (
+                    <div
+                      className="rounded-2xl p-4 text-white shadow-md"
+                      style={{ background: "linear-gradient(135deg, hsl(233 47% 26%), hsl(243 45% 34%))" }}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Next session</span>
+                        <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[10px] font-semibold">
+                          {startsInLabel(next.scheduled_at)}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-3">
+                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-sm font-bold shrink-0">
+                          {tutorName.charAt(0).toUpperCase()}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold truncate">
+                            {tutorName}{next.tutor_subjects?.subject ? ` · ${next.tutor_subjects.subject}` : ""}
+                          </p>
+                          <p className="text-xs text-white/70">
+                            {new Date(next.scheduled_at).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" })}
+                            {" · "}
+                            {new Date(next.scheduled_at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}
+                            {" · "}{next.duration_minutes} min
+                          </p>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <button
+                          onClick={() => onStartChat(next)}
+                          className="rounded-full bg-white/15 py-2 text-xs font-semibold hover:bg-white/25 transition-colors"
+                        >
+                          Chat
+                        </button>
+                        <button
+                          onClick={() => onJoinVideoSession(next)}
+                          className="rounded-full bg-emerald-500 py-2 text-xs font-semibold hover:bg-emerald-600 transition-colors"
+                        >
+                          Join
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+                {showAllUpcoming && displayedUpcoming.map((booking) => (
                   <LiveBookingCard
                     key={booking.id}
                     booking={booking}
@@ -163,15 +251,14 @@ export const LearnerActivityTab = ({
                   />
                 ))}
                 {upcomingBookings.length > 1 && (
-                  <Button
-                    variant="ghost"
-                    className="w-full text-muted-foreground"
+                  <button
+                    className="w-full text-center text-xs font-semibold text-primary py-1 hover:underline"
                     onClick={() => setShowAllUpcoming(!showAllUpcoming)}
                   >
                     {showAllUpcoming
                       ? "Show less"
                       : `See all ${upcomingBookings.length} upcoming`}
-                  </Button>
+                  </button>
                 )}
               </div>
             )}
@@ -203,10 +290,13 @@ export const LearnerActivityTab = ({
 
           {/* Learning Filesystem — personal artifact vault */}
           <MyWorkPanel userId={userId} />
+          </>
+          )}
 
           {/* Past */}
+          {view === "past" && (
           <section className="space-y-3">
-            <h3 className="text-lg font-semibold">Past</h3>
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Past</h3>
 
             {pastBookings.length === 0 ? (
               <Card>
@@ -219,7 +309,7 @@ export const LearnerActivityTab = ({
             ) : (
               <div className="space-y-3">
                 {displayedPast.map((pastBooking) => (
-                  <Card key={pastBooking.id}>
+                  <Card key={pastBooking.id} className={pastBooking.status !== "completed" ? "opacity-60" : undefined}>
                     <CardContent className="p-4">
                       <div className="flex justify-between items-start">
                         <div>
@@ -236,18 +326,11 @@ export const LearnerActivityTab = ({
                         </div>
                         <div className="text-right">
                           <p className="font-semibold">R{pastBooking.price}</p>
-                          <Badge
-                            variant={
-                              pastBooking.status === "completed"
-                                ? "outline"
-                                : "destructive"
-                            }
-                            className="mt-1"
-                          >
-                            {pastBooking.status === "completed"
-                              ? "Completed"
-                              : "Cancelled"}
-                          </Badge>
+                          {pastBooking.status === "completed" ? (
+                            <Badge variant="outline" className="mt-1">Completed</Badge>
+                          ) : (
+                            <span className="mt-1 inline-block text-xs font-medium text-red-400">Cancelled</span>
+                          )}
                           {pastBooking.status === "completed" && (
                             <Button
                               variant="outline"
@@ -291,6 +374,7 @@ export const LearnerActivityTab = ({
               </div>
             )}
           </section>
+          )}
         </>
       )}
     </div>

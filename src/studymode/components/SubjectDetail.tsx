@@ -19,6 +19,7 @@ import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
 import { supabase } from '../../integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { MasteryRing } from '@/components/ui/mastery-ring';
 
 interface SubjectDetailProps {
   subject: Subject;
@@ -330,54 +331,28 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
         subject={subject.name}
       />
 
-      {/* Current Topic Card */}
+      {/* Today's Focus — spec p.6: topic + mastery RING (never a thin bar) */}
       <div className="p-5 rounded-2xl bg-card border border-border">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-accent-foreground" />
-            <span className="font-medium text-foreground">Today's Focus</span>
-          </div>
-          <span className="text-xs px-2 py-1 rounded-full bg-accent/60 text-accent-foreground font-medium dark:bg-accent/15">
-            {subject.currentTopic.examWeight}% exam weight
-          </span>
+        <div className="flex items-center gap-2 mb-2">
+          <Target className="h-4 w-4 text-accent-foreground" />
+          <span className="text-xs font-medium text-muted-foreground">Today's focus</span>
         </div>
-        
-        <h3 className="text-lg font-bold text-foreground mb-3">
-          {subject.currentTopic.name}
-        </h3>
 
-        {/* Mastery Progress */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground flex items-center gap-1">
-              <TrendingUp className="h-4 w-4" />
-              Topic Mastery
-            </span>
-            <span className={cn("font-bold", getMasteryColor(subject.currentTopic.mastery))}>
-              {subject.currentTopic.mastery}%
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h3 className="text-xl font-bold text-foreground leading-tight">
+              {subject.currentTopic.name}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-1">
+              {subject.currentTopic.examWeight}% of exam weight
+            </p>
+            <span className="inline-block mt-2 text-[11px] px-2 py-1 rounded-full bg-accent/60 text-accent-foreground font-medium dark:bg-accent/15">
+              {subject.currentTopic.mastery >= 95
+                ? "🎉 Ready to advance to next topic!"
+                : `${95 - subject.currentTopic.mastery}% more to unlock next topic`}
             </span>
           </div>
-          <div className="relative h-3 rounded-full bg-muted overflow-hidden">
-            <div 
-              className={cn(
-                "h-full rounded-full transition-all duration-500",
-                subject.currentTopic.mastery >= 95 ? "bg-success" :
-                subject.currentTopic.mastery >= 70 ? "bg-accent" :
-                subject.currentTopic.mastery >= 50 ? "bg-warning" : "bg-destructive"
-              )}
-              style={{ width: `${subject.currentTopic.mastery}%` }}
-            />
-            <div 
-              className="absolute top-0 bottom-0 w-0.5 bg-foreground/30"
-              style={{ left: '95%' }}
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            {subject.currentTopic.mastery >= 95 
-              ? "🎉 Ready to advance to next topic!"
-              : `${95 - subject.currentTopic.mastery}% more to unlock next topic`
-            }
-          </p>
+          <MasteryRing value={subject.currentTopic.mastery} size={56} strokeWidth={5} />
         </div>
 
         {/* Concept Mastery Breakdown Toggle */}
@@ -451,26 +426,25 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
             <p className="text-[10px] opacity-80">Timed, no hints</p>
           </div>
         </Button>
+        {/* Spec p.6: all four practice modes get equal, vivid visual weight */}
         <Button
           onClick={() => setActiveView('mastery')}
-          variant="outline"
-          className="h-auto py-4 flex-col gap-2 border-accent/30 hover:bg-accent/10"
+          className="h-auto py-4 flex-col gap-2 bg-emerald-600 hover:bg-emerald-700 text-white"
         >
-          <Target className="h-6 w-6 text-accent-foreground" />
+          <Target className="h-6 w-6" />
           <div className="text-center">
-            <p className="text-sm font-bold text-foreground">Mastery Tracker</p>
-            <p className="text-[10px] text-muted-foreground">Per-topic progress</p>
+            <p className="text-sm font-bold">Mastery Tracker</p>
+            <p className="text-[10px] opacity-80">Per-topic progress</p>
           </div>
         </Button>
         <Button
           onClick={() => setActiveView('insights')}
-          variant="outline"
-          className="h-auto py-4 flex-col gap-2 border-accent/30 hover:bg-accent/10"
+          className="h-auto py-4 flex-col gap-2 bg-amber-500 hover:bg-amber-600 text-white"
         >
-          <BarChart3 className="h-6 w-6 text-accent-foreground" />
+          <BarChart3 className="h-6 w-6" />
           <div className="text-center">
-            <p className="text-sm font-bold text-foreground">Insights</p>
-            <p className="text-[10px] text-muted-foreground">Analytics & trends</p>
+            <p className="text-sm font-bold">Insights</p>
+            <p className="text-[10px] opacity-80">Analytics & trends</p>
           </div>
         </Button>
       </div>

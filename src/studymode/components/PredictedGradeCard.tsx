@@ -6,10 +6,9 @@
  * coverage strip. Pure read-only — driven by usePredictedGrade.
  */
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { Target, TrendingUp, Sparkles, Info } from "lucide-react";
+import { Target, TrendingUp, Sparkles } from "lucide-react";
 import { usePredictedGrade } from "../hooks/usePredictedGrade";
 import { cn } from "@/lib/utils";
 
@@ -39,14 +38,12 @@ export function PredictedGradeCard({ subjects }: Props) {
     <Card className="rounded-2xl">
       <CardContent className="p-5 space-y-4">
         <div className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Predicted Grades</h3>
-          <Badge variant="outline" className="ml-auto text-[10px]">Learner model</Badge>
+          <h3 className="font-semibold">Predicted grades</h3>
+          <span className="ml-auto text-[10px] font-semibold text-primary bg-primary/10 rounded-full px-2 py-0.5">Learner model</span>
         </div>
 
-        <p className="text-xs text-muted-foreground flex items-start gap-1.5">
-          <Info className="h-3 w-3 mt-0.5 shrink-0" />
-          Blends mock exam scores, recent task accuracy, and topic mastery. Confidence rises with practice.
+        <p className="text-xs text-muted-foreground">
+          Blends mock scores, task accuracy, and topic mastery.
         </p>
 
         <div className="space-y-3">
@@ -59,18 +56,19 @@ export function PredictedGradeCard({ subjects }: Props) {
                     {d.signals.sampleSize} attempts · {d.signals.topicsCovered}/{d.signals.topicsTotal || "—"} topics mastered
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge className={cn("text-base font-bold px-3 py-1 border", bandColor(d.band))}>
+                {/* Square "Predicted" chip — spec p.7: not circular, so it never reads as an avatar */}
+                <div className="flex flex-col items-end shrink-0">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground mb-0.5">Predicted</span>
+                  <span className={cn("flex h-8 w-8 items-center justify-center rounded-md border text-sm font-bold", bandColor(d.band))}>
                     {d.band}
-                  </Badge>
-                  <span className="text-sm font-mono text-muted-foreground">{d.predictedPercent}%</span>
+                  </span>
                 </div>
               </div>
 
               <div className="space-y-1">
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>Confidence</span>
-                  <span>{Math.round(d.confidence * 100)}%</span>
+                  <span>Confidence in this prediction</span>
+                  <span className="font-semibold text-primary">{Math.round(d.confidence * 100)}%</span>
                 </div>
                 <Progress value={d.confidence * 100} className="h-1" />
               </div>

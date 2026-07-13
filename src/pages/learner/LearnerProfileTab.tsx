@@ -3,14 +3,12 @@
  */
 import { useState } from "react";
 import {
-  User, CreditCard, Clock, Star, GraduationCap, LogOut,
-  ChevronRight, BookOpen, Wallet, CalendarCheck, Sparkles, Settings, FileText, Shield, Bell,
+  Clock, Star, GraduationCap, LogOut,
+  ChevronRight, Wallet, CalendarCheck, Sparkles, FileText, Shield, Bell,
 } from "lucide-react";
 
 import { Session } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
 import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
-import { SyllabusSetupGate } from "@/components/SyllabusSetupGate";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HapticsToggle } from "@/components/HapticsToggle";
@@ -69,26 +67,6 @@ const STUDY_LEVEL_LABELS: Record<string, string> = {
 
 /* ── Reusable sub-components ── */
 
-const ActionButton = ({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick: () => void;
-}) => (
-  <button
-    onClick={onClick}
-    className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-muted/60 p-4 transition-colors active:bg-muted"
-  >
-    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-background shadow-sm">
-      {icon}
-    </div>
-    <span className="text-xs font-medium text-foreground">{label}</span>
-  </button>
-);
-
 const MenuRow = ({
   icon,
   label,
@@ -125,7 +103,6 @@ export const LearnerProfileTab = ({
   onSignOut,
   onNavigate,
 }: LearnerProfileTabProps) => {
-  const [showSyllabus, setShowSyllabus] = useState(false);
   const [showPaymentHistory, setShowPaymentHistory] = useState(false);
   const [showPlans, setShowPlans] = useState(false);
 
@@ -162,38 +139,45 @@ export const LearnerProfileTab = ({
         />
       </div>
 
-      {/* ── 2×2 Action Grid ── */}
-      <div className="grid grid-cols-4 gap-3">
-        <ActionButton
-          icon={<GraduationCap className="h-5 w-5 text-primary" />}
-          label="Academic"
+      {/* ── Shortcut chips — spec p.12: Academic profile / Wallet / Bookings with live values ── */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        <button
           onClick={onShowAcademicSetup}
-        />
-        <ActionButton
-          icon={<Wallet className="h-5 w-5 text-primary" />}
-          label="Wallet"
+          className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-sm shrink-0"
+        >
+          <GraduationCap className="h-3.5 w-3.5 text-primary" />
+          Academic profile
+        </button>
+        <button
           onClick={onShowPaymentMethods}
-        />
-        <ActionButton
-          icon={<CalendarCheck className="h-5 w-5 text-primary" />}
-          label="Bookings"
+          className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-sm shrink-0"
+        >
+          <Wallet className="h-3.5 w-3.5 text-primary" />
+          Wallet · R{totalSpent.toLocaleString()}
+        </button>
+        <button
           onClick={() => onNavigateTab("activity")}
-        />
-        <ActionButton
-          icon={<Sparkles className="h-5 w-5 text-primary" />}
-          label="Study Mode"
-          onClick={() => onNavigateTab("library")}
-        />
+          className="flex items-center gap-1.5 rounded-full border border-border bg-card px-3.5 py-2 text-xs font-medium text-foreground shadow-sm shrink-0"
+        >
+          <CalendarCheck className="h-3.5 w-3.5 text-primary" />
+          Bookings · {bookings.length}
+        </button>
       </div>
+      <p className="text-[11px] text-muted-foreground -mt-3">
+        "Academic profile" opens the same data as Study → Settings — curriculum, subjects, risk levels, and syllabus codes all live there, not duplicated here.
+      </p>
 
-      {/* ── Progress Report ── */}
+      {/* ── Progress Report — purple gradient banner (spec p.12) ── */}
       {session?.user?.id && (
-        <div className="rounded-2xl bg-gradient-to-br from-primary/5 to-primary/10 p-4 border border-primary/20">
+        <div
+          className="rounded-2xl p-4 shadow-md"
+          style={{ background: "linear-gradient(135deg, hsl(258 70% 56%), hsl(243 65% 58%))" }}
+        >
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <h3 className="text-sm font-bold text-foreground">Progress Report</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Full PDF with charts, mock scores & an AI improvement plan.
+              <h3 className="text-sm font-bold text-white">Progress report</h3>
+              <p className="text-xs text-white/75 mt-0.5">
+                PDF with charts, mock scores & an AI plan.
               </p>
             </div>
             <ProgressReportButton
@@ -213,10 +197,18 @@ export const LearnerProfileTab = ({
       {session?.user?.id && <GuardianWorkspaceCard userId={session.user.id} />}
       <TutorWorkspaceLinkCard />
 
-      {/* ── Menu Rows ── */}
-      <HapticsToggle userId={session?.user?.id} />
+      {/* ── Preferences — spec p.12 ── */}
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Preferences</p>
+        <HapticsToggle userId={session?.user?.id} />
+        <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
+          <ThemeToggle />
+        </div>
+      </div>
+
+      {/* ── Account — spec p.12: only what's genuinely Profile-only ── */}
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground -mb-4">Account</p>
       <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
-        <ThemeToggle />
         <MenuRow
           icon={<Sparkles className="h-4 w-4" />}
           label="Subscription & Plans"
@@ -242,21 +234,7 @@ export const LearnerProfileTab = ({
           label="My Reviews"
           onClick={() => onNavigateTab("activity")}
         />
-        <MenuRow
-          icon={<FileText className="h-4 w-4" />}
-          label="Syllabus & Paper Codes"
-          onClick={() => setShowSyllabus(!showSyllabus)}
-        />
-        {showSyllabus && session?.user?.id && (
-          <div className="pb-3">
-            <SyllabusSetupGate userId={session.user.id} academicProfile={academicProfile as any} advisory />
-          </div>
-        )}
-        <MenuRow
-          icon={<Settings className="h-4 w-4" />}
-          label="Change Study Level"
-          onClick={() => onNavigate("/learner/choose-level")}
-        />
+        {/* Syllabus & Paper Codes + Change Study Level collapsed into "Academic profile" (spec p.12) */}
         <MenuRow
           icon={<Bell className="h-4 w-4" />}
           label="Notifications"

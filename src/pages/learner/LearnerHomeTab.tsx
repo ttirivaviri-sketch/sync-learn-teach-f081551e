@@ -1,22 +1,20 @@
 /**
- * LearnerHomeTab — Home owns "today": greeting + streak/XP hero, Today
- * agenda, then search, subject filters, location, tutor cards.
+ * LearnerHomeTab — matches UI spec page 3 mockup exactly:
+ *   greeting → gradient streak hero → TODAY agenda → CONTINUE LEARNING rings
+ *   → "Find a tutor" teaser (expands to the full marketplace).
  * Bookings live in Activity (single booking truth) — no "My Lessons" here.
+ * No duplicate "at a glance"/next-action blocks — Today framing lives here once.
  */
-import { MapPin, Video, MessageCircle, Search, Award, ChevronDown, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Video, MessageCircle, Search, Award, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { SchoolWorkspaceBanner } from "@/components/school/SchoolWorkspaceBanner";
-import { SmartSuggestionStrip } from "@/components/learner/SmartSuggestionStrip";
-import { NextActionCard } from "@/components/learner/NextActionCard";
 import { HomeTodayHero } from "@/components/learner/HomeTodayHero";
-import { MasteryIntelligenceCard } from "@/components/learner/MasteryIntelligenceCard";
-import { WeeklyDigestCard } from "@/components/learner/WeeklyDigestCard";
+import { HomeContinueLearning } from "@/components/learner/HomeContinueLearning";
 import { haptic } from "@/lib/haptics";
 
 import StarRating from "@/components/StarRating";
@@ -93,9 +91,19 @@ export const LearnerHomeTab = ({
   displayName,
   onNavigateTab,
 }: LearnerHomeTabProps) => {
+  // "Find a tutor" teaser (mockup) — expands to the full marketplace below.
+  const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+
+  const teaserTutors = tutors.slice(0, 3);
+  const teaserRates = tutors
+    .map((t) => Number(t.subjects[0]?.hourly_rate))
+    .filter((r) => Number.isFinite(r) && r > 0);
+  const fromRate = teaserRates.length ? Math.min(...teaserRates) : null;
+  const teaserSubject = selectedSubject || tutors[0]?.subjects[0]?.subject || "All subjects";
+
   return (
-  <div className="space-y-4 p-4 mt-0">
-    {/* Today hero — greeting, streak + XP, one-item-per-source agenda */}
+  <div className="space-y-5 p-4 mt-0">
+    {/* Greeting → gradient streak hero → TODAY agenda */}
     <HomeTodayHero
       displayName={displayName}
       upcomingBookings={upcomingBookings}
@@ -103,32 +111,53 @@ export const LearnerHomeTab = ({
       onOpenActivity={() => onNavigateTab?.("activity")}
     />
 
-    {/* Hero: single "do this now" card — the one obvious primary action */}
-    <NextActionCard />
+    {/* CONTINUE LEARNING — per-subject mastery rings → Study */}
+    <HomeContinueLearning onOpenStudy={() => onNavigateTab?.("study")} />
 
-    {/* At-a-glance — insight cards collapsed into one expandable strip */}
-    <Collapsible>
-      <CollapsibleTrigger asChild>
-        <button className="w-full flex items-center justify-between px-3 py-2 rounded-lg border border-border/60 bg-muted/30 hover:bg-muted/60 transition-colors text-left group">
-          <span className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-            <Sparkles className="h-3.5 w-3.5" />
-            At a glance — progress, digest & suggestions
+    {/* Find-a-tutor teaser — avatar stack + from-price, expands the marketplace */}
+    {!marketplaceOpen && (
+      <button
+        onClick={() => { haptic("light"); setMarketplaceOpen(true); }}
+        className="w-full flex items-center gap-3 rounded-xl bg-card border border-border px-3.5 py-3 text-left shadow-sm transition-colors hover:bg-muted/40 active:scale-[0.99]"
+      >
+        <span className="flex -space-x-2 shrink-0">
+          {teaserTutors.length > 0 ? (
+            teaserTutors.map((t) => (
+              <Avatar key={t.id} className="h-7 w-7 border-2 border-card">
+                <AvatarImage src={t.avatar_url || "/placeholder.svg"} />
+                <AvatarFallback className="text-[10px]">
+                  {t.full_name?.split(" ").map((n) => n[0]).join("") || "T"}
+                </AvatarFallback>
+              </Avatar>
+            ))
+          ) : (
+            <span className="h-7 w-7 rounded-full bg-muted flex items-center justify-center">
+              <Search className="h-3.5 w-3.5 text-muted-foreground" />
+            </span>
+          )}
+          {tutors.length > 3 && (
+            <span className="h-7 w-7 rounded-full bg-primary/10 border-2 border-card flex items-center justify-center text-[10px] font-bold text-primary">
+              +{tutors.length - 3}
+            </span>
+          )}
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-semibold text-foreground truncate">
+            {tutorsLoading
+              ? "Finding tutors near you…"
+              : `${tutors.length} tutor${tutors.length === 1 ? "" : "s"} near ${userGeoLocation ? "you" : "Johannesburg Central"}`}
           </span>
-          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-        </button>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="space-y-3 pt-3">
-        <SchoolWorkspaceBanner />
-        <MasteryIntelligenceCard />
-        <WeeklyDigestCard />
-        <SmartSuggestionStrip
-          onSuggest={(topic) => {
-            onSearchChange(topic);
-          }}
-        />
-      </CollapsibleContent>
-    </Collapsible>
+          <span className="block text-xs text-muted-foreground truncate">
+            {teaserSubject}{fromRate ? ` · from R${fromRate}/hour` : ""}
+          </span>
+        </span>
+        <ChevronRight className="h-4 w-4 text-muted-foreground/60 shrink-0" />
+      </button>
+    )}
 
+    {/* Full marketplace — search, filters, location, tutor cards */}
+    {marketplaceOpen && (
+    <div className="space-y-4">
     {/* Search Bar */}
     <div className="relative">
       <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -286,6 +315,8 @@ export const LearnerHomeTab = ({
         })
       )}
     </div>
+    </div>
+    )}
   </div>
   );
 };
