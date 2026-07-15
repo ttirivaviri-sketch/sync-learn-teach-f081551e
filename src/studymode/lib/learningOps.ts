@@ -1,4 +1,3 @@
-// @ts-nocheck — LOS bundle targets hand-typed contract for tables not yet in generated types; see MANUAL_EDITS.md
 /**
  * Learning Operating System (LOS) service layer.
  *
@@ -357,7 +356,7 @@ export async function syncInterventionQueue(args: {
     }
 
     const existingRows = existing ?? [];
-    const activeTypes = new Set(args.interventions.map((item) => item.type));
+    const activeTypes = new Set<LosInterventionType>(args.interventions.map((item) => item.type));
 
     for (const intervention of args.interventions) {
       const match = existingRows.find((row) => row.intervention_type === intervention.type);

@@ -1,4 +1,3 @@
-// @ts-nocheck — LOS bundle targets hand-typed contract for tables not yet in generated types; see MANUAL_EDITS.md
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logger } from '@/utils/logger';
@@ -12,6 +11,7 @@ import {
   createLearningWorkspace,
   createWorkspaceCohort,
   createWorkspaceInvitation,
+  generateWorkspaceInvitationToken,
   loadWorkspaceOperations,
   setWorkspaceInvitationStatus,
   updateWorkspaceMemberRole,
@@ -182,6 +182,13 @@ export function useSchoolWorkspace() {
     await refresh();
   }, [refresh]);
 
+  /** Generates a one-time invite token and returns a shareable join URL. */
+  const issueInvitationLink = useCallback(async (invitationId: string) => {
+    const token = await generateWorkspaceInvitationToken(invitationId);
+    if (!token) throw new Error('Could not generate an invitation token');
+    return `${window.location.origin}/invite/${token}`;
+  }, []);
+
   useEffect(() => {
     refresh();
   }, [refresh]);
@@ -197,6 +204,7 @@ export function useSchoolWorkspace() {
     createWorkspace,
     createCohort,
     inviteMember,
+    issueInvitationLink,
     changeMemberRole,
     assignMembershipToCohort,
     changeInvitationStatus,

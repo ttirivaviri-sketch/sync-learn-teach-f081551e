@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy, Play, Camera } from 'lucide-react';
+import { ArrowLeft, Target, TrendingUp, MessageCircle, Sparkles, Unlock, ChevronDown, ChevronUp, ChevronRight, Brain, Clock, BarChart3, Zap, Trophy, Play, Camera, Radar } from 'lucide-react';
 import { Subject, DailyTask } from '../types/study';
 import { Button } from '@/components/ui/button';
 import { StructuredDailyTaskRunner } from './StructuredDailyTaskRunner';
@@ -14,6 +14,7 @@ import { PrerequisiteRemediationFlow } from './PrerequisiteRemediationFlow';
 import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { Leaderboard } from './Leaderboard';
 import { PhotoSolvePanel } from './PhotoSolvePanel';
+import { LearningOpsOverview } from './LearningOpsOverview';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
@@ -37,7 +38,7 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
   const [showPrerequisiteCheck, setShowPrerequisiteCheck] = useState(false);
   const [showConceptBreakdown, setShowConceptBreakdown] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery' | 'photo'>('tasks');
+  const [activeView, setActiveView] = useState<'tasks' | 'recall' | 'exam' | 'insights' | 'mastery' | 'photo' | 'missionControl'>('tasks');
   const [recallTopic, setRecallTopic] = useState<string | null>(null);
   const { advanceToNextTopic, canAdvance, getCurrentTopicIndex } = useTopicProgression();
   const { addXp, updateStreak } = useUserProgress();
@@ -180,7 +181,20 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
     );
   }
 
-  // ── Photo Solve ──────────────────────────────────────────────────────
+  // ── Learning Mission Control (LOS overview) ─────────────────────
+  if (activeView === 'missionControl') {
+    return (
+      <div className="animate-fade-in space-y-4">
+        <Button variant="ghost" size="sm" onClick={() => setActiveView('tasks')} className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          Back to {subject.name}
+        </Button>
+        <LearningOpsOverview subject={subject} />
+      </div>
+    );
+  }
+
+  // ── Photo Solve ──────────────────────────────────────────────────
   if (activeView === 'photo') {
     return (
       <PhotoSolvePanel
@@ -448,6 +462,20 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
           </div>
         </Button>
       </div>
+
+      {/* Learning Mission Control — LOS interventions, mastery intelligence, workspace ops */}
+      <Button
+        onClick={() => setActiveView('missionControl')}
+        variant="outline"
+        className="w-full h-auto py-3.5 gap-3 border-primary/30 bg-primary/5 hover:bg-primary/10 text-foreground"
+      >
+        <Radar className="h-5 w-5 text-primary" />
+        <div className="text-left flex-1">
+          <p className="text-sm font-bold">Learning Mission Control</p>
+          <p className="text-[10px] text-muted-foreground">Interventions, mastery intelligence &amp; workspace ops</p>
+        </div>
+        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+      </Button>
 
       {/* Photo Solve — full-width premium tile */}
       <Button

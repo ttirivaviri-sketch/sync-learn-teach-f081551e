@@ -1,4 +1,3 @@
-// @ts-nocheck — LOS bundle targets hand-typed contract for tables not yet in generated types; see MANUAL_EDITS.md
 /**
  * ConceptIngestionPanel
  *
@@ -25,7 +24,7 @@ import { useConceptIngestion } from '../hooks/useConceptIngestion';
 
 interface DocumentOption {
   id: string;
-  title: string;
+  name: string;
   type: string;
   subject: string | null;
 }
@@ -57,7 +56,7 @@ export function ConceptIngestionPanel({ workspaceId, canManage, defaultCurriculu
       if (!user) return;
       const { data } = await supabase
         .from('documents')
-        .select('id, title, type, subject')
+        .select('id, name, type, subject')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
         .limit(50);
@@ -126,7 +125,7 @@ export function ConceptIngestionPanel({ workspaceId, canManage, defaultCurriculu
                 <SelectContent>
                   {documents.length === 0 && <SelectItem value="none" disabled>No processed documents</SelectItem>}
                   {documents.map((doc) => (
-                    <SelectItem key={doc.id} value={doc.id}>{doc.title ?? doc.id} · {doc.type}</SelectItem>
+                    <SelectItem key={doc.id} value={doc.id}>{doc.name ?? doc.id} · {doc.type}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
