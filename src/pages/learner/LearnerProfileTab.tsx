@@ -14,6 +14,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { HapticsToggle } from "@/components/HapticsToggle";
 import { ProgressReportButton } from "@/components/ProgressReportButton";
 import { GuardianWorkspaceCard } from "@/components/learner/GuardianWorkspaceCard";
+import { GuardianOverviewCard } from "@/components/learner/GuardianOverviewCard";
 import { TutorWorkspaceLinkCard } from "@/components/school/TutorWorkspaceLinkCard";
 import { SubscriptionFlow } from "@/components/subscription/SubscriptionFlow";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
@@ -194,6 +195,7 @@ export const LearnerProfileTab = ({
         </div>
       )}
 
+      {session?.user?.id && <GuardianOverviewCard userId={session.user.id} />}
       {session?.user?.id && <GuardianWorkspaceCard userId={session.user.id} />}
       <TutorWorkspaceLinkCard />
 

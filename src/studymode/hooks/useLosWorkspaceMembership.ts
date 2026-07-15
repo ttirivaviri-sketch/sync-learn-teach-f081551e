@@ -1,4 +1,3 @@
-// @ts-nocheck — LOS bundle targets hand-typed contract for tables not yet in generated types; see MANUAL_EDITS.md
 /**
  * useLosWorkspaceMembership
  *
@@ -10,12 +9,12 @@
  */
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { losFrom } from '@/integrations/supabase/learning-os-types';
+import { losFrom, type LosWorkspaceRole } from '@/integrations/supabase/learning-os-types';
 import { logger } from '@/utils/logger';
 
 export interface LosMembershipSummary {
   workspaceId: string;
-  role: string;
+  role: LosWorkspaceRole;
 }
 
 interface UseLosWorkspaceMembershipResult {
@@ -26,7 +25,7 @@ interface UseLosWorkspaceMembershipResult {
 /**
  * @param roles optional list of roles to filter by (e.g. staff roles).
  */
-export function useLosWorkspaceMembership(roles?: string[]): UseLosWorkspaceMembershipResult {
+export function useLosWorkspaceMembership(roles?: LosWorkspaceRole[]): UseLosWorkspaceMembershipResult {
   const [isLoading, setIsLoading] = useState(true);
   const [membership, setMembership] = useState<LosMembershipSummary | null>(null);
   const rolesKey = roles?.join(',') ?? '';
@@ -50,7 +49,7 @@ export function useLosWorkspaceMembership(roles?: string[]): UseLosWorkspaceMemb
           .eq('status', 'active');
 
         if (rolesKey) {
-          query = query.in('role', rolesKey.split(','));
+          query = query.in('role', rolesKey.split(',') as LosWorkspaceRole[]);
         }
 
         const { data, error } = await query.order('role', { ascending: true }).limit(1);

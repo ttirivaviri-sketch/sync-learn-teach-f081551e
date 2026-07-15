@@ -1,4 +1,3 @@
-// @ts-nocheck — LOS bundle targets hand-typed contract for tables not yet in generated types; see MANUAL_EDITS.md
 /**
  * Hand-maintained typed contract for Learning Operating System tables.
  *
@@ -595,11 +594,38 @@ export type LosViewName = keyof LearningOpsViews;
  * Internally we cast `supabase` through `unknown` once, here, so the rest of
  * the LOS code can keep static type safety and avoid `as any` casts.
  */
+/**
+ * postgrest-js's `GenericTable` / `GenericView` constraints require:
+ *  1. Row/Insert/Update to satisfy `Record<string, unknown>` — interfaces do
+ *     NOT (no implicit index signature), so we flatten them into mapped-type
+ *     object literals which do;
+ *  2. a `Relationships` member on every table/view.
+ * Without both, the client silently resolves every row type to `never`.
+ */
+type Plain<T> = { [K in keyof T]: T[K] };
+
+type NormalizeTable<T extends { Row: object }> = {
+  Row: Plain<T['Row']>;
+  Insert: T extends { Insert: object } ? Plain<T['Insert']> : Plain<T['Row']>;
+  Update: T extends { Update: object } ? Plain<T['Update']> : Partial<Plain<T['Row']>>;
+  Relationships: [];
+};
+
+type NormalizeView<T extends { Row: object }> = {
+  Row: Plain<T['Row']>;
+  Relationships: [];
+};
+
 type LosDatabase = {
+  __InternalSupabase: {
+    PostgrestVersion: '12.2.12 (cd3cf9e)';
+  };
   public: {
-    Tables: LearningOpsTables;
-    Views: LearningOpsViews;
-    Functions: LearningOpsFunctions;
+    Tables: { [K in keyof LearningOpsTables]: NormalizeTable<LearningOpsTables[K]> };
+    Views: { [K in keyof LearningOpsViews]: NormalizeView<LearningOpsViews[K]> };
+    // Interfaces lack implicit index signatures, so pass Functions through a
+    // mapped type as well or it fails `Record<string, GenericFunction>`.
+    Functions: { [K in keyof LearningOpsFunctions]: Plain<LearningOpsFunctions[K]> };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

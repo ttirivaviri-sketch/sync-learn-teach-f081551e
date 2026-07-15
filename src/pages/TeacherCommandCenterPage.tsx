@@ -17,13 +17,13 @@ import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { useLosWorkspaceMembership } from "@/studymode/hooks/useLosWorkspaceMembership";
 import { TeacherCommandCenter } from "@/studymode/components/TeacherCommandCenter";
 
-const LOS_STAFF_ROLES = ["owner", "admin", "teacher"];
+const LOS_STAFF_ROLES = ["owner", "admin", "teacher"] as const;
 
 export default function TeacherCommandCenterPage() {
   const navigate = useNavigate();
   const { data, isLoading } = useMySchoolMemberships();
   const { isLoading: losLoading, membership: losMembership } =
-    useLosWorkspaceMembership(LOS_STAFF_ROLES);
+    useLosWorkspaceMembership([...LOS_STAFF_ROLES]);
 
   if (isLoading || losLoading) return <LoadingScreen />;
 
