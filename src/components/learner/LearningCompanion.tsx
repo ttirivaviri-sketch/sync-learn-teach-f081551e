@@ -33,6 +33,7 @@ import {
   type CompanionMood,
 } from "@/hooks/useCompanionRecommendations";
 import { cn } from "@/lib/utils";
+import { trackCompanionEvent } from "@/lib/companionTracking";
 import { haptic } from "@/lib/haptics";
 
 interface Props {
@@ -143,12 +144,18 @@ export function LearningCompanion({ userId, onBookTutor, onOpenLibrary, classNam
 
   const { shown, done } = useTypewriter(current?.message ?? "");
 
+  // Feedback loop: record that this suggestion was surfaced (deduped per day).
+  useEffect(() => {
+    if (userId && current) trackCompanionEvent(userId, current, "shown");
+  }, [userId, current]);
+
   if (isLoading || !current) return null;
 
   const mood = MOOD_STYLES[current.mood];
 
   const dismiss = () => {
     haptic("selection");
+    if (userId) trackCompanionEvent(userId, current, "dismissed");
     const next = new Set(dismissed);
     next.add(current.id);
     setDismissed(next);
@@ -159,6 +166,7 @@ export function LearningCompanion({ userId, onBookTutor, onOpenLibrary, classNam
     haptic("light");
     const r = current.resource;
     if (!r) return;
+    if (userId) trackCompanionEvent(userId, current, "clicked");
     if (r.kind === "video") {
       setPlayingVideo({ url: r.url, title: r.title });
     } else {
@@ -298,6 +306,7 @@ export function LearningCompanion({ userId, onBookTutor, onOpenLibrary, classNam
               className="h-8 text-xs shrink-0"
               onClick={() => {
                 haptic("light");
+                if (userId) trackCompanionEvent(userId, current, "booked");
                 onBookTutor?.(current.tutor!.id, current.tutor!.name);
               }}
             >

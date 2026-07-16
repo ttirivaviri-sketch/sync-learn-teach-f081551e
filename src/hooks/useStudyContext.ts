@@ -80,7 +80,7 @@ export function useStudyContext() {
         ]);
         school = {
           schoolId: snap.school_id,
-          schoolName: schoolRow.data?.name ?? null,
+          schoolName: (schoolRow.data as { name?: string | null } | null)?.name ?? null,
           gradeId: snap.grade_id,
           gradeName: gradeRow.data?.name ?? null,
           classIds: snap.class_ids ?? [],
