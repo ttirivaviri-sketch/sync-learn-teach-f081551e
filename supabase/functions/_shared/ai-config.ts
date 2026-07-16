@@ -611,6 +611,48 @@ function containsHTMLOrCode(text: string): boolean {
  * Makes a non-streaming AI call and returns the parsed content string.
  * Includes a safety check to reject HTML/code responses and retry once.
  */
+/**
+ * Reports real token usage into ai_usage_daily / school_ai_usage_daily via
+ * the record_ai_token_usage RPC. Fire-and-forget: errors are logged, never
+ * thrown — usage accounting must not break generation.
+ */
+export function reportTokenUsage(attrib: {
+  userId: string | null;
+  bucket: string;
+  tokensIn: number;
+  tokensOut: number;
+  schoolId?: string | null;
+}): void {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return;
+  if (!attrib.userId && !attrib.schoolId) return;
+  if (attrib.tokensIn <= 0 && attrib.tokensOut <= 0) return;
+
+  fetch(`${supabaseUrl}/rest/v1/rpc/record_ai_token_usage`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: serviceKey,
+      Authorization: `Bearer ${serviceKey}`,
+    },
+    body: JSON.stringify({
+      _user_id: attrib.userId,
+      _bucket: attrib.bucket,
+      _tokens_in: Math.max(0, Math.round(attrib.tokensIn)),
+      _tokens_out: Math.max(0, Math.round(attrib.tokensOut)),
+      _school_id: attrib.schoolId ?? null,
+    }),
+  }).catch((e) => console.warn("[reportTokenUsage] failed:", e));
+}
+
+/** Token-usage attribution passed to callAI so real usage is recorded. */
+export interface UsageAttribution {
+  userId: string | null;
+  bucket: string;
+  schoolId?: string | null;
+}
+
 export async function callAI(
   ai: AIConfig,
   systemPrompt: string,
@@ -621,6 +663,9 @@ export async function callAI(
     tools?: unknown[];
     toolChoice?: unknown;
     maxTokens?: number;
+    /** When provided, real prompt/completion tokens from the model response
+     *  are recorded into ai_usage_daily / school_ai_usage_daily. */
+    usage?: UsageAttribution;
   } = {}
 ): Promise<string> {
   const makeRequest = async (prompt: string): Promise<string> => {
@@ -657,6 +702,17 @@ export async function callAI(
     }
 
     const data = await response.json();
+
+    // Record real token usage (fire-and-forget) when attribution is supplied.
+    if (options.usage && data?.usage) {
+      reportTokenUsage({
+        userId: options.usage.userId,
+        bucket: options.usage.bucket,
+        schoolId: options.usage.schoolId ?? null,
+        tokensIn: Number(data.usage.prompt_tokens ?? 0),
+        tokensOut: Number(data.usage.completion_tokens ?? 0),
+      });
+    }
 
     // Handle tool calls
     if (options.tools) {
