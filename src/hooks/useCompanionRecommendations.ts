@@ -256,7 +256,7 @@ export function useCompanionRecommendations(userId: string | null | undefined) {
       if (!userId) return [];
 
       // ── 1. Gather signals in parallel ──────────────────────────────────
-      const [stateRes, hwRes, subjectsRes] = await Promise.all([
+      const [stateRes, hwRes, subjectsRes, feedbackRes] = await Promise.all([
         supabase
           .from("learner_state")
           .select("topic_name, subject_id, risk_level, mastery_pct, ewma_score_pct, attempts, updated_at")
@@ -270,11 +270,62 @@ export function useCompanionRecommendations(userId: string | null | undefined) {
           .order("due_at", { ascending: true })
           .limit(5),
         supabase.from("subjects").select("id, name").eq("user_id", userId),
+        // Feedback loop: the learner's own recent interaction history
+        // (companion_interactions may not exist in envs behind on migrations —
+        // errors are tolerated and treated as "no history").
+        supabase
+          .from("companion_interactions" as never)
+          .select("suggestion_kind, event, topic, created_at" as never)
+          .eq("user_id" as never, userId as never)
+          .gte("created_at" as never, new Date(Date.now() - 30 * 86400_000).toISOString() as never)
+          .order("created_at", { ascending: false })
+          .limit(300)
+          .then((r) => r, () => ({ data: null, error: null })),
       ]);
 
       const subjectName = new Map<string, string>(
         (subjectsRes.data ?? []).map((s) => [s.id, s.name])
       );
+
+      // ── 1b. Digest feedback history ───────────────────────────────────
+      type FeedbackRow = {
+        suggestion_kind: string;
+        event: string;
+        topic: string | null;
+        created_at: string;
+      };
+      const feedback: FeedbackRow[] = Array.isArray(feedbackRes?.data)
+        ? (feedbackRes.data as unknown as FeedbackRow[])
+        : [];
+
+      // Topics the learner dismissed in the last 3 days — give them a rest.
+      const cooloffMs = 3 * 86400_000;
+      const snoozedTopics = new Set(
+        feedback
+          .filter(
+            (f) =>
+              f.event === "dismissed" &&
+              f.topic &&
+              Date.now() - new Date(f.created_at).getTime() < cooloffMs
+          )
+          .map((f) => f.topic!.toLowerCase())
+      );
+
+      // Per-kind engagement score: (clicked + booked − dismissed) / shown.
+      // Positive → the learner acts on this kind; negative → they wave it away.
+      const kindStats = new Map<string, { shown: number; engaged: number; dismissed: number }>();
+      for (const f of feedback) {
+        const s = kindStats.get(f.suggestion_kind) ?? { shown: 0, engaged: 0, dismissed: 0 };
+        if (f.event === "shown") s.shown += 1;
+        else if (f.event === "clicked" || f.event === "booked") s.engaged += 1;
+        else if (f.event === "dismissed") s.dismissed += 1;
+        kindStats.set(f.suggestion_kind, s);
+      }
+      const kindScore = (kind: string): number => {
+        const s = kindStats.get(kind);
+        if (!s || s.shown < 3) return 0; // not enough history — neutral
+        return (s.engaged - s.dismissed) / s.shown;
+      };
 
       const signals: Signal[] = [];
 
@@ -525,7 +576,20 @@ export function useCompanionRecommendations(userId: string | null | undefined) {
         if (suggestions.length >= 4) break;
       }
 
-      return suggestions.slice(0, 4);
+      // ── 4. Feedback-aware ordering ────────────────────────────────────
+      // Drop suggestions for topics dismissed in the last 3 days, then order
+      // by the learner's own historical engagement with each suggestion kind
+      // (stable sort keeps the signal-priority order within equal scores).
+      const filtered = suggestions.filter(
+        (s) => !s.topic || !snoozedTopics.has(s.topic.toLowerCase())
+      );
+      const pool = filtered.length > 0 ? filtered : suggestions;
+      const ranked = pool
+        .map((s, i) => ({ s, i, score: kindScore(s.kind) }))
+        .sort((a, b) => b.score - a.score || a.i - b.i)
+        .map((x) => x.s);
+
+      return ranked.slice(0, 4);
     },
   });
 }
