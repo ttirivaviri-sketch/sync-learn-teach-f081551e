@@ -19,6 +19,7 @@ const AIProgressInsights = lazy(() => import('./AIProgressInsights').then(m => (
 const AIWeakTopicAlerts = lazy(() => import('./AIWeakTopicAlerts').then(m => ({ default: m.AIWeakTopicAlerts })));
 const DailySummary = lazy(() => import('./DailySummary').then(m => ({ default: m.DailySummary })));
 const AdaptivePlanBanner = lazy(() => import('./AdaptivePlanBanner').then(m => ({ default: m.AdaptivePlanBanner })));
+const StudyPlanProposalsCard = lazy(() => import('./StudyPlanProposalsCard').then(m => ({ default: m.StudyPlanProposalsCard })));
 const AchievementsTab = lazy(() => import('./AchievementsTab').then(m => ({ default: m.AchievementsTab })));
 const LessonReinforcementBanner = lazy(() => import('./LessonReinforcementBanner').then(m => ({ default: m.LessonReinforcementBanner })));
 const MockExamSection = lazy(() => import('./MockExamSection').then(m => ({ default: m.MockExamSection })));
@@ -649,6 +650,8 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             )}
 
             <AdaptivePlanBanner />
+
+            <StudyPlanProposalsCard userId={userId} />
 
             <StudyCalendar
               subjects={subjects}
