@@ -182,6 +182,7 @@ IMPORTANT:
 
     // ── Call AI ──────────────────────────────────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: quota.userId, bucket: "quiz" },
       temperature: 0.5,
       jsonMode: true,
       maxTokens: 3500,

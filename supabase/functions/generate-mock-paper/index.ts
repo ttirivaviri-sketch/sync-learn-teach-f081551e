@@ -175,6 +175,7 @@ Mark scheme: ${(e.marking_scheme || []).join(" | ")}
 Generate now. Return JSON only.`;
 
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: quota.userId, bucket: "mock_paper" },
       temperature: 0.6,
       jsonMode: true,
       maxTokens: 8000,

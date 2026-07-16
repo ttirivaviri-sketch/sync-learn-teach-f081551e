@@ -225,6 +225,7 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
 
     // ── Call AI (with capped output tokens) ─────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: quota.userId, bucket: "quiz" },
       temperature: 0.5,
       jsonMode: true,
       maxTokens: questionCount === 1 ? 1500 : 3500,

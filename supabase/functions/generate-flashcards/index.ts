@@ -139,6 +139,7 @@ ${weakAreas ? `- Extra focus on weak areas: ${Array.isArray(weakAreas) ? weakAre
 
     // ── Call AI ──────────────────────────────────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: quota.userId, bucket: "flashcards" },
       temperature: 0.5,
       jsonMode: true,
       maxTokens: 1800,
