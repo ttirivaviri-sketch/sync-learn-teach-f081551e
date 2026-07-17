@@ -59,7 +59,11 @@ serve(async (req) => {
     const system = "You design fair school homework strictly grounded in the source material. Provide an examiner-quality rubric for each question. Reply ONLY with JSON.";
     const prompt = `Topic: ${topic ?? doc.title}\nDifficulty: ${diff}\n\nSource content:\n${text}\n\nWrite ${n} homework questions. For each include the model answer, examiner notes (what marks are awarded for), common mistakes, and the concepts tested. JSON shape: { "questions": [{ "prompt": string, "question_type": "multiple_choice"|"true_false"|"short_answer"|"long_answer"|"exam_style", "options": string[]?, "expected_answer": string, "examiner_notes": string, "common_mistakes": string, "concepts": string[], "marks": number }] }`;
 
-    const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system);
+    const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system, {
+      userId: auth.userId ?? null,
+      bucket: "homework_generated",
+      schoolId: school_id,
+    });
     const questions = (result?.questions ?? []).slice(0, n);
     if (questions.length === 0) return errorResponse("AI returned no questions", 502);
 
@@ -93,9 +97,10 @@ serve(async (req) => {
     const { error: qErr } = await auth.svc.from("school_homework_questions").insert(qRows);
     if (qErr) return errorResponse(`Questions insert failed: ${qErr.message}`, 500);
 
+    // Request count for quota; real tokens are recorded by callAIJson usage attribution.
     await auth.svc.rpc("increment_school_ai_usage", {
       _school_id: school_id, _bucket: "homework_generated",
-      _tokens_in: Math.ceil(text.length / 4), _tokens_out: questions.length * 200,
+      _tokens_in: 0, _tokens_out: 0,
     });
 
     return jsonResponse({ ok: true, homework_id: hw.id, count: questions.length, total_marks: totalMarks });

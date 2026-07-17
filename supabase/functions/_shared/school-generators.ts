@@ -9,7 +9,7 @@
 // untrusted input.
 
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { safeJsonParse } from "./ai-config.ts";
+import { safeJsonParse, reportTokenUsage, type UsageAttribution } from "./ai-config.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -82,7 +82,11 @@ export async function loadDocumentChunks(
   return { doc, text: acc.trim() };
 }
 
-export async function callAIJson<T>(prompt: string, system: string): Promise<T | null> {
+export async function callAIJson<T>(
+  prompt: string,
+  system: string,
+  usage?: UsageAttribution
+): Promise<T | null> {
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
@@ -97,6 +101,18 @@ export async function callAIJson<T>(prompt: string, system: string): Promise<T |
   });
   if (!r.ok) throw new Error(`AI call failed ${r.status}: ${await r.text()}`);
   const j = await r.json();
+
+  // Record real token usage (fire-and-forget) when attribution is supplied.
+  if (usage && j?.usage) {
+    reportTokenUsage({
+      userId: usage.userId,
+      bucket: usage.bucket,
+      schoolId: usage.schoolId ?? null,
+      tokensIn: Number(j.usage.prompt_tokens ?? 0),
+      tokensOut: Number(j.usage.completion_tokens ?? 0),
+    });
+  }
+
   const text = j.choices?.[0]?.message?.content ?? "";
   return safeJsonParse<T>(text);
 }

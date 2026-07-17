@@ -312,6 +312,7 @@ Respond with ONLY valid JSON:
 }`;
 
         const aiResponse = await callAI(ai, VIDEO_SYSTEM_PROMPT, userPrompt, {
+          usage: { userId: user.id, bucket: "misc" },
           temperature: 0.3,
           jsonMode: true,
         });

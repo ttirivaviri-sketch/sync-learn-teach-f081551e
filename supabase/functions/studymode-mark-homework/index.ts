@@ -86,7 +86,13 @@ serve(async (req) => {
       const prompt = `Question: ${q.prompt}\nExpected answer: ${q.expected_answer}\nExaminer notes: ${q.examiner_notes}\nCommon mistakes: ${q.common_mistakes}\nMarks available: ${q.marks}\n\nStudent answer: ${studentAnswer || "(blank)"}\n\nReturn JSON: { "correct": bool, "awarded": number, "examiner_expects": string, "what_you_missed": string, "concept_fix": string }`;
 
       let mark: AIMark | null = null;
-      try { mark = await callAIJson<AIMark>(prompt, system); } catch { /* leave null */ }
+      try {
+        mark = await callAIJson<AIMark>(prompt, system, {
+          userId,
+          bucket: "homework_marked",
+          schoolId: school_id,
+        });
+      } catch { /* leave null */ }
       const awarded = mark ? Math.max(0, Math.min(Number(mark.awarded) || 0, Number(q.marks))) : 0;
 
       const status = released ? "released" : "ai_marked";
@@ -106,9 +112,10 @@ serve(async (req) => {
       });
     }
 
+    // Request count for quota; real tokens are recorded by callAIJson usage attribution.
     await svc.rpc("increment_school_ai_usage", {
       _school_id: school_id, _bucket: "homework_marked",
-      _tokens_in: 0, _tokens_out: questions.length * 150,
+      _tokens_in: 0, _tokens_out: 0,
     });
 
     return jsonResponse({

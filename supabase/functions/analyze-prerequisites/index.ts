@@ -25,6 +25,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
+  getUserIdFromRequest,
   safeJsonParse,
   normalizeArray,
   errorResponse,
@@ -125,6 +126,7 @@ Curriculum: ${curriculum}${grade ? `\nGrade: ${grade}` : ""}${gradeLevel ? `\nLe
     userPrompt += `\n\nList the prerequisite gaps now.`;
 
     const raw = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: getUserIdFromRequest(req), bucket: "topic_session" },
       temperature: 0.3,
       jsonMode: true,
       maxTokens: 1200,

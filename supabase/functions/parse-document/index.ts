@@ -559,6 +559,7 @@ Be exhaustive — every question must appear. Preserve the examiner's exact mark
 
       try {
         const rawResult = await callAI(ai, systemPrompt, userMsg, {
+          usage: { userId: callerId, bucket: "misc" },
           tools: [toolDef],
           toolChoice: { type: "function", function: { name: toolDef.function.name } },
         });

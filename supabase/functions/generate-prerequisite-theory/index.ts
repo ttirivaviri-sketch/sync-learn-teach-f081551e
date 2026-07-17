@@ -14,6 +14,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
+  getUserIdFromRequest,
   errorResponse,
   jsonResponse,
 } from "../_shared/ai-config.ts";
@@ -61,6 +62,7 @@ Missing concepts to cover: ${Array.isArray(missingConcepts) && missingConcepts.l
 Write the refresher now.`;
 
     const theory = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: getUserIdFromRequest(req), bucket: "concept_review" },
       temperature: 0.4,
       maxTokens: 900,
     });

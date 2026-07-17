@@ -158,7 +158,11 @@ serve(async (req) => {
       : "";
     const prompt = `Topic: ${topic}\nDifficulty: ${diff}\n\nProduce EXACTLY this mix: ${planText}.\n\nSource content:\n${text}${avoidBlock}\n\nJSON shape: { "questions": [{ "type": "multiple_choice"|"true_false"|"short_answer", "prompt": string, "options": string[]?, "answer": (string|boolean|number), "marks": number, "difficulty": "easy"|"medium"|"hard" }] }.\n\nRules:\n- For multiple_choice: provide EXACTLY 4 options and an answer that exactly matches one option string.\n- For true_false: omit options; answer must be the boolean true or false.\n- For short_answer: omit options; answer is a concise reference answer (1–2 sentences).\n- Return the questions grouped in this order: ${plan.map((p) => `${p.n}×${p.label}`).join(", ")}.\n- Do NOT exceed the requested totals.`;
 
-    const result = await callAIJson<{ questions: AiQuestion[] }>(prompt, system);
+    const result = await callAIJson<{ questions: AiQuestion[] }>(prompt, system, {
+      userId: auth.userId ?? null,
+      bucket: "quiz",
+      schoolId: school_id,
+    });
     let aiQs = (result?.questions ?? []) as AiQuestion[];
     if (aiQs.length === 0) return errorResponse("AI returned no questions", 502);
 
@@ -197,10 +201,11 @@ serve(async (req) => {
       };
     });
 
+    // Request count for quota; real tokens are recorded by callAIJson usage attribution.
     await auth.svc.rpc("increment_school_ai_usage", {
       _school_id: school_id, _bucket: "quiz",
-      _tokens_in: Math.ceil(text.length / 4),
-      _tokens_out: normalized.length * 80,
+      _tokens_in: 0,
+      _tokens_out: 0,
     });
 
     // Preview-only: return without writing

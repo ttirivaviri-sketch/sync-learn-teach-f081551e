@@ -165,6 +165,7 @@ Generate ${planDays * 2} tasks (roughly 2 per day). Prioritise high-weight topic
 
     // ── Call AI ──────────────────────────────────────────────────────────────
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId, bucket: "daily_task" },
       temperature: 0.4,
       jsonMode: true,
     });
