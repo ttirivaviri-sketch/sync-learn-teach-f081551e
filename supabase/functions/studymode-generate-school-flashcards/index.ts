@@ -41,7 +41,11 @@ serve(async (req) => {
     const system = "You generate accurate flashcards from teacher content. Math/science MUST use LaTeX. Reply ONLY with JSON.";
     const prompt = `Topic: ${topic}\nSubject: ${subject ?? "(unspecified)"}\n\nSource content:\n${text}\n\nGenerate ${n} flashcards covering definitions, formulas, and exam-style prompts. JSON shape: { "flashcards": [{ "front": string, "back": string, "hint": string, "difficulty": "easy"|"medium"|"hard", "tags": string[] }] }`;
 
-    const result = await callAIJson<{ flashcards: FlashcardOut[] }>(prompt, system);
+    const result = await callAIJson<{ flashcards: FlashcardOut[] }>(prompt, system, {
+      userId: auth.userId ?? null,
+      bucket: "flashcards",
+      schoolId: school_id,
+    });
     const cards = (result?.flashcards ?? []).slice(0, n);
     if (cards.length === 0) return errorResponse("AI returned no flashcards", 502);
 
@@ -66,8 +70,9 @@ serve(async (req) => {
     const { error } = await auth.svc.from("flashcards").insert(rows);
     if (error) return errorResponse(`Insert failed: ${error.message}`, 500);
 
+    // Request count for quota; real tokens are recorded by callAIJson usage attribution.
     await auth.svc.rpc("increment_school_ai_usage", {
-      _school_id: school_id, _bucket: "flashcards", _tokens_in: Math.ceil(text.length / 4), _tokens_out: cards.length * 50,
+      _school_id: school_id, _bucket: "flashcards", _tokens_in: 0, _tokens_out: 0,
     });
 
     return jsonResponse({ ok: true, shared_template_id: sharedId, count: cards.length });

@@ -34,6 +34,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
+  getUserIdFromRequest,
   safeJsonParse,
   normalizeArray,
   errorResponse,
@@ -129,6 +130,7 @@ ${student_answer.trim() || "(blank)"}
 Grade now. Return JSON only.`;
 
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+      usage: { userId: getUserIdFromRequest(req), bucket: "explain" },
       temperature: 0.2,
       jsonMode: true,
     });

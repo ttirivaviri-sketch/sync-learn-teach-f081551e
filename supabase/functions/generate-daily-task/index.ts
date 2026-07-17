@@ -2,6 +2,7 @@
 // Returns a single bundle with 4 mandatory blocks, syllabus-locked, coverage-validated.
 
 import { buildProvenance, hashPrompt, attachMeta } from '../_shared/provenance.ts';
+import { getUserIdFromRequest, reportTokenUsage, type UsageAttribution } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -239,7 +240,11 @@ function validate(bundle: TaskBundle, selected: string[]): ValidationResult {
   };
 }
 
-async function callAI(messages: any[], apiKey: string): Promise<TaskBundle | null> {
+async function callAI(
+  messages: any[],
+  apiKey: string,
+  usage?: UsageAttribution
+): Promise<TaskBundle | null> {
   const resp = await fetch(LOVABLE_AI_URL, {
     method: 'POST',
     headers: {
@@ -264,6 +269,18 @@ async function callAI(messages: any[], apiKey: string): Promise<TaskBundle | nul
   }
 
   const data = await resp.json();
+
+  // Record real token usage (fire-and-forget) when attribution is supplied.
+  if (usage && data?.usage) {
+    reportTokenUsage({
+      userId: usage.userId,
+      bucket: usage.bucket,
+      schoolId: usage.schoolId ?? null,
+      tokensIn: Number(data.usage.prompt_tokens ?? 0),
+      tokensOut: Number(data.usage.completion_tokens ?? 0),
+    });
+  }
+
   const toolCall = data?.choices?.[0]?.message?.tool_calls?.[0];
   if (!toolCall) {
     console.error('No tool_call in response', JSON.stringify(data).slice(0, 500));
@@ -332,7 +349,9 @@ Deno.serve(async (req: Request) => {
       { role: 'user', content: buildUserPrompt(body, selected, reason) },
     ];
 
-    let bundle = await callAI(messages, apiKey);
+    const usageAttrib = { userId: getUserIdFromRequest(req), bucket: 'daily_task' };
+
+    let bundle = await callAI(messages, apiKey, usageAttrib);
     if (!bundle) {
       return new Response(JSON.stringify({ error: 'AI generation failed' }), {
         status: 502,
@@ -367,7 +386,7 @@ Deno.serve(async (req: Request) => {
           content: `Coverage validation failed. Fix the following and re-emit the FULL bundle via emit_daily_task:\n${fixInstructions.join('\n')}`,
         },
       ];
-      const retried = await callAI(retryMessages, apiKey);
+      const retried = await callAI(retryMessages, apiKey, usageAttrib);
       if (retried) {
         bundle = normalize(retried);
         validation = validate(bundle, selected);

@@ -448,7 +448,11 @@ Generate a COMPLETE student profile following the exact JSON schema from your in
       ai,
       STUDENT_INSIGHTS_SYSTEM_PROMPT,
       userPrompt,
-      { temperature: 0.4, jsonMode: true }
+      {
+        usage: { userId: user.id, bucket: "insights" },
+        temperature: 0.4,
+        jsonMode: true,
+      }
     );
 
     let insights: Record<string, unknown>;

@@ -202,6 +202,7 @@ ${conceptsTested?.length ? `**Concepts Being Tested:** ${conceptsTested.join(", 
 Score this answer out of ${totalMarks || "the available marks"}.`;
 
       const rawContent = await callAI(ai, markSystemPrompt, markUserPrompt, {
+        usage: { userId: quota.userId, bucket: "explain" },
         temperature: 0.3,
         jsonMode: true,
         maxTokens: 900,
@@ -278,13 +279,17 @@ Help this student understand exactly what they missed and how to improve.`;
       const aiResp = await callAIStream(
         ai,
         explainSystemPrompt,
-        explainUserPrompt
+        explainUserPrompt,
+        { usage: { userId: quota.userId, bucket: "explain" } }
       );
       return streamResponse(aiResp.body);
     }
 
     // Non-streaming fallback
-    const content = await callAI(ai, explainSystemPrompt, explainUserPrompt, { maxTokens: 700 });
+    const content = await callAI(ai, explainSystemPrompt, explainUserPrompt, {
+      usage: { userId: quota.userId, bucket: "explain" },
+      maxTokens: 700,
+    });
     return jsonResponse({ explanation: content });
   } catch (e) {
     console.error("explain-answer error:", e);

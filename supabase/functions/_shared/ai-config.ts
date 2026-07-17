@@ -753,32 +753,52 @@ export async function callAIStream(
   ai: AIConfig,
   systemPrompt: string,
   userPrompt: string,
-  options: { temperature?: number } = {}
+  options: {
+    temperature?: number;
+    /** When provided, real prompt/completion tokens are captured from the
+     *  final SSE usage chunk (stream_options.include_usage) and recorded. */
+    usage?: UsageAttribution;
+  } = {}
 ): Promise<Response> {
   // Enforce no-HTML rule for streaming responses (can't retry after stream starts)
   const enforcedSystemPrompt = systemPrompt.includes("Do NOT return HTML")
     ? systemPrompt
     : systemPrompt + `\n\nREMINDER: Return ONLY structured study content (markdown or plain text). Do NOT return HTML, CSS, JavaScript, JSX, or any code.`;
 
-  const body: Record<string, unknown> = {
-    model: ai.model,
-    messages: [
-      { role: "system", content: enforcedSystemPrompt },
-      { role: "user", content: userPrompt },
-    ],
-    stream: true,
+  const makeBody = (withUsage: boolean): string => {
+    const body: Record<string, unknown> = {
+      model: ai.model,
+      messages: [
+        { role: "system", content: enforcedSystemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      stream: true,
+    };
+    if (options.temperature !== undefined) body.temperature = options.temperature;
+    // Ask OpenAI-compatible providers to append a final usage chunk.
+    if (withUsage) body.stream_options = { include_usage: true };
+    return JSON.stringify(body);
   };
 
-  if (options.temperature !== undefined) body.temperature = options.temperature;
+  const doFetch = (withUsage: boolean): Promise<Response> =>
+    fetch(ai.url, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ai.key}`,
+        "Content-Type": "application/json",
+      },
+      body: makeBody(withUsage),
+    });
 
-  const response = await fetch(ai.url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${ai.key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  let wantUsage = Boolean(options.usage);
+  let response = await doFetch(wantUsage);
+
+  // Some gateways reject unknown params — retry once without stream_options.
+  if (!response.ok && wantUsage && response.status === 400) {
+    console.warn("[callAIStream] provider rejected stream_options — retrying without usage capture");
+    wantUsage = false;
+    response = await doFetch(false);
+  }
 
   if (!response.ok) {
     if (response.status === 429) throw new Error("RATE_LIMIT");
@@ -786,6 +806,60 @@ export async function callAIStream(
     const errText = await response.text();
     console.error("AI stream error:", response.status, errText);
     throw new Error(`AI stream error: ${response.status}`);
+  }
+
+  // Passthrough with a lightweight SSE scanner that reports the usage chunk.
+  if (wantUsage && options.usage && response.body) {
+    const attrib = options.usage;
+    const decoder = new TextDecoder();
+    let tail = "";
+    let reported = false;
+    const scanUsage = (text: string) => {
+      if (reported) return;
+      const lines = (tail + text).split("\n");
+      tail = lines.pop() ?? "";
+      for (const line of lines) {
+        if (reported || !line.startsWith("data: ") || !line.includes('"usage"')) continue;
+        try {
+          const evt = JSON.parse(line.slice(6));
+          const u = evt?.usage;
+          const tokensIn = Number(u?.prompt_tokens ?? 0);
+          const tokensOut = Number(u?.completion_tokens ?? 0);
+          if (tokensIn > 0 || tokensOut > 0) {
+            reported = true;
+            reportTokenUsage({
+              userId: attrib.userId,
+              bucket: attrib.bucket,
+              schoolId: attrib.schoolId ?? null,
+              tokensIn,
+              tokensOut,
+            });
+          }
+        } catch {
+          // Partial/non-JSON data line — ignore; usage chunk is well-formed.
+        }
+      }
+    };
+    const scanner = new TransformStream<Uint8Array, Uint8Array>({
+      transform(chunk, controller) {
+        controller.enqueue(chunk);
+        try {
+          scanUsage(decoder.decode(chunk, { stream: true }));
+        } catch (e) {
+          // Never let usage accounting break the stream.
+          console.warn("[callAIStream] usage scan failed:", e);
+        }
+      },
+      flush() {
+        try {
+          scanUsage("\n");
+        } catch { /* noop */ }
+      },
+    });
+    return new Response(response.body.pipeThrough(scanner), {
+      status: response.status,
+      headers: response.headers,
+    });
   }
 
   return response;
