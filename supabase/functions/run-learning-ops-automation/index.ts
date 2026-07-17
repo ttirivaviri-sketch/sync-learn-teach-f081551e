@@ -24,6 +24,36 @@ import { z } from "https://esm.sh/zod@3.23.8";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+
+/**
+ * Authorize the caller. Accepted:
+ *   1. Bearer CRON_SECRET        — pg_cron tick (vault secret)
+ *   2. Bearer SERVICE_ROLE_KEY   — internal service-to-service calls
+ *   3. Valid user JWT belonging to active LOS staff (owner/admin/teacher/tutor)
+ *      — the AutomationControlPanel "run now" path
+ */
+async function authorizeRequest(
+  req: Request,
+  sb: ReturnType<typeof createClient>,
+): Promise<{ ok: boolean; via: string }> {
+  const authHeader = req.headers.get("Authorization") || "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return { ok: false, via: "none" };
+
+  if (CRON_SECRET && token === CRON_SECRET) return { ok: true, via: "cron_secret" };
+  if (token === SERVICE_KEY) return { ok: true, via: "service_key" };
+
+  // Fall back to user JWT: must be an active staff member somewhere.
+  const { data: userData, error } = await sb.auth.getUser(token);
+  const userId = userData?.user?.id;
+  if (error || !userId) return { ok: false, via: "invalid_jwt" };
+
+  const { data: isStaff } = await sb.rpc("is_any_los_staff", { _user_id: userId });
+  return isStaff === true
+    ? { ok: true, via: `staff:${userId}` }
+    : { ok: false, via: `not_staff:${userId}` };
+}
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -238,6 +268,13 @@ serve(async (req: Request) => {
 
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
+
+    const auth = await authorizeRequest(req, sb);
+    if (!auth.ok) {
+      log("unauthorized", { request_id: requestId, via: auth.via });
+      return jsonResponse({ error: "unauthorized", request_id: requestId }, 401);
+    }
+    log("authorized", { request_id: requestId, via: auth.via.split(":")[0] });
 
     let rawBody: unknown = {};
     try {

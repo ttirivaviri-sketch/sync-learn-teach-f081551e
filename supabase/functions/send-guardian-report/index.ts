@@ -65,7 +65,12 @@ async function sendOne(opts: {
 
 serve(async (req) => {
   try {
-    if (!CRON_SECRET || (req.headers.get("Authorization") || "") !== `Bearer ${CRON_SECRET}`) {
+    // Accept the cron secret (pg_cron tick) OR the service key
+    // (internal call from run-learning-ops-automation's guardian_digest job).
+    const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const viaCron = Boolean(CRON_SECRET) && token === CRON_SECRET;
+    const viaService = Boolean(SERVICE_KEY) && token === SERVICE_KEY;
+    if (!viaCron && !viaService) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
