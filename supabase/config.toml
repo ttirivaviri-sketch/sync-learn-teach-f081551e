@@ -36,9 +36,6 @@ verify_jwt = false
 [functions.run-migration]
 verify_jwt = false
 
-[functions.generate-exam-questions]
-verify_jwt = false
-
 [functions.sail-agent]
 verify_jwt = false
 
@@ -95,5 +92,14 @@ verify_jwt = true
 
 [functions.studymode-detect-gaps]
 verify_jwt = true
+
+# Cron-invoked: pg_cron posts "Bearer <CRON_SECRET>" (not a JWT), so the
+# platform gateway must not enforce JWT verification. Both functions do
+# their own auth in-code (CRON_SECRET / service key / staff JWT).
+[functions.run-learning-ops-automation]
+verify_jwt = false
+
+[functions.send-guardian-report]
+verify_jwt = false
 
 
