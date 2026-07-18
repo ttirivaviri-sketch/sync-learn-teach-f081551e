@@ -24,6 +24,7 @@ import {
   streamResponse,
   enforceQuota,
   quotaExceededResponse,
+  callAIStream,
 } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
@@ -214,33 +215,12 @@ WHEN A STUDENT ASKS ABOUT A TOPIC:
 4. If they're struggling, break it down further.
 5. If they're confident, challenge them with an AO2/AO3-style application question.`;
 
-    // ── Stream response ─────────────────────────────────────────────────
-    const response = await fetch(ai.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ai.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: ai.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...messages,
-        ],
-        stream: true,
-        max_tokens: 700,
-      }),
+    // ── Stream response via shared helper (real token usage recorded) ────
+    const response = await callAIStream(ai, systemPrompt, "", {
+      messages,
+      maxTokens: 700,
+      usage: { userId: quota.userId, bucket: "tutor" },
     });
-
-    if (!response.ok) {
-      if (response.status === 429)
-        return errorResponse("RATE_LIMIT", 429);
-      if (response.status === 402)
-        return errorResponse("CREDITS_EXHAUSTED", 402);
-      const t = await response.text();
-      console.error("AI tutor error:", response.status, t);
-      throw new Error("AI tutor failed");
-    }
 
     return streamResponse(response.body);
   } catch (e) {

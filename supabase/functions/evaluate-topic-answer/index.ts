@@ -1,4 +1,4 @@
-import { enforceQuota, quotaExceededResponse } from "../_shared/ai-config.ts";
+import { enforceQuota, quotaExceededResponse, reportTokenUsage } from "../_shared/ai-config.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,6 +76,17 @@ Deno.serve(async (req) => {
     }
 
     const data = await resp.json();
+
+    // Record real token usage (fire-and-forget).
+    if (data?.usage) {
+      reportTokenUsage({
+        userId: quota.userId,
+        bucket: "explain",
+        tokensIn: Number(data.usage.prompt_tokens ?? 0),
+        tokensOut: Number(data.usage.completion_tokens ?? 0),
+      });
+    }
+
     const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     const parsed = args ? JSON.parse(args) : null;
     if (!parsed) throw new Error('No evaluation returned');

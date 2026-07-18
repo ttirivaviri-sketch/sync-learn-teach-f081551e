@@ -14,6 +14,7 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { fingerprintStem, normaliseStem } from "./provenance.ts";
+import { reportTokenUsage } from "./ai-config.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -46,7 +47,7 @@ function svc() {
 }
 
 /** Get an embedding via the Lovable AI Gateway. */
-async function embed(text: string): Promise<number[] | null> {
+async function embed(text: string, attributeTo?: string | null): Promise<number[] | null> {
   if (!LOVABLE_API_KEY) return null;
   try {
     const res = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
@@ -60,6 +61,14 @@ async function embed(text: string): Promise<number[] | null> {
     });
     if (!res.ok) return null;
     const json = await res.json();
+    if (attributeTo && json?.usage) {
+      reportTokenUsage({
+        userId: attributeTo,
+        bucket: "misc",
+        tokensIn: Number(json.usage.prompt_tokens ?? json.usage.total_tokens ?? 0),
+        tokensOut: 0,
+      });
+    }
     return json?.data?.[0]?.embedding ?? null;
   } catch {
     return null;
@@ -112,7 +121,7 @@ export async function checkNovelty(opts: CheckOpts): Promise<NoveltyOutcome> {
   // Layer 2 — semantic match (only if we can embed)
   let embedding: number[] | null = null;
   try {
-    embedding = await embed(opts.questionText);
+    embedding = await embed(opts.questionText, opts.userId);
     if (embedding && embedding.length > 0) {
       const { data: recent } = await client
         .from("question_fingerprints")

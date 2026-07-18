@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { reportTokenUsage } from "../_shared/ai-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,7 +35,7 @@ const agentSystemPrompts: Record<string, string> = {
   reviewer: "You are SAIL Reviewer Agent. Provide a neutral risk assessment and a suggested patch sketch. NEVER claim to deploy.",
 };
 
-async function runAgentLLM(agent: string, eventType: string, source: string, severity: string, payload: unknown): Promise<{ ok: boolean; data?: any; error?: string; status?: number; durationMs: number }> {
+async function runAgentLLM(agent: string, eventType: string, source: string, severity: string, payload: unknown, attributeTo?: string | null): Promise<{ ok: boolean; data?: any; error?: string; status?: number; durationMs: number }> {
   const start = Date.now();
   if (!LOVABLE_API_KEY) {
     return { ok: false, error: "LOVABLE_API_KEY not configured", durationMs: 0 };
@@ -83,6 +84,14 @@ async function runAgentLLM(agent: string, eventType: string, source: string, sev
       return { ok: false, error: `Gateway ${resp.status}: ${text.slice(0, 300)}`, status: resp.status, durationMs };
     }
     const json = await resp.json();
+    if (attributeTo && json?.usage) {
+      reportTokenUsage({
+        userId: attributeTo,
+        bucket: "misc",
+        tokensIn: Number(json.usage.prompt_tokens ?? 0),
+        tokensOut: Number(json.usage.completion_tokens ?? 0),
+      });
+    }
     const toolCall = json.choices?.[0]?.message?.tool_calls?.[0];
     const argsStr = toolCall?.function?.arguments;
     if (!argsStr) {
@@ -123,6 +132,7 @@ Deno.serve(async (req: Request) => {
     const sailSecret = Deno.env.get("SAIL_SECRET") || Deno.env.get("CRON_SECRET");
     const internalHeader = req.headers.get("x-sail-secret");
     let authorized = !!(sailSecret && internalHeader && internalHeader === sailSecret);
+    let adminCallerId: string | null = null;
 
     if (!authorized) {
       const authHeader = req.headers.get("Authorization");
@@ -147,6 +157,7 @@ Deno.serve(async (req: Request) => {
           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+      adminCallerId = userData.user.id;
     }
 
     const body = await req.json();
@@ -189,7 +200,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from("sail_events").update({ task_id: task.id, processed: true }).eq("id", event.id);
 
     // 4. Run LLM analysis
-    const llm = await runAgentLLM(agent, event_type, source, sev, data);
+    const llm = await runAgentLLM(agent, event_type, source, sev, data, adminCallerId);
 
     let finalRisk = sev === "high" ? "high" : sev === "medium" ? "medium" : "low";
     let finalStatus = "review";

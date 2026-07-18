@@ -13,7 +13,7 @@
  * }
  * Response: { text: string, speaker: "tutor" | "learner" | "unknown" }
  */
-import { corsHeaders } from "../_shared/ai-config.ts";
+import { corsHeaders, getUserIdFromRequest, reportTokenUsage } from "../_shared/ai-config.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -64,6 +64,17 @@ Deno.serve(async (req) => {
     }
 
     const data = await resp.json();
+    if (data?.usage) {
+      const callerId = getUserIdFromRequest(req);
+      if (callerId) {
+        reportTokenUsage({
+          userId: callerId,
+          bucket: "misc",
+          tokensIn: Number(data.usage.prompt_tokens ?? 0),
+          tokensOut: Number(data.usage.completion_tokens ?? 0),
+        });
+      }
+    }
     const text = data.choices?.[0]?.message?.content?.trim() ?? "";
     return new Response(JSON.stringify({ text, speaker }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

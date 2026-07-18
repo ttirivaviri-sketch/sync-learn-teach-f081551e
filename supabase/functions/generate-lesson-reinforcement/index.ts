@@ -9,7 +9,7 @@
  * Body: { recording_id: string }
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -86,6 +86,15 @@ Produce a 5-question multiple-choice quiz and 6 flashcards.` },
       }],
       tool_choice: { type: "function", function: { name: "reinforcement_set" } },
     });
+
+    if (aiResp?.usage) {
+      reportTokenUsage({
+        userId: rec.learner_id,
+        bucket: "misc",
+        tokensIn: Number(aiResp.usage.prompt_tokens ?? 0),
+        tokensOut: Number(aiResp.usage.completion_tokens ?? 0),
+      });
+    }
 
     const argsStr = aiResp.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!argsStr) throw new Error("No reinforcement returned");

@@ -11,7 +11,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
-import { corsHeaders } from "../_shared/ai-config.ts";
+import { corsHeaders, getUserIdFromRequest, reportTokenUsage } from "../_shared/ai-config.ts";
 
 const BUCKET = "question-diagrams";
 
@@ -96,6 +96,17 @@ Diagram requested: ${imagePrompt}`;
     }
 
     const aiData = await aiResp.json();
+    if (aiData?.usage) {
+      const callerId = getUserIdFromRequest(req);
+      if (callerId) {
+        reportTokenUsage({
+          userId: callerId,
+          bucket: "misc",
+          tokensIn: Number(aiData.usage.prompt_tokens ?? 0),
+          tokensOut: Number(aiData.usage.completion_tokens ?? 0),
+        });
+      }
+    }
     const dataUrl: string | undefined =
       aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 

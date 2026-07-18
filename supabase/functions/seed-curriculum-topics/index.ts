@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { getUserIdFromRequest, reportTokenUsage } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,7 +21,7 @@ function safeJsonParse(text: string): any | null {
   return null;
 }
 
-async function callGemini(prompt: string, system: string): Promise<any> {
+async function callGemini(prompt: string, system: string, attributeTo?: string | null): Promise<any> {
   const res = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -41,6 +42,14 @@ async function callGemini(prompt: string, system: string): Promise<any> {
     throw new Error(`AI gateway ${res.status}: ${t.slice(0, 300)}`);
   }
   const json = await res.json();
+  if (attributeTo && json?.usage) {
+    reportTokenUsage({
+      userId: attributeTo,
+      bucket: 'misc',
+      tokensIn: Number(json.usage.prompt_tokens ?? 0),
+      tokensOut: Number(json.usage.completion_tokens ?? 0),
+    });
+  }
   const content = json?.choices?.[0]?.message?.content ?? '';
   const parsed = safeJsonParse(content);
   if (!parsed) throw new Error('AI returned unparseable JSON');
@@ -96,6 +105,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
+    const callerId = getUserIdFromRequest(req);
     const body = await req.json();
     const { curriculum, grade, subject, force = false, validate = true } = body ?? {};
 
@@ -138,7 +148,7 @@ Deno.serve(async (req) => {
 
     // 3. Generate
     const prompt = buildPrompt(curriculum, grade, subject, syllabusText);
-    let result = await callGemini(prompt, SYSTEM);
+    let result = await callGemini(prompt, SYSTEM, callerId);
     let topics = Array.isArray(result?.topics) ? result.topics : [];
     if (topics.length === 0) throw new Error('AI returned no topics');
 
@@ -146,7 +156,7 @@ Deno.serve(async (req) => {
     //    more than cost on a one-shot per-template seed.
     if (validate) {
       try {
-        const v = await callGemini(buildValidatorPrompt(curriculum, grade, subject, topics), VALIDATOR_SYSTEM);
+        const v = await callGemini(buildValidatorPrompt(curriculum, grade, subject, topics), VALIDATOR_SYSTEM, callerId);
         if (Array.isArray(v?.topics) && v.topics.length > 0) topics = v.topics;
       } catch (e) {
         console.warn('validator skipped:', (e as Error).message);
