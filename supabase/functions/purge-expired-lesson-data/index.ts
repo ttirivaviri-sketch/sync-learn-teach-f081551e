@@ -11,10 +11,23 @@ import { corsHeaders } from "../_shared/ai-config.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const CRON_SECRET = Deno.env.get("CRON_SECRET") ?? "";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    // Destructive, service-role-powered purge — only cron (CRON_SECRET) or
+    // internal service-to-service calls (SERVICE_ROLE key) may invoke it.
+    const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const viaCron = !!CRON_SECRET && token === CRON_SECRET;
+    const viaService = !!token && token === SERVICE_ROLE;
+    if (!viaCron && !viaService) {
+      console.warn("[purge-expired-lesson-data] unauthorized invocation blocked");
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { data: settings } = await sb.from("lesson_retention_settings").select("user_id,auto_delete_after_days,keep_notes_only");
     const defaultDays = 90;

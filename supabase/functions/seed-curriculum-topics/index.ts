@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { getUserIdFromRequest, reportTokenUsage } from '../_shared/ai-config.ts';
+import { enforceQuota, getUserIdFromRequest, quotaExceededResponse, reportTokenUsage } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -115,8 +115,25 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Each seed run is two expensive AI calls — require a signed-in user, then quota-gate.
+    if (!callerId) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+    const quota = await enforceQuota(req, 'misc');
+    if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
+
+    // `force: true` bypasses the exists-check and regenerates — admin only.
+    let effectiveForce = false;
+    if (force && callerId) {
+      const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: callerId, _role: 'admin' });
+      effectiveForce = isAdmin === true;
+      if (!effectiveForce) console.warn('[seed-curriculum-topics] non-admin force ignored', callerId);
+    }
+
     // 1. Skip if exists
-    if (!force) {
+    if (!effectiveForce) {
       const { data: existing } = await supabase
         .from('curriculum_topic_templates')
         .select('id')
