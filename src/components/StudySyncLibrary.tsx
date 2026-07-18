@@ -51,7 +51,6 @@ const StudySyncLibrary = ({
   const {
     allResources,
     personalizedResources,
-    recommendedTutorials,
     pastPapers,
     topTutors,
     searchResults,
@@ -67,8 +66,14 @@ const StudySyncLibrary = ({
   const isBookish = (r: LibraryResource) =>
     !isClip(r) && (r.type === "book" || r.type === "guide");
 
-  // Strict personalization: only show content matching learner's syllabus + grade + subjects
-  const tutorialFeed = personalizedResources.filter(isClip);
+  // Clips feed: personalized clips first, then every other uploaded/seeded clip
+  // (deduped) — so new uploads always land in the Clips feed instead of Browse.
+  const personalizedClips = personalizedResources.filter(isClip);
+  const personalizedClipIds = new Set(personalizedClips.map((r) => r.id));
+  const tutorialFeed = [
+    ...personalizedClips,
+    ...allResources.filter((r) => isClip(r) && !personalizedClipIds.has(r.id)),
+  ];
 
   // Per-tab match diagnostics for empty-state explanations
   const tutorialStats = getMatchStatsFor(isClip);
@@ -326,9 +331,27 @@ const StudySyncLibrary = ({
               })()}
 
               {academicProfile && (
-                <ContentRack title="Recommended for You" items={personalizedResources.slice(0, 4)} icon={Sparkles} {...rackProps} />
+                <ContentRack title="Recommended for You" items={personalizedResources.filter((r) => !isClip(r)).slice(0, 4)} icon={Sparkles} {...rackProps} />
               )}
-              <ContentRack title="Top Tutorial Videos" items={recommendedTutorials.slice(0, 4)} icon={Video} {...rackProps} />
+              {/* Videos live in the Clips feed, not Browse — teaser opens the reels */}
+              {tutorialFeed.length > 0 && (
+                <button
+                  onClick={() => { setReelsStartIndex(0); setReelsFeedOpen(true); }}
+                  className="w-full flex items-center gap-3 rounded-2xl px-4 py-4 text-left shadow-md transition-transform active:scale-[0.99]"
+                  style={{ background: 'linear-gradient(135deg, hsl(340 82% 58%), hsl(20 90% 60%))' }}
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15 shrink-0">
+                    <Video className="h-5 w-5 text-white" />
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[10px] font-bold uppercase tracking-widest text-white/70">Study Clips</span>
+                    <span className="block text-sm font-semibold text-white truncate">
+                      {tutorialFeed.length} clip{tutorialFeed.length === 1 ? "" : "s"} — watch now
+                    </span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 text-white/80 shrink-0" />
+                </button>
+              )}
               {topTutors.length > 0 && (
                 <TopicTutorRack
                   title="Popular Tutors"
@@ -356,7 +379,7 @@ const StudySyncLibrary = ({
                 />
               )}
               <ContentRack title="Past Exam Papers" items={pastPapers.slice(0, 4)} icon={FileText} {...rackProps} />
-              <ContentRack title="All Resources" items={allResources.slice(0, 4)} icon={BookOpen} {...rackProps} />
+              <ContentRack title="All Resources" items={allResources.filter((r) => !isClip(r)).slice(0, 4)} icon={BookOpen} {...rackProps} />
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")} />
             </TabsContent>
 

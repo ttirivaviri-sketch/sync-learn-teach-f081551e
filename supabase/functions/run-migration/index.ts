@@ -1056,9 +1056,16 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // Auth check
+  // Auth check — hard-fail when no secret is configured so an empty
+  // x-migration-token header can never match an empty MIGRATION_TOKEN.
+  if (!MIGRATION_TOKEN) {
+    return new Response(JSON.stringify({ error: "Migration secret not configured" }), {
+      status: 503,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
   const token = req.headers.get("x-migration-token");
-  if (token !== MIGRATION_TOKEN) {
+  if (!token || token !== MIGRATION_TOKEN) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { ...corsHeaders, "Content-Type": "application/json" },

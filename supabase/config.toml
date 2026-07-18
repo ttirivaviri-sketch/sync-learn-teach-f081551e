@@ -103,3 +103,92 @@ verify_jwt = false
 verify_jwt = false
 
 
+# ── Explicit registration for every remaining function ──────────────────
+# Default posture: verify_jwt = true (platform rejects requests without a
+# valid JWT). Functions running from pg_cron or service-to-service without
+# a user JWT are explicitly false and validate secrets in-code.
+
+[functions.analyze-prerequisites]
+verify_jwt = true
+
+[functions.bulk-seed-curriculum]
+verify_jwt = true
+
+[functions.evaluate-topic-answer]
+verify_jwt = true
+
+[functions.export-lesson-data]
+verify_jwt = true
+
+[functions.generate-concept-review]
+verify_jwt = true
+
+[functions.generate-daily-task]
+verify_jwt = true
+
+[functions.generate-lesson-reinforcement]
+verify_jwt = true
+
+[functions.generate-mock-paper]
+verify_jwt = true
+
+[functions.generate-prerequisite-quiz]
+verify_jwt = true
+
+[functions.generate-prerequisite-theory]
+verify_jwt = true
+
+[functions.generate-progress-plan]
+verify_jwt = true
+
+[functions.generate-student-insights]
+verify_jwt = true
+
+[functions.generate-topic-session]
+verify_jwt = true
+
+[functions.generate-tutor-booking-insights]
+verify_jwt = true
+
+[functions.grade-answer]
+verify_jwt = true
+
+[functions.ingest-document-concepts]
+verify_jwt = true
+
+[functions.learning-next-action]
+verify_jwt = true
+
+[functions.learning-plan-rebalance]
+verify_jwt = true
+
+[functions.map-question-concepts]
+verify_jwt = true
+
+[functions.payfast-add-payment-method]
+verify_jwt = true
+
+[functions.personalise-curriculum-deep-dive]
+verify_jwt = true
+
+[functions.process-lesson-recording]
+verify_jwt = true
+
+[functions.process-tutor-payout]
+verify_jwt = true
+
+[functions.process-video-upload]
+verify_jwt = true
+
+# Invoked by pg_cron daily with CRON_SECRET bearer (validated in-code).
+[functions.purge-expired-lesson-data]
+verify_jwt = false
+
+[functions.seed-curriculum-topics]
+verify_jwt = true
+
+[functions.send-progress-report]
+verify_jwt = true
+
+[functions.transcribe-lesson-chunk]
+verify_jwt = true

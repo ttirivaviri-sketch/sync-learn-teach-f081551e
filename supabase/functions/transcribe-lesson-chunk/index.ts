@@ -22,6 +22,14 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
 
+    // Every chunk is a paid AI transcription call — require a signed-in user.
+    const authedUserId = getUserIdFromRequest(req);
+    if (!authedUserId) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { audio_base64, mime_type, speaker_hint, display_name } = await req.json();
     if (!audio_base64 || typeof audio_base64 !== "string") {
       return new Response(JSON.stringify({ error: "audio_base64 required" }), {
