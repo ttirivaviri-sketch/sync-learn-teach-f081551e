@@ -48,6 +48,7 @@ import {
   jsonResponse,
   enforceQuota,
   quotaExceededResponse,
+  reportTokenUsage,
 } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
@@ -205,7 +206,19 @@ serve(async (req) => {
       );
     }
 
+    const recordUsage = (d: any) => {
+      if (d?.usage) {
+        reportTokenUsage({
+          userId: quota.userId,
+          bucket: "misc",
+          tokensIn: Number(d.usage.prompt_tokens ?? 0),
+          tokensOut: Number(d.usage.completion_tokens ?? 0),
+        });
+      }
+    };
+
     let data = await response.json();
+    recordUsage(data);
     let raw = data?.choices?.[0]?.message?.content ?? "";
     let parsed = safeJsonParse<any>(raw);
 
@@ -220,6 +233,7 @@ serve(async (req) => {
       );
       if (response.ok) {
         data = await response.json();
+        recordUsage(data);
         raw = data?.choices?.[0]?.message?.content ?? "";
         parsed = safeJsonParse<any>(raw);
       }

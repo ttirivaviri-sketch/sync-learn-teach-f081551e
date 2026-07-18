@@ -755,6 +755,10 @@ export async function callAIStream(
   userPrompt: string,
   options: {
     temperature?: number;
+    maxTokens?: number;
+    /** Multi-turn conversation history. When provided, replaces the single
+     *  userPrompt as the non-system portion of the messages array. */
+    messages?: Array<{ role: string; content: string }>;
     /** When provided, real prompt/completion tokens are captured from the
      *  final SSE usage chunk (stream_options.include_usage) and recorded. */
     usage?: UsageAttribution;
@@ -770,11 +774,12 @@ export async function callAIStream(
       model: ai.model,
       messages: [
         { role: "system", content: enforcedSystemPrompt },
-        { role: "user", content: userPrompt },
+        ...(options.messages ?? [{ role: "user", content: userPrompt }]),
       ],
       stream: true,
     };
     if (options.temperature !== undefined) body.temperature = options.temperature;
+    if (options.maxTokens !== undefined) body.max_tokens = options.maxTokens;
     // Ask OpenAI-compatible providers to append a final usage chunk.
     if (withUsage) body.stream_options = { include_usage: true };
     return JSON.stringify(body);

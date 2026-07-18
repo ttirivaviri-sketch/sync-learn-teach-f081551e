@@ -14,21 +14,30 @@
  * Body: { recording_id: string }
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-const gatewayChat = async (body: Record<string, unknown>) => {
+const gatewayChat = async (body: Record<string, unknown>, attributeTo?: string | null) => {
   const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`AI gateway ${r.status}: ${await r.text()}`);
-  return r.json();
+  const json = await r.json();
+  if (attributeTo && json?.usage) {
+    reportTokenUsage({
+      userId: attributeTo,
+      bucket: "misc",
+      tokensIn: Number(json.usage.prompt_tokens ?? 0),
+      tokensOut: Number(json.usage.completion_tokens ?? 0),
+    });
+  }
+  return json;
 };
 
 const toBase64 = (bytes: Uint8Array) => {
@@ -98,7 +107,7 @@ Deno.serve(async (req) => {
           ],
         },
       ],
-    });
+    }, rec.learner_id);
     const fullText: string = transcriptResp.choices?.[0]?.message?.content?.trim() ?? "";
     if (!fullText) throw new Error("Empty transcript");
 
@@ -152,7 +161,7 @@ Deno.serve(async (req) => {
         },
       }],
       tool_choice: { type: "function", function: { name: "lesson_notes" } },
-    });
+    }, rec.learner_id);
 
     const argsStr = notesResp.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!argsStr) throw new Error("No notes returned");
@@ -210,7 +219,7 @@ Deno.serve(async (req) => {
           },
         }],
         tool_choice: { type: "function", function: { name: "review_concepts" } },
-      });
+      }, rec.learner_id);
       const reviewArgs = reviewResp.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
       if (reviewArgs) reviewed = JSON.parse(reviewArgs).items ?? [];
     } catch (e) {

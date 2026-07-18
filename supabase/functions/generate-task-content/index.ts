@@ -22,6 +22,9 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   errorResponse,
+  callAIStream,
+  enforceQuota,
+  quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
@@ -251,6 +254,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
+    const quota = await enforceQuota(req, "topic_session");
+    if (!quota.allowed) {
+      return quotaExceededResponse("topic_session", quota.used, quota.limit);
+    }
+
     const ai = getAIConfig();
     const body = await req.json();
 
@@ -311,34 +319,10 @@ serve(async (req) => {
       userPrompt += `\n\nPREVIOUSLY STUDIED SUBTOPICS (do NOT repeat these — pick a different one):\n- ${previouslyStudiedSubtopics.join('\n- ')}`;
     }
 
-    // ── Make streaming request to AI API ──────────────────────────────────
-    const aiResponse = await fetch(ai.url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ai.key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: ai.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        stream: true,
-      }),
+    // ── Streaming AI request via shared helper (quota + real token usage) ──
+    const aiResponse = await callAIStream(ai, systemPrompt, userPrompt, {
+      usage: { userId: quota.userId, bucket: "topic_session" },
     });
-
-    if (!aiResponse.ok) {
-      if (aiResponse.status === 429) {
-        return errorResponse("RATE_LIMIT", 429);
-      }
-      if (aiResponse.status === 402) {
-        return errorResponse("CREDITS_EXHAUSTED", 402);
-      }
-      const errText = await aiResponse.text();
-      console.error("AI stream error:", aiResponse.status, errText);
-      return errorResponse(`AI API error: ${aiResponse.status}`);
-    }
 
     // Pass through the AI streaming response directly
     // The AI API returns SSE format: data: {"choices":[{"delta":{"content":"..."}}]}

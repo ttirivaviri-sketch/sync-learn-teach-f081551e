@@ -4,7 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders, errorResponse, jsonResponse } from "../_shared/ai-config.ts";
+import { corsHeaders, errorResponse, jsonResponse, reportTokenUsage } from "../_shared/ai-config.ts";
 import { enforceSchoolContract, logContractDenial } from "../_shared/school-contract.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -13,7 +13,7 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const LOVABLE_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 const EMBED_MODEL = "openai/text-embedding-3-small";
 
-async function embedOne(text: string): Promise<number[]> {
+async function embedOne(text: string, attributeTo?: string | null): Promise<number[]> {
   const r = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
@@ -21,6 +21,14 @@ async function embedOne(text: string): Promise<number[]> {
   });
   if (!r.ok) throw new Error(`Embed failed ${r.status}`);
   const j = await r.json();
+  if (attributeTo && j?.usage) {
+    reportTokenUsage({
+      userId: attributeTo,
+      bucket: "misc",
+      tokensIn: Number(j.usage.prompt_tokens ?? j.usage.total_tokens ?? 0),
+      tokensOut: 0,
+    });
+  }
   return j.data[0].embedding;
 }
 
@@ -61,7 +69,7 @@ serve(async (req) => {
     });
     if ("response" in gate) return gate.response;
 
-    const embedding = await embedOne(query);
+    const embedding = await embedOne(query, userId);
     const { data, error } = await svc.rpc("match_school_chunks", {
       _school_id: school_id,
       _query_embedding: embedding as unknown as string,

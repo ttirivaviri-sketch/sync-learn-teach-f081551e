@@ -4,7 +4,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders, errorResponse, jsonResponse } from "../_shared/ai-config.ts";
+import { corsHeaders, errorResponse, jsonResponse, reportTokenUsage } from "../_shared/ai-config.ts";
 import { enforceSchoolContract, logContractDenial } from "../_shared/school-contract.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -29,7 +29,7 @@ function chunk(text: string): string[] {
   return out;
 }
 
-async function embedBatch(inputs: string[]): Promise<number[][]> {
+async function embedBatch(inputs: string[], attributeTo?: string | null): Promise<number[][]> {
   const r = await fetch("https://ai.gateway.lovable.dev/v1/embeddings", {
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_KEY}`, "Content-Type": "application/json" },
@@ -37,6 +37,14 @@ async function embedBatch(inputs: string[]): Promise<number[][]> {
   });
   if (!r.ok) throw new Error(`Embed failed ${r.status}: ${await r.text()}`);
   const j = await r.json();
+  if (attributeTo && j?.usage) {
+    reportTokenUsage({
+      userId: attributeTo,
+      bucket: "misc",
+      tokensIn: Number(j.usage.prompt_tokens ?? j.usage.total_tokens ?? 0),
+      tokensOut: 0,
+    });
+  }
   return j.data.map((d: { embedding: number[] }) => d.embedding);
 }
 
@@ -105,7 +113,7 @@ serve(async (req) => {
       const slice = pieces.slice(b, b + BATCH);
       let vectors: number[][];
       try {
-        vectors = await embedBatch(slice);
+        vectors = await embedBatch(slice, userId);
       } catch (e) {
         await svc.from("school_ai_documents")
           .update({ status: "failed", error: (e as Error).message })

@@ -17,6 +17,7 @@
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
+import { reportTokenUsage } from "../_shared/ai-config.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -224,6 +225,14 @@ serve(async (req) => {
 
         if (aiRes.ok) {
           const aiData = await aiRes.json();
+          if (aiData?.usage) {
+            reportTokenUsage({
+              userId: callerId,
+              bucket: "insights",
+              tokensIn: Number(aiData.usage.prompt_tokens ?? 0),
+              tokensOut: Number(aiData.usage.completion_tokens ?? 0),
+            });
+          }
           const content = aiData.choices?.[0]?.message?.content || "";
           insights.recommendations = content
             .split("\n")

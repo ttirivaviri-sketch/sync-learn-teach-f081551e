@@ -1,4 +1,5 @@
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
+import { enforceQuota, quotaExceededResponse, reportTokenUsage } from "../_shared/ai-config.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -10,6 +11,11 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
+    const quota = await enforceQuota(req, "concept_review");
+    if (!quota.allowed) {
+      return quotaExceededResponse("concept_review", quota.used, quota.limit);
+    }
+
     const { question, concept_map, depth } = await req.json();
     if (!question || !concept_map) {
       return new Response(JSON.stringify({ error: 'question and concept_map required' }), {
@@ -88,6 +94,17 @@ Deno.serve(async (req) => {
     }
 
     const data = await resp.json();
+
+    // Record real token usage (fire-and-forget).
+    if (data?.usage) {
+      reportTokenUsage({
+        userId: quota.userId,
+        bucket: "concept_review",
+        tokensIn: Number(data.usage.prompt_tokens ?? 0),
+        tokensOut: Number(data.usage.completion_tokens ?? 0),
+      });
+    }
+
     const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     if (!args) {
       console.error('No tool_calls in response:', JSON.stringify(data));
