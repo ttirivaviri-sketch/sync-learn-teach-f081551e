@@ -1,18 +1,24 @@
-// @ts-nocheck
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
-import React from 'react';
 
 /**
- * Initialize Sentry for React frontend
- * Captures React errors, performance monitoring, and user interactions
+ * Sentry init for the React frontend (SDK v8 APIs).
+ *
+ * - No-op when VITE_SENTRY_DSN is unset (dev/sandbox/CI builds stay clean).
+ * - 10% trace sampling in production, 100% in development.
+ * - Session replay only on errors in production to control quota.
+ *
+ * Called once from main.tsx before the app renders.
  */
 export function initSentryFrontend() {
-  const dsn = import.meta.env.VITE_SENTRY_DSN;
+  const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
   const environment = import.meta.env.MODE || 'development';
 
-  if (!dsn && environment === 'production') {
-    console.warn('VITE_SENTRY_DSN not set in production - error tracking disabled');
+  if (!dsn) {
+    if (environment === 'production') {
+      // eslint-disable-next-line no-console
+      console.warn('VITE_SENTRY_DSN not set in production — error tracking disabled');
+    }
+    return;
   }
 
   Sentry.init({
@@ -20,69 +26,45 @@ export function initSentryFrontend() {
     environment,
     tracesSampleRate: environment === 'production' ? 0.1 : 1.0,
     integrations: [
-      new BrowserTracing({
-        // Set sampling rate for transactions
-        tracingOrigins: ['localhost', /^\//],
-        routingInstrumentation: Sentry.reactRouterV6Instrumentation(
-          window.history
-        ),
-      }),
-      new Sentry.Replay({
+      Sentry.browserTracingIntegration(),
+      Sentry.replayIntegration({
         maskAllText: true,
         blockAllMedia: true,
       }),
     ],
-    // Capture replays for 10% of transactions in production
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0, // Always capture replays for errors
+    replaysSessionSampleRate: 0,
+    replaysOnErrorSampleRate: 1.0,
   });
 }
 
-/**
- * Set user context for frontend error tracking
- */
+/** Set user context after sign-in so errors are attributable. */
 export function setSentryFrontendUserContext(
   userId: string,
   email?: string,
-  extra?: any
+  extra?: Record<string, unknown>,
 ) {
-  Sentry.setUser({
-    id: userId,
-    email,
-    ...extra,
-  });
+  Sentry.setUser({ id: userId, email, ...extra });
 }
 
-/**
- * Clear user context on logout
- */
+/** Clear user context on sign-out. */
 export function clearSentryFrontendUserContext() {
   Sentry.setUser(null);
 }
 
-/**
- * Add breadcrumb for tracing user interactions
- */
+/** Add breadcrumb for tracing user interactions. */
 export function addSentryFrontendBreadcrumb(
   message: string,
   category: string,
   level: Sentry.SeverityLevel = 'info',
-  data?: Record<string, any>
+  data?: Record<string, unknown>,
 ) {
-  Sentry.addBreadcrumb({
-    message,
-    category,
-    level,
-    data,
-  });
+  Sentry.addBreadcrumb({ message, category, level, data });
 }
 
-/**
- * Capture exception with context
- */
+/** Capture exception with optional structured context. */
 export function captureSentryFrontendException(
   error: Error,
-  context?: Record<string, any>
+  context?: Record<string, Record<string, unknown>>,
 ) {
   if (context) {
     Sentry.withScope((scope) => {
@@ -95,41 +77,5 @@ export function captureSentryFrontendException(
     Sentry.captureException(error);
   }
 }
-
-/**
- * React Error Boundary for catching component errors
- */
-export const SentryErrorBoundary = Sentry.withErrorBoundary(
-  ({ children }: { children: React.ReactNode }) => {
-    return <>{children}</>;
-  },
-  {
-    fallback: (
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          height: '100vh',
-          flexDirection: 'column',
-          fontFamily: 'sans-serif',
-        }}
-      >
-        <h1>Something went wrong</h1>
-        <p>Our team has been notified. Please try refreshing the page.</p>
-      </div>
-    ),
-    showDialog: true,
-    dialogOptions: {
-      title: 'Error',
-      subtitle: 'Something unexpected happened',
-      subtitle2: 'Our team has been notified',
-      labelComments: 'What happened?',
-      labelClose: 'Close',
-      labelSubmit: 'Submit',
-      onSubmit: () => {},
-    },
-  }
-);
 
 export default Sentry;

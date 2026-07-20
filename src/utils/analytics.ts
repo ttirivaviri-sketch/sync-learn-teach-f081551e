@@ -1,5 +1,6 @@
 // Analytics utility for tracking user interactions
 import { logger } from "@/utils/logger";
+import { captureSentryFrontendException, addSentryFrontendBreadcrumb } from "@/lib/sentryFrontend";
 
 export const analytics = {
   // Track page views
@@ -14,7 +15,11 @@ export const analytics = {
   track: (event: string, properties?: Record<string, any>) => {
     if (typeof window !== 'undefined') {
       logger.info('Analytics: Event', event, properties);
-      // In production, send to analytics service
+      // Breadcrumbs make Sentry error reports show what the user was doing.
+      // No-ops when Sentry isn't initialized (no DSN).
+      try {
+        addSentryFrontendBreadcrumb(event, 'user-action', 'info', properties);
+      } catch { /* never let telemetry break the app */ }
     }
   },
 
@@ -22,7 +27,13 @@ export const analytics = {
   error: (error: Error, context?: string) => {
     if (typeof window !== 'undefined') {
       logger.error('Analytics: Error', error, context);
-      // In production, send to error tracking service like Sentry
+      // Forward to Sentry (no-op when DSN unset).
+      try {
+        captureSentryFrontendException(
+          error instanceof Error ? error : new Error(String(error)),
+          context ? { analytics: { context } } : undefined,
+        );
+      } catch { /* never let telemetry break the app */ }
     }
   },
 
