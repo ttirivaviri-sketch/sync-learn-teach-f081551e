@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export interface GeolocationCoords {
@@ -11,7 +11,19 @@ export interface LocationError {
   message: string;
 }
 
-export const useGeolocation = () => {
+interface UseGeolocationOptions {
+  /**
+   * Auto-request the device location on mount (silent). Defaults to true.
+   * Pass false to defer the (potentially permission-prompting, battery-using)
+   * lookup until the consumer actually needs it — callers can still trigger
+   * it manually via getCurrentLocation(). Flipping false→true triggers the
+   * silent auto-request at that point.
+   */
+  auto?: boolean;
+}
+
+export const useGeolocation = (options?: UseGeolocationOptions) => {
+  const auto = options?.auto ?? true;
   const [location, setLocation] = useState<GeolocationCoords | null>(null);
   const [error, setError] = useState<LocationError | null>(null);
   const [loading, setLoading] = useState(false);
@@ -114,11 +126,15 @@ export const useGeolocation = () => {
     return `${distance.toFixed(1)}km`;
   }, [location, calculateDistance]);
 
-  // Auto-request location on hook initialization (silent — no toast)
+  // Auto-request location on hook initialization (silent — no toast).
+  // Runs at most once, and only after `auto` becomes true.
+  const autoRequestedRef = useRef(false);
   useEffect(() => {
+    if (!auto || autoRequestedRef.current) return;
+    autoRequestedRef.current = true;
     getCurrentLocation({ silent: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [auto]);
 
   return {
     location,

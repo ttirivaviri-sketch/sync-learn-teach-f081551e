@@ -12,11 +12,25 @@ interface PresenceState {
   last_seen: string;
 }
 
-export const usePresenceTracking = (session: Session | null) => {
+interface UsePresenceTrackingOptions {
+  /**
+   * When false, skips joining the presence channel + heartbeat entirely
+   * (and tears down an active channel when toggled off). Lets shells gate
+   * presence to the tabs that display online indicators. Defaults to true.
+   */
+  enabled?: boolean;
+}
+
+export const usePresenceTracking = (
+  session: Session | null,
+  options?: UsePresenceTrackingOptions,
+) => {
+  const enabled = options?.enabled ?? true;
   const [onlineUsers, setOnlineUsers] = useState<PresenceState[]>([]);
   const channelRef = useRef<RealtimeChannel | null>(null);
 
   useEffect(() => {
+    if (!enabled) return;
     if (!session?.user) return;
 
     let channel: RealtimeChannel | null = null;
@@ -89,7 +103,7 @@ export const usePresenceTracking = (session: Session | null) => {
         channelRef.current = null;
       }
     };
-  }, [session]);
+  }, [session, enabled]);
 
   const updateDatabaseOnlineStatus = async (isOnline: boolean) => {
     if (!session?.user?.id) return;

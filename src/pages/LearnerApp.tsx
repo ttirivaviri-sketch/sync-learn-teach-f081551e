@@ -119,6 +119,17 @@ const LearnerApp = () => {
   // ── Data hooks ──────────────────────────────────────────────────────────
   const userId = session?.user?.id;
 
+  // Home-tab-only data (tutor search, geolocation, presence indicators) is
+  // gated on the active tab so switching to Study/Library/Activity/Profile
+  // tears down the tutor realtime channels + refetch loop + the presence
+  // heartbeat instead of keeping them hot in the background. Previously
+  // loaded tutors stay in state, so returning to Home renders instantly
+  // while a fresh fetch runs.
+  const homeTabActive = activeTab === "home";
+
+  // Bookings stay un-gated on purpose: Home, Activity and Profile all render
+  // them, and realtime booking updates (session confirmed / payment due)
+  // must arrive even while the learner is in Study mode.
   const {
     bookings, loading: bookingsLoading,
     createBooking, updateBookingStatus, getUpcomingSessions,
@@ -129,7 +140,7 @@ const LearnerApp = () => {
   useLearningKernel(userId);
   usePremiumMilestones(userId, "learner");
 
-  const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation();
+  const { location: userGeoLocation, getCurrentLocation, loading: locationLoading } = useGeolocation({ auto: homeTabActive });
   const debouncedSearchQuery = useDebouncedValue(searchQuery, 300);
 
   const {
@@ -138,6 +149,7 @@ const LearnerApp = () => {
   } = useAcademicProfile(userId);
 
   const { tutors, allSubjects, loading: tutorsLoading, refreshTutors } = useTutorData(userGeoLocation, {
+    enabled: homeTabActive,
     subjectFilter: selectedSubject,
     searchQuery: debouncedSearchQuery,
     studyLevel: profile?.study_level || undefined,
@@ -145,6 +157,10 @@ const LearnerApp = () => {
     grade: academicProfile?.grade || undefined,
     curriculum: academicProfile?.curriculum || undefined,
   });
+  // Presence is intentionally NOT gated on the tab: toggling it off/on would
+  // flip-flop online_status writes in the DB on every tab switch and make the
+  // learner look offline to tutors mid-session. The channel join is already
+  // deferred to browser idle inside the hook, so its mount cost is minimal.
   const { isUserOnline } = usePresenceTracking(session);
 
   const confirmedBookingIds = useMemo(

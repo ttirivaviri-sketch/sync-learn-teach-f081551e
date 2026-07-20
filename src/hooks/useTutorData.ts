@@ -53,6 +53,13 @@ interface UseTutorDataOptions {
   grade?: string;
   /** Learner's curriculum (ZIMSEC, CAPS, IEB, Cambridge) */
   curriculum?: string;
+  /**
+   * When false, skips fetching and realtime subscriptions entirely (and tears
+   * down existing channels). Lets shell components gate this hook to the tab
+   * that actually renders tutor data instead of paying for it on every mount.
+   * Defaults to true so existing callers are unaffected.
+   */
+  enabled?: boolean;
 }
 
 export const useTutorData = (
@@ -65,6 +72,7 @@ export const useTutorData = (
   const { toast } = useToast();
 
   const maxActive = options?.maxActiveBookings ?? 10;
+  const enabled = options?.enabled ?? true;
 
   // Tracks the in-flight fetch so we can abort it if a new one starts or the
   // component unmounts. Avoids stale `setTutors` calls and racey overlapping fetches.
@@ -331,6 +339,17 @@ export const useTutorData = (
 
   useEffect(() => {
     mountedRef.current = true;
+
+    // Gated off (e.g. Home tab not active): skip the fetch and the three
+    // realtime subscriptions entirely. Previously-loaded tutors stay in state
+    // so returning to the tab shows data instantly while a refresh runs.
+    if (!enabled) {
+      return () => {
+        mountedRef.current = false;
+        if (abortRef.current) abortRef.current.abort();
+      };
+    }
+
     fetchTutors();
 
     const channel = supabase
@@ -353,7 +372,7 @@ export const useTutorData = (
       supabase.removeChannel(channel);
     };
     // fetchTutors and debouncedFetch are stable wrt the right deps via useCallback.
-  }, [fetchTutors, debouncedFetch]);
+  }, [enabled, fetchTutors, debouncedFetch]);
 
   return {
     tutors,
