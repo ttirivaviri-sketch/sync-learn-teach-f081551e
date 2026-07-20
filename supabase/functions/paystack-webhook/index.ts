@@ -37,6 +37,28 @@ Deno.serve(async (req) => {
       const mode = meta.mode || "charge";
       const auth = data.authorization;
 
+      // ── Idempotency guard ────────────────────────────────────────────
+      // Paystack redelivers webhooks. If this reference is already marked
+      // succeeded, the event was fully processed — skip everything. Without
+      // this, a replay would re-confirm a booking the learner has since
+      // canceled, and re-run the card-save default juggling.
+      let payment: { id: string; booking_id: string | null; status: string } | null = null;
+      if (data.reference) {
+        const { data: existingPayment } = await service
+          .from("payments")
+          .select("id, booking_id, status")
+          .eq("provider_ref", data.reference)
+          .maybeSingle();
+        payment = existingPayment;
+
+        if (payment?.status === "succeeded") {
+          console.log("Duplicate charge.success for", data.reference, "— already processed, skipping");
+          return new Response(JSON.stringify({ received: true, duplicate: true }), {
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+      }
+
       // Save card if reusable & we don't already have it
       if (userId && auth?.reusable && auth?.authorization_code) {
         const { data: existing } = await service
@@ -69,35 +91,33 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Update payment + booking
-      if (data.reference) {
-        const { data: payment } = await service
+      // Update payment + booking (payment already fetched by the guard above)
+      if (payment) {
+        await service
           .from("payments")
-          .select("id, booking_id")
-          .eq("provider_ref", data.reference)
-          .maybeSingle();
+          .update({ status: "succeeded" })
+          .eq("id", payment.id);
 
-        if (payment) {
+        if (mode === "charge" && (bookingId || payment.booking_id)) {
+          // Only lift a booking out of the payment-pending states. Never
+          // resurrect a canceled/completed booking from a late webhook.
           await service
-            .from("payments")
-            .update({ status: "succeeded" })
-            .eq("id", payment.id);
-
-          if (mode === "charge" && (bookingId || payment.booking_id)) {
-            await service
-              .from("bookings")
-              .update({ status: "confirmed" })
-              .eq("id", bookingId || payment.booking_id);
-          }
+            .from("bookings")
+            .update({ status: "confirmed" })
+            .eq("id", bookingId || payment.booking_id)
+            .in("status", ["requested", "confirmed"]);
         }
       }
     }
 
     if (event.event === "charge.failed" && event.data?.reference) {
+      // Out-of-order delivery: never downgrade a payment that has already
+      // succeeded (or been refunded) because a stale failure event arrived late.
       await service
         .from("payments")
         .update({ status: "failed" })
-        .eq("provider_ref", event.data.reference);
+        .eq("provider_ref", event.data.reference)
+        .not("status", "in", '("succeeded","refunded")');
     }
 
     return new Response(JSON.stringify({ received: true }), {

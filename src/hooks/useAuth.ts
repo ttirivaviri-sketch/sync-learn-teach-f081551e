@@ -10,6 +10,7 @@ import { useNavigate } from 'react-router-dom';
 import { Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { setSentryFrontendUserContext, clearSentryFrontendUserContext } from '@/lib/sentryFrontend';
 
 interface UseAuthOptions {
   /** If set, redirect to this path when there is no active session. */
@@ -82,9 +83,14 @@ export const useAuth = (options: UseAuthOptions = {}) => {
 
         if (!newSession?.user) {
           stopWatching();
+          // No-op when Sentry isn't initialized.
+          try { clearSentryFrontendUserContext(); } catch { /* telemetry must not break auth */ }
           if (options.redirectTo) navigate(options.redirectTo);
           return;
         }
+
+        // Attribute subsequent error reports to this user (no-op without DSN).
+        try { setSentryFrontendUserContext(newSession.user.id, newSession.user.email); } catch { /* ignore */ }
 
         // Defer to next tick to avoid recursive supabase calls inside the listener
         setTimeout(async () => {

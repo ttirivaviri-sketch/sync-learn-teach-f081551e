@@ -24,3 +24,10 @@ dist-ssr
 *.sw?
 .env
 core
+
+# Core dumps & scratch artifacts
+core.*
+*.core
+.build.log
+.spec_extract.txt
+.spec_pages/
