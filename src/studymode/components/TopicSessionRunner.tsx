@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { BookOpen, Sparkles, X, ArrowRight, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { useTopicSessionRunner } from '../hooks/useTopicSessionRunner';
+import { useIntegrityMonitor } from '../hooks/useIntegrityMonitor';
+import { FocusTrackingIndicator } from './FocusBadge';
+import type { IntegritySummary } from '../lib/integrity';
 import { TopicSessionSummary } from './TopicSessionSummary';
 import { MathMarkdown } from './MathMarkdown';
 import { cn } from '@/lib/utils';
@@ -27,6 +30,29 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
   const [reviewDepth, setReviewDepth] = useState<'quick' | 'full'>('quick');
   const [showSummary, setShowSummary] = useState(false);
   const [bootstrapped, setBootstrapped] = useState(false);
+  const [focusSummary, setFocusSummary] = useState<IntegritySummary | null>(null);
+  const integrityPersistedRef = useRef(false);
+
+  // Focus/independence signal capture — active while a question awaits an answer.
+  const integrity = useIntegrityMonitor({
+    active: open && !runner.isFinished && !!runner.currentQuestion && !runner.lastResult,
+    questionIndex: runner.currentIndex + 1,
+  });
+
+  // Persist the integrity report exactly once per session (best-effort) and
+  // capture the summary so the student can see their own focus score.
+  const persistIntegrityOnce = useCallback(() => {
+    if (integrityPersistedRef.current || runner.questionsAttempted === 0) return;
+    integrityPersistedRef.current = true;
+    integrity.persist({
+      sessionKind: 'topic_session',
+      sessionRef: runner.sessionId,
+      subjectName: runner.subject,
+      topicName: runner.topic,
+      questionsTotal: runner.questionsAttempted,
+    }).then(setFocusSummary).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runner.questionsAttempted, runner.sessionId, runner.subject, runner.topic]);
 
   useEffect(() => {
     if (open && start && !bootstrapped) {
@@ -44,6 +70,9 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
       setAnswer('');
       setShowSummary(false);
       setReviewOpen(false);
+      setFocusSummary(null);
+      integrityPersistedRef.current = false;
+      integrity.reset();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, start]);
@@ -59,20 +88,25 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
     }
   }, [runner.lastResult]);
 
-  // When all questions done → summary
+  // When all questions done → summary (persist integrity first so the
+  // summary dialog can show the focus score)
   useEffect(() => {
     if (runner.isFinished && !showSummary && runner.questions.length > 0) {
+      persistIntegrityOnce();
       setShowSummary(true);
     }
-  }, [runner.isFinished, showSummary, runner.questions.length]);
+  }, [runner.isFinished, showSummary, runner.questions.length, persistIntegrityOnce]);
 
   const handleEnd = async () => {
+    // Persist integrity report alongside the session (best-effort, once).
+    persistIntegrityOnce();
     await runner.endSession();
     onOpenChange(false);
   };
 
   const handleSubmit = async () => {
     if (!answer.trim()) return;
+    integrity.resolveAnswer(answer);
     await runner.submitAnswer(answer);
   };
 
@@ -99,6 +133,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
               <h2 className="text-sm font-semibold truncate">{runner.topic}</h2>
             </div>
             <div className="flex items-center gap-2">
+              <FocusTrackingIndicator className="hidden sm:inline-flex" />
               <Badge className="bg-accent/15 text-accent-foreground border-accent/30">
                 +{runner.sessionXP} XP
               </Badge>
@@ -134,7 +169,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                   )}
 
                   {/* Question */}
-                  <Card className="border-primary/20">
+                  <Card className="border-primary/20" onCopy={integrity.onQuestionCopy}>
                     <CardContent className="p-4">
                       <MathMarkdown>{q.question}</MathMarkdown>
                     </CardContent>
@@ -168,6 +203,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
                       <Textarea
                         value={answer}
                         onChange={e => setAnswer(e.target.value)}
+                        onPaste={integrity.onAnswerPaste}
                         placeholder="Type your answer…"
                         rows={5}
                         className="resize-none"
@@ -361,6 +397,7 @@ export function TopicSessionRunner({ open, onOpenChange, start }: Props) {
           sessionXP={runner.sessionXP}
           attempted={runner.questionsAttempted}
           correct={runner.questionsCorrect}
+          focusSummary={focusSummary}
           onClose={handleEnd}
         />
       )}

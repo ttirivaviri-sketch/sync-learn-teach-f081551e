@@ -29,6 +29,9 @@ import { useRecallEngine } from '../hooks/useRecallEngine';
 import type { Subject, Topic } from '../types/study';
 import type { SemanticEvaluation } from '../engine/recallEngine';
 import { useStudyMemory } from '../hooks/useStudyMemory';
+import { useIntegrityMonitor } from '../hooks/useIntegrityMonitor';
+import { FocusTrackingIndicator, FocusScoreLine } from './FocusBadge';
+import type { IntegritySummary } from '../lib/integrity';
 
 interface ExamModeSessionProps {
   subject: Subject;
@@ -66,6 +69,13 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
   const [flaggedQuestions, setFlaggedQuestions] = useState<Set<number>>(new Set());
   const [showOverview, setShowOverview] = useState(false);
   const [markingProgress, setMarkingProgress] = useState(0);
+  const [focusSummary, setFocusSummary] = useState<IntegritySummary | null>(null);
+
+  // Focus/independence signal capture — active for the whole timed exam phase.
+  const integrity = useIntegrityMonitor({
+    active: phase === 'exam',
+    questionIndex: engine.currentIndex + 1,
+  });
 
   // Track per-question time
   useEffect(() => {
@@ -122,6 +132,19 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
     setIsSubmitting(true);
 
     const total = engine.questions.length;
+
+    // Resolve any buffered pastes against each final answer, then persist
+    // the integrity report (best-effort — never blocks marking).
+    for (let i = 0; i < total; i++) {
+      const a = answers.get(i);
+      if (a?.trim()) integrity.resolveAnswer(a, i + 1);
+    }
+    integrity.persist({
+      sessionKind: 'exam_mode',
+      subjectName: subject.name,
+      topicName: topic?.name ?? subject.currentTopic?.name,
+      questionsTotal: total,
+    }).then(setFocusSummary).catch(() => {});
 
     for (let i = 0; i < total; i++) {
       const answer = answers.get(i) || '';
@@ -305,6 +328,9 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
                 <p className="text-xs text-muted-foreground">Time Used</p>
               </div>
             </div>
+            {focusSummary && focusSummary.questionsTotal > 0 && (
+              <FocusScoreLine summary={focusSummary} className="pt-2 border-t border-border" />
+            )}
           </CardContent>
         </Card>
 
@@ -403,6 +429,7 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
           </span>
         </div>
         <div className="flex items-center gap-3">
+          <FocusTrackingIndicator className="hidden sm:inline-flex" />
           <span className="text-xs text-muted-foreground">
             {answeredCount}/{engine.questions.length} answered
           </span>
@@ -450,7 +477,7 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
       )}
 
       {/* Question — exam-paper styling */}
-      <Card className="border-destructive/20 bg-card">
+      <Card className="border-destructive/20 bg-card" onCopy={integrity.onQuestionCopy}>
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-4 pb-3 border-b border-border/50">
             <div className="flex items-center gap-2">
@@ -535,6 +562,7 @@ export function ExamModeSession({ subject, topic, onComplete, onBack }: ExamMode
               placeholder="Write your answer here. Show all working..."
               value={currentAnswer}
               onChange={e => handleAnswerChange(e.target.value)}
+              onPaste={integrity.onAnswerPaste}
               className="min-h-[180px] text-sm"
             />
           </div>

@@ -2,6 +2,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Target, Sparkles } from 'lucide-react';
+import { FocusScoreLine } from './FocusBadge';
+import type { IntegritySummary } from '../lib/integrity';
 
 interface Props {
   open: boolean;
@@ -11,10 +13,11 @@ interface Props {
   sessionXP: number;
   attempted: number;
   correct: number;
+  focusSummary?: IntegritySummary | null;
   onClose: () => void;
 }
 
-export function TopicSessionSummary({ open, onOpenChange, subject, topic, sessionXP, attempted, correct, onClose }: Props) {
+export function TopicSessionSummary({ open, onOpenChange, subject, topic, sessionXP, attempted, correct, focusSummary, onClose }: Props) {
   const accuracy = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
 
   return (
@@ -54,6 +57,10 @@ export function TopicSessionSummary({ open, onOpenChange, subject, topic, sessio
               </CardContent>
             </Card>
           </div>
+
+          {focusSummary && focusSummary.questionsTotal > 0 && (
+            <FocusScoreLine summary={focusSummary} className="text-center px-2" />
+          )}
 
           <p className="text-xs text-muted-foreground text-center px-2">
             This session is independent of your StudyMode progression. Your XP has been added to the leaderboards.

@@ -106,8 +106,8 @@ serve(async (req) => {
           .maybeSingle();
         if (existing && existing.status === "completed") continue;
 
-        // Pull activity + booked tutors in parallel.
-        const [{ data: activities }, { data: bookings }, { data: studentProfile }] = await Promise.all([
+        // Pull activity + booked tutors + integrity signals in parallel.
+        const [{ data: activities }, { data: bookings }, { data: studentProfile }, { data: integrityRows }] = await Promise.all([
           supabase.from("study_activity").select("*").eq("user_id", profile.user_id).gte("date", weekStartStr),
           supabase
             .from("bookings")
@@ -115,6 +115,11 @@ serve(async (req) => {
             .eq("learner_id", profile.user_id)
             .in("status", ["confirmed", "completed", "in_progress"]),
           supabase.from("profiles").select("full_name, email").eq("id", profile.user_id).maybeSingle(),
+          supabase
+            .from("session_integrity_reports")
+            .select("is_flagged, focus_score, tab_switches, paste_events")
+            .eq("user_id", profile.user_id)
+            .gte("created_at", weekStart.toISOString()),
         ]);
 
         const studentName = studentProfile?.full_name || "Student";
@@ -164,6 +169,24 @@ serve(async (req) => {
 
         const studyMinutes = (activities || []).reduce((acc: number, a: any) => acc + (Number(a.duration_minutes) || 0), 0);
 
+        // Independence & Focus signals — only surfaced when the weekly
+        // reliability threshold is met (≥2 flagged sessions). One distracted
+        // session never reaches guardians; students always see their own data.
+        const WEEKLY_REPORT_MIN_FLAGGED_SESSIONS = 2;
+        const iRows = integrityRows || [];
+        const flaggedSessions = iRows.filter((r: any) => r.is_flagged).length;
+        const focus = flaggedSessions >= WEEKLY_REPORT_MIN_FLAGGED_SESSIONS
+          ? {
+              sessions_total: iRows.length,
+              sessions_flagged: flaggedSessions,
+              avg_focus_score: iRows.length
+                ? Math.round(iRows.reduce((a: number, r: any) => a + Number(r.focus_score ?? 100), 0) / iRows.length)
+                : 100,
+              tab_switches: iRows.reduce((a: number, r: any) => a + (Number(r.tab_switches) || 0), 0),
+              paste_events: iRows.reduce((a: number, r: any) => a + (Number(r.paste_events) || 0), 0),
+            }
+          : null;
+
         const baseInsights: Omit<InsightsPayload, "audience"> = {
           studentName,
           studentEmail: profile.student_email || studentProfile?.email || null,
@@ -185,6 +208,7 @@ serve(async (req) => {
           recommendations: weak.length
             ? [`Focus on: ${weak.join(", ")}`, "Schedule a short daily session per weak area."]
             : ["Great progress this week — keep momentum with consistent short sessions."],
+          focus,
         };
 
         // Cache summary

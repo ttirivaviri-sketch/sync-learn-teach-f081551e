@@ -44,6 +44,20 @@ export interface InsightsPayload {
   upcomingExams: string[]; // ["Maths (12d)", ...]
   recommendations: string[];
   ctaUrl?: string;
+  /**
+   * Independence & Focus signals (disclosed in-app monitoring during quizzes
+   * / AI question sessions). Only populated when the weekly reporting
+   * threshold is met (≥2 flagged sessions), so occasional distractions never
+   * reach guardians. Framed supportively — these are focus signals, not
+   * proof of misconduct.
+   */
+  focus?: {
+    sessions_total: number;
+    sessions_flagged: number;
+    avg_focus_score: number; // 0-100
+    tab_switches: number;
+    paste_events: number;
+  } | null;
 }
 
 const BRAND = {
@@ -208,6 +222,23 @@ export function buildInsightsHtml(p: InsightsPayload): string {
       <div style="background:${BRAND.primary}0d;border-left:3px solid ${BRAND.primary};padding:12px 14px;border-radius:6px;">
         <div style="font-size:11px;color:${BRAND.primary};font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Upcoming exams</div>
         <div style="margin-top:6px;color:${BRAND.text};font-size:13px;">${esc(p.upcomingExams.join(" · "))}</div>
+      </div>
+    </div>` : ""}
+
+    <!-- Independence & Focus (threshold-gated) -->
+    ${p.focus ? `
+    <div style="padding:18px 28px 0;">
+      <div style="background:${BRAND.amber}12;border:1px solid ${BRAND.amber}40;border-radius:10px;padding:14px;">
+        <div style="font-size:11px;color:#b45309;font-weight:700;letter-spacing:.5px;text-transform:uppercase;">Independence &amp; Focus</div>
+        <p style="margin:8px 0 0;color:${BRAND.text};font-size:13px;line-height:1.6;">
+          During quiz and practice sessions this week, ${esc(p.studentName)} showed signs of distraction or outside help in
+          <strong>${p.focus.sessions_flagged} of ${p.focus.sessions_total} sessions</strong>
+          (average focus score <strong>${p.focus.avg_focus_score}%</strong>${p.focus.tab_switches ? `, ${p.focus.tab_switches} switch${p.focus.tab_switches === 1 ? "" : "es"} away from the app` : ""}${p.focus.paste_events ? `, ${p.focus.paste_events} pasted answer${p.focus.paste_events === 1 ? "" : "s"}` : ""}).
+        </p>
+        <p style="margin:8px 0 0;color:${BRAND.muted};font-size:12px;line-height:1.6;">
+          These are focus signals, not proof of anything — a gentle conversation about working independently in a
+          distraction-free space usually helps. Students can always see their own focus score, so this is a shared, transparent measure.
+        </p>
       </div>
     </div>` : ""}
 

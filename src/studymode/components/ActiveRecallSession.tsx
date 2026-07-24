@@ -11,7 +11,7 @@
  * After all questions: shows session summary with mastery updates and insights.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   ArrowLeft, ArrowRight, Brain, CheckCircle, AlertTriangle,
   Loader2, Target, Trophy, Lightbulb, XCircle, BarChart3,
@@ -30,6 +30,9 @@ import { useRecallEngine } from '../hooks/useRecallEngine';
 import type { Subject, Topic } from '../types/study';
 import type { SemanticEvaluation, MasteryClassification } from '../engine/recallEngine';
 import { useStudyMemory } from '../hooks/useStudyMemory';
+import { useIntegrityMonitor } from '../hooks/useIntegrityMonitor';
+import { FocusTrackingIndicator, FocusScoreLine } from './FocusBadge';
+import type { IntegritySummary } from '../lib/integrity';
 
 interface ActiveRecallSessionProps {
   subject: Subject;
@@ -47,6 +50,14 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
   const [evaluation, setEvaluation] = useState<SemanticEvaluation | null>(null);
   const [showModelAnswer, setShowModelAnswer] = useState(false);
   const [phase, setPhase] = useState<'answering' | 'evaluating' | 'feedback'>('answering');
+  const [focusSummary, setFocusSummary] = useState<IntegritySummary | null>(null);
+  const integrityPersistedRef = useRef(false);
+
+  // Focus/independence signal capture — active while a question awaits an answer.
+  const integrity = useIntegrityMonitor({
+    active: !engine.isComplete && phase === 'answering' && !!engine.currentQuestion,
+    questionIndex: engine.currentIndex + 1,
+  });
 
   // Auto-generate questions on mount
   useEffect(() => {
@@ -68,6 +79,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
     if (!userAnswer.trim() || !engine.currentQuestion) return;
 
     setPhase('evaluating');
+    integrity.resolveAnswer(userAnswer);
     const timeTaken = Math.round((Date.now() - questionStartTime) / 1000);
     const q = engine.currentQuestion as any;
     const result = await engine.evaluateAnswer(engine.currentIndex, userAnswer, timeTaken);
@@ -97,6 +109,21 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
       setPhase('feedback');
     }
   }, [userAnswer, engine.currentQuestion, engine.currentIndex, engine.evaluateAnswer, questionStartTime, subject, topic, logEvent]);
+
+  // Persist the integrity report once when the session completes (best-effort).
+  useEffect(() => {
+    if (!engine.isComplete || integrityPersistedRef.current) return;
+    const answered = engine.sessionStats?.questionsAnswered ?? engine.questions.length;
+    if (answered === 0) return;
+    integrityPersistedRef.current = true;
+    integrity.persist({
+      sessionKind: 'active_recall',
+      subjectName: subject.name,
+      topicName: topic?.name ?? subject.currentTopic?.name,
+      questionsTotal: answered,
+    }).then(setFocusSummary).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [engine.isComplete]);
 
   const handleNextQuestion = useCallback(() => {
     engine.goToNextQuestion();
@@ -201,6 +228,9 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
                   <p className="text-xs text-muted-foreground">Duration</p>
                 </div>
               </div>
+              {focusSummary && focusSummary.questionsTotal > 0 && (
+                <FocusScoreLine summary={focusSummary} className="mt-4 pt-3 border-t border-border text-center" />
+              )}
             </CardContent>
           </Card>
         )}
@@ -339,8 +369,11 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
                 <Brain className="h-5 w-5 text-accent-foreground shrink-0" />
                 Active Recall
               </h3>
-              <span className="text-sm font-medium text-muted-foreground shrink-0">
-                {engine.progress.current}/{engine.progress.total}
+              <span className="flex items-center gap-2 shrink-0">
+                <FocusTrackingIndicator className="hidden sm:inline-flex" />
+                <span className="text-sm font-medium text-muted-foreground">
+                  {engine.progress.current}/{engine.progress.total}
+                </span>
               </span>
             </div>
             <p className="text-xs text-muted-foreground truncate">
@@ -376,7 +409,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
       </div>
 
       {/* Question Card */}
-      <Card className="border-accent/20">
+      <Card className="border-accent/20" onCopy={integrity.onQuestionCopy}>
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-3">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
@@ -439,6 +472,7 @@ export function ActiveRecallSession({ subject, topic, onComplete, onBack }: Acti
             placeholder="Write your complete answer here. Show all working and reasoning steps..."
             value={userAnswer}
             onChange={e => setUserAnswer(e.target.value)}
+            onPaste={integrity.onAnswerPaste}
             className="min-h-[180px] text-sm"
           />
           <div className="flex gap-3">
