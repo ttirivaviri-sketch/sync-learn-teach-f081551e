@@ -26,6 +26,10 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
+// Verified sender address. Set the RESEND_FROM secret once your domain is
+// verified in Resend (e.g. "reports@studysync.co.za"). Falls back to
+// Resend's sandbox sender, which only delivers to the Resend account owner.
+const RESEND_FROM = Deno.env.get("RESEND_FROM") || "onboarding@resend.dev";
 
 function calcRisk(daysToExam: number | null, avg: number, completion: number): SubjectInsight["risk_level"] {
   if (daysToExam === null) return "needs_attention";
@@ -51,7 +55,7 @@ async function sendOne(opts: {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${RESEND_API_KEY}` },
       body: JSON.stringify({
-        from: `${opts.fromName} <onboarding@resend.dev>`,
+        from: `${opts.fromName} <${RESEND_FROM}>`,
         to: [opts.to],
         reply_to: opts.replyTo,
         subject: opts.subject,

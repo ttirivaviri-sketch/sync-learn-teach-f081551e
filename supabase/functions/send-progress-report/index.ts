@@ -26,6 +26,10 @@ const corsHeaders = {
 };
 
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
+// Verified sender address. Set the RESEND_FROM secret once your domain is
+// verified in Resend (e.g. "reports@studysync.co.za"). Falls back to
+// Resend's sandbox sender, which only delivers to the Resend account owner.
+const RESEND_FROM = Deno.env.get("RESEND_FROM") || "onboarding@resend.dev";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
@@ -147,7 +151,7 @@ serve(async (req) => {
 
       try {
         const payload: any = {
-          from: `${studentName} via StudySync <onboarding@resend.dev>`,
+          from: `${studentName} via StudySync <${RESEND_FROM}>`,
           to: [r.email],
           reply_to: studentEmail || undefined,
           subject,
