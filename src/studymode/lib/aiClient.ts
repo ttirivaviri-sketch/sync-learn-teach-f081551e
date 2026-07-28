@@ -68,6 +68,8 @@ const EDGE_FUNCTION_MAP: Record<string, string> = {
   'generate-daily-task':         'generate-daily-task',
   // Multimodal photo-solve step grading
   'photo-solve-grade':           'photo-solve-grade',
+  // Isomorphic practice variants from a graded photo-solve attempt
+  'photo-solve-variants':        'photo-solve-variants',
 };
 
 /**

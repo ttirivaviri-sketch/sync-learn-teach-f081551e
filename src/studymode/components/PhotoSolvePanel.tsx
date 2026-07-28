@@ -7,12 +7,16 @@
  *
  * Awards XP for correct steps and fires haptics on first-correct + on
  * a fully correct submission.
+ *
+ * Each grading is persisted to `photo_solve_attempts` (best-effort) and a
+ * "Practice this correction" CTA generates 5 isomorphic variants of the
+ * photographed question via PhotoSolvePractice.
  */
 
 import { useCallback, useRef, useState } from 'react';
 import {
   Camera, Upload, ArrowLeft, Loader2, CheckCircle2, XCircle,
-  AlertTriangle, Lightbulb, RefreshCcw, Sparkles,
+  AlertTriangle, Lightbulb, RefreshCcw, Sparkles, Target,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Subject, Topic } from '../types/study';
@@ -20,8 +24,10 @@ import { MathMarkdown } from './MathMarkdown';
 import { aiRequestJSON } from '../lib/aiClient';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { studySyncHaptic, studySyncHapticOnce } from '@/lib/haptics';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
+import { PhotoSolvePractice } from './PhotoSolvePractice';
 
 export interface PhotoSolveResult {
   question_detected: string;
@@ -135,6 +141,8 @@ export function PhotoSolvePanel({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PhotoSolveResult | null>(null);
   const [showSolution, setShowSolution] = useState(false);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [practising, setPractising] = useState(false);
 
   const cameraRef = useRef<HTMLInputElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -174,6 +182,39 @@ export function PhotoSolvePanel({
       });
       setResult(data);
       onResult?.(data);
+
+      // Persist the attempt (best-effort) so it can drive follow-up practice
+      // and history. Failures never block the grading UX.
+      try {
+        const { data: userData } = await supabase.auth.getUser();
+        const uid = userData?.user?.id;
+        if (uid) {
+          const { data: row, error: insErr } = await (supabase
+            .from('photo_solve_attempts' as never) as any)
+            .insert({
+              user_id: uid,
+              subject_name: subject?.name ?? null,
+              topic_name: topic?.name ?? null,
+              curriculum: curriculum ?? null,
+              question_detected: data.question_detected || null,
+              final_answer: data.final_answer || null,
+              final_answer_correct: data.final_answer_correct,
+              steps: data.steps,
+              missed_steps: data.missed_steps,
+              next_hint: data.next_hint || null,
+              model_solution: data.model_solution || null,
+              confidence: data.confidence,
+              marks_awarded: data.marks_awarded,
+              marks_possible: data.marks_possible,
+            })
+            .select('id')
+            .single();
+          if (insErr) logger.warn('photo-solve attempt persist failed', insErr);
+          else setAttemptId(row?.id ?? null);
+        }
+      } catch (persistErr) {
+        logger.warn('photo-solve attempt persist failed', persistErr);
+      }
 
       // XP + haptics
       const correctCount = data.steps.filter((s) => s.verdict === 'correct').length;
@@ -219,7 +260,23 @@ export function PhotoSolvePanel({
     setDataUrl(null);
     setError(null);
     setShowSolution(false);
+    setAttemptId(null);
+    setPractising(false);
   };
+
+  // ── Practice mode: 5 isomorphic variants of the graded question ──────────
+  if (practising && result) {
+    return (
+      <PhotoSolvePractice
+        original={result}
+        attemptId={attemptId}
+        subjectName={subject?.name}
+        topicName={topic?.name}
+        curriculum={curriculum}
+        onBack={() => setPractising(false)}
+      />
+    );
+  }
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -459,6 +516,17 @@ export function PhotoSolvePanel({
                 </div>
               )}
             </div>
+          )}
+
+          {/* Practice the correction — 5 isomorphic variants */}
+          {result.question_detected && result.confidence >= 0.3 && (
+            <Button
+              onClick={() => setPractising(true)}
+              className="w-full gradient-primary gap-2"
+            >
+              <Target className="h-4 w-4" />
+              Practice this correction (5 questions)
+            </Button>
           )}
 
           {/* Try again */}
