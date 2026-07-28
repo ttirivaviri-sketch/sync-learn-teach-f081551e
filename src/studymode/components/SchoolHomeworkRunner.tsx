@@ -1,16 +1,32 @@
 /**
  * SchoolHomeworkRunner — student-side homework UI inside StudyMode.
- * Renders questions, collects answers, submits, then shows AI feedback
- * (when released by teacher settings) and provisional grades.
+ * Renders questions (KaTeX math + AI-authored visuals), collects answers,
+ * submits, then shows AI feedback (when released by teacher settings) and
+ * provisional grades.
+ *
+ * Draft answers are persisted to localStorage per homework+student so a
+ * closed dialog doesn't lose typed work before submission.
  */
 import { useState, useMemo, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Lock, GraduationCap } from "lucide-react";
+import { Loader2, CheckCircle2, Lock, GraduationCap, AlertTriangle } from "lucide-react";
 import { useHomeworkDetail, useSubmitHomework } from "@/hooks/useSchoolStudyMode";
 import { useToast } from "@/hooks/use-toast";
+import { MathMarkdown } from "./MathMarkdown";
+import { QuestionVisual, type QuestionVisualSpec } from "./QuestionVisual";
+
+const draftKey = (homeworkId: string, studentId: string) =>
+  `ss-hw-draft:${homeworkId}:${studentId}`;
+
+function loadDraft(homeworkId: string, studentId: string): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(draftKey(homeworkId, studentId));
+    return raw ? JSON.parse(raw) : {};
+  } catch { return {}; }
+}
 
 export function SchoolHomeworkRunner({
   homeworkId,
@@ -24,17 +40,26 @@ export function SchoolHomeworkRunner({
   const { toast } = useToast();
   const { data, isLoading } = useHomeworkDetail(homeworkId, studentId);
   const submit = useSubmitHomework();
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(() => loadDraft(homeworkId, studentId));
 
-  // Seed with existing answers (resume flow).
+  // Seed with existing answers (resume flow) — server answers win over drafts.
   useEffect(() => {
     if (!data?.responses) return;
     const seed: Record<string, string> = {};
     for (const r of data.responses as any[]) {
       if (r.student_answer) seed[r.question_id] = r.student_answer;
     }
-    setAnswers((prev) => ({ ...seed, ...prev }));
+    setAnswers((prev) => ({ ...prev, ...seed }));
   }, [data?.responses]);
+
+  // Persist draft answers so closing the dialog doesn't lose typed work.
+  useEffect(() => {
+    try {
+      if (Object.keys(answers).length > 0) {
+        localStorage.setItem(draftKey(homeworkId, studentId), JSON.stringify(answers));
+      }
+    } catch { /* storage full/unavailable — non-fatal */ }
+  }, [answers, homeworkId, studentId]);
 
   const responseById = useMemo(() => {
     const m = new Map<string, any>();
@@ -42,7 +67,9 @@ export function SchoolHomeworkRunner({
     return m;
   }, [data?.responses]);
 
-  const allAnswered = data?.questions?.every((q: any) => (answers[q.id] ?? "").trim().length > 0);
+  const questions = (data?.questions ?? []) as any[];
+  const answeredCount = questions.filter((q) => (answers[q.id] ?? "").trim().length > 0).length;
+  const allAnswered = questions.length > 0 && answeredCount === questions.length;
 
   if (isLoading || !data?.homework) {
     return <div className="p-6 flex items-center justify-center"><Loader2 className="h-5 w-5 animate-spin" /></div>;
@@ -50,20 +77,27 @@ export function SchoolHomeworkRunner({
   const hw = data.homework as any;
 
   const onSubmit = async () => {
-    const payload = (data.questions as any[]).map((q) => ({
+    const payload = questions.map((q) => ({
       question_id: q.id, answer: (answers[q.id] ?? "").trim(),
     }));
     try {
       const r = await submit.mutateAsync({ schoolId: hw.school_id, homeworkId, answers: payload });
+      try { localStorage.removeItem(draftKey(homeworkId, studentId)); } catch { /* ignore */ }
+      const unmarked = Number((r as any).unmarked_count ?? 0);
       toast({
         title: r.grades_released ? "Submitted & graded" : "Submitted",
-        description: r.feedback_visible ? "Feedback is available below." : "Your teacher will review and release grades.",
+        description: unmarked > 0
+          ? `${unmarked} answer(s) will be marked by your teacher directly.`
+          : r.feedback_visible ? "Feedback is available below." : "Your teacher will review and release grades.",
       });
       onDone?.();
     } catch (e) {
       toast({ title: "Submit failed", description: (e as Error).message, variant: "destructive" });
     }
   };
+
+  const isChoice = (q: any) =>
+    Array.isArray(q.options) && q.options.length > 0;
 
   return (
     <div className="space-y-4">
@@ -78,31 +112,52 @@ export function SchoolHomeworkRunner({
           <Badge variant="outline">{hw.total_marks} marks</Badge>
         </div>
         {hw.instructions && <p className="text-sm mt-3 text-muted-foreground">{hw.instructions}</p>}
+        {/* Progress */}
+        <div className="mt-3 flex items-center gap-2">
+          <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary transition-all"
+              style={{ width: `${questions.length ? Math.round((answeredCount / questions.length) * 100) : 0}%` }}
+            />
+          </div>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {answeredCount}/{questions.length} answered
+          </span>
+        </div>
       </Card>
 
-      {(data.questions as any[]).map((q, i) => {
+      {questions.map((q, i) => {
         const resp = responseById.get(q.id);
         const released = resp?.status === "released";
+        const needsTeacher = resp?.status === "submitted";
         const feedback = resp?.ai_feedback;
+        const visual = (q.visual ?? null) as QuestionVisualSpec | null;
 
         return (
           <Card key={q.id} className="p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-medium">
-                <span className="text-muted-foreground mr-2">Q{i + 1}.</span>{q.prompt}
-              </p>
+              <div className="text-sm font-medium prose prose-sm dark:prose-invert max-w-none flex-1">
+                <span className="text-muted-foreground mr-2">Q{i + 1}.</span>
+                <MathMarkdown>{q.prompt}</MathMarkdown>
+              </div>
               <Badge variant="secondary" className="shrink-0">{q.marks} mk</Badge>
             </div>
 
-            {q.options && Array.isArray(q.options) ? (
+            {visual && <QuestionVisual visual={visual} />}
+
+            {isChoice(q) ? (
               <div className="space-y-2">
                 {(q.options as string[]).map((opt) => (
                   <Button
                     key={opt}
                     variant={answers[q.id] === opt ? "default" : "outline"}
-                    className="w-full justify-start text-left h-auto py-2"
+                    className="w-full justify-start text-left h-auto py-2 whitespace-normal"
                     onClick={() => setAnswers((a) => ({ ...a, [q.id]: opt }))}
-                  >{opt}</Button>
+                  >
+                    <span className="prose prose-sm dark:prose-invert max-w-none [&_p]:m-0">
+                      <MathMarkdown>{opt}</MathMarkdown>
+                    </span>
+                  </Button>
                 ))}
               </div>
             ) : (
@@ -112,6 +167,13 @@ export function SchoolHomeworkRunner({
                 onChange={(e) => setAnswers((a) => ({ ...a, [q.id]: e.target.value }))}
                 rows={3}
               />
+            )}
+
+            {needsTeacher && (
+              <div className="rounded-lg bg-muted/40 p-3 flex items-center gap-2 text-sm text-muted-foreground">
+                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                Automatic marking wasn't available for this answer — your teacher will mark it.
+              </div>
             )}
 
             {feedback && (
@@ -124,9 +186,9 @@ export function SchoolHomeworkRunner({
                     ? <>Score: {resp.teacher_score ?? resp.ai_score} / {q.marks}</>
                     : <span className="text-muted-foreground">Grade held until teacher releases</span>}
                 </div>
-                <p><span className="font-medium">Examiner expects:</span> {feedback.examiner_expects}</p>
-                <p><span className="font-medium">What you missed:</span> {feedback.what_you_missed}</p>
-                <p><span className="font-medium">Concept fix:</span> {feedback.concept_fix}</p>
+                <div><span className="font-medium">Examiner expects:</span> <MathMarkdown>{feedback.examiner_expects}</MathMarkdown></div>
+                <div><span className="font-medium">What you missed:</span> <MathMarkdown>{feedback.what_you_missed}</MathMarkdown></div>
+                <div><span className="font-medium">Concept fix:</span> <MathMarkdown>{feedback.concept_fix}</MathMarkdown></div>
                 {resp?.teacher_comment && (
                   <p className="pt-2 border-t border-border"><span className="font-medium">Teacher:</span> {resp.teacher_comment}</p>
                 )}
@@ -138,7 +200,7 @@ export function SchoolHomeworkRunner({
 
       <Button onClick={onSubmit} disabled={!allAnswered || submit.isPending} className="w-full">
         {submit.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
-        Submit homework
+        {allAnswered ? "Submit homework" : `Answer all questions to submit (${answeredCount}/${questions.length})`}
       </Button>
     </div>
   );

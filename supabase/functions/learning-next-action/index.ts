@@ -51,7 +51,10 @@ Deno.serve(async (req) => {
         .select("homework_id, status")
         .in("homework_id", ids)
         .eq("student_id", userId);
-      const submittedIds = new Set((submissions ?? []).filter((s) => s.status === "submitted" || s.status === "graded").map((s) => s.homework_id));
+      // Any response row past "pending" means the student has submitted this
+      // homework (marker writes submitted/ai_marked/teacher_reviewed/released).
+      const DONE_STATUSES = new Set(["submitted", "ai_marked", "teacher_reviewed", "released"]);
+      const submittedIds = new Set((submissions ?? []).filter((s) => DONE_STATUSES.has(s.status)).map((s) => s.homework_id));
       const pending = hw.filter((h) => !submittedIds.has(h.id));
       const next = pending[0];
       if (next) {

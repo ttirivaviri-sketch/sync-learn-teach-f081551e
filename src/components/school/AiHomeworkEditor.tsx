@@ -2,8 +2,10 @@
  * AiHomeworkEditor — preview, edit and release AI-generated homework.
  *
  * Lets a teacher:
- *  - review every AI-generated question (prompt / expected answer / marks)
- *  - edit or delete questions before publication
+ *  - review every AI-generated question with a rendered (KaTeX + visual)
+ *    preview of exactly what the student will see
+ *  - edit prompt / expected answer / examiner notes / common mistakes / marks
+ *  - delete questions before publication
  *  - set the due date
  *  - publish (status='published') so enrolled students see it,
  *    or save changes while keeping it as a draft.
@@ -19,12 +21,14 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Trash2, Send, Save } from "lucide-react";
+import { Loader2, Trash2, Send, Save, Eye } from "lucide-react";
 import { toast } from "sonner";
 import {
   useHomeworkQuestions, useUpdateHomeworkQuestion, useDeleteHomeworkQuestion, usePublishHomework,
 } from "@/hooks/useSchoolStudyMode";
 import { supabase } from "@/integrations/supabase/client";
+import { MathMarkdown } from "@/studymode/components/MathMarkdown";
+import { QuestionVisual, type QuestionVisualSpec } from "@/studymode/components/QuestionVisual";
 
 interface Props {
   homeworkId: string;
@@ -42,7 +46,8 @@ export function AiHomeworkEditor({ homeworkId, classId, initialDueAt, initialSta
   const pub = usePublishHomework();
 
   // Local edits keyed by question id.
-  const [edits, setEdits] = useState<Record<string, { prompt?: string; expected_answer?: string; marks?: string }>>({});
+  const [edits, setEdits] = useState<Record<string, { prompt?: string; expected_answer?: string; marks?: string; examiner_notes?: string; common_mistakes?: string }>>({});
+  const [previewIds, setPreviewIds] = useState<Record<string, boolean>>({});
   const [dueAt, setDueAt] = useState<string>(
     initialDueAt ? new Date(initialDueAt).toISOString().slice(0, 16) : ""
   );
@@ -61,6 +66,8 @@ export function AiHomeworkEditor({ homeworkId, classId, initialDueAt, initialSta
         id, homework_id: homeworkId,
         prompt: v.prompt ?? row.prompt,
         expected_answer: v.expected_answer ?? row.expected_answer,
+        examiner_notes: v.examiner_notes ?? row.examiner_notes,
+        common_mistakes: v.common_mistakes ?? row.common_mistakes,
         marks: v.marks !== undefined && v.marks !== "" ? Number(v.marks) : Number(row.marks),
       });
     });
@@ -135,20 +142,49 @@ export function AiHomeworkEditor({ homeworkId, classId, initialDueAt, initialSta
             <div className="space-y-3">
               {(qs.data ?? []).map((q: any) => {
                 const e = edits[q.id] ?? {};
+                const showPreview = previewIds[q.id] ?? false;
+                const visual = (q.visual ?? null) as QuestionVisualSpec | null;
                 return (
                   <div key={q.id} className="rounded-md border p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-muted-foreground">
-                        Q{q.ord + 1} · {q.question_type}
+                        Q{q.ord + 1} · {q.question_type}{visual ? " · has visual" : ""}
                       </span>
-                      <Button
-                        size="sm" variant="ghost"
-                        onClick={async () => {
-                          if (!confirm("Delete this question?")) return;
-                          await del.mutateAsync({ id: q.id, homework_id: homeworkId });
-                        }}
-                      ><Trash2 className="h-4 w-4" /></Button>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm" variant="ghost"
+                          title="Preview as student"
+                          onClick={() => setPreviewIds((s) => ({ ...s, [q.id]: !showPreview }))}
+                        ><Eye className="h-4 w-4" /></Button>
+                        <Button
+                          size="sm" variant="ghost"
+                          onClick={async () => {
+                            if (!confirm("Delete this question?")) return;
+                            await del.mutateAsync({ id: q.id, homework_id: homeworkId });
+                          }}
+                        ><Trash2 className="h-4 w-4" /></Button>
+                      </div>
                     </div>
+
+                    {showPreview && (
+                      <div className="rounded-md bg-muted/40 border border-dashed p-3 space-y-2">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">Student preview</p>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <MathMarkdown>{e.prompt ?? q.prompt}</MathMarkdown>
+                        </div>
+                        {visual && <QuestionVisual visual={visual} />}
+                        {Array.isArray(q.options) && q.options.length > 0 && (
+                          <ul className="space-y-1 text-sm">
+                            {(q.options as string[]).map((opt, oi) => (
+                              <li key={oi} className="rounded border px-2 py-1">
+                                <MathMarkdown>{opt}</MathMarkdown>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    )}
+
                     <div>
                       <Label className="text-xs">Prompt</Label>
                       <Textarea
@@ -172,6 +208,24 @@ export function AiHomeworkEditor({ homeworkId, classId, initialDueAt, initialSta
                           type="number"
                           value={e.marks ?? String(q.marks ?? 1)}
                           onChange={(ev) => setEdits((s) => ({ ...s, [q.id]: { ...s[q.id], marks: ev.target.value } }))}
+                        />
+                      </div>
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <div>
+                        <Label className="text-xs">Examiner notes (marking rubric)</Label>
+                        <Textarea
+                          rows={2}
+                          value={e.examiner_notes ?? q.examiner_notes ?? ""}
+                          onChange={(ev) => setEdits((s) => ({ ...s, [q.id]: { ...s[q.id], examiner_notes: ev.target.value } }))}
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Common mistakes</Label>
+                        <Textarea
+                          rows={2}
+                          value={e.common_mistakes ?? q.common_mistakes ?? ""}
+                          onChange={(ev) => setEdits((s) => ({ ...s, [q.id]: { ...s[q.id], common_mistakes: ev.target.value } }))}
                         />
                       </div>
                     </div>

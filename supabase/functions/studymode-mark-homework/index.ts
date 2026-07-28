@@ -8,6 +8,10 @@
 //   - if homework.auto_release_grades → status='released' and grade visible
 //   - if homework.auto_release_feedback=false → ai_feedback held until teacher releases
 //     (we still store it, but only return scores=null and feedback=null to client)
+//   - questions are AI-marked IN PARALLEL (bounded) instead of serially
+//   - if the AI call fails for a question, the response row is stored with
+//     status='submitted' (never auto-released) so the teacher review queue
+//     surfaces it for manual marking instead of silently awarding 0
 //
 // POST { school_id, homework_id, answers: { question_id, answer }[] }
 
@@ -74,14 +78,12 @@ serve(async (req) => {
     const heldFeedback = !hw.auto_release_feedback;
     const released = !!hw.auto_release_grades;
 
-    const responsesOut: Array<{ question_id: string; ai_score: number | null; ai_feedback: AIMark | null; status: string }> = [];
-
-    for (const a of answers) {
+    // Mark one answer against its rubric. Returns null mark on AI failure.
+    const markOne = async (a: { question_id: string; answer?: unknown }) => {
       const q = byId.get(a.question_id);
-      if (!q) continue;
+      if (!q) return null;
       const studentAnswer = String(a.answer ?? "").trim();
 
-      // AI mark
       const system = "You are an exam marker. Mark fairly using the rubric. Output JSON.";
       const prompt = `Question: ${q.prompt}\nExpected answer: ${q.expected_answer}\nExaminer notes: ${q.examiner_notes}\nCommon mistakes: ${q.common_mistakes}\nMarks available: ${q.marks}\n\nStudent answer: ${studentAnswer || "(blank)"}\n\nReturn JSON: { "correct": bool, "awarded": number, "examiner_expects": string, "what_you_missed": string, "concept_fix": string }`;
 
@@ -92,16 +94,48 @@ serve(async (req) => {
           bucket: "homework_marked",
           schoolId: school_id,
         });
-      } catch { /* leave null */ }
-      const awarded = mark ? Math.max(0, Math.min(Number(mark.awarded) || 0, Number(q.marks))) : 0;
+      } catch (err) {
+        console.error("[mark-homework] AI mark failed for question", q.id, err);
+      }
+      return { q, studentAnswer, mark };
+    };
 
+    // Bounded parallelism: chunks of 5 to avoid gateway rate spikes while
+    // still being ~5x faster than the previous fully-serial loop.
+    const CONCURRENCY = 5;
+    const markResults: Array<{ q: any; studentAnswer: string; mark: AIMark | null } | null> = [];
+    for (let i = 0; i < answers.length; i += CONCURRENCY) {
+      const batch = answers.slice(i, i + CONCURRENCY).map(markOne);
+      markResults.push(...(await Promise.all(batch)));
+    }
+
+    const responsesOut: Array<{ question_id: string; ai_score: number | null; ai_feedback: AIMark | null; status: string }> = [];
+    const upserts: Array<Record<string, unknown>> = [];
+
+    for (const r of markResults) {
+      if (!r) continue;
+      const { q, studentAnswer, mark } = r;
+
+      if (!mark) {
+        // AI marking failed — store the answer for the teacher to mark
+        // manually. Never auto-release an unmarked response, never award 0.
+        upserts.push({
+          homework_id, question_id: q.id, school_id, student_id: userId,
+          student_answer: studentAnswer, ai_score: null, ai_feedback: null,
+          status: "submitted", submitted_at: now, marked_at: null, released_at: null,
+        });
+        responsesOut.push({ question_id: q.id, ai_score: null, ai_feedback: null, status: "submitted" });
+        continue;
+      }
+
+      const awarded = Math.max(0, Math.min(Number(mark.awarded) || 0, Number(q.marks)));
       const status = released ? "released" : "ai_marked";
-      await svc.from("school_homework_responses").upsert({
+      upserts.push({
         homework_id, question_id: q.id, school_id, student_id: userId,
         student_answer: studentAnswer, ai_score: awarded, ai_feedback: mark,
         status, submitted_at: now, marked_at: now,
         released_at: released ? now : null,
-      }, { onConflict: "question_id,student_id" });
+      });
 
       // Decide what to return to the student NOW.
       responsesOut.push({
@@ -112,15 +146,23 @@ serve(async (req) => {
       });
     }
 
+    if (upserts.length > 0) {
+      const { error: upErr } = await svc.from("school_homework_responses")
+        .upsert(upserts, { onConflict: "question_id,student_id" });
+      if (upErr) return errorResponse(`Response save failed: ${upErr.message}`, 500);
+    }
+
     // Request count for quota; real tokens are recorded by callAIJson usage attribution.
     await svc.rpc("increment_school_ai_usage", {
       _school_id: school_id, _bucket: "homework_marked",
       _tokens_in: 0, _tokens_out: 0,
     });
 
+    const unmarkedCount = responsesOut.filter((r) => r.status === "submitted").length;
     return jsonResponse({
       ok: true, homework_id, responses: responsesOut,
       grades_released: released, feedback_visible: !heldFeedback,
+      unmarked_count: unmarkedCount,
     });
   } catch (e) {
     return errorResponse((e as Error).message || "Internal error", 500);
