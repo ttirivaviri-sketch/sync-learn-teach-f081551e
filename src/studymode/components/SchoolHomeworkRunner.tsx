@@ -17,6 +17,7 @@ import { useHomeworkDetail, useSubmitHomework } from "@/hooks/useSchoolStudyMode
 import { useToast } from "@/hooks/use-toast";
 import { MathMarkdown } from "./MathMarkdown";
 import { QuestionVisual, type QuestionVisualSpec } from "./QuestionVisual";
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
 
 const draftKey = (homeworkId: string, studentId: string) =>
   `ss-hw-draft:${homeworkId}:${studentId}`;
@@ -197,6 +198,16 @@ export function SchoolHomeworkRunner({
           </Card>
         );
       })}
+
+      {questions.some((q) => responseById.get(q.id)?.ai_feedback) && (
+        <FeedbackWidget
+          surface="school_homework"
+          prompt="Was the homework feedback helpful?"
+          topicName={hw.topic ?? null}
+          context={{ homework_id: homeworkId }}
+          className="px-1"
+        />
+      )}
 
       <Button onClick={onSubmit} disabled={!allAnswered || submit.isPending} className="w-full">
         {submit.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

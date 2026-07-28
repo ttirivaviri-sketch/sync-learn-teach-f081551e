@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Trophy, Target, Sparkles } from 'lucide-react';
 import { FocusScoreLine } from './FocusBadge';
 import type { IntegritySummary } from '../lib/integrity';
+import { SessionPulse } from '@/components/feedback/SessionPulse';
 
 interface Props {
   open: boolean;
@@ -65,6 +66,13 @@ export function TopicSessionSummary({ open, onOpenChange, subject, topic, sessio
           <p className="text-xs text-muted-foreground text-center px-2">
             This session is independent of your StudyMode progression. Your XP has been added to the leaderboards.
           </p>
+
+          <SessionPulse
+            surface="topic_session"
+            subjectName={subject}
+            topicName={topic}
+            context={{ attempted, correct, accuracy }}
+          />
 
           <Button onClick={onClose} className="w-full">Done</Button>
         </div>

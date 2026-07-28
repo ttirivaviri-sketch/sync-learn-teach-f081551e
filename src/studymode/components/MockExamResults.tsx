@@ -14,6 +14,8 @@ import { cn } from "@/lib/utils";
 import { studySyncHaptic } from "@/lib/haptics";
 import { MathMarkdown } from "./MathMarkdown";
 import type { MockPaper, GradedQuestion } from "../hooks/useMockExam";
+import { FeedbackWidget } from "@/components/feedback/FeedbackWidget";
+import { SessionPulse } from "@/components/feedback/SessionPulse";
 
 interface Props {
   paper: MockPaper;
@@ -226,6 +228,21 @@ export function MockExamResults({ paper, result, onClose }: Props) {
             );
           })}
         </div>
+
+        <FeedbackWidget
+          surface="mock_exam"
+          prompt="Was the examiner feedback helpful?"
+          subjectName={paper.subject}
+          context={{ paper_code: paper.paper_code, percent: result.percent, band: result.band }}
+          className="px-1"
+        />
+
+        <SessionPulse
+          surface="mock_exam"
+          question="Did this mock exam help you prepare?"
+          subjectName={paper.subject}
+          context={{ paper_code: paper.paper_code, percent: result.percent }}
+        />
 
         <Button className="w-full" onClick={onClose}>
           Done
