@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import type { PhotoSolveResult } from './PhotoSolvePanel';
+import { SessionPulse } from '@/components/feedback/SessionPulse';
 
 interface VariantQuestion {
   id: string;
@@ -306,6 +307,13 @@ export function PhotoSolvePractice({
             </div>
           ))}
         </div>
+        <SessionPulse
+          surface="photo_solve_practice"
+          question="Did this practice help you fix the correction?"
+          subjectName={subjectName}
+          topicName={topicName}
+          context={{ attempt_id: attemptId, before_pct: beforePct, after_pct: avgPct }}
+        />
         <Button onClick={onBack} className="w-full gradient-primary">Done</Button>
       </div>
     );

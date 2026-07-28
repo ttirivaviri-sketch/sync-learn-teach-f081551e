@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { PhotoSolvePractice } from './PhotoSolvePractice';
+import { FeedbackWidget } from '@/components/feedback/FeedbackWidget';
 
 export interface PhotoSolveResult {
   question_detected: string;
@@ -517,6 +518,20 @@ export function PhotoSolvePanel({
               )}
             </div>
           )}
+
+          {/* Feedback on the AI grading */}
+          <FeedbackWidget
+            surface="photo_solve"
+            prompt="Was this marking helpful?"
+            subjectName={subject?.name}
+            topicName={topic?.name}
+            context={{
+              attempt_id: attemptId,
+              confidence: result.confidence,
+              marks_awarded: result.marks_awarded,
+              marks_possible: result.marks_possible,
+            }}
+          />
 
           {/* Practice the correction — 5 isomorphic variants */}
           {result.question_detected && result.confidence >= 0.3 && (
