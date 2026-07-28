@@ -86,7 +86,7 @@ const Slide1 = () => {
           <h1 className="text-[clamp(2rem,8vw,4rem)] font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4 max-w-[16ch] mx-auto lg:mx-0">
             Learn <span className="text-gray-900">smarter.</span>
             <br />
-            Pass <span className="text-[hsl(45,100%,45%)]">faster.</span>
+            Pass <span className="text-primary">faster.</span>
           </h1>
           <p className="text-base md:text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0">
             AI-powered learning, expert tutors and a smart study library — all
@@ -110,7 +110,7 @@ const Slide1 = () => {
               e.preventDefault();
               handleWhatsApp();
             }}
-            className="inline-flex items-center gap-3 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-bold rounded-2xl px-5 py-3.5 shadow-md transition-colors max-w-md w-full lg:w-auto"
+            className="inline-flex items-center gap-3 bg-primary hover:bg-primary-dark text-primary-foreground font-bold rounded-2xl px-5 py-3.5 shadow-md transition-colors max-w-md w-full lg:w-auto"
           >
             <MessageCircle className="h-5 w-5 shrink-0" />
             <span className="text-left text-sm sm:text-base leading-tight flex-1">
@@ -119,32 +119,10 @@ const Slide1 = () => {
             <ArrowRight className="h-5 w-5 shrink-0" />
           </a>
 
-          <div className="flex items-center gap-3 mt-6 justify-center lg:justify-start">
-            <div className="flex -space-x-2">
-              {[
-                "https://i.pravatar.cc/40?img=12",
-                "https://i.pravatar.cc/40?img=32",
-                "https://i.pravatar.cc/40?img=47",
-                "https://i.pravatar.cc/40?img=58",
-              ].map((src) => (
-                <img
-                  key={src}
-                  src={src}
-                  alt=""
-                  className="h-8 w-8 rounded-full border-2 border-white object-cover"
-                  loading="lazy"
-                />
-              ))}
-              <div className="h-8 w-8 rounded-full border-2 border-white bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center">
-                2K+
-              </div>
-            </div>
-            <p className="text-xs text-gray-600 leading-tight">
-              Join 2,000+ students
-              <br />
-              already achieving more
-            </p>
-          </div>
+          <p className="flex items-center gap-2 mt-6 justify-center lg:justify-start text-xs text-gray-600 leading-tight">
+            <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
+            Built for ZIMSEC, Cambridge, IEB &amp; NSC students — free trial, cancel anytime
+          </p>
         </div>
       }
       right={
@@ -220,7 +198,7 @@ const FeatureSlide = ({
   };
   const ctaBg: Record<string, string> = {
     blue: "bg-blue-600 hover:bg-blue-700 text-white",
-    amber: "bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900",
+    amber: "bg-primary hover:bg-primary-dark text-primary-foreground",
     emerald: "bg-emerald-600 hover:bg-emerald-700 text-white",
     purple: "bg-purple-600 hover:bg-purple-700 text-white",
   };

@@ -62,7 +62,7 @@ const StudyModeSection = () => {
         <div className="text-center mt-14">
           <Button
             size="lg"
-            className="bg-[hsl(220,80%,50%)] hover:bg-[hsl(220,80%,44%)] text-white font-bold text-base px-10 rounded-full gap-2 group"
+            className="bg-primary hover:bg-primary-dark text-primary-foreground font-bold text-base px-10 rounded-full gap-2 group"
             onClick={openTrialFlow}
           >
             Try It Free

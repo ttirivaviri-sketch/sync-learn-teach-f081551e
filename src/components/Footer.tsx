@@ -1,11 +1,17 @@
-import { useState } from "react";
 import { Separator } from "@/components/ui/separator";
-import { Twitter, Github, Linkedin, Instagram, ArrowRight, Mail, Phone, MessageCircle } from "lucide-react";
+import { Instagram, Mail, Phone, MessageCircle } from "lucide-react";
 
 const footerLinks = {
-  "For Students": ["AI Study Tools", "Find Tutors", "StudyMode", "Resource Library", "Track Progress"],
-  "For Tutors":   ["Become a Tutor", "Verification Process", "Earnings & Payouts", "Tutor Dashboard"],
-  Company:        ["About Us", "Blog", "Careers", "Press Kit"],
+  "For Students": [
+    { label: "AI StudyMode", href: "/learner/auth" },
+    { label: "Find Tutors", href: "/learner/auth" },
+    { label: "Resource Library", href: "/learner/auth" },
+    { label: "Pricing", href: "/#pricing" },
+  ],
+  "For Tutors": [
+    { label: "Become a Tutor", href: "/tutor/auth" },
+    { label: "Tutor Dashboard", href: "/tutor" },
+  ],
   Legal: [
     { label: "Privacy Policy", href: "/legal/privacy" },
     { label: "Terms of Service", href: "/legal/terms" },
@@ -17,13 +23,11 @@ const footerLinks = {
   ],
 };
 
+// Only channels that actually exist — no dead '#' socials.
 const socials = [
   { icon: Instagram, label: "Instagram", href: "https://instagram.com/studysyncplatform" },
   { icon: MessageCircle, label: "WhatsApp", href: "https://wa.me/27686523995" },
   { icon: Mail, label: "Email", href: "mailto:supportstudysync@gmail.com" },
-  { icon: Linkedin,  label: "LinkedIn",  href: "#" },
-  { icon: Github,    label: "GitHub",    href: "#" },
-  { icon: Twitter,   label: "Twitter",   href: "#" },
 ];
 
 const directContacts = [
@@ -35,14 +39,6 @@ const directContacts = [
 ];
 
 const Footer = () => {
-  const [email, setEmail] = useState("");
-  const [subscribed, setSubscribed] = useState(false);
-
-  const handleSubscribe = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (email) { setSubscribed(true); setEmail(""); }
-  };
-
   return (
     <footer className="bg-foreground text-background">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,33 +57,7 @@ const Footer = () => {
               -- everything students need to ace their exams.
             </p>
 
-            {/* Newsletter */}
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-widest text-background/50 mb-3">
-                Get study tips & updates
-              </p>
-              {subscribed ? (
-                <p className="text-sm text-emerald-400 font-medium">You're subscribed!</p>
-              ) : (
-                <form onSubmit={handleSubscribe} className="flex gap-2">
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="your@email.com"
-                    className="flex-1 min-w-0 bg-white/10 border border-white/15 rounded-lg px-3 py-2 text-sm text-background placeholder:text-background/35 focus:outline-none focus:border-primary"
-                    required
-                  />
-                  <button
-                    type="submit"
-                    className="bg-primary hover:bg-primary/90 text-white rounded-lg px-3 py-2 transition-colors shrink-0"
-                    aria-label="Subscribe"
-                  >
-                    <ArrowRight className="h-4 w-4" />
-                  </button>
-                </form>
-              )}
-            </div>
+
 
             {/* Socials */}
             <div className="flex gap-3">
@@ -113,17 +83,13 @@ const Footer = () => {
                 {heading}
               </p>
               <ul className="space-y-2.5">
-                {(links as Array<string | { label: string; href: string }>).map((link) => {
-                  const label = typeof link === "string" ? link : link.label;
-                  const href = typeof link === "string" ? "#" : link.href;
-                  return (
-                    <li key={label}>
-                      <a href={href} className="text-sm text-background/60 hover:text-background transition-colors">
-                        {label}
-                      </a>
-                    </li>
-                  );
-                })}
+                {links.map((link) => (
+                  <li key={link.label}>
+                    <a href={link.href} className="text-sm text-background/60 hover:text-background transition-colors">
+                      {link.label}
+                    </a>
+                  </li>
+                ))}
               </ul>
             </div>
           ))}

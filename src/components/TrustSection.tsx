@@ -110,9 +110,9 @@ const TrustSection = () => {
         <div className="bg-white rounded-3xl shadow-elegant border border-border/50 p-8 md:p-12">
           <div className="grid md:grid-cols-3 gap-10 text-center">
             {[
-              { Icon: CheckCircle, value: "100%", label: "Verified Tutors", color: "text-primary", gradient: "from-blue-500 to-indigo-600" },
-              { Icon: Award,        value: "500+",  label: "Qualified Educators", color: "text-secondary", gradient: "from-teal-500 to-emerald-600" },
-              { Icon: Users,        value: "1 000+",label: "Happy Students", color: "text-primary", gradient: "from-violet-500 to-purple-600" },
+              { Icon: CheckCircle, value: "100%", label: "Tutors verified before listing", color: "text-primary", gradient: "from-blue-500 to-indigo-600" },
+              { Icon: Award,        value: "4",  label: "Curricula: ZIMSEC, Cambridge, IEB, NSC", color: "text-secondary", gradient: "from-teal-500 to-emerald-600" },
+              { Icon: Users,        value: "9+", label: "AI study modes in one app", color: "text-primary", gradient: "from-violet-500 to-purple-600" },
             ].map(({ Icon, value, label, gradient }, i) => (
               <div key={i} className="group flex flex-col items-center gap-4">
                 <div

@@ -12,6 +12,7 @@ import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
 import { PaymentHistory } from "@/components/PaymentHistory";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { HapticsToggle } from "@/components/HapticsToggle";
+import { DataSaverToggle } from "@/components/DataSaverToggle";
 import { ProgressReportButton } from "@/components/ProgressReportButton";
 import { GuardianWorkspaceCard } from "@/components/learner/GuardianWorkspaceCard";
 import { GuardianOverviewCard } from "@/components/learner/GuardianOverviewCard";
@@ -205,6 +206,9 @@ export const LearnerProfileTab = ({
         <HapticsToggle userId={session?.user?.id} />
         <div className="rounded-2xl bg-card px-4 shadow-sm border border-border/40">
           <ThemeToggle />
+        </div>
+        <div className="rounded-2xl bg-card px-4 py-3 shadow-sm border border-border/40">
+          <DataSaverToggle />
         </div>
       </div>
 
