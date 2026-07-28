@@ -42,14 +42,26 @@ serve(async (req) => {
       }
     }
 
-    // Release rows.
+    // Release rows — but never release unmarked ('submitted'/'pending')
+    // responses that have no score at all: those failed AI marking and are
+    // waiting for a teacher score (an override above moves them to
+    // 'teacher_reviewed', which makes them releasable).
     const now = new Date().toISOString();
     let rel = auth.svc.from("school_homework_responses")
       .update({ status: "released", released_at: now })
-      .eq("homework_id", homework_id).eq("school_id", school_id);
+      .eq("homework_id", homework_id).eq("school_id", school_id)
+      .in("status", ["ai_marked", "teacher_reviewed", "released"]);
     if (student_id) rel = rel.eq("student_id", student_id);
     const { count, error } = await rel.select("id", { count: "exact" });
     if (error) return errorResponse(error.message, 500);
+
+    // Count what was left behind so the UI can tell the teacher.
+    let skippedQ = auth.svc.from("school_homework_responses")
+      .select("id", { count: "exact", head: true })
+      .eq("homework_id", homework_id).eq("school_id", school_id)
+      .in("status", ["submitted", "pending"]);
+    if (student_id) skippedQ = skippedQ.eq("student_id", student_id);
+    const { count: skipped } = await skippedQ;
 
     // Audit
     await auth.svc.from("school_audit_logs").insert({
@@ -62,7 +74,7 @@ serve(async (req) => {
       _school_id: school_id, _bucket: "feedback_released", _tokens_in: 0, _tokens_out: 0,
     });
 
-    return jsonResponse({ ok: true, released: count ?? 0 });
+    return jsonResponse({ ok: true, released: count ?? 0, skipped_unmarked: skipped ?? 0 });
   } catch (e) {
     return errorResponse((e as Error).message || "Internal error", 500);
   }

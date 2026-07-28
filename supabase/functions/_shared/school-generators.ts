@@ -57,6 +57,7 @@ export async function loadDocumentChunks(
   schoolId: string,
   documentId: string,
   maxChars = 16000,
+  topic?: string,
 ): Promise<{ doc: { id: string; title: string | null; status: string } | null; text: string }> {
   const { data: doc } = await svc
     .from("school_ai_documents")
@@ -74,12 +75,45 @@ export async function loadDocumentChunks(
     .eq("school_id", schoolId)
     .order("ord", { ascending: true });
 
-  let acc = "";
-  for (const c of chunks ?? []) {
-    if (acc.length + c.content.length > maxChars) break;
-    acc += c.content + "\n\n";
+  let ordered = chunks ?? [];
+
+  // Topic-aware retrieval: when a topic is given, rank chunks by keyword
+  // overlap so material relevant to the requested topic wins the budget
+  // instead of whatever happens to appear first in the document.
+  const terms = (topic ?? "")
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((t) => t.length >= 3);
+  if (terms.length > 0 && ordered.length > 1) {
+    const scored = ordered.map((c) => {
+      const lc = c.content.toLowerCase();
+      let score = 0;
+      for (const t of terms) {
+        let idx = lc.indexOf(t);
+        while (idx !== -1) { score++; idx = lc.indexOf(t, idx + t.length); }
+      }
+      return { ...c, score };
+    });
+    const anyHit = scored.some((c) => c.score > 0);
+    if (anyHit) {
+      // Relevant chunks first (by score desc, ord asc for stability),
+      // then the remaining chunks in document order as filler context.
+      scored.sort((a, b) => (b.score - a.score) || (a.ord - b.ord));
+      ordered = scored;
+    }
   }
-  return { doc, text: acc.trim() };
+
+  const picked: Array<{ content: string; ord: number }> = [];
+  let total = 0;
+  for (const c of ordered) {
+    if (total + c.content.length > maxChars) continue;
+    picked.push(c);
+    total += c.content.length;
+    if (total >= maxChars) break;
+  }
+  // Present picked chunks in reading order regardless of relevance ranking.
+  picked.sort((a, b) => a.ord - b.ord);
+  return { doc, text: picked.map((c) => c.content).join("\n\n").trim() };
 }
 
 export async function callAIJson<T>(

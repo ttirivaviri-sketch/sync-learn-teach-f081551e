@@ -201,7 +201,7 @@ export function useHomeworkQuestions(homeworkId?: string) {
 export function useUpdateHomeworkQuestion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (row: { id: string; homework_id: string; prompt?: string; expected_answer?: string; marks?: number; options?: any; examiner_notes?: string; }) => {
+    mutationFn: async (row: { id: string; homework_id: string; prompt?: string; expected_answer?: string; marks?: number; options?: any; examiner_notes?: string; common_mistakes?: string; }) => {
       const { id, homework_id, ...patch } = row;
       const { error } = await supabase.from("school_homework_questions").update(patch).eq("id", id);
       if (error) throw error;
@@ -374,17 +374,19 @@ export function useHomeworkDetail(homeworkId?: string, studentId?: string) {
     queryKey: ["homework-detail", homeworkId, studentId],
     enabled: !!homeworkId,
     queryFn: async () => {
+      // Questions come through a SECURITY DEFINER RPC that exposes ONLY
+      // student-safe columns (never expected_answer / examiner_notes /
+      // common_mistakes — direct table SELECT for students was removed).
       const [{ data: hw }, { data: qs }, { data: resp }] = await Promise.all([
         supabase.from("school_homework").select("*").eq("id", homeworkId!).maybeSingle(),
-        supabase.from("school_homework_questions").select("id,ord,prompt,question_type,options,marks")
-          .eq("homework_id", homeworkId!).order("ord"),
+        supabase.rpc("get_homework_questions_for_student" as never, { _homework_id: homeworkId! } as never),
         studentId
           ? supabase.from("school_homework_responses")
             .select("question_id,student_answer,ai_score,teacher_score,ai_feedback,teacher_comment,status,released_at")
             .eq("homework_id", homeworkId!).eq("student_id", studentId)
           : Promise.resolve({ data: [] }),
       ]);
-      return { homework: hw, questions: qs ?? [], responses: resp ?? [] };
+      return { homework: hw, questions: (qs ?? []) as any[], responses: resp ?? [] };
     },
   });
 }
@@ -445,12 +447,37 @@ export function useHomeworkReviewQueue(homeworkId?: string) {
     queryKey: ["homework-review", homeworkId],
     enabled: !!homeworkId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("school_homework_responses")
-        .select("id,student_id,question_id,student_answer,ai_score,teacher_score,ai_feedback,teacher_comment,status,submitted_at")
-        .eq("homework_id", homeworkId!)
-        .order("submitted_at", { ascending: true });
+      const [{ data, error }, { data: qs }] = await Promise.all([
+        supabase.from("school_homework_responses")
+          .select("id,student_id,question_id,student_answer,ai_score,teacher_score,ai_feedback,teacher_comment,status,submitted_at")
+          .eq("homework_id", homeworkId!)
+          .order("submitted_at", { ascending: true }),
+        supabase.from("school_homework_questions")
+          .select("id,ord,prompt,marks")
+          .eq("homework_id", homeworkId!).order("ord"),
+      ]);
       if (error) throw error;
-      return data ?? [];
+      const rows = data ?? [];
+
+      // Resolve student names so teachers don't mark against raw UUIDs.
+      const studentIds = [...new Set(rows.map((r) => r.student_id))];
+      let names: Record<string, string> = {};
+      if (studentIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", studentIds);
+        for (const p of (profiles ?? []) as any[]) {
+          if (p.full_name) names[p.id] = p.full_name;
+        }
+      }
+
+      const qById = new Map((qs ?? []).map((q: any) => [q.id, q]));
+      return rows.map((r) => ({
+        ...r,
+        student_name: names[r.student_id] ?? null,
+        question: qById.get(r.question_id) ?? null,
+      }));
     },
   });
 }
@@ -459,7 +486,7 @@ export function useReleaseHomework() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (args: { schoolId: string; homeworkId: string; studentId?: string; overrides?: Array<{ question_id: string; teacher_score?: number; teacher_comment?: string }> }) =>
-      invokeWithContract<{ ok: boolean; released: number }>(() =>
+      invokeWithContract<{ ok: boolean; released: number; skipped_unmarked?: number }>(() =>
         supabase.functions.invoke("studymode-release-homework", {
           body: { school_id: args.schoolId, homework_id: args.homeworkId, student_id: args.studentId, overrides: args.overrides },
         }),
