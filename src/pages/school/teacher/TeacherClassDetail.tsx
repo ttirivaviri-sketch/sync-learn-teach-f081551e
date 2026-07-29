@@ -21,6 +21,7 @@ import { StudentAnalyticsPanel } from "@/components/school/StudentAnalyticsPanel
 import { AiHomeworkPanel } from "@/components/school/AiHomeworkPanel";
 import { ClassPerformancePanel } from "@/components/school/ClassPerformancePanel";
 import { ClassKernelPanel } from "@/components/school/ClassKernelPanel";
+import { ClassMisconceptionDigest } from "@/components/school/ClassMisconceptionDigest";
 import {
   useClass,
   useResources, useCreateResource, useDeleteResource,
@@ -107,6 +108,7 @@ function ClassDetailBody({ school, cls, classId, initialTab }: { school: any; cl
         <TabsContent value="analytics">
           <div className="space-y-6 mt-3">
             <ClassKernelPanel classId={classId} onAssignRemediation={handleAssignRemediation} onBulkAssignRemediation={handleBulkAssignRemediation} />
+            <ClassMisconceptionDigest classId={classId} />
             <ClassPerformancePanel classId={classId} />
             <section>
               <h4 className="font-medium text-sm mb-2">Per-student deep dive</h4>

@@ -28,6 +28,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { PhotoSolvePractice } from './PhotoSolvePractice';
+import { PhotoSolveHistory } from './PhotoSolveHistory';
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget';
 import { imageCompressionParams } from '@/lib/dataSaver';
 
@@ -345,6 +346,9 @@ export function PhotoSolvePanel({
           </Button>
         </div>
       )}
+
+      {/* Recent attempts — idle state only */}
+      {!previewUrl && !loading && !result && <PhotoSolveHistory />}
 
       {/* Preview */}
       {previewUrl && (
