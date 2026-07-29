@@ -5,6 +5,15 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Play, RefreshCw } from "lucide-react";
+import CurriculumImportPanel from "@/components/admin/CurriculumImportPanel";
+
+interface TemplateRow {
+  curriculum: string;
+  grade: string;
+  subject: string;
+  source: string;
+  verified_at: string | null;
+}
 
 interface Job {
   id: string;
@@ -22,19 +31,27 @@ interface Job {
 
 export default function CurriculumTemplates() {
   const [jobs, setJobs] = useState<Job[]>([]);
-  const [templateCount, setTemplateCount] = useState(0);
+  const [templates, setTemplates] = useState<TemplateRow[]>([]);
   const [starting, setStarting] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = async () => {
-    const [{ data: jobData }, { count }] = await Promise.all([
+    const [{ data: jobData }, { data: tplData }] = await Promise.all([
       supabase.from("seeding_jobs").select("*").order("started_at", { ascending: false }).limit(10),
-      supabase.from("curriculum_topic_templates").select("*", { count: "exact", head: true }),
+      supabase
+        .from("curriculum_topic_templates")
+        .select("curriculum,grade,subject,source,verified_at")
+        .order("curriculum")
+        .order("grade")
+        .order("subject"),
     ]);
     setJobs((jobData ?? []) as any);
-    setTemplateCount(count ?? 0);
+    setTemplates((tplData ?? []) as TemplateRow[]);
     setLoading(false);
   };
+
+  const templateCount = templates.length;
+  const verifiedCount = templates.filter((t) => t.source === "verified").length;
 
   useEffect(() => {
     load();
@@ -69,9 +86,15 @@ export default function CurriculumTemplates() {
       </div>
 
       <Card className="p-6 flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">Templates in database</p>
-          <p className="text-3xl font-bold">{templateCount}</p>
+        <div className="flex gap-8">
+          <div>
+            <p className="text-sm text-muted-foreground">Templates in database</p>
+            <p className="text-3xl font-bold">{templateCount}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Human-verified</p>
+            <p className="text-3xl font-bold text-emerald-600">{verifiedCount}</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button onClick={() => startSeed(false)} disabled={starting}>
@@ -84,6 +107,42 @@ export default function CurriculumTemplates() {
           </Button>
         </div>
       </Card>
+
+      <CurriculumImportPanel onImported={load} />
+
+      <div>
+        <h2 className="text-lg font-semibold mb-3">Coverage</h2>
+        {templates.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No templates yet.</p>
+        ) : (
+          <div className="space-y-4">
+            {[...new Set(templates.map((t) => t.curriculum))].map((cur) => {
+              const rows = templates.filter((t) => t.curriculum === cur);
+              return (
+                <Card key={cur} className="p-4">
+                  <p className="font-semibold mb-2">
+                    {cur}{" "}
+                    <span className="text-xs text-muted-foreground font-normal">
+                      {rows.filter((r) => r.source === "verified").length}/{rows.length} verified
+                    </span>
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {rows.map((r) => (
+                      <Badge
+                        key={`${r.grade}-${r.subject}`}
+                        variant={r.source === "verified" ? "default" : "secondary"}
+                        title={r.source === "verified" ? `Verified ${r.verified_at ? new Date(r.verified_at).toLocaleDateString() : ""}` : `Source: ${r.source}`}
+                      >
+                        {r.grade} · {r.subject}
+                      </Badge>
+                    ))}
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Recent Jobs</h2>
