@@ -15,6 +15,7 @@ import { HapticsToggle } from "@/components/HapticsToggle";
 import { DataSaverToggle } from "@/components/DataSaverToggle";
 import { ProgressReportButton } from "@/components/ProgressReportButton";
 import { GuardianWorkspaceCard } from "@/components/learner/GuardianWorkspaceCard";
+import { GuardianLinkCard } from "@/components/learner/GuardianLinkCard";
 import { GuardianOverviewCard } from "@/components/learner/GuardianOverviewCard";
 import { TutorWorkspaceLinkCard } from "@/components/school/TutorWorkspaceLinkCard";
 import { SubscriptionFlow } from "@/components/subscription/SubscriptionFlow";
@@ -197,6 +198,7 @@ export const LearnerProfileTab = ({
       )}
 
       {session?.user?.id && <GuardianOverviewCard userId={session.user.id} />}
+      {session?.user?.id && <GuardianLinkCard userId={session.user.id} />}
       {session?.user?.id && <GuardianWorkspaceCard userId={session.user.id} />}
       <TutorWorkspaceLinkCard />
 

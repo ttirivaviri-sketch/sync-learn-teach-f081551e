@@ -6,6 +6,7 @@ import { SchoolKernelPanel } from "@/components/school/SchoolKernelPanel";
 import { KernelAlertsPanel } from "@/components/school/KernelAlertsPanel";
 import { RemediationTrackerPanel } from "@/components/school/RemediationTrackerPanel";
 import { RemediationEffectivenessPanel } from "@/components/school/RemediationEffectivenessPanel";
+import { SchoolOnboardingWizard } from "@/components/school/SchoolOnboardingWizard";
 import { useSchoolKernelRealtime } from "@/hooks/useSchoolKernelRealtime";
 
 export default function SchoolDashboard() {
@@ -48,19 +49,13 @@ export default function SchoolDashboard() {
         ))}
       </div>
 
+      <SchoolOnboardingWizard schoolId={school.id} />
+
       <SchoolKernelPanel schoolId={school.id} />
       <KernelAlertsPanel schoolId={school.id} />
       <RemediationTrackerPanel schoolId={school.id} />
       <RemediationEffectivenessPanel schoolId={school.id} />
 
-      <Card className="p-5">
-        <h2 className="font-medium mb-1">Getting started</h2>
-        <ol className="text-sm text-muted-foreground list-decimal pl-5 space-y-1">
-          <li>Invite teachers and students from the <span className="text-foreground">Invitations</span> tab.</li>
-          <li>Manage active members and roles in <span className="text-foreground">Members</span>.</li>
-          <li>Update school branding, contact, and contract under <span className="text-foreground">Settings</span>.</li>
-        </ol>
-      </Card>
     </section>
   );
 }

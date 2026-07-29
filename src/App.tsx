@@ -46,6 +46,7 @@ const AdminAllocations = lazy(() => import("./pages/admin/Allocations"));
 const AdminStudyAnalytics = lazy(() => import("./pages/admin/StudyAnalytics"));
 const AdminSchools = lazy(() => import("./pages/admin/Schools"));
 const AdminSchoolDetail = lazy(() => import("./pages/admin/SchoolDetail"));
+const GuardianPortal = lazy(() => import("./pages/GuardianPortal"));
 
 // School admin portal
 const SchoolLayout = lazy(() => import("./pages/school/SchoolLayout"));
@@ -120,6 +121,9 @@ const App = () => (
               {/* Payment routes */}
               <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+
+              {/* Parent / guardian read-only portal */}
+              <Route path="/guardian" element={<GuardianPortal />} />
 
               {/* Learning Operating System entry points */}
               <Route path="/teacher" element={<TeacherCommandCenterPage />} />
