@@ -117,10 +117,10 @@ export const TestimonialSection = () => {
             <span className="w-4 h-px bg-border block" />
           </span>
           <h2 className="text-4xl md:text-5xl font-display font-extrabold text-foreground mb-4">
-            What our community says
+            What our early community says
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Thousands of learners and tutors trust StudySync to connect them.
+            Feedback from students and tutors in our pilot programme.
           </p>
         </div>
 
@@ -204,24 +204,11 @@ export const TestimonialSection = () => {
           </button>
         </div>
 
-        {/* Overall rating strip */}
-        <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-6 text-center">
-          <div>
-            <p className="text-4xl font-display font-extrabold text-foreground">4.9</p>
-            <Stars count={5} />
-            <p className="text-xs text-muted-foreground mt-1">Overall rating</p>
-          </div>
-          <div className="w-px h-12 bg-border hidden sm:block" />
-          <div>
-            <p className="text-4xl font-display font-extrabold text-foreground">2 400+</p>
-            <p className="text-sm font-medium text-muted-foreground mt-1">Verified reviews</p>
-          </div>
-          <div className="w-px h-12 bg-border hidden sm:block" />
-          <div>
-            <p className="text-4xl font-display font-extrabold text-foreground">98%</p>
-            <p className="text-sm font-medium text-muted-foreground mt-1">Would recommend</p>
-          </div>
-        </div>
+        {/* Honest early-stage strip — no invented aggregate stats */}
+        <p className="mt-12 text-center text-sm text-muted-foreground">
+          Every session on StudySync ends with a rating — reviews are collected
+          in-app from real bookings.
+        </p>
 
       </div>
     </section>

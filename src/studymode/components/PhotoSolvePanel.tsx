@@ -29,6 +29,7 @@ import { cn } from '@/lib/utils';
 import { logger } from '@/utils/logger';
 import { PhotoSolvePractice } from './PhotoSolvePractice';
 import { FeedbackWidget } from '@/components/feedback/FeedbackWidget';
+import { imageCompressionParams } from '@/lib/dataSaver';
 
 export interface PhotoSolveResult {
   question_detected: string;
@@ -64,7 +65,10 @@ type GradedStep = PhotoSolveResult['steps'][number];
 
 const MAX_BYTES = 12 * 1024 * 1024; // 12MB cap on the raw user file
 
-/** Downscale to ≤1600px on the long edge and re-encode as JPEG (~0.82). */
+/**
+ * Downscale and re-encode as JPEG. Normal: ≤1600px @ q0.82.
+ * Data Saver active: ≤1024px @ q0.6 (~3-4x smaller upload).
+ */
 async function fileToCompressedDataUrl(file: File): Promise<string> {
   const readAsDataUrl = (f: File) =>
     new Promise<string>((resolve, reject) => {
@@ -82,8 +86,8 @@ async function fileToCompressedDataUrl(file: File): Promise<string> {
       im.onerror = () => reject(new Error('decode failed'));
       im.src = original;
     });
-    const MAX = 1600;
-    const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+    const { maxDim, quality } = imageCompressionParams();
+    const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
     const w = Math.max(1, Math.round(img.width * scale));
     const h = Math.max(1, Math.round(img.height * scale));
     const canvas = document.createElement('canvas');
@@ -92,7 +96,7 @@ async function fileToCompressedDataUrl(file: File): Promise<string> {
     const ctx = canvas.getContext('2d');
     if (!ctx) return original;
     ctx.drawImage(img, 0, 0, w, h);
-    return canvas.toDataURL('image/jpeg', 0.82);
+    return canvas.toDataURL('image/jpeg', quality);
   } catch {
     return original;
   }

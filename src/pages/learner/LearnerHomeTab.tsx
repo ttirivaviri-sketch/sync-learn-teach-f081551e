@@ -15,6 +15,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { HomeTodayHero } from "@/components/learner/HomeTodayHero";
 import { HomeContinueLearning } from "@/components/learner/HomeContinueLearning";
+import { ProofOfProgress } from "@/components/learner/ProofOfProgress";
 import { LearningCompanion } from "@/components/learner/LearningCompanion";
 import { haptic } from "@/lib/haptics";
 
@@ -124,6 +125,9 @@ export const LearnerHomeTab = ({
       onBookTutor={onBookTutorById}
       onOpenLibrary={() => onNavigateTab?.("library")}
     />
+
+    {/* PROOF OF PROGRESS — weekly improvement story (retention driver) */}
+    <ProofOfProgress />
 
     {/* CONTINUE LEARNING — per-subject mastery rings → Study */}
     <HomeContinueLearning onOpenStudy={() => onNavigateTab?.("study")} />

@@ -68,7 +68,7 @@ const Navbar = () => {
           </Button>
           <Button
             size="sm"
-            className="bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-semibold rounded-full px-6"
+            className="bg-primary hover:bg-primary-dark text-primary-foreground font-semibold rounded-full px-6"
             onClick={() => openTrialFlow("learner")}
           >
             Get Started
@@ -101,7 +101,7 @@ const Navbar = () => {
           ))}
           <div className="flex gap-3 pt-2">
             <Button
-              className="flex-1 bg-[hsl(45,100%,51%)] hover:bg-[hsl(45,100%,45%)] text-gray-900 font-semibold rounded-full"
+              className="flex-1 bg-primary hover:bg-primary-dark text-primary-foreground font-semibold rounded-full"
               onClick={() => openTrialFlow("learner")}
             >
               Get Started
