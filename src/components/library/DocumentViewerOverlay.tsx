@@ -1,4 +1,4 @@
-import { FileText, Loader2, X, ExternalLink } from "lucide-react";
+import { FileText, Loader2, X, ExternalLink, ClipboardCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { LibraryResource } from "@/types/academicProfile";
 import { useProtectedPdfBlob } from "@/hooks/useProtectedPdfBlob";
@@ -32,9 +32,16 @@ export function DocumentViewerOverlay({
   );
 
   // Determine display label
+  const paperBits = [
+    resource.paperMeta?.year,
+    resource.paperMeta?.session,
+    resource.paperMeta?.paperNumber,
+  ].filter(Boolean);
   const typeLabel =
     resource.type === "pastpaper"
-      ? "Past paper"
+      ? paperBits.length > 0
+        ? `Past paper · ${paperBits.join(" ")}`
+        : "Past paper"
       : resource.type === "guide"
       ? "Study guide"
       : "Study material";
@@ -63,6 +70,25 @@ export function DocumentViewerOverlay({
             </h3>
           </div>
           <div className="flex items-center gap-1">
+            {/* Marking scheme — opens the official scheme alongside the paper */}
+            {resource.paperMeta?.markingSchemeUrl && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                onClick={() =>
+                  window.open(
+                    resource.paperMeta!.markingSchemeUrl!,
+                    "_blank",
+                    "noopener,noreferrer",
+                  )
+                }
+                title="Open marking scheme"
+              >
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Marking scheme</span>
+              </Button>
+            )}
             {/* Open externally button — always visible once we have a URL */}
             {url && (
               <Button

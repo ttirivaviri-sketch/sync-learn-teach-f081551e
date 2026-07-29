@@ -13,7 +13,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Loader2, Plus, Trash2, ExternalLink, CheckCircle2, XCircle, Eye } from "lucide-react";
+import { Loader2, Plus, Trash2, ExternalLink, CheckCircle2, XCircle, Eye, Upload } from "lucide-react";
 import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
 import type { LibraryResource } from "@/types/academicProfile";
 
@@ -31,6 +31,11 @@ interface Resource {
   grade_levels: string[];
   pages: number | null;
   view_count: number;
+  paper_year: number | null;
+  paper_session: string | null;
+  paper_number: string | null;
+  marking_scheme_url: string | null;
+  rights_note: string | null;
 }
 
 const empty: Partial<Resource> = {
@@ -44,7 +49,26 @@ const empty: Partial<Resource> = {
   video_url: "",
   thumbnail_url: "",
   grade_levels: [],
+  paper_year: null,
+  paper_session: "",
+  paper_number: "",
+  marking_scheme_url: "",
+  rights_note: "",
 };
+
+/** Upload a PDF to the public library-pdfs bucket; returns the public URL. */
+async function uploadLibraryPdf(file: File, prefix: string): Promise<string> {
+  if (file.type !== "application/pdf") throw new Error("Only PDF files are accepted");
+  if (file.size > 50 * 1024 * 1024) throw new Error("PDF must be under 50 MB");
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_").slice(-80);
+  const path = `${prefix}/${Date.now()}-${safe}`;
+  const { error } = await supabase.storage
+    .from("library-pdfs")
+    .upload(path, file, { contentType: "application/pdf", upsert: false });
+  if (error) throw error;
+  const { data } = supabase.storage.from("library-pdfs").getPublicUrl(path);
+  return data.publicUrl;
+}
 
 
 
@@ -59,6 +83,7 @@ export default function Library() {
   const [testing, setTesting] = useState<string | null>(null);
   const [testResults, setTestResults] = useState<Record<string, { ok: boolean; ct: string; status: number }>>({});
   const [previewing, setPreviewing] = useState<LibraryResource | null>(null);
+  const [uploading, setUploading] = useState<"paper" | "scheme" | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -94,6 +119,14 @@ export default function Library() {
       toast.error("Non-video kinds require a PDF URL");
       return;
     }
+    const isPaper = editing?.kind === "past_paper";
+    if (isPaper && editing?.paper_year != null) {
+      const y = Number(editing.paper_year);
+      if (!Number.isInteger(y) || y < 1980 || y > 2100) {
+        toast.error("Paper year must be between 1980 and 2100");
+        return;
+      }
+    }
     setSaving(true);
     try {
       const payload = {
@@ -107,10 +140,15 @@ export default function Library() {
         video_url: isVideo ? editing.video_url : null,
         thumbnail_url: editing.thumbnail_url || null,
         grade_levels: editing.grade_levels ?? [],
+        paper_year: isPaper ? (editing.paper_year ?? null) : null,
+        paper_session: isPaper ? (editing.paper_session || null) : null,
+        paper_number: isPaper ? (editing.paper_number || null) : null,
+        marking_scheme_url: isPaper ? (editing.marking_scheme_url || null) : null,
+        rights_note: isPaper ? (editing.rights_note || null) : null,
       };
       const { error } = editing.id
-        ? await supabase.from("library_system_resources").update(payload).eq("id", editing.id)
-        : await supabase.from("library_system_resources").insert(payload);
+        ? await supabase.from("library_system_resources").update(payload as never).eq("id", editing.id)
+        : await supabase.from("library_system_resources").insert(payload as never);
       if (error) throw error;
       toast.success(editing.id ? "Updated" : "Created");
       setEditing(null);
@@ -215,6 +253,14 @@ export default function Library() {
                       <span className="font-medium">{r.title}</span>
                       <Badge variant="secondary">{r.kind}</Badge>
                       <Badge variant="outline">{r.curriculum}</Badge>
+                      {r.kind === "past_paper" && r.paper_year && (
+                        <Badge className="bg-orange-500 text-white border-0">
+                          {r.paper_year}{r.paper_session ? ` ${r.paper_session}` : ""}{r.paper_number ? ` · ${r.paper_number}` : ""}
+                        </Badge>
+                      )}
+                      {r.kind === "past_paper" && r.marking_scheme_url && (
+                        <Badge variant="outline" className="text-emerald-600 border-emerald-300">MS ✓</Badge>
+                      )}
                       {r.grade_levels?.length > 0 && (
                         <Badge variant="outline">{r.grade_levels.join(", ")}</Badge>
                       )}
@@ -322,10 +368,132 @@ export default function Library() {
               ) : (
                 <div className="grid gap-1">
                   <Label>PDF URL (direct .pdf link or storage path)</Label>
-                  <Input value={editing.pdf_url ?? ""} onChange={(e) => setEditing({ ...editing, pdf_url: e.target.value })} />
+                  <div className="flex gap-2">
+                    <Input
+                      className="flex-1"
+                      value={editing.pdf_url ?? ""}
+                      onChange={(e) => setEditing({ ...editing, pdf_url: e.target.value })}
+                    />
+                    <Button variant="outline" size="sm" className="shrink-0" asChild disabled={uploading === "paper"}>
+                      <label className="cursor-pointer">
+                        {uploading === "paper"
+                          ? <Loader2 className="h-4 w-4 animate-spin" />
+                          : <><Upload className="h-4 w-4 mr-1" /> Upload</>}
+                        <input
+                          type="file"
+                          accept="application/pdf"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const f = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!f) return;
+                            setUploading("paper");
+                            try {
+                              const url = await uploadLibraryPdf(f, editing.kind === "past_paper" ? "past-papers" : "resources");
+                              setEditing((prev) => prev ? { ...prev, pdf_url: url } : prev);
+                              toast.success("PDF uploaded");
+                            } catch (err: any) {
+                              toast.error(err.message ?? "Upload failed");
+                            } finally {
+                              setUploading(null);
+                            }
+                          }}
+                        />
+                      </label>
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Use a direct .pdf URL (https://...). Landing pages won't render.
+                    Paste a direct .pdf URL, or upload straight to storage. Landing pages won't render.
                   </p>
+                </div>
+              )}
+
+              {editing.kind === "past_paper" && (
+                <div className="rounded-lg border bg-muted/30 p-3 grid gap-3">
+                  <p className="text-xs font-medium text-muted-foreground">Past-paper details</p>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="grid gap-1">
+                      <Label>Year</Label>
+                      <Input
+                        type="number"
+                        min={1980}
+                        max={2100}
+                        value={editing.paper_year ?? ""}
+                        onChange={(e) => setEditing({ ...editing, paper_year: e.target.value ? Number(e.target.value) : null })}
+                      />
+                    </div>
+                    <div className="grid gap-1">
+                      <Label>Session</Label>
+                      <Select
+                        value={editing.paper_session || "none"}
+                        onValueChange={(v) => setEditing({ ...editing, paper_session: v === "none" ? "" : v })}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">—</SelectItem>
+                          <SelectItem value="March">March</SelectItem>
+                          <SelectItem value="June">June</SelectItem>
+                          <SelectItem value="November">November</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1">
+                      <Label>Paper</Label>
+                      <Input
+                        placeholder="Paper 1"
+                        value={editing.paper_number ?? ""}
+                        onChange={(e) => setEditing({ ...editing, paper_number: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-1">
+                    <Label>Marking scheme URL (optional)</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        className="flex-1"
+                        value={editing.marking_scheme_url ?? ""}
+                        onChange={(e) => setEditing({ ...editing, marking_scheme_url: e.target.value })}
+                      />
+                      <Button variant="outline" size="sm" className="shrink-0" asChild disabled={uploading === "scheme"}>
+                        <label className="cursor-pointer">
+                          {uploading === "scheme"
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <><Upload className="h-4 w-4 mr-1" /> Upload</>}
+                          <input
+                            type="file"
+                            accept="application/pdf"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const f = e.target.files?.[0];
+                              e.target.value = "";
+                              if (!f) return;
+                              setUploading("scheme");
+                              try {
+                                const url = await uploadLibraryPdf(f, "marking-schemes");
+                                setEditing((prev) => prev ? { ...prev, marking_scheme_url: url } : prev);
+                                toast.success("Marking scheme uploaded");
+                              } catch (err: any) {
+                                toast.error(err.message ?? "Upload failed");
+                              } finally {
+                                setUploading(null);
+                              }
+                            }}
+                          />
+                        </label>
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid gap-1">
+                    <Label>Rights / provenance note (admin-only)</Label>
+                    <Input
+                      placeholder="e.g. Official ZIMSEC release, publicly distributed"
+                      value={editing.rights_note ?? ""}
+                      onChange={(e) => setEditing({ ...editing, rights_note: e.target.value })}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Only upload papers you have the right to distribute. This note is never shown to learners.
+                    </p>
+                  </div>
                 </div>
               )}
               <div className="grid gap-1">
