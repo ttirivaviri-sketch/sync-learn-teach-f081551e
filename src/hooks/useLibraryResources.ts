@@ -470,10 +470,10 @@ export function useLibraryResources(
             .order("created_at", { ascending: false }),
           supabase
             .from("library_system_resources")
-            .select(
-              `id, title, subject, curriculum, grade_levels, topic,
-               kind, description, pages, thumbnail_url, pdf_url, video_url, view_count`
-            )
+            // select("*") on purpose: stays resilient if the past-paper
+            // metadata migration hasn't been applied yet (missing columns
+            // in an explicit select would 400 the whole library fetch).
+            .select("*")
             .order("created_at", { ascending: false }),
 
         ]);
@@ -591,6 +591,14 @@ export function useLibraryResources(
             isTutorial: isVideo,
             videoUrl: isVideo ? rawVideoUrl ?? undefined : row.pdf_url,
             pdfSource: isVideo ? undefined : "system",
+            paperMeta: isPastPaper
+              ? {
+                  year: row.paper_year ?? null,
+                  session: row.paper_session ?? null,
+                  paperNumber: row.paper_number ?? null,
+                  markingSchemeUrl: row.marking_scheme_url ?? null,
+                }
+              : undefined,
             tags: {
               subject: row.subject || "General",
               topic: row.topic || "All Topics",
@@ -694,11 +702,14 @@ export function useLibraryResources(
 
   const recommendedTutorials = visibleResources.filter((r) => r.isTutorial);
 
-  const pastPapers = visibleResources.filter(
-    (r) =>
-      r.type === "pastpaper" ||
-      (r.category || "").toLowerCase().includes("past paper")
-  );
+  const pastPapers = visibleResources
+    .filter(
+      (r) =>
+        r.type === "pastpaper" ||
+        (r.category || "").toLowerCase().includes("past paper")
+    )
+    // Newest exam year first; papers without a year sink to the end.
+    .sort((a, b) => (b.paperMeta?.year ?? 0) - (a.paperMeta?.year ?? 0));
 
   const topTutors = visibleResources
     .filter((r) => r.isTutorial && r.tutor)

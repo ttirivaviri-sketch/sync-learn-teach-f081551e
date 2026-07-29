@@ -109,6 +109,13 @@ export interface LibraryResource {
   videoUrl?: string;
   /** Origin table for protected PDF streaming. */
   pdfSource?: "system" | "tutorial";
+  /** Structured metadata when type === "pastpaper". */
+  paperMeta?: {
+    year?: number | null;
+    session?: string | null;
+    paperNumber?: string | null;
+    markingSchemeUrl?: string | null;
+  };
 }
 
 // ─── Tutor Ranking ────────────────────────────────────────────────────────────

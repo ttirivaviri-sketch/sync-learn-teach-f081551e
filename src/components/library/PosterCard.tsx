@@ -53,8 +53,19 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
           isPaper ? "bg-orange-500 text-white" : "bg-primary text-primary-foreground"
         }`}
       >
-        {isPaper ? "Past Paper" : resource.type === "guide" ? "Guide" : "Book"}
+        {isPaper
+          ? resource.paperMeta?.year
+            ? `${resource.paperMeta.year}${resource.paperMeta.session ? ` ${resource.paperMeta.session.slice(0, 3)}` : ""}`
+            : "Past Paper"
+          : resource.type === "guide" ? "Guide" : "Book"}
       </Badge>
+
+      {/* Marking-scheme indicator */}
+      {isPaper && resource.paperMeta?.markingSchemeUrl && (
+        <Badge className="absolute top-2 right-2 text-[10px] border-0 bg-emerald-600 text-white">
+          MS
+        </Badge>
+      )}
 
       {/* Bottom overlay */}
       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/95 via-black/60 to-transparent p-2.5">
