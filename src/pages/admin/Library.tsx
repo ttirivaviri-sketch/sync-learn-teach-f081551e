@@ -147,8 +147,8 @@ export default function Library() {
         rights_note: isPaper ? (editing.rights_note || null) : null,
       };
       const { error } = editing.id
-        ? await supabase.from("library_system_resources").update(payload as never).eq("id", editing.id)
-        : await supabase.from("library_system_resources").insert(payload as never);
+        ? await supabase.from("library_system_resources").update(payload).eq("id", editing.id)
+        : await supabase.from("library_system_resources").insert(payload);
       if (error) throw error;
       toast.success(editing.id ? "Updated" : "Created");
       setEditing(null);

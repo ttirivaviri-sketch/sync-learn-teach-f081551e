@@ -28,12 +28,13 @@ export function ClassMisconceptionDigest({ classId }: { classId: string }) {
     enabled: !!classId,
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc(
+      const { data, error } = await supabase.rpc(
         "get_class_misconception_digest",
         { p_class_id: classId },
       );
       if (error) throw error;
-      return (data?.items ?? []) as DigestItem[];
+      const payload = data as unknown as { items?: DigestItem[] } | null;
+      return payload?.items ?? [];
     },
   });
 

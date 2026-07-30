@@ -45,7 +45,7 @@ export default function CurriculumTemplates() {
         .order("grade")
         .order("subject"),
     ]);
-    setJobs((jobData ?? []) as any);
+    setJobs((jobData ?? []) as unknown as Job[]);
     setTemplates((tplData ?? []) as TemplateRow[]);
     setLoading(false);
   };

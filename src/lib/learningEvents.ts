@@ -11,6 +11,7 @@
  * wrap them in try/catch and a logging outage can't break a user flow.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { logger } from "@/utils/logger";
 
 export type LearningEventSource =
@@ -20,6 +21,7 @@ export type LearningEventSource =
   | "school_quiz"
   | "daily_task"
   | "mock_exam"
+  | "photo_solve"
   | "booking_completed";
 
 export interface LearningEventInput {
@@ -43,9 +45,7 @@ export async function logLearningEvent(input: LearningEventInput): Promise<void>
     }
     if (!userId) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const { error } = await sb.from("learning_events").insert({
+    const { error } = await supabase.from("learning_events").insert({
       user_id: userId,
       school_id: input.schoolId ?? null,
       subject_id: input.subjectId ?? null,
@@ -53,7 +53,7 @@ export async function logLearningEvent(input: LearningEventInput): Promise<void>
       source: input.source,
       score_pct: input.scorePct ?? null,
       mastery_delta: input.masteryDelta ?? null,
-      payload: input.payload ?? {},
+      payload: (input.payload ?? {}) as Json,
       occurred_at: input.occurredAt ?? new Date().toISOString(),
     });
     if (error) logger.warn("[learningEvents] insert failed", error);

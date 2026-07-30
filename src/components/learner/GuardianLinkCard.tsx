@@ -30,7 +30,7 @@ export function GuardianLinkCard({ userId }: { userId: string }) {
     queryKey: ["guardian-links", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("guardian_links")
         .select("id,guardian_label,invite_code,status,accepted_at")
         .eq("learner_user_id", userId)
@@ -44,21 +44,21 @@ export function GuardianLinkCard({ userId }: { userId: string }) {
   const createInvite = async () => {
     setCreating(true);
     try {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("guardian_links")
         .insert({ learner_user_id: userId });
       if (error) throw error;
       toast.success("Invite code created — share it with your parent/guardian");
       qc.invalidateQueries({ queryKey: ["guardian-links", userId] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Could not create invite");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not create invite");
     } finally {
       setCreating(false);
     }
   };
 
   const revoke = async (id: string) => {
-    const { error } = await (supabase as any)
+    const { error } = await supabase
       .from("guardian_links")
       .update({ status: "revoked" })
       .eq("id", id);

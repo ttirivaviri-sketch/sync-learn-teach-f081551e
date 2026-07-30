@@ -31,7 +31,7 @@ export function PhotoSolveHistory() {
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
       if (!uid) return [] as AttemptRow[];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("photo_solve_attempts")
         .select(
           "id,subject_name,topic_name,question_detected,final_answer_correct," +
