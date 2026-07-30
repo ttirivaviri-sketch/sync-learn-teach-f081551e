@@ -13,6 +13,7 @@
  * nag: at most one pulse prompt per surface per PULSE_COOLDOWN_HOURS.
  */
 import { supabase } from "@/integrations/supabase/client";
+import type { Database, Json } from "@/integrations/supabase/types";
 import { logger } from "@/utils/logger";
 
 export type FeedbackSurface =
@@ -64,14 +65,17 @@ export interface PulseFeedbackInput {
   context?: Record<string, unknown>;
 }
 
-async function insertFeedback(row: Record<string, unknown>): Promise<boolean> {
+type FeedbackRow = Omit<
+  Database["public"]["Tables"]["feedback_events"]["Insert"],
+  "user_id"
+>;
+
+async function insertFeedback(row: FeedbackRow): Promise<boolean> {
   try {
     const { data } = await supabase.auth.getUser();
     const userId = data.user?.id;
     if (!userId) return false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sb = supabase as any;
-    const { error } = await sb.from("feedback_events").insert({ user_id: userId, ...row });
+    const { error } = await supabase.from("feedback_events").insert({ user_id: userId, ...row });
     if (error) {
       logger.warn("[feedback] insert failed", error);
       return false;
@@ -92,7 +96,7 @@ export async function sendOutputFeedback(input: OutputFeedbackInput): Promise<bo
     comment: input.comment?.slice(0, 500) ?? null,
     subject_name: input.subjectName ?? null,
     topic_name: input.topicName ?? null,
-    context: input.context ?? {},
+    context: (input.context ?? {}) as Json,
   });
 }
 
@@ -104,7 +108,7 @@ export async function sendPulseFeedback(input: PulseFeedbackInput): Promise<bool
     rating,
     subject_name: input.subjectName ?? null,
     topic_name: input.topicName ?? null,
-    context: input.context ?? {},
+    context: (input.context ?? {}) as Json,
   });
   if (ok) markPulseShown(input.surface);
   return ok;

@@ -1073,6 +1073,51 @@ export type Database = {
         }
         Relationships: []
       }
+      feedback_events: {
+        Row: {
+          comment: string | null
+          context: Json
+          created_at: string
+          id: string
+          kind: string
+          rating: number | null
+          reason: string | null
+          sentiment: string | null
+          subject_name: string | null
+          surface: string
+          topic_name: string | null
+          user_id: string
+        }
+        Insert: {
+          comment?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          kind: string
+          rating?: number | null
+          reason?: string | null
+          sentiment?: string | null
+          subject_name?: string | null
+          surface: string
+          topic_name?: string | null
+          user_id: string
+        }
+        Update: {
+          comment?: string | null
+          context?: Json
+          created_at?: string
+          id?: string
+          kind?: string
+          rating?: number | null
+          reason?: string | null
+          sentiment?: string | null
+          subject_name?: string | null
+          surface?: string
+          topic_name?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       flashcards: {
         Row: {
           back: string
@@ -1214,6 +1259,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      guardian_links: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          guardian_label: string | null
+          guardian_user_id: string | null
+          id: string
+          invite_code: string
+          learner_user_id: string
+          status: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          guardian_label?: string | null
+          guardian_user_id?: string | null
+          id?: string
+          invite_code?: string
+          learner_user_id: string
+          status?: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          guardian_label?: string | null
+          guardian_user_id?: string | null
+          id?: string
+          invite_code?: string
+          learner_user_id?: string
+          status?: string
+        }
+        Relationships: []
       }
       homework_reminder_sent: {
         Row: {
@@ -1881,8 +1959,13 @@ export type Database = {
           grade_levels: string[]
           id: string
           kind: string
+          marking_scheme_url: string | null
           pages: number | null
+          paper_number: string | null
+          paper_session: string | null
+          paper_year: number | null
           pdf_url: string | null
+          rights_note: string | null
           subject: string
           thumbnail_url: string | null
           title: string
@@ -1898,8 +1981,13 @@ export type Database = {
           grade_levels?: string[]
           id?: string
           kind: string
+          marking_scheme_url?: string | null
           pages?: number | null
+          paper_number?: string | null
+          paper_session?: string | null
+          paper_year?: number | null
           pdf_url?: string | null
+          rights_note?: string | null
           subject: string
           thumbnail_url?: string | null
           title: string
@@ -1915,8 +2003,13 @@ export type Database = {
           grade_levels?: string[]
           id?: string
           kind?: string
+          marking_scheme_url?: string | null
           pages?: number | null
+          paper_number?: string | null
+          paper_session?: string | null
+          paper_year?: number | null
           pdf_url?: string | null
+          rights_note?: string | null
           subject?: string
           thumbnail_url?: string | null
           title?: string
@@ -2458,6 +2551,72 @@ export type Database = {
           status?: string
           tutor_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      photo_solve_attempts: {
+        Row: {
+          confidence: number | null
+          created_at: string
+          curriculum: string | null
+          final_answer: string | null
+          final_answer_correct: boolean | null
+          id: string
+          marks_awarded: number | null
+          marks_possible: number | null
+          missed_steps: Json
+          model_solution: string | null
+          next_hint: string | null
+          practice_questions: Json | null
+          practice_score_pct: number | null
+          practiced_at: string | null
+          question_detected: string | null
+          steps: Json
+          subject_name: string | null
+          topic_name: string | null
+          user_id: string
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string
+          curriculum?: string | null
+          final_answer?: string | null
+          final_answer_correct?: boolean | null
+          id?: string
+          marks_awarded?: number | null
+          marks_possible?: number | null
+          missed_steps?: Json
+          model_solution?: string | null
+          next_hint?: string | null
+          practice_questions?: Json | null
+          practice_score_pct?: number | null
+          practiced_at?: string | null
+          question_detected?: string | null
+          steps?: Json
+          subject_name?: string | null
+          topic_name?: string | null
+          user_id: string
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string
+          curriculum?: string | null
+          final_answer?: string | null
+          final_answer_correct?: boolean | null
+          id?: string
+          marks_awarded?: number | null
+          marks_possible?: number | null
+          missed_steps?: Json
+          model_solution?: string | null
+          next_hint?: string | null
+          practice_questions?: Json | null
+          practice_score_pct?: number | null
+          practiced_at?: string | null
+          question_detected?: string | null
+          steps?: Json
+          subject_name?: string | null
+          topic_name?: string | null
+          user_id?: string
         }
         Relationships: []
       }
@@ -6096,6 +6255,7 @@ export type Database = {
     Functions: {
       _sad_upsert: { Args: { _day: string; _user_id: string }; Returns: string }
       _student_primary_school: { Args: { _user_id: string }; Returns: string }
+      accept_guardian_invite: { Args: { p_code: string }; Returns: Json }
       accept_school_invitation: { Args: { _token: string }; Returns: Json }
       admin_study_completion_rate: {
         Args: { p_days?: number }
@@ -6173,6 +6333,14 @@ export type Database = {
         Returns: number
       }
       get_ai_usage_today: { Args: never; Returns: Json }
+      get_class_misconception_digest: {
+        Args: { p_class_id: string }
+        Returns: Json
+      }
+      get_guardian_learner_overview: {
+        Args: { p_learner: string }
+        Returns: Json
+      }
       get_exam_readiness: {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json

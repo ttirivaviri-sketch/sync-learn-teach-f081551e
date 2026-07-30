@@ -194,7 +194,7 @@ export function PhotoSolvePractice({
     if (avgPct >= 80) studySyncHaptic('quiz.perfect');
 
     logLearningEvent({
-      source: 'photo_solve' as never,
+      source: 'photo_solve',
       topicName: topicName ?? null,
       scorePct: avgPct,
       payload: {
@@ -207,7 +207,7 @@ export function PhotoSolvePractice({
     });
 
     if (attemptId) {
-      (supabase.from('photo_solve_attempts' as never) as any)
+      supabase.from('photo_solve_attempts')
         .update({
           practice_questions: outcomes.map((o) => ({
             question: o.question.question,

@@ -72,7 +72,7 @@ export default function GuardianPortal() {
     queryKey: ["guardian-learners", userId],
     enabled: !!userId,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("guardian_links")
         .select("id,learner_user_id,status")
         .eq("guardian_user_id", userId)
@@ -86,16 +86,17 @@ export default function GuardianPortal() {
     if (!code.trim()) return;
     setRedeeming(true);
     try {
-      const { data, error } = await (supabase as any).rpc("accept_guardian_invite", {
+      const { data, error } = await supabase.rpc("accept_guardian_invite", {
         p_code: code.trim(),
       });
       if (error) throw error;
-      if (data?.ok === false) throw new Error(data.error ?? "Invalid code");
+      const result = data as { ok?: boolean; error?: string } | null;
+      if (result?.ok === false) throw new Error(result.error ?? "Invalid code");
       toast.success("Linked! You can now follow this learner's progress.");
       setCode("");
       qc.invalidateQueries({ queryKey: ["guardian-learners", userId] });
-    } catch (e: any) {
-      toast.error(e.message ?? "Could not redeem code");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Could not redeem code");
     } finally {
       setRedeeming(false);
     }
@@ -188,12 +189,12 @@ function LearnerOverviewCard({ learnerId }: { learnerId: string }) {
     queryKey: ["guardian-overview", learnerId],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc(
+      const { data, error } = await supabase.rpc(
         "get_guardian_learner_overview",
         { p_learner: learnerId },
       );
       if (error) throw error;
-      return data as Overview;
+      return data as unknown as Overview;
     },
   });
 

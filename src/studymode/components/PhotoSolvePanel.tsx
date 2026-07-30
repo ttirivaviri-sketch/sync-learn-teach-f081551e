@@ -195,8 +195,8 @@ export function PhotoSolvePanel({
         const { data: userData } = await supabase.auth.getUser();
         const uid = userData?.user?.id;
         if (uid) {
-          const { data: row, error: insErr } = await (supabase
-            .from('photo_solve_attempts' as never) as any)
+          const { data: row, error: insErr } = await supabase
+            .from('photo_solve_attempts')
             .insert({
               user_id: uid,
               subject_name: subject?.name ?? null,

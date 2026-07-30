@@ -105,7 +105,7 @@ export default function CurriculumImportPanel({ onImported }: { onImported?: () 
             curriculum: t.curriculum,
             grade: t.grade,
             subject: t.subject,
-            topics: t.topics as any,
+            topics: t.topics as unknown as import("@/integrations/supabase/types").Json,
             source: "verified",
             verified_by: userId,
             verified_at: new Date().toISOString(),

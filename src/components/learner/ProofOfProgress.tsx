@@ -106,9 +106,7 @@ export function ProofOfProgress({ className }: { className?: string }) {
       const userId = auth.user?.id;
       if (!userId) return null;
       const since = new Date(Date.now() - 14 * 24 * 3600_000).toISOString();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sb = supabase as any;
-      const { data: rows, error } = await sb
+      const { data: rows, error } = await supabase
         .from("learning_events")
         .select("source, topic_name, score_pct, occurred_at, payload")
         .eq("user_id", userId)
