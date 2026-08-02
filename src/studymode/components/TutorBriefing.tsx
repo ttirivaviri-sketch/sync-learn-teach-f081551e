@@ -103,6 +103,8 @@ const SOURCE_LABEL: Record<LearningEventSource, string> = {
   daily_task: 'Daily task',
   mock_exam: 'Mock exam',
   booking_completed: 'Tutoring session',
+  photo_solve: 'Photo solve',
+
 };
 
 function formatRelative(iso: string): string {

@@ -1,95 +1,42 @@
-# Simplify Learner UX — "one obvious thing per screen"
+## What's broken
 
-Goal: make the app feel simple without removing capability. Everything stays; it just gets ranked, grouped, and demoted so one primary action is obvious per screen and the rest is one tap away.
-
-I agree with the direction you pasted. StudyMode is currently reached via a toggle inside Home — that's the single biggest discoverability bug. Promoting it to its own bottom-nav tab is the right move. I'd sequence it exactly as suggested: **Home → Library → StudyMode**, in that order, because each step de-clutters the surface the next one depends on.
-
----
-
-## Phase 1 — Learner bottom nav: 4 tabs → 5 tabs
-
-Current (`src/pages/LearnerApp.tsx` + `AppShell`): Home / Activity / Library / Profile, with StudyMode hidden behind a toggle on Home.
-
-New:
+The published app (`sync-learn-teach.lovable.app` and `studysync.co.za`) renders an empty page. The HTML and title load fine, but JavaScript dies immediately with:
 
 ```text
-[ Home ] [ Study ] [ Library ] [ Activity ] [ Profile ]
+Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')
 ```
 
-- `Study` tab mounts `<StudyModeWrapper />` directly — no toggle, no wrapper card.
-- The old StudyMode toggle on Home is removed; a small "Open Study" affordance stays on the NextActionCard for continuity.
-- Bottom nav already scales via `gridTemplateColumns: repeat(navItems.length, 1fr)` — 5 tabs fit, but we tighten label sizing to keep it comfortable on 360px devices.
-- Desktop sidebar just gets one more item — no layout change.
+Nothing renders after that, which is exactly the "blank state on all pages" you're seeing. The dev preview works because Vite does not bundle chunks in dev — the bug only exists in the production build.
 
-## Phase 2 — Home consolidation
+### Cause
 
-Today, Home stacks: greeting → 4 insight cards → giant "My Lessons" → NextActionCard → tutor list.
+`vite.config.ts` has a hand-written `manualChunks` function that splits `node_modules` into ~12 separate chunks (`react`, `router`, `radix`, `query`, `motion`, `vendor`, …). React ends up in its own chunk while libraries that touch React at module-evaluation time (react-is, use-sync-external-store, Radix internals) land in `vendor`. That produces a circular chunk import, so `vendor` runs before `react` has been initialised and `React` is `undefined` when something calls `React.createContext()`.
 
-After:
+The rule `if (id.includes('framer-motion') || id.includes('motion'))` also over-matches — any dependency path containing the substring "motion" gets pulled into that chunk, which makes the ordering worse.
 
-- **One** hero: `NextActionCard` (already exists, already the right primitive). It becomes the only above-the-fold element besides the greeting.
-- The 4 insight cards collapse into a single horizontally-scrollable "At a glance" strip (streak, XP, next exam, weak topic) — same data, one row instead of four blocks.
-- "My Lessons" demotes from giant CTA to a normal row action inside the At-a-glance strip (chip: "3 lessons this week →").
-- Tutor discovery list stays exactly where it is — that's the thing people actually opened Home to do.
+## The fix
 
-No hooks change. Purely a re-composition of `LearnerHomeTab.tsx`.
+1. `**vite.config.ts` — replace the fragile manual chunking.** Remove the custom `manualChunks` function. Vite/Rollup's default chunking already handles React ordering correctly, and the app already code-splits properly through the `React.lazy` route imports in `App.tsx`, so the first-paint savings the manual rule was chasing are largely preserved. Keep `minify`, `target`, `cssCodeSplit`, and `chunkSizeWarningLimit` as-is.
+  If we later want vendor splitting back, it must be done as an object map that keeps React, react-dom, scheduler, react-is, and every React-dependent UI library in one shared chunk — not as separate per-library chunks.
+2. **Verify the built bundle actually boots.** Run a production build and serve `dist/` locally, then load `/`, `/learner`, and `/school` in a headless browser asserting `#root` is non-empty and there are zero page errors. This is the check that was missing — the previous chunking change was never validated against a real production build.
 
-## Phase 3 — Library consolidation
+## Second issue found while auditing the recent PRs
 
-Today: Clips / Books / Past Papers / Tutorials tabs + StruggleRecRail + "need help?" nudges repeated.
+`src/App.tsx` declares `/school` twice:
 
-After:
+- line 130 → `SchoolAdminPage` (the Learning-OS console)
+- line 158 → `SchoolLayout` + `SchoolDashboard`, behind the `FEATURE_SCHOOLS` flag
 
-- Drop the **Tutorials** sub-tab. Tapping a clip in the "Clips for you" rail already opens the fullscreen clip feed — that's what the Tutorials tab did. One less tab, zero features lost.
-- Merge the 3 "need help?" nudges into **one** persistent footer CTA on the Library page.
-- StruggleRecRail stays at the top (it's the "for you" shelf).
-- Edit inside `StudySyncLibrary` + `LearnerLibraryTab.tsx` only.
+The first declaration wins, so the school portal's index page is unreachable; only `/school/:schoolId/*` works. I'll move the Learning-OS console to `/school-ops` and leave `/school` to `SchoolLayout`, so both surfaces are reachable.
 
-## Phase 4 — StudyMode inner tabs de-stacked
+Related: `/teacher` (`TeacherCommandCenterPage`) currently redirects signed-out users to `/tutor/auth`. For a school teacher that's the wrong door. I'll flag this rather than change it unilaterally — tell me whether school teachers should authenticate through the tutor login or the learner/school login and I'll wire it accordingly.
 
-This is the worst offender. The fix is the same pattern applied to each of the 5 inner tabs:
+## What I verified as already fine
 
+- PRs #94–#100 (Cambridge IGCSE / O-Level / A-Level curriculum seeds) are merged **and** applied to the database: `curriculum_topic_templates` now carries CAMB IGCSE (15), O-Level (10) and A-Level (11) rows alongside the existing ZIMSEC / NSC / IEB sets.
+- The two newest commits only regenerated `bun.lock` and `src/integrations/supabase/types.ts` — no app-code changes, so they're not implicated in the blank page.
+- All public routes (`/`, `/learner`, `/tutor`, `/guardian`, `/admin`) render correctly against the dev server with no console errors.
 
-| Tab         | Today (stacked)                                                                  | After (one primary + "More")                                                                                       |
-| ----------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Subjects    | Header actions + banners + subject grid + AI panel                               | Subject grid is the screen. Header actions collapse into a `⋯` menu.                                               |
-| Progress    | Grade predictor + AI insights + charts (3 full-width blocks)                     | One summary card ("You're on track for a B, up from C") + `See details` expands the rest inline.                   |
-| Calendar    | Exam countdown + adaptive-plan banner + calendar                                 | Calendar is the screen. Countdown becomes a chip in the header; banner becomes a dismissable toast on first visit. |
-| Exams       | Mock exams + explainer + AI alerts + "still stuck" + review + history (6 blocks) | Mock exam CTA + review widget only. Explainer, alerts, history move under a `⋯ More` sheet.                        |
-| Leaderboard | (fine as-is)                                                                     | No change.                                                                                                         |
+## Note on testing signed-in screens
 
-
-Rules applied consistently:
-
-- **One summary card** instead of a stack of banners.
-- **Badges capped at 1 per item** (currently multiple pile up on subject cards).
-- **Secondary actions** move to a `⋯` overflow, not the header.
-- Nothing is deleted — every block that comes out of the main scroll lives in a `More` sheet on the same tab.
-
-## Phase 5 — Follow-ups (not in this plan, flagged)
-
-- Onboarding tour that highlights the new Study tab on first launch (one-time).
-- Analytics event on tab switches to confirm StudyMode DAU rises after promotion.
-
----
-
-## Technical notes
-
-- **Files touched (Phase 1–4):**
-  - `src/pages/LearnerApp.tsx` — add Study nav item + route case
-  - `src/components/layout/AppShell.tsx` — no changes required (already dynamic)
-  - `src/pages/learner/LearnerHomeTab.tsx` — remove StudyMode toggle, collapse insight cards
-  - `src/pages/learner/LearnerLibraryTab.tsx` + `src/components/StudySyncLibrary.tsx` — remove Tutorials tab, unify help nudge
-  - `src/studymode/components/StudyMode.tsx` + the 5 inner tab components under `src/studymode/components/` — de-stack per table above
-- **No hook changes, no DB changes, no edge-function changes.** Purely presentational.
-- **StudyModeWrapper** (`src/studymode/StudyModeWrapper.tsx`) is already suitable as a standalone route/tab mount.
-- **Mobile-first check:** at 360×640, the new 5-tab nav needs `text-[10px]` labels and 20px icons to stay legible. Desktop sidebar is unaffected.
-- **Feature flag:** wrap the nav change behind `featureFlags.newLearnerNav` (default on) so we can flip back instantly if something regresses.
-
-## What I want to confirm before building
-
-1. **5-tab order** — is `Home / Study / Library / Activity / Profile` right, or do you want Study in position 1 (leftmost)? Study after library 
-2. **Insight cards on Home** — collapse into one horizontal strip (my proposal) 
-3. **Phase 4 scope** — do all 5 StudyMode inner tabs in one pass
-
-If you're happy with the direction and defaults, say "go" and I'll implement Phases 1–3 in one build pass, then Phase 4 in a second.
+This project uses an external Supabase that Lovable can't mint a session for, so I can't run authenticated end-to-end checks. I'll verify the fix on public routes plus a production-build smoke test; you'll need to confirm the signed-in learner and school-student screens once it's deployed.
