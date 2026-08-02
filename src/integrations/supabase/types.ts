@@ -518,6 +518,48 @@ export type Database = {
           },
         ]
       }
+      companion_interactions: {
+        Row: {
+          created_at: string
+          event: string
+          id: string
+          metadata: Json
+          resource_id: string | null
+          subject: string | null
+          suggestion_id: string
+          suggestion_kind: string
+          topic: string | null
+          tutor_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: string
+          id?: string
+          metadata?: Json
+          resource_id?: string | null
+          subject?: string | null
+          suggestion_id: string
+          suggestion_kind: string
+          topic?: string | null
+          tutor_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: string
+          id?: string
+          metadata?: Json
+          resource_id?: string | null
+          subject?: string | null
+          suggestion_id?: string
+          suggestion_kind?: string
+          topic?: string | null
+          tutor_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       concept_attempts: {
         Row: {
           concept_id: string | null
@@ -1509,6 +1551,266 @@ export type Database = {
           },
         ]
       }
+      learning_concept_catalog: {
+        Row: {
+          command_words: string[]
+          concept_name: string
+          confidence: number | null
+          created_at: string
+          curriculum: string
+          id: string
+          ingested_at: string | null
+          metadata: Json
+          objective_type: string
+          prerequisites: string[]
+          source_document_id: string | null
+          source_kind: string | null
+          subject_id: string | null
+          subject_name: string
+          subtopic_name: string | null
+          topic_name: string
+          updated_at: string
+        }
+        Insert: {
+          command_words?: string[]
+          concept_name: string
+          confidence?: number | null
+          created_at?: string
+          curriculum: string
+          id?: string
+          ingested_at?: string | null
+          metadata?: Json
+          objective_type?: string
+          prerequisites?: string[]
+          source_document_id?: string | null
+          source_kind?: string | null
+          subject_id?: string | null
+          subject_name: string
+          subtopic_name?: string | null
+          topic_name: string
+          updated_at?: string
+        }
+        Update: {
+          command_words?: string[]
+          concept_name?: string
+          confidence?: number | null
+          created_at?: string
+          curriculum?: string
+          id?: string
+          ingested_at?: string | null
+          metadata?: Json
+          objective_type?: string
+          prerequisites?: string[]
+          source_document_id?: string | null
+          source_kind?: string | null
+          subject_id?: string | null
+          subject_name?: string
+          subtopic_name?: string | null
+          topic_name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      learning_concept_ingestion_staging: {
+        Row: {
+          command_words: string[]
+          concept_name: string
+          confidence: number
+          created_at: string
+          curriculum: string
+          id: string
+          metadata: Json
+          objective_type: string
+          prerequisites: string[]
+          promoted_catalog_id: string | null
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by_user_id: string | null
+          source_document_id: string | null
+          source_kind: string
+          status: string
+          subject_id: string | null
+          subject_name: string
+          submitted_by_user_id: string | null
+          subtopic_name: string | null
+          topic_name: string
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          command_words?: string[]
+          concept_name: string
+          confidence?: number
+          created_at?: string
+          curriculum: string
+          id?: string
+          metadata?: Json
+          objective_type?: string
+          prerequisites?: string[]
+          promoted_catalog_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          source_document_id?: string | null
+          source_kind: string
+          status?: string
+          subject_id?: string | null
+          subject_name: string
+          submitted_by_user_id?: string | null
+          subtopic_name?: string | null
+          topic_name: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          command_words?: string[]
+          concept_name?: string
+          confidence?: number
+          created_at?: string
+          curriculum?: string
+          id?: string
+          metadata?: Json
+          objective_type?: string
+          prerequisites?: string[]
+          promoted_catalog_id?: string | null
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by_user_id?: string | null
+          source_document_id?: string | null
+          source_kind?: string
+          status?: string
+          subject_id?: string | null
+          subject_name?: string
+          submitted_by_user_id?: string | null
+          subtopic_name?: string | null
+          topic_name?: string
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_concept_ingestion_staging_promoted_catalog_id_fkey"
+            columns: ["promoted_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "learning_concept_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_concept_ingestion_staging_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_concept_mastery_ledger: {
+        Row: {
+          concept_id: string | null
+          concept_name: string
+          confidence: number
+          created_at: string
+          evidence_source: string | null
+          evidence_type: string
+          id: string
+          metadata: Json
+          recorded_at: string
+          score_delta: number
+          subject_id: string | null
+          subject_name: string
+          topic_name: string
+          user_id: string
+        }
+        Insert: {
+          concept_id?: string | null
+          concept_name: string
+          confidence?: number
+          created_at?: string
+          evidence_source?: string | null
+          evidence_type: string
+          id?: string
+          metadata?: Json
+          recorded_at?: string
+          score_delta?: number
+          subject_id?: string | null
+          subject_name: string
+          topic_name: string
+          user_id: string
+        }
+        Update: {
+          concept_id?: string | null
+          concept_name?: string
+          confidence?: number
+          created_at?: string
+          evidence_source?: string | null
+          evidence_type?: string
+          id?: string
+          metadata?: Json
+          recorded_at?: string
+          score_delta?: number
+          subject_id?: string | null
+          subject_name?: string
+          topic_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_concept_mastery_ledger_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "learning_concept_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_concept_prerequisite_edges: {
+        Row: {
+          concept_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          prerequisite_concept_id: string
+          source_kind: string | null
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          concept_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          prerequisite_concept_id: string
+          source_kind?: string | null
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          concept_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          prerequisite_concept_id?: string
+          source_kind?: string | null
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_concept_prerequisite_edge_prerequisite_concept_id_fkey"
+            columns: ["prerequisite_concept_id"]
+            isOneToOne: false
+            referencedRelation: "learning_concept_catalog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_concept_prerequisite_edges_concept_id_fkey"
+            columns: ["concept_id"]
+            isOneToOne: false
+            referencedRelation: "learning_concept_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learning_events: {
         Row: {
           created_at: string
@@ -1558,6 +1860,549 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      learning_intervention_events: {
+        Row: {
+          action_type: string
+          actor_user_id: string
+          created_at: string
+          id: string
+          intervention_id: string
+          metadata: Json
+          note: string | null
+        }
+        Insert: {
+          action_type: string
+          actor_user_id: string
+          created_at?: string
+          id?: string
+          intervention_id: string
+          metadata?: Json
+          note?: string | null
+        }
+        Update: {
+          action_type?: string
+          actor_user_id?: string
+          created_at?: string
+          id?: string
+          intervention_id?: string
+          metadata?: Json
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_intervention_events_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "learning_intervention_outcomes"
+            referencedColumns: ["intervention_id"]
+          },
+          {
+            foreignKeyName: "learning_intervention_events_intervention_id_fkey"
+            columns: ["intervention_id"]
+            isOneToOne: false
+            referencedRelation: "learning_intervention_queue"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_intervention_queue: {
+        Row: {
+          acknowledged_at: string | null
+          action_note: string | null
+          assigned_role: string | null
+          assigned_to_user_id: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          intervention_type: string
+          last_action_at: string | null
+          metadata: Json
+          priority: string
+          reason: string
+          recommended_action: string
+          resolved_at: string | null
+          resolved_by_user_id: string | null
+          status: string
+          subject_id: string | null
+          supporting_evidence: Json
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          acknowledged_at?: string | null
+          action_note?: string | null
+          assigned_role?: string | null
+          assigned_to_user_id?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          intervention_type: string
+          last_action_at?: string | null
+          metadata?: Json
+          priority?: string
+          reason: string
+          recommended_action: string
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          status?: string
+          subject_id?: string | null
+          supporting_evidence?: Json
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          acknowledged_at?: string | null
+          action_note?: string | null
+          assigned_role?: string | null
+          assigned_to_user_id?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          intervention_type?: string
+          last_action_at?: string | null
+          metadata?: Json
+          priority?: string
+          reason?: string
+          recommended_action?: string
+          resolved_at?: string | null
+          resolved_by_user_id?: string | null
+          status?: string
+          subject_id?: string | null
+          supporting_evidence?: Json
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_intervention_queue_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_ops_automation_runs: {
+        Row: {
+          details: Json
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          job_name: string
+          rows_processed: number
+          started_at: string
+          status: string
+          workspace_id: string | null
+        }
+        Insert: {
+          details?: Json
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name: string
+          rows_processed?: number
+          started_at?: string
+          status?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          details?: Json
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          job_name?: string
+          rows_processed?: number
+          started_at?: string
+          status?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_ops_automation_runs_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_ops_automation_schedule: {
+        Row: {
+          cadence: string
+          created_at: string
+          enabled: boolean
+          id: string
+          job_name: string
+          last_error: string | null
+          last_run_at: string | null
+          last_status: string | null
+          metadata: Json
+          next_run_at: string | null
+          updated_at: string
+          workspace_id: string | null
+        }
+        Insert: {
+          cadence?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          job_name: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          metadata?: Json
+          next_run_at?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Update: {
+          cadence?: string
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          job_name?: string
+          last_error?: string | null
+          last_run_at?: string | null
+          last_status?: string | null
+          metadata?: Json
+          next_run_at?: string | null
+          updated_at?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_ops_automation_schedule_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_ops_plan_proposals: {
+        Row: {
+          applied_schedule_id: string | null
+          created_at: string
+          duration_minutes: number
+          id: string
+          metadata: Json
+          projected_risk: number | null
+          proposed_for: string
+          reason: string
+          status: string
+          subject_id: string | null
+          subject_name: string
+          topic_name: string
+          updated_at: string
+          user_id: string
+          workspace_id: string | null
+        }
+        Insert: {
+          applied_schedule_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          metadata?: Json
+          projected_risk?: number | null
+          proposed_for: string
+          reason?: string
+          status?: string
+          subject_id?: string | null
+          subject_name: string
+          topic_name: string
+          updated_at?: string
+          user_id: string
+          workspace_id?: string | null
+        }
+        Update: {
+          applied_schedule_id?: string | null
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          metadata?: Json
+          projected_risk?: number | null
+          proposed_for?: string
+          reason?: string
+          status?: string
+          subject_id?: string | null
+          subject_name?: string
+          topic_name?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_ops_plan_proposals_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_workspace_cohorts: {
+        Row: {
+          created_at: string
+          curriculum: string | null
+          grade_level: string | null
+          id: string
+          is_active: boolean
+          lead_user_id: string | null
+          metadata: Json
+          name: string
+          subject_names: string[]
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          curriculum?: string | null
+          grade_level?: string | null
+          id?: string
+          is_active?: boolean
+          lead_user_id?: string | null
+          metadata?: Json
+          name: string
+          subject_names?: string[]
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          curriculum?: string | null
+          grade_level?: string | null
+          id?: string
+          is_active?: boolean
+          lead_user_id?: string | null
+          metadata?: Json
+          name?: string
+          subject_names?: string[]
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_workspace_cohorts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_workspace_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by_user_id: string | null
+          cohort_ids: string[]
+          created_at: string
+          email: string
+          expires_at: string | null
+          id: string
+          invite_note: string | null
+          invited_by_user_id: string
+          metadata: Json
+          role: string
+          status: string
+          token: string | null
+          token_hash: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          cohort_ids?: string[]
+          created_at?: string
+          email: string
+          expires_at?: string | null
+          id?: string
+          invite_note?: string | null
+          invited_by_user_id: string
+          metadata?: Json
+          role?: string
+          status?: string
+          token?: string | null
+          token_hash?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by_user_id?: string | null
+          cohort_ids?: string[]
+          created_at?: string
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invite_note?: string | null
+          invited_by_user_id?: string
+          metadata?: Json
+          role?: string
+          status?: string
+          token?: string | null
+          token_hash?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_workspace_invitations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_workspace_member_cohorts: {
+        Row: {
+          cohort_id: string
+          created_at: string
+          id: string
+          membership_id: string
+          metadata: Json
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          cohort_id: string
+          created_at?: string
+          id?: string
+          membership_id: string
+          metadata?: Json
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          cohort_id?: string
+          created_at?: string
+          id?: string
+          membership_id?: string
+          metadata?: Json
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_workspace_member_cohorts_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspace_cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_workspace_member_cohorts_membership_id_fkey"
+            columns: ["membership_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspace_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_workspace_member_cohorts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_workspace_memberships: {
+        Row: {
+          campus: string | null
+          cohort_name: string | null
+          created_at: string
+          grade_level: string | null
+          id: string
+          metadata: Json
+          role: string
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          campus?: string | null
+          cohort_name?: string | null
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          metadata?: Json
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          campus?: string | null
+          cohort_name?: string | null
+          created_at?: string
+          grade_level?: string | null
+          id?: string
+          metadata?: Json
+          role?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_workspace_memberships_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          owner_user_id: string
+          school_name: string | null
+          slug: string
+          updated_at: string
+          workspace_type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          owner_user_id: string
+          school_name?: string | null
+          slug: string
+          updated_at?: string
+          workspace_type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          owner_user_id?: string
+          school_name?: string | null
+          slug?: string
+          updated_at?: string
+          workspace_type?: string
+        }
+        Relationships: []
       }
       lesson_consents: {
         Row: {
@@ -3820,6 +4665,7 @@ export type Database = {
           prompt: string
           question_type: string
           school_id: string
+          visual: Json | null
         }
         Insert: {
           common_mistakes?: string | null
@@ -3835,6 +4681,7 @@ export type Database = {
           prompt: string
           question_type?: string
           school_id: string
+          visual?: Json | null
         }
         Update: {
           common_mistakes?: string | null
@@ -3850,6 +4697,7 @@ export type Database = {
           prompt?: string
           question_type?: string
           school_id?: string
+          visual?: Json | null
         }
         Relationships: [
           {
@@ -4505,6 +5353,63 @@ export type Database = {
           succeeded?: number
           total?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      session_integrity_reports: {
+        Row: {
+          created_at: string
+          events: Json
+          focus_score: number | null
+          id: string
+          is_flagged: boolean
+          paste_events: number
+          question_copies: number
+          questions_flagged: number
+          questions_total: number
+          session_kind: string
+          session_ref: string | null
+          subject_name: string | null
+          tab_switches: number
+          topic_name: string | null
+          total_away_ms: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          events?: Json
+          focus_score?: number | null
+          id?: string
+          is_flagged?: boolean
+          paste_events?: number
+          question_copies?: number
+          questions_flagged?: number
+          questions_total?: number
+          session_kind: string
+          session_ref?: string | null
+          subject_name?: string | null
+          tab_switches?: number
+          topic_name?: string | null
+          total_away_ms?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          events?: Json
+          focus_score?: number | null
+          id?: string
+          is_flagged?: boolean
+          paste_events?: number
+          question_copies?: number
+          questions_flagged?: number
+          questions_total?: number
+          session_kind?: string
+          session_ref?: string | null
+          subject_name?: string | null
+          tab_switches?: number
+          topic_name?: string | null
+          total_away_ms?: number
+          user_id?: string
         }
         Relationships: []
       }
@@ -6190,6 +7095,19 @@ export type Database = {
       }
     }
     Views: {
+      companion_suggestion_effectiveness: {
+        Row: {
+          booked_count: number | null
+          clicked_count: number | null
+          dismissed_count: number | null
+          engagement_rate: number | null
+          last_interaction_at: string | null
+          shown_count: number | null
+          suggestion_kind: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       concept_mastery_v: {
         Row: {
           attempts: number | null
@@ -6211,6 +7129,102 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      learner_projected_risk: {
+        Row: {
+          avg_confidence: number | null
+          projected_risk: number | null
+          recent_avg_delta: number | null
+          slope_per_day: number | null
+          subject_id: string | null
+          subject_name: string | null
+          total_evidence: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      learning_class_at_risk: {
+        Row: {
+          cohort_id: string | null
+          cohort_name: string | null
+          high_count: number | null
+          last_alert_at: string | null
+          open_count: number | null
+          projected_risk: number | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_workspace_member_cohorts_cohort_id_fkey"
+            columns: ["cohort_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspace_cohorts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_workspace_member_cohorts_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      learning_concept_trends: {
+        Row: {
+          avg_confidence: number | null
+          concept_name: string | null
+          day: string | null
+          evidence_count: number | null
+          subject_id: string | null
+          subject_name: string | null
+          topic_name: string | null
+          total_score_delta: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      learning_intervention_outcomes: {
+        Row: {
+          acknowledged_at: string | null
+          created_at: string | null
+          hours_open: number | null
+          intervention_id: string | null
+          intervention_type: string | null
+          post_evidence_count: number | null
+          post_score_delta: number | null
+          priority: string | null
+          resolved_at: string | null
+          status: string | null
+          subject_id: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_intervention_queue_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "learning_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      school_member_directory: {
+        Row: {
+          brand_color: string | null
+          country: string | null
+          created_at: string | null
+          id: string | null
+          logo_url: string | null
+          name: string | null
+          plan: Database["public"]["Enums"]["school_plan"] | null
+          school_type: string | null
+          slug: string | null
+          status: Database["public"]["Enums"]["school_status"] | null
+        }
+        Relationships: []
       }
       tutors_public: {
         Row: {
@@ -6257,6 +7271,10 @@ export type Database = {
       _student_primary_school: { Args: { _user_id: string }; Returns: string }
       accept_guardian_invite: { Args: { p_code: string }; Returns: Json }
       accept_school_invitation: { Args: { _token: string }; Returns: Json }
+      accept_workspace_invitation: {
+        Args: { p_token: string }
+        Returns: string
+      }
       admin_study_completion_rate: {
         Args: { p_days?: number }
         Returns: {
@@ -6332,18 +7350,34 @@ export type Database = {
         Args: { p_allocation_id: string }
         Returns: number
       }
+      generate_workspace_invite_token: {
+        Args: { p_invitation_id: string }
+        Returns: string
+      }
       get_ai_usage_today: { Args: never; Returns: Json }
       get_class_misconception_digest: {
         Args: { p_class_id: string }
+        Returns: Json
+      }
+      get_exam_readiness: {
+        Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
       }
       get_guardian_learner_overview: {
         Args: { p_learner: string }
         Returns: Json
       }
-      get_exam_readiness: {
-        Args: { p_paper_code: string; p_subject_id: string }
-        Returns: Json
+      get_homework_questions_for_student: {
+        Args: { _homework_id: string }
+        Returns: {
+          id: string
+          marks: number
+          options: Json
+          ord: number
+          prompt: string
+          question_type: string
+          visual: Json
+        }[]
       }
       get_invitation_summary: { Args: { _token: string }; Returns: Json }
       get_overall_leaderboard: {
@@ -6412,6 +7446,17 @@ export type Database = {
           user_type: string
         }[]
       }
+      get_upstream_prerequisites: {
+        Args: { p_concept_id: string; p_max_depth?: number }
+        Returns: {
+          concept_id: string
+          concept_name: string
+          depth: number
+          subject_name: string
+          topic_name: string
+          weight: number
+        }[]
+      }
       has_conversation_access: {
         Args: { _conversation_id: string; _user_id: string }
         Returns: boolean
@@ -6433,8 +7478,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      is_any_los_staff: { Args: { _user_id: string }; Returns: boolean }
       is_class_teacher: { Args: { _class_id: string }; Returns: boolean }
       is_enrolled_in_class: { Args: { _class_id: string }; Returns: boolean }
+      is_los_workspace_member: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      is_los_workspace_staff: {
+        Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
       is_school_member: {
         Args: {
           _role?: Database["public"]["Enums"]["app_role"]
@@ -6481,11 +7535,19 @@ export type Database = {
           subject_id: string
         }[]
       }
+      materialize_concept_prerequisite_edges: {
+        Args: { p_subject_name?: string }
+        Returns: number
+      }
       notify_allocation_event: {
         Args: { p_allocation_id: string; p_event: string; p_extra?: string }
         Returns: undefined
       }
       notify_homework_due_soon: { Args: never; Returns: undefined }
+      promote_concept_ingestion: {
+        Args: { p_staging_id: string }
+        Returns: string
+      }
       rebuild_school_analytics_today: {
         Args: { _school_id: string }
         Returns: undefined
@@ -6515,6 +7577,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      record_ai_token_usage: {
+        Args: {
+          _bucket: string
+          _school_id?: string
+          _tokens_in?: number
+          _tokens_out?: number
+          _user_id: string
+        }
+        Returns: undefined
       }
       refresh_student_context_snapshot: {
         Args: { _user_id: string }
@@ -6590,6 +7662,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      route_interventions_to_teachers: {
+        Args: { p_workspace_id: string }
+        Returns: number
+      }
+      run_nightly_intervention_sweep: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
+      run_study_plan_optimizer: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
+      run_weekly_cohort_rollup: {
+        Args: { p_workspace_id: string }
+        Returns: Json
+      }
+      school_member_directory_rows: {
+        Args: never
+        Returns: {
+          brand_color: string
+          country: string
+          created_at: string
+          id: string
+          logo_url: string
+          name: string
+          plan: Database["public"]["Enums"]["school_plan"]
+          school_type: string
+          slug: string
+          status: Database["public"]["Enums"]["school_status"]
+        }[]
+      }
       school_storage_used_mb: { Args: { _school_id: string }; Returns: number }
       school_topic_affected_students: {
         Args: { _school_id: string; _topic: string }
@@ -6602,6 +7705,10 @@ export type Database = {
           risk_level: string
           student_id: string
         }[]
+      }
+      seed_learning_ops_default_schedules: {
+        Args: { _workspace_id: string }
+        Returns: undefined
       }
       set_subscription_plan: {
         Args: { p_plan: string }
