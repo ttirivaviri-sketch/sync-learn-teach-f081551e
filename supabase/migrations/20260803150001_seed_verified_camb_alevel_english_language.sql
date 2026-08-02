@@ -1,0 +1,74 @@
+-- Seed verified curriculum template: Cambridge International AS & A Level English Language
+-- Strands are labelled AS (first year) and A2 (second year) reflecting the
+-- staged structure of the Cambridge International AS & A Level qualification.
+-- Content policy: strand structure and approximate weightings reflect publicly
+-- documented syllabus organisation (factual information). All exemplar
+-- question stems are original paraphrases written for this project; no exam-board
+-- text is reproduced.
+-- Idempotent: ON CONFLICT upsert only overwrites rows previously sourced from
+-- 'ai' or 'hybrid'; human-verified rows are never clobbered.
+
+INSERT INTO public.curriculum_topic_templates (curriculum, grade, subject, topics, source, verified_at)
+VALUES (
+  'CAMB',
+  'A-Level',
+  'English Language',
+  $topics$[
+    {
+      "name": "AS: Reading and Analysing Texts",
+      "subtopics": ["Analysing form, structure and language in non-fiction texts", "Text types: articles, reviews, blogs, speeches, letters, advertisements", "Register, tone and audience positioning", "Rhetorical and persuasive techniques", "Comparing style across related texts", "Building an analytical essay from evidence"],
+      "learning_objectives": ["Analyse how writers' linguistic choices create meaning and effect", "Identify conventions of different text types and their exploitation", "Analyse register, tone and the writer-reader relationship", "Structure analytical responses with integrated evidence"],
+      "key_concepts": ["Lexis, grammar, phonology, pragmatics as analytical levels", "Genre conventions and subversion", "Formality continuum", "Figurative and rhetorical devices with effect", "Cohesion and discourse structure"],
+      "assessment_objectives": ["Demonstrate understanding of texts and how language works within them", "Analyse writers' stylistic choices using appropriate terminology"],
+      "typical_question_styles": ["Analyse the text, focusing on form, structure and language", "Compare how the two texts present their subject through language choices", "Discuss the writer's use of language to influence the reader"],
+      "exam_weight": 25,
+      "prerequisites": ["IGCSE/O Level English Language"],
+      "common_misconceptions": ["Describing content instead of analysing linguistic choices", "Feature-spotting terminology without explaining effects", "Ignoring the text's context, audience and purpose", "Treating formal register as automatically superior rather than situational"],
+      "exemplar_question_stems": ["Analyse how the travel blog uses language, form and structure to engage its audience", "Compare the ways the two speeches use rhetorical techniques to persuade their listeners"]
+    },
+    {
+      "name": "AS: Directed and Extended Writing",
+      "subtopics": ["Writing for specified form, audience and purpose", "Transforming source material into a new text type", "Reflective commentary on own writing choices", "Discursive and argumentative writing", "Descriptive and narrative-inflected non-fiction", "Voice, register and structural control"],
+      "learning_objectives": ["Produce writing precisely shaped to form, purpose and audience", "Transform ideas from stimulus texts into new genres", "Write reflective commentaries analysing own linguistic choices", "Sustain a controlled voice across extended pieces"],
+      "key_concepts": ["Form conventions deployment", "Register matching and shift", "Commentary as analysis, not description, of own choices", "Planning for structural effect", "Show-don't-tell in vivid non-fiction"],
+      "assessment_objectives": ["Write effectively for specified forms, purposes and audiences", "Reflect analytically on own language production"],
+      "typical_question_styles": ["Write the opening of a speech/article/letter on the topic, then comment on your language choices", "Transform the source text into the specified new form for a different audience", "Write a discursive piece responding to the statement"],
+      "exam_weight": 25,
+      "prerequisites": ["AS reading strand"],
+      "common_misconceptions": ["Ignoring the specified audience and defaulting to essay register", "Writing commentaries that summarise content instead of analysing choices", "Copying stimulus wording rather than transforming it", "Sacrificing accuracy for ambitious but uncontrolled style"],
+      "exemplar_question_stems": ["Write the text for a podcast introduction on the topic, then explain how your language choices target the intended listeners", "Using ideas from the source material, write a letter to the editor arguing your position"]
+    },
+    {
+      "name": "A2: Language Topics — Child Acquisition and World Englishes",
+      "subtopics": ["Stages of child language acquisition", "Theories: behaviourist, nativist, interactionist, cognitive", "Child directed speech features", "English as a global language", "Varieties of English and attitudes to them", "Language death, revival and linguistic imperialism debates"],
+      "learning_objectives": ["Describe and exemplify stages of child language development", "Evaluate competing acquisition theories against data", "Discuss the spread of global English and resulting varieties", "Evaluate debates about prestige, standardisation and language loss"],
+      "key_concepts": ["Holophrastic, two-word, telegraphic and post-telegraphic stages", "Virtuous errors as evidence of rule internalisation", "Kachru's circles model as a framing device", "Prestige varieties and covert prestige", "Pidgins and creoles at concept level"],
+      "assessment_objectives": ["Demonstrate knowledge of language development and global English", "Evaluate theoretical positions using evidence and examples"],
+      "typical_question_styles": ["Discuss what the transcript reveals about the child's language development, referring to theories", "Discuss the view that the global spread of English does more harm than good", "Analyse the data on the variety of English and discuss attitudes towards it"],
+      "exam_weight": 25,
+      "prerequisites": ["AS strands"],
+      "common_misconceptions": ["Treating acquisition stages as rigid timetables identical for all children", "Presenting one theory as proven correct rather than weighing evidence", "Equating non-standard varieties with incorrect English", "Assuming global English is a single uniform variety"],
+      "exemplar_question_stems": ["The transcript shows a two-year-old talking with a caregiver; analyse the child's utterances and evaluate which theories best explain them", "Evaluate the claim that English's global dominance inevitably endangers other languages"]
+    },
+    {
+      "name": "A2: Language Analysis — Change, Data and Self-Reflection",
+      "subtopics": ["Historical change in English: lexis, semantics, grammar, orthography", "Analysing historical and modern text pairs", "Corpus data: n-grams and collocations interpretation", "Language and the self: identity and social groups", "Sociolect, idiolect and code-switching", "Attitudes to language change: prescriptivism vs descriptivism"],
+      "learning_objectives": ["Analyse evidence of language change across time in text data", "Interpret quantitative language data alongside qualitative analysis", "Discuss how language constructs personal and group identity", "Evaluate prescriptivist and descriptivist positions"],
+      "key_concepts": ["Semantic shift: broadening, narrowing, amelioration, pejoration", "Borrowing, coinage and derivational productivity", "Corpus frequency as evidence of usage trends", "Accommodation theory at concept level", "Standardisation as historical process"],
+      "assessment_objectives": ["Analyse language data systematically using appropriate frameworks", "Construct evidence-based arguments about change and identity"],
+      "typical_question_styles": ["Analyse how the historical text differs from present-day English, using the data provided", "Discuss what the n-gram data suggests about the changing use of the words", "Discuss the relationship between language and identity, with examples"],
+      "exam_weight": 25,
+      "prerequisites": ["A2 topics strand"],
+      "common_misconceptions": ["Judging historical usage as error rather than difference", "Reading corpus graphs without considering corpus composition and limitations", "Treating identity expression through language as fixed rather than contextual", "Dismissing prescriptivism without engaging with its arguments"],
+      "exemplar_question_stems": ["Analyse the language of the nineteenth-century letter, identifying features that differ from contemporary English", "The graph shows frequency changes for three related terms; analyse and account for the trends"]
+    }
+  ]$topics$::jsonb,
+  'verified',
+  now()
+)
+ON CONFLICT (curriculum, grade, subject) DO UPDATE
+SET topics = EXCLUDED.topics,
+    source = 'verified',
+    verified_at = now(),
+    updated_at = now()
+WHERE curriculum_topic_templates.source IN ('ai', 'hybrid');
