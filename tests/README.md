@@ -168,3 +168,30 @@ Tests run on every PR via GitHub Actions (see `.github/workflows/ci.yml`). PRs c
 2. Set up code coverage reporting in CI (Codecov or Coveralls)
 3. Add visual regression testing (e.g., Percy, Chromatic)
 4. Add performance testing (e.g., Lighthouse CI)
+
+## Mocked Supabase auth (protected screens)
+
+`tests/mocks/supabase.ts` provides a full fake Supabase client (auth, chainable
+`from()`, `rpc`, `functions.invoke`, `storage`, realtime channels) so protected
+screens can be tested without a real project or session.
+
+```tsx
+import { supabaseMock, signInAs, resetSupabaseMock, queueTableData, setRpcResult } from '../../tests/mocks/supabase';
+import { renderWithProviders } from '../../tests/utils/renderWithProviders';
+
+vi.mock('@/integrations/supabase/client', () => ({ supabase: supabaseMock, APP_SCOPE: 'learner' }));
+
+beforeEach(resetSupabaseMock);
+
+it('renders for an admin', async () => {
+  signInAs({ id: 'u1', email: 'admin@test.dev' });
+  setRpcResult('has_role', true);
+  queueTableData('profiles', [{ is_suspended: false }]);
+  renderWithProviders(<AdminScreen />, { route: '/admin', routes: { '/admin/auth': <div>Login</div> } });
+});
+```
+
+Helpers: `signInAs`, `signOut`, `buildSession`, `queueTableData`, `queueTableError`,
+`setRpcResult`, `setFunctionResult`, `recordedWrites`, `resetSupabaseMock`.
+See `src/hooks/useAuth.test.tsx` for a working example (signed-out redirect,
+signed-in render, suspended-user sign-out).
