@@ -127,7 +127,9 @@ const App = () => (
 
               {/* Learning Operating System entry points */}
               <Route path="/teacher" element={<TeacherCommandCenterPage />} />
-              <Route path="/school" element={<SchoolAdminPage />} />
+              {/* Learning-OS school console. NOTE: kept off "/school" — that
+                  path belongs to the SchoolLayout portal declared below. */}
+              <Route path="/school-ops" element={<SchoolAdminPage />} />
               <Route path="/teacher/class/:cohortId" element={<TeacherClassDetailPage />} />
 
               {/* Admin routes */}
