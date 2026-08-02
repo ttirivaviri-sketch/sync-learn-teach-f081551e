@@ -1,0 +1,390 @@
+-- Seed verified curriculum topic template: NSC Grade 12 Geography (CAPS)
+-- Strand structure and weightings reflect the factual CAPS Grade 12
+-- organisation: Paper 1 (climate & weather, geomorphology) and Paper 2
+-- themes (rural/urban settlement, economic geography of South Africa)
+-- plus map work and GIS assessed in both papers. All exemplar question
+-- stems are original compositions; no exam-board paper text is reproduced.
+-- Idempotent: only overwrites rows whose source is 'ai' or 'hybrid'.
+
+INSERT INTO public.curriculum_topic_templates (curriculum, grade, subject, topics, source, verified_at)
+VALUES ('NSC', 'Grade 12', 'Geography', $topics$
+[
+  {
+    "name": "Climate and Weather: Mid-Latitude and Tropical Systems",
+    "subtopics": [
+      "Mid-latitude cyclones: formation, stages, associated weather",
+      "Cold and warm fronts and their passage over South Africa",
+      "Tropical cyclones: formation, structure, impacts",
+      "Reading synoptic weather maps",
+      "Satellite image interpretation",
+      "Impacts of cyclones on human activities and management responses"
+    ],
+    "learning_objectives": [
+      "Describe the formation and life cycle of a mid-latitude cyclone",
+      "Interpret the weather changes associated with the passage of cold and warm fronts",
+      "Explain the conditions required for tropical cyclone development",
+      "Analyse synoptic charts to identify pressure systems and predict weather",
+      "Assess the impacts of tropical cyclones on southern Africa and evaluate preparedness strategies",
+      "Use satellite images alongside synoptic charts to describe weather patterns"
+    ],
+    "key_concepts": [
+      "Mid-latitude cyclone",
+      "Frontal systems",
+      "Tropical cyclone",
+      "Synoptic chart",
+      "Air masses",
+      "Hazard management"
+    ],
+    "assessment_objectives": [
+      "Interpret weather data, synoptic charts and satellite images",
+      "Explain atmospheric processes and evaluate human responses to weather hazards"
+    ],
+    "typical_question_styles": [
+      "Synoptic chart interpretation with data response",
+      "Paragraph questions explaining cyclone development",
+      "Case-study question on tropical cyclone impacts and responses"
+    ],
+    "exam_weight": 15,
+    "prerequisites": [
+      "Grade 11 Geography foundations"
+    ],
+    "common_misconceptions": [
+      "Confusing mid-latitude and tropical cyclones",
+      "Believing cold fronts bring warm weather because they follow warm sectors",
+      "Reading isobar spacing incorrectly when judging wind strength",
+      "Assuming tropical cyclones can form over land"
+    ],
+    "exemplar_question_stems": [
+      "Study the synoptic weather map provided. Identify the pressure system at A and describe the weather conditions expected at station B as the cold front passes.",
+      "Explain why tropical cyclones lose intensity once they make landfall over Mozambique.",
+      "In a paragraph of approximately eight lines, discuss strategies that communities in northern KwaZulu-Natal can use to reduce the impact of tropical cyclones.",
+      "Compare the stages of development of a mid-latitude cyclone as shown in the diagrams."
+    ]
+  },
+  {
+    "name": "Climate and Weather: Subtropical Anticyclones and Local Climates",
+    "subtopics": [
+      "The three high-pressure cells influencing South Africa",
+      "Travelling disturbances: line thunderstorms and coastal lows",
+      "Berg winds and their effects",
+      "South African weather patterns in summer and winter",
+      "Valley climates: anabatic and katabatic winds, temperature inversions",
+      "Frost pockets and their significance for farming",
+      "Urban climates: heat islands and pollution domes"
+    ],
+    "learning_objectives": [
+      "Explain the influence of the South Atlantic, South Indian and Kalahari highs on South African weather",
+      "Describe the development of line thunderstorms and moisture front dynamics",
+      "Explain berg wind conditions and their link to fire hazards",
+      "Analyse valley wind systems and the formation of temperature inversions",
+      "Assess the impact of frost pockets and inversions on settlement and farming",
+      "Explain the causes and effects of urban heat islands and evaluate mitigation strategies"
+    ],
+    "key_concepts": [
+      "Anticyclonic circulation",
+      "Moisture front",
+      "Berg wind",
+      "Anabatic and katabatic winds",
+      "Temperature inversion",
+      "Urban heat island"
+    ],
+    "assessment_objectives": [
+      "Explain regional and local climate processes",
+      "Apply climate concepts to settlement, farming and planning decisions"
+    ],
+    "typical_question_styles": [
+      "Diagram-based questions on valley climates",
+      "Paragraph question on urban heat islands",
+      "Data response using temperature and wind data"
+    ],
+    "exam_weight": 15,
+    "prerequisites": [
+      "Climate and Weather: Mid-Latitude and Tropical Systems"
+    ],
+    "common_misconceptions": [
+      "Believing berg winds originate over the sea because they end at the coast",
+      "Confusing anabatic (day, up-slope) with katabatic (night, down-slope) winds",
+      "Assuming temperature always decreases with altitude in a valley at night",
+      "Thinking heat islands occur only in summer"
+    ],
+    "exemplar_question_stems": [
+      "With the aid of a labelled diagram, explain why frost pockets develop on valley floors on calm winter nights.",
+      "Explain how the position of the Kalahari High in winter contributes to dry, stable conditions over the interior plateau.",
+      "Suggest two planning strategies a city could use to reduce the intensity of its urban heat island, and justify each.",
+      "Describe the weather associated with berg wind conditions along the south coast and explain the resulting fire risk."
+    ]
+  },
+  {
+    "name": "Geomorphology: Drainage Systems in South Africa",
+    "subtopics": [
+      "Drainage basins and their components",
+      "Drainage patterns and drainage density",
+      "Stream order, discharge and river profiles",
+      "River grading and rejuvenation",
+      "Types of rivers: permanent, periodic, episodic",
+      "Fluvial landforms including knickpoints and terraces",
+      "Catchment and river management in South Africa"
+    ],
+    "learning_objectives": [
+      "Identify the components of a drainage basin on maps and diagrams",
+      "Classify drainage patterns and relate them to underlying rock structure",
+      "Interpret longitudinal and cross profiles of rivers",
+      "Explain river grading, rejuvenation and the landforms that result",
+      "Distinguish permanent, periodic and episodic rivers in the South African context",
+      "Evaluate strategies for managing South Africa's scarce water resources at catchment level"
+    ],
+    "key_concepts": [
+      "Drainage basin",
+      "Drainage patterns",
+      "River profiles",
+      "Grading and rejuvenation",
+      "Knickpoint",
+      "Catchment management"
+    ],
+    "assessment_objectives": [
+      "Interpret fluvial features from maps, photographs and diagrams",
+      "Explain fluvial processes and evaluate water management strategies"
+    ],
+    "typical_question_styles": [
+      "Map and diagram interpretation of drainage features",
+      "Paragraph question on rejuvenation landforms",
+      "Case-study question on catchment management"
+    ],
+    "exam_weight": 15,
+    "prerequisites": [
+      "Grade 11 Geography foundations"
+    ],
+    "common_misconceptions": [
+      "Confusing drainage density with drainage pattern",
+      "Believing all South African rivers flow permanently",
+      "Assuming a graded profile means a perfectly smooth straight line",
+      "Mixing up interfluves with watersheds"
+    ],
+    "exemplar_question_stems": [
+      "Identify the drainage pattern visible in the map extract and explain how the underlying geology produced it.",
+      "With the aid of a diagram, explain how a knickpoint indicates rejuvenation of a river.",
+      "In a paragraph of approximately eight lines, discuss why integrated catchment management is essential in a water-scarce country such as South Africa.",
+      "Distinguish between periodic and episodic rivers, giving one South African example of each."
+    ]
+  },
+  {
+    "name": "Rural Settlement and Land Use",
+    "subtopics": [
+      "Site and situation of rural settlements",
+      "Rural settlement patterns: dispersed, nucleated, linear",
+      "Rural land use activities",
+      "Rural-urban migration: causes and consequences",
+      "Rural depopulation and its effects",
+      "Social justice issues in rural areas including land reform",
+      "Strategies to address rural challenges"
+    ],
+    "learning_objectives": [
+      "Analyse factors influencing the site and situation of rural settlements",
+      "Classify rural settlement patterns and explain the factors behind them",
+      "Explain the causes and consequences of rural-urban migration for sending areas",
+      "Discuss the effects of rural depopulation on services and the local economy",
+      "Evaluate land reform and other social justice interventions in rural South Africa",
+      "Propose and assess strategies for sustainable rural development"
+    ],
+    "key_concepts": [
+      "Site and situation",
+      "Settlement patterns",
+      "Rural-urban migration",
+      "Depopulation",
+      "Land reform",
+      "Rural development"
+    ],
+    "assessment_objectives": [
+      "Interpret settlement features from maps and photographs",
+      "Evaluate rural challenges and development responses"
+    ],
+    "typical_question_styles": [
+      "Map/photograph interpretation of settlement pattern",
+      "Paragraph question on rural depopulation",
+      "Extended response evaluating a rural development strategy"
+    ],
+    "exam_weight": 13,
+    "prerequisites": [
+      "Grade 11 Geography foundations"
+    ],
+    "common_misconceptions": [
+      "Confusing site (physical land) with situation (relative position)",
+      "Assuming nucleation is always caused by water availability",
+      "Believing rural-urban migration affects only the migrants themselves",
+      "Treating land reform as a single uniform programme"
+    ],
+    "exemplar_question_stems": [
+      "Using evidence from the photograph, classify the rural settlement pattern and suggest two factors that produced it.",
+      "In a paragraph of approximately eight lines, discuss the consequences of rural depopulation for those who remain behind.",
+      "Evaluate the extent to which land reform can improve livelihoods in rural South Africa.",
+      "Explain why many rural settlements in the former homelands are located far from economic opportunities."
+    ]
+  },
+  {
+    "name": "Urban Settlement: Structure and Challenges",
+    "subtopics": [
+      "Urbanisation trends in South Africa",
+      "Urban hierarchy and functions",
+      "Internal structure: land use zones and models",
+      "The apartheid city and its legacy",
+      "Urban issues: housing shortages, informal settlements, service delivery",
+      "Urban injustice and inequality",
+      "Strategies: urban renewal, integrated development planning"
+    ],
+    "learning_objectives": [
+      "Describe urbanisation trends and the growth of South African cities",
+      "Explain urban land use zones and apply land use models critically",
+      "Analyse how apartheid planning shaped the structure of South African cities",
+      "Discuss current urban challenges including informal settlements and service delivery",
+      "Evaluate strategies used to redress spatial inequality in cities",
+      "Interpret urban features from topographic maps and orthophotos"
+    ],
+    "key_concepts": [
+      "Urbanisation",
+      "Urban hierarchy",
+      "Land use zones",
+      "Apartheid city model",
+      "Informal settlements",
+      "Urban renewal"
+    ],
+    "assessment_objectives": [
+      "Analyse urban structure using maps, models and data",
+      "Evaluate responses to urban inequality and service challenges"
+    ],
+    "typical_question_styles": [
+      "Land use zone identification on maps or diagrams",
+      "Paragraph question on the apartheid city legacy",
+      "Case-study question evaluating an urban upgrading project"
+    ],
+    "exam_weight": 14,
+    "prerequisites": [
+      "Rural Settlement and Land Use"
+    ],
+    "common_misconceptions": [
+      "Applying Northern-hemisphere urban models to South African cities without adjustment",
+      "Treating informal settlements as free of economic activity",
+      "Believing the CBD is always the most densely populated zone",
+      "Assuming service delivery problems have a single cause"
+    ],
+    "exemplar_question_stems": [
+      "Identify the urban land use zone at X on the orthophoto map and give two reasons for your answer.",
+      "In a paragraph of approximately eight lines, explain how apartheid spatial planning still influences commuting patterns in South African cities today.",
+      "Evaluate the success of informal settlement upgrading as a response to the housing shortage.",
+      "Describe the relationship between distance from the CBD and land value, and explain one exception to this pattern."
+    ]
+  },
+  {
+    "name": "Economic Geography of South Africa: Primary and Secondary Sectors",
+    "subtopics": [
+      "Structure of the South African economy",
+      "Agriculture: types, contribution, food security",
+      "Mining: distribution of minerals and its economic role",
+      "Factors favouring and hindering industrial development",
+      "South Africa's core industrial regions",
+      "Industrial decentralisation and spatial development initiatives",
+      "Special economic zones and industrial development corridors"
+    ],
+    "learning_objectives": [
+      "Describe the contribution of each sector to the South African economy",
+      "Analyse factors affecting commercial and subsistence farming and food security",
+      "Explain the distribution of major minerals and evaluate mining's costs and benefits",
+      "Assess the factors that favour or hinder industrial development in core regions",
+      "Compare South Africa's four core industrial regions",
+      "Evaluate industrial decentralisation policies, SDIs and special economic zones"
+    ],
+    "key_concepts": [
+      "Economic sectors",
+      "Food security",
+      "Mineral distribution",
+      "Industrial agglomeration",
+      "Core industrial regions",
+      "Spatial development initiatives"
+    ],
+    "assessment_objectives": [
+      "Interpret economic data, maps and case studies",
+      "Evaluate economic development strategies and their spatial outcomes"
+    ],
+    "typical_question_styles": [
+      "Data response using sector or trade statistics",
+      "Paragraph question on factors influencing an industrial region",
+      "Extended evaluation of a spatial development initiative"
+    ],
+    "exam_weight": 14,
+    "prerequisites": [
+      "Urban Settlement: Structure and Challenges"
+    ],
+    "common_misconceptions": [
+      "Believing agriculture's small GDP share means it is unimportant to employment and food security",
+      "Assuming mining benefits automatically reach mining communities",
+      "Confusing decentralisation with deindustrialisation",
+      "Treating all industrial regions as identical in function"
+    ],
+    "exemplar_question_stems": [
+      "Account for the concentration of heavy industry in the Gauteng industrial region.",
+      "In a paragraph of approximately eight lines, discuss the factors that threaten food security in South Africa.",
+      "Evaluate the effectiveness of special economic zones in attracting investment to underdeveloped provinces.",
+      "Explain two reasons why mining regions often experience economic decline once minerals are exhausted."
+    ]
+  },
+  {
+    "name": "Map Work, GIS and Fieldwork Techniques",
+    "subtopics": [
+      "Topographic map skills: scale, distance, bearing, coordinates",
+      "Contours, gradient, cross-sections and intervisibility",
+      "Orthophoto maps and their interpretation",
+      "Calculations: gradient, vertical exaggeration, area, magnetic declination",
+      "GIS concepts: data layers, buffering, resolution, data types",
+      "Applying GIS to real-world problems",
+      "Integrating map evidence with theory questions"
+    ],
+    "learning_objectives": [
+      "Perform standard map calculations including gradient, area and magnetic declination",
+      "Interpret contour patterns to identify landforms and assess intervisibility",
+      "Compare topographic maps with orthophotos of the same area",
+      "Explain core GIS concepts including vector and raster data and buffering",
+      "Apply GIS reasoning to siting and planning problems",
+      "Support answers on climate, geomorphology and settlement with specific map evidence"
+    ],
+    "key_concepts": [
+      "Scale and distance",
+      "Gradient",
+      "Cross-sections",
+      "Orthophoto interpretation",
+      "GIS data layers",
+      "Buffering"
+    ],
+    "assessment_objectives": [
+      "Apply map and GIS skills accurately to calculations and interpretation",
+      "Integrate map evidence with geographical knowledge"
+    ],
+    "typical_question_styles": [
+      "Calculation questions with working shown",
+      "Feature identification on topographic and orthophoto maps",
+      "GIS application questions on data layers and buffering"
+    ],
+    "exam_weight": 14,
+    "prerequisites": [
+      "Grade 11 Geography foundations"
+    ],
+    "common_misconceptions": [
+      "Forgetting to convert units in gradient and area calculations",
+      "Applying magnetic declination in the wrong direction",
+      "Confusing vector with raster data",
+      "Reading contour values in the wrong direction on slopes"
+    ],
+    "exemplar_question_stems": [
+      "Calculate the average gradient between trigonometrical station 23 and spot height 1408, showing all working.",
+      "Identify the landform at grid reference B and justify your answer using contour evidence.",
+      "A municipality wants to locate a new clinic within 500 m of a taxi route but outside the flood plain. Explain how buffering in a GIS would assist this decision.",
+      "Calculate the magnetic declination for the current year, given the information provided on the map."
+    ]
+  }
+]
+$topics$::jsonb, 'verified', now())
+ON CONFLICT (curriculum, grade, subject)
+DO UPDATE SET
+  topics = EXCLUDED.topics,
+  source = 'verified',
+  verified_at = now(),
+  updated_at = now()
+WHERE curriculum_topic_templates.source IN ('ai', 'hybrid');

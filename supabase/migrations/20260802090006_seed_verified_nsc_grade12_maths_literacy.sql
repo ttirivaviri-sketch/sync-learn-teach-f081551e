@@ -1,0 +1,439 @@
+-- Seed verified curriculum topic template: NSC Grade 12 Mathematical Literacy (CAPS)
+-- Strand structure reflects the factual CAPS application-topic organisation:
+-- finance, measurement, maps & plans, data handling and probability, all
+-- assessed in real-life contexts across two papers. All exemplar question
+-- stems are original compositions; no exam-board paper text is reproduced.
+-- Idempotent: only overwrites rows whose source is 'ai' or 'hybrid'.
+
+INSERT INTO public.curriculum_topic_templates (curriculum, grade, subject, topics, source, verified_at)
+VALUES ('NSC', 'Grade 12', 'Mathematical Literacy', $topics$
+[
+  {
+    "name": "Numbers and Calculations in Context",
+    "subtopics": [
+      "Number formats and conventions",
+      "Operations in context: fractions, decimals, percentages",
+      "Ratio, rate and proportion",
+      "Percentage increase, decrease and inclusive/exclusive calculations",
+      "Rounding appropriately for context",
+      "Working with very large and very small numbers"
+    ],
+    "learning_objectives": [
+      "Perform multi-step calculations in real contexts without a calculator dependency",
+      "Apply ratios and rates to sharing, mixing and unit-cost problems",
+      "Calculate percentage change and reverse percentage problems including VAT",
+      "Round answers sensibly according to the context, e.g. up for containers",
+      "Interpret large numbers in budgets and small numbers in measurements",
+      "Judge the reasonableness of answers"
+    ],
+    "key_concepts": [
+      "Ratio and rate",
+      "Proportion",
+      "Percentage change",
+      "VAT calculations",
+      "Contextual rounding",
+      "Estimation"
+    ],
+    "assessment_objectives": [
+      "Apply numerical skills accurately in unfamiliar real-life contexts",
+      "Communicate and justify solutions with correct units"
+    ],
+    "typical_question_styles": [
+      "Multi-step contextual calculations with resource documents",
+      "Show-that verification questions",
+      "Comparison questions between options using rates"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Grade 11 Mathematical Literacy foundations"
+    ],
+    "common_misconceptions": [
+      "Adding percentages of different bases directly",
+      "Reversing a percentage increase by subtracting the same percentage",
+      "Rounding down when the context demands rounding up",
+      "Confusing ratio shares with fractional parts of the whole"
+    ],
+    "exemplar_question_stems": [
+      "The price of a school jersey including 15% VAT is R299. Calculate the price excluding VAT.",
+      "A cordial is mixed with water in the ratio 1 : 4. Calculate how much cordial is needed to make 7,5 litres of drink.",
+      "Show that the claim that the bulk pack is the cheaper option per kilogram is correct.",
+      "A hall must seat 1 250 guests with 18 chairs per row. Calculate the number of rows needed."
+    ]
+  },
+  {
+    "name": "Personal and Business Finance: Documents, Tariffs and Budgets",
+    "subtopics": [
+      "Financial documents: payslips, invoices, statements, till slips",
+      "Tariff systems: electricity, water, cellphone, municipal rates",
+      "Comparing tariff options",
+      "Household and small business budgets",
+      "Income and expenditure statements",
+      "Cost price, selling price and profit",
+      "Break-even analysis in context"
+    ],
+    "learning_objectives": [
+      "Interpret entries on payslips, bills and bank statements",
+      "Perform calculations with sliding-scale and block tariff systems",
+      "Compare tariff options and recommend the cheaper for a usage profile",
+      "Draw up and analyse budgets and income-and-expenditure statements",
+      "Calculate cost price, selling price, profit and profit margin",
+      "Determine break-even points from tables, graphs or calculations"
+    ],
+    "key_concepts": [
+      "Financial documents",
+      "Block tariffs",
+      "Budgets",
+      "Income and expenditure",
+      "Profit calculations",
+      "Break-even"
+    ],
+    "assessment_objectives": [
+      "Interpret authentic financial documents accurately",
+      "Analyse and advise on financial decisions with justification"
+    ],
+    "typical_question_styles": [
+      "Questions based on a provided bill or payslip",
+      "Tariff comparison with a recommendation",
+      "Break-even determination from a graph or table"
+    ],
+    "exam_weight": 14,
+    "prerequisites": [
+      "Numbers and Calculations in Context"
+    ],
+    "common_misconceptions": [
+      "Applying the highest block rate to all units consumed",
+      "Confusing gross income with net income on a payslip",
+      "Treating a budget deficit as savings",
+      "Reading the break-even point as maximum profit"
+    ],
+    "exemplar_question_stems": [
+      "Use the municipal tariff table to calculate the cost of 28 kl of water for the month.",
+      "Study the payslip provided and calculate the employee's total deductions as a percentage of gross salary.",
+      "Sipho sells vetkoek at R8 each with fixed costs of R560 per month and ingredients costing R3 per vetkoek. Determine how many he must sell to break even.",
+      "Compare the two cellphone contract options and advise Naledi which is cheaper if she uses 450 minutes per month. Show all calculations."
+    ]
+  },
+  {
+    "name": "Finance: Interest, Banking, Inflation and Exchange Rates",
+    "subtopics": [
+      "Simple and compound interest in savings and loans",
+      "Bank fees and account options",
+      "Loan repayments, deposits and residual values in context",
+      "Inflation and its effect on prices and buying power",
+      "Exchange rates and foreign currency calculations",
+      "Comparing investment and loan options"
+    ],
+    "learning_objectives": [
+      "Calculate simple and compound growth over multiple periods using tables or formulas provided",
+      "Interpret bank fee structures and compare account options",
+      "Work with hire purchase and loan scenarios including deposits and total cost of credit",
+      "Apply inflation rates to estimate future prices",
+      "Convert between currencies using given exchange rates including buying and selling rates",
+      "Advise on financial options using calculated evidence"
+    ],
+    "key_concepts": [
+      "Simple vs compound interest",
+      "Bank charges",
+      "Hire purchase",
+      "Total cost of credit",
+      "Inflation",
+      "Exchange rates"
+    ],
+    "assessment_objectives": [
+      "Perform accurate financial calculations in context",
+      "Evaluate financial products and decisions"
+    ],
+    "typical_question_styles": [
+      "Interest growth tables to complete or verify",
+      "Total-cost-of-credit comparisons",
+      "Currency conversion in travel scenarios"
+    ],
+    "exam_weight": 14,
+    "prerequisites": [
+      "Personal and Business Finance: Documents, Tariffs and Budgets"
+    ],
+    "common_misconceptions": [
+      "Using simple interest where compounding applies",
+      "Ignoring the deposit when calculating hire purchase interest",
+      "Believing inflation means prices fall when the rate drops",
+      "Multiplying instead of dividing (or vice versa) in currency conversions"
+    ],
+    "exemplar_question_stems": [
+      "Calculate the value of R12 000 invested for 3 years at 8% per annum compounded annually.",
+      "A television costs R7 999 cash or R950 deposit plus 24 instalments of R399. Calculate the extra amount paid on hire purchase.",
+      "The exchange rate is R18,45 per US dollar. Calculate how many dollars a traveller receives for R25 000, ignoring commission.",
+      "If inflation averages 6% per year, estimate the price of a R45 loaf-and-milk basket in two years' time."
+    ]
+  },
+  {
+    "name": "Measurement: Length, Mass, Volume and Temperature",
+    "subtopics": [
+      "Converting between metric units",
+      "Measuring instruments and reading scales",
+      "Calculations with time: schedules, elapsed time, time zones",
+      "Cooking, medicine and fuel consumption contexts",
+      "Body measures: BMI, growth charts",
+      "Rates in measurement: consumption and cost"
+    ],
+    "learning_objectives": [
+      "Convert confidently between mm, cm, m, km, ml, l, g and kg",
+      "Read values accurately from measuring instruments and scales",
+      "Calculate elapsed time and interpret timetables and time zones",
+      "Solve consumption problems such as fuel usage and medicine dosages",
+      "Calculate and interpret BMI and read growth percentile charts",
+      "Combine rates with costs in practical scenarios"
+    ],
+    "key_concepts": [
+      "Metric conversions",
+      "Scale reading",
+      "Elapsed time",
+      "Consumption rates",
+      "BMI and growth charts",
+      "Dosage calculations"
+    ],
+    "assessment_objectives": [
+      "Measure, convert and calculate accurately in practical contexts",
+      "Interpret measurement information for decisions"
+    ],
+    "typical_question_styles": [
+      "Conversion and dosage calculations",
+      "Timetable and journey planning questions",
+      "Growth chart or BMI interpretation"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Numbers and Calculations in Context"
+    ],
+    "common_misconceptions": [
+      "Multiplying by 100 instead of 1000 when converting kg to g",
+      "Adding times as decimals (1,5 hours read as 1 h 50 min)",
+      "Misreading unnumbered gradations on scales",
+      "Confusing weight-for-age with height-for-age on growth charts"
+    ],
+    "exemplar_question_stems": [
+      "A car uses petrol at 7,8 litres per 100 km. Calculate the fuel cost of a 645 km trip at R23,40 per litre.",
+      "The bus leaves Polokwane at 21:35 and arrives in Johannesburg at 03:10 the next day. Calculate the duration of the journey.",
+      "A child must receive 12,5 ml of medicine three times daily for 5 days. Determine whether one 200 ml bottle is enough.",
+      "Calculate the BMI of a person with mass 82 kg and height 1,75 m, and interpret the result using the table provided."
+    ]
+  },
+  {
+    "name": "Measurement: Perimeter, Area and Volume in Projects",
+    "subtopics": [
+      "Perimeter and area of rectangles, triangles, circles and composite shapes",
+      "Surface area of boxes and cylinders in context",
+      "Volume of rectangular prisms and cylinders",
+      "Applying formulas provided on the exam paper",
+      "Cost calculations for materials: paint, tiles, fencing, concrete",
+      "Wastage and buffer allowances in projects"
+    ],
+    "learning_objectives": [
+      "Calculate perimeter and area of composite shapes in plans and projects",
+      "Apply surface area to painting and wrapping problems",
+      "Calculate volumes of containers, tanks and concrete slabs",
+      "Convert between volume units and litres in context",
+      "Estimate material quantities and costs including wastage allowances",
+      "Check the reasonableness of project estimates"
+    ],
+    "key_concepts": [
+      "Composite areas",
+      "Surface area",
+      "Volume",
+      "Unit conversion to litres",
+      "Material costing",
+      "Wastage allowance"
+    ],
+    "assessment_objectives": [
+      "Apply measurement formulas accurately in project contexts",
+      "Integrate measurement with cost decisions"
+    ],
+    "typical_question_styles": [
+      "Multi-step project costing questions",
+      "Volume and capacity questions with unit conversion",
+      "Verify-the-quote questions on a builder's estimate"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Measurement: Length, Mass, Volume and Temperature"
+    ],
+    "common_misconceptions": [
+      "Confusing perimeter with area in fencing versus grass problems",
+      "Forgetting to subtract openings such as windows when painting walls",
+      "Mixing units within one calculation",
+      "Ignoring the stated wastage percentage when ordering tiles"
+    ],
+    "exemplar_question_stems": [
+      "Calculate the area of the L-shaped patio on the plan, and the number of 600 mm by 600 mm tiles needed if 10% extra is allowed for cutting.",
+      "A cylindrical water tank has a radius of 0,9 m and a height of 1,4 m. Calculate its capacity in litres. Use the formula provided.",
+      "Paint covers 9 square metres per litre. Determine how many 5-litre tins are needed to apply two coats to the walls described.",
+      "Verify whether the builder's claim that 2,4 cubic metres of concrete is enough for the slab is correct."
+    ]
+  },
+  {
+    "name": "Maps, Plans and Models",
+    "subtopics": [
+      "Map scales: number and bar scales",
+      "Calculating actual distances from maps",
+      "Route planning, directions and street maps",
+      "Elevation and floor plans of buildings",
+      "Assembly diagrams and instructions",
+      "Packaging arrangements and models",
+      "Seating and layout plans"
+    ],
+    "learning_objectives": [
+      "Use number and bar scales to calculate real distances and dimensions",
+      "Plan routes and estimate travelling times between locations",
+      "Interpret floor plans including symbols, dimensions and orientation",
+      "Follow and explain assembly instructions and diagrams",
+      "Determine optimal packaging arrangements for boxes in containers",
+      "Interpret seating plans and layout maps for events"
+    ],
+    "key_concepts": [
+      "Scale calculations",
+      "Route planning",
+      "Floor plan symbols",
+      "Elevation views",
+      "Packaging arrangements",
+      "Layout interpretation"
+    ],
+    "assessment_objectives": [
+      "Interpret maps, plans and diagrams accurately",
+      "Apply scale and spatial reasoning to practical decisions"
+    ],
+    "typical_question_styles": [
+      "Scale-based distance and dimension calculations",
+      "Floor plan interpretation with follow-up costing",
+      "Packaging arrangement questions"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Measurement: Perimeter, Area and Volume in Projects"
+    ],
+    "common_misconceptions": [
+      "Inverting the scale ratio when converting measured distance",
+      "Measuring straight-line distance when route distance is asked",
+      "Confusing north orientation on plans",
+      "Assuming only one packing orientation is possible"
+    ],
+    "exemplar_question_stems": [
+      "The map scale is 1 : 50 000. The distance between the school and the clinic on the map is 6,4 cm. Calculate the actual distance in kilometres.",
+      "Use the floor plan to determine the actual length and width of Bedroom 2, and calculate the cost of carpeting it at R189 per square metre.",
+      "Determine the maximum number of 250 mm by 150 mm by 100 mm boxes that can be packed into the crate shown.",
+      "Using the seating plan, identify the row and seat furthest from the stage entrance and describe the route an usher would take to it."
+    ]
+  },
+  {
+    "name": "Data Handling",
+    "subtopics": [
+      "Collecting and classifying data",
+      "Measures of central tendency: mean, median, mode",
+      "Measures of spread: range, quartiles, interquartile range",
+      "Five-number summary and box-and-whisker plots",
+      "Graphs: bar, histogram, pie, line, scatter plots",
+      "Misleading graphs and statistics",
+      "Comparing two data sets"
+    ],
+    "learning_objectives": [
+      "Organise data into tables and appropriate classes",
+      "Calculate and interpret mean, median and mode for grouped and ungrouped data",
+      "Determine quartiles and construct box-and-whisker plots",
+      "Select, draw and interpret appropriate graphs for data",
+      "Identify how graphs and statistics can mislead",
+      "Compare data sets using summary statistics and spread"
+    ],
+    "key_concepts": [
+      "Central tendency",
+      "Quartiles and IQR",
+      "Box-and-whisker plots",
+      "Graph selection",
+      "Misleading representations",
+      "Data comparison"
+    ],
+    "assessment_objectives": [
+      "Summarise and represent data correctly",
+      "Interpret and critique statistical information"
+    ],
+    "typical_question_styles": [
+      "Calculate summary statistics from a data set",
+      "Interpret or critique a given graph",
+      "Compare two box-and-whisker plots with conclusions"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Numbers and Calculations in Context"
+    ],
+    "common_misconceptions": [
+      "Confusing the median position with the median value",
+      "Reading a histogram as a bar chart with gaps",
+      "Believing the mean is always the best measure regardless of outliers",
+      "Judging a graph by its shape without checking axis scales"
+    ],
+    "exemplar_question_stems": [
+      "The marks of 15 learners are listed. Determine the five-number summary and draw a box-and-whisker plot.",
+      "Explain how the vertical axis of the advertisement's graph exaggerates the difference between the two brands.",
+      "Compare the electricity usage of the two households represented in the box-and-whisker plots and give one possible reason for the difference.",
+      "Calculate the mean monthly rainfall and explain why the median might describe the typical month better in this data set."
+    ]
+  },
+  {
+    "name": "Probability",
+    "subtopics": [
+      "The probability scale from 0 to 1",
+      "Relative frequency vs theoretical probability",
+      "Tree diagrams and two-way tables",
+      "Compound events in games and tests",
+      "Weather predictions and risk statements",
+      "Fairness in games and lotteries",
+      "Expressing probability as fractions, decimals and percentages"
+    ],
+    "learning_objectives": [
+      "Express probabilities in equivalent forms and place events on the probability scale",
+      "Distinguish experimental from theoretical probability",
+      "Use tree diagrams and two-way tables to determine probabilities of compound events",
+      "Interpret probability statements in weather, testing and risk contexts",
+      "Evaluate the fairness of games and promotions",
+      "Make predictions using probability and assess their reliability"
+    ],
+    "key_concepts": [
+      "Probability scale",
+      "Relative frequency",
+      "Tree diagrams",
+      "Two-way tables",
+      "Compound events",
+      "Fairness"
+    ],
+    "assessment_objectives": [
+      "Calculate probabilities using appropriate representations",
+      "Interpret and evaluate probability claims in daily life"
+    ],
+    "typical_question_styles": [
+      "Two-way table probability questions",
+      "Tree diagram construction and use",
+      "Evaluate-the-claim questions on games or advertisements"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Data Handling"
+    ],
+    "common_misconceptions": [
+      "Believing past outcomes change the probability of independent events",
+      "Adding probabilities of non-mutually-exclusive events directly",
+      "Confusing a 30% chance of rain with rain lasting 30% of the day",
+      "Assuming a game is fair because it has two outcomes"
+    ],
+    "exemplar_question_stems": [
+      "The two-way table shows learners by grade and transport used. Determine the probability that a randomly chosen learner is in Grade 12 and walks to school.",
+      "Draw a tree diagram for testing two components in sequence and determine the probability that at least one is defective.",
+      "A shop promotion claims one in every five tills wins a voucher. Evaluate whether a shopper who has lost four times in a row is now guaranteed to win.",
+      "Express the probability 0,35 as a percentage and as a fraction in simplest form, and describe the likelihood in words."
+    ]
+  }
+]
+$topics$::jsonb, 'verified', now())
+ON CONFLICT (curriculum, grade, subject)
+DO UPDATE SET
+  topics = EXCLUDED.topics,
+  source = 'verified',
+  verified_at = now(),
+  updated_at = now()
+WHERE curriculum_topic_templates.source IN ('ai', 'hybrid');

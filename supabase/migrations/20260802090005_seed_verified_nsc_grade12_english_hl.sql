@@ -1,0 +1,433 @@
+-- Seed verified curriculum topic template: NSC Grade 12 English Home Language (CAPS)
+-- Strand structure reflects the factual three-paper organisation:
+-- Paper 1 (comprehension, summary, language in context), Paper 2
+-- (literature: poetry, novel, drama - set works rotate so strands are
+-- genre-skill based), Paper 3 (writing). All exemplar question stems are
+-- original compositions; no exam-board paper text is reproduced.
+-- Idempotent: only overwrites rows whose source is 'ai' or 'hybrid'.
+
+INSERT INTO public.curriculum_topic_templates (curriculum, grade, subject, topics, source, verified_at)
+VALUES ('NSC', 'Grade 12', 'English Home Language', $topics$
+[
+  {
+    "name": "Comprehension and Critical Reading",
+    "subtopics": [
+      "Literal, inferential and evaluative comprehension",
+      "Analysing argument, tone and register",
+      "Distinguishing fact, opinion and bias",
+      "Critical language awareness and manipulation",
+      "Reading visual texts alongside written texts",
+      "Responding in well-formulated own words"
+    ],
+    "learning_objectives": [
+      "Retrieve and infer meaning from complex written texts",
+      "Analyse a writer's argument, intention, tone and register",
+      "Identify bias, prejudice and emotive language and explain their effects",
+      "Evaluate the validity and effectiveness of a writer's assertions",
+      "Integrate information from paired written and visual texts",
+      "Formulate precise answers in own words within mark allocations"
+    ],
+    "key_concepts": [
+      "Inference",
+      "Tone and register",
+      "Bias and manipulation",
+      "Critical language awareness",
+      "Text pairing",
+      "Own-words responses"
+    ],
+    "assessment_objectives": [
+      "Demonstrate comprehension at literal, inferential and critical levels",
+      "Evaluate language use and writer's craft in unseen texts"
+    ],
+    "typical_question_styles": [
+      "Short and paragraph-length comprehension questions on unseen passages",
+      "Critical evaluation questions on the writer's stance",
+      "Questions linking a written passage to an accompanying visual text"
+    ],
+    "exam_weight": 15,
+    "prerequisites": [
+      "Grade 11 English Home Language skills"
+    ],
+    "common_misconceptions": [
+      "Quoting the passage where own words are required",
+      "Confusing the writer's view with views the writer reports",
+      "Ignoring the mark allocation when deciding answer length",
+      "Treating tone as the same as subject matter"
+    ],
+    "exemplar_question_stems": [
+      "Account for the writer's use of the word 'supposedly' in paragraph 3.",
+      "Critically discuss whether the writer's argument in paragraphs 6 to 8 is convincing.",
+      "In your own words, explain the 'paradox' the writer identifies in paragraph 2.",
+      "Explain how the image accompanying the article reinforces the writer's central claim."
+    ]
+  },
+  {
+    "name": "Summary Writing",
+    "subtopics": [
+      "Identifying main ideas across a text",
+      "Discarding examples, anecdotes and repetition",
+      "Paraphrasing accurately and concisely",
+      "Writing a fluent single-paragraph summary",
+      "Observing the word limit and indicating the word count",
+      "Marking criteria: content points and language"
+    ],
+    "learning_objectives": [
+      "Select the required number of distinct main points from a passage",
+      "Rewrite points concisely in own words without distortion",
+      "Combine points into a coherent paragraph with logical connectors",
+      "Adhere strictly to the word limit while preserving all points",
+      "Edit the summary for language accuracy and economy"
+    ],
+    "key_concepts": [
+      "Main point selection",
+      "Paraphrase",
+      "Cohesion",
+      "Concision",
+      "Word-limit discipline"
+    ],
+    "assessment_objectives": [
+      "Identify and reformulate essential content accurately",
+      "Write with economy, fluency and correctness"
+    ],
+    "typical_question_styles": [
+      "Paragraph summary of a prescribed aspect of an unseen passage within a word limit"
+    ],
+    "exam_weight": 10,
+    "prerequisites": [
+      "Comprehension and Critical Reading"
+    ],
+    "common_misconceptions": [
+      "Lifting whole sentences from the passage",
+      "Including examples as separate points",
+      "Exceeding the word limit assuming a small overrun is ignored",
+      "Summarising the whole passage instead of the specified focus"
+    ],
+    "exemplar_question_stems": [
+      "Summarise in your own words the practical steps the writer suggests for reducing digital distraction, in no more than 90 words.",
+      "The passage discusses the benefits of urban green spaces. Summarise seven benefits in a fluent paragraph of no more than 90 words, indicating your word count.",
+      "Identify the writer's main recommendations for first-time job seekers and present them as a coherent summary within the word limit."
+    ]
+  },
+  {
+    "name": "Language Structures and Conventions in Context",
+    "subtopics": [
+      "Parts of speech and syntax in context",
+      "Concord, tense and mood",
+      "Punctuation and its effects",
+      "Sentence types and transformation",
+      "Active/passive voice and direct/indirect speech",
+      "Vocabulary: synonyms, antonyms, idioms, register shifts",
+      "Editing skills: correcting errors in authentic texts",
+      "Analysing advertising and cartoon language"
+    ],
+    "learning_objectives": [
+      "Apply grammatical knowledge to analyse and correct authentic texts",
+      "Transform sentences between voices and speech forms while preserving meaning",
+      "Explain how punctuation choices affect meaning",
+      "Analyse persuasive techniques in advertisements",
+      "Interpret cartoons: visual and verbal humour, stereotype, irony",
+      "Edit texts for concord, spelling, punctuation and redundancy"
+    ],
+    "key_concepts": [
+      "Syntax and concord",
+      "Voice and speech conversion",
+      "Punctuation effects",
+      "Persuasive techniques",
+      "Cartoon analysis",
+      "Editing"
+    ],
+    "assessment_objectives": [
+      "Apply language rules accurately in context",
+      "Analyse how language and visual choices create meaning and effect"
+    ],
+    "typical_question_styles": [
+      "Questions based on an advertisement",
+      "Questions based on a cartoon strip",
+      "Editing and language-use questions on a short text with deliberate errors"
+    ],
+    "exam_weight": 10,
+    "prerequisites": [
+      "Grade 11 English Home Language skills"
+    ],
+    "common_misconceptions": [
+      "Analysing an advertisement's content while ignoring its techniques",
+      "Describing a cartoon's pictures without explaining the humour or message",
+      "Changing tense unnecessarily when converting to reported speech",
+      "Correcting errors by rewriting whole sentences when a targeted fix is required"
+    ],
+    "exemplar_question_stems": [
+      "Discuss how the advertiser uses both the image and the slogan to persuade readers to buy the product.",
+      "Refer to frame 3 of the cartoon: explain how the cartoonist conveys the character's frustration.",
+      "Rewrite the following sentence in the passive voice: 'The committee rejected the proposal unanimously.'",
+      "Correct the concord error in the sentence: 'Neither of the arguments were convincing.'"
+    ]
+  },
+  {
+    "name": "Poetry Study",
+    "subtopics": [
+      "Close reading of prescribed poems",
+      "Imagery, diction and figurative language",
+      "Tone, mood and shifts within poems",
+      "Form and structure: sonnet conventions, enjambment, stanza patterns",
+      "Sound devices and rhythm",
+      "Themes and contexts of prescribed poems",
+      "The unseen poem: applying skills to new texts"
+    ],
+    "learning_objectives": [
+      "Analyse diction, imagery and figures of speech and their effects in prescribed poems",
+      "Identify tone and trace shifts in tone or argument through a poem",
+      "Explain how form and structure contribute to meaning",
+      "Discuss themes with close textual reference",
+      "Compare aspects of paired poems where required",
+      "Apply analytical skills independently to an unseen poem"
+    ],
+    "key_concepts": [
+      "Diction and imagery",
+      "Tone shifts",
+      "Form and structure",
+      "Sound devices",
+      "Theme",
+      "Unseen analysis"
+    ],
+    "assessment_objectives": [
+      "Interpret and analyse poetry with textual support",
+      "Construct coherent critical responses in essay and contextual formats"
+    ],
+    "typical_question_styles": [
+      "Contextual questions on a prescribed poem",
+      "Ten-mark literary essay on a prescribed poem",
+      "Contextual questions on an unseen poem"
+    ],
+    "exam_weight": 15,
+    "prerequisites": [
+      "Grade 11 English Home Language skills"
+    ],
+    "common_misconceptions": [
+      "Identifying devices without linking them to meaning and effect",
+      "Confusing the speaker with the poet",
+      "Paraphrasing the poem line by line instead of analysing it",
+      "Ignoring the question's focus and writing a generic prepared answer"
+    ],
+    "exemplar_question_stems": [
+      "Comment on the effectiveness of the extended metaphor in conveying the speaker's sense of loss.",
+      "The tone of the poem changes in the final stanza. Identify the change and explain what causes it.",
+      "In a well-constructed essay of 250-300 words, discuss how the poet uses imagery and structure to convey the central theme.",
+      "Using the unseen poem, explain how the poet's diction creates a sense of urgency."
+    ]
+  },
+  {
+    "name": "Novel Study",
+    "subtopics": [
+      "Plot construction, pace and narrative arcs",
+      "Characterisation and character development",
+      "Narrative voice and focalisation",
+      "Setting, context and atmosphere",
+      "Themes and motifs across the novel",
+      "Style: diction, symbolism, irony",
+      "Essay and contextual response technique for the novel"
+    ],
+    "learning_objectives": [
+      "Analyse the development of plot and its structural turning points",
+      "Discuss characterisation and the methods used to reveal character",
+      "Explain the effect of the chosen narrative perspective",
+      "Trace themes and motifs with well-chosen textual evidence",
+      "Analyse the writer's style including symbolism and irony",
+      "Construct literary essays with argument, evidence and insight"
+    ],
+    "key_concepts": [
+      "Narrative structure",
+      "Characterisation",
+      "Narrative voice",
+      "Theme and motif",
+      "Symbolism",
+      "Critical essay technique"
+    ],
+    "assessment_objectives": [
+      "Demonstrate detailed knowledge and interpretation of the set novel",
+      "Sustain critical argument in essay and contextual formats"
+    ],
+    "typical_question_styles": [
+      "Literary essay of 400-450 words on a theme or character",
+      "Contextual questions on extracts from the novel"
+    ],
+    "exam_weight": 12,
+    "prerequisites": [
+      "Grade 11 English Home Language skills"
+    ],
+    "common_misconceptions": [
+      "Narrating the plot instead of building an argument",
+      "Using quotations without integrating or analysing them",
+      "Ignoring the extract in contextual questions and answering generally",
+      "Preparing one essay and forcing it onto any question"
+    ],
+    "exemplar_question_stems": [
+      "In a carefully planned essay of 400-450 words, critically discuss how the protagonist's moral choices drive the tragedy of the novel.",
+      "Refer to the extract: comment on the significance of this moment in the novel as a whole.",
+      "Discuss the effectiveness of the novel's ending in resolving its central conflict.",
+      "Critically discuss how the writer uses a symbol of your choice to develop a key theme."
+    ]
+  },
+  {
+    "name": "Drama Study",
+    "subtopics": [
+      "Dramatic structure: exposition to denouement",
+      "Character motivation, foils and conflict",
+      "Dramatic irony, tension and audience awareness",
+      "Staging, stage directions and theatrical effect",
+      "Themes of the prescribed play",
+      "Language of the play: verse, prose, wordplay, rhetoric",
+      "Essay and contextual response technique for drama"
+    ],
+    "learning_objectives": [
+      "Analyse the structure of the prescribed play and the function of key scenes",
+      "Discuss character motivation and the use of foils and conflict",
+      "Explain the operation and effect of dramatic irony",
+      "Interpret staging and stage directions as part of meaning",
+      "Trace the play's central themes with scene-specific evidence",
+      "Analyse distinctive features of the playwright's language",
+      "Write structured literary essays and precise contextual answers on drama"
+    ],
+    "key_concepts": [
+      "Dramatic structure",
+      "Motivation and conflict",
+      "Dramatic irony",
+      "Staging",
+      "Theme",
+      "Dramatic language"
+    ],
+    "assessment_objectives": [
+      "Demonstrate detailed knowledge and interpretation of the set play",
+      "Analyse dramatic technique and its effect on the audience"
+    ],
+    "typical_question_styles": [
+      "Literary essay of 400-450 words on the play",
+      "Contextual questions on extracts including performance-related questions"
+    ],
+    "exam_weight": 13,
+    "prerequisites": [
+      "Grade 11 English Home Language skills"
+    ],
+    "common_misconceptions": [
+      "Treating the play as prose fiction and ignoring the audience dimension",
+      "Confusing what the audience knows with what characters know",
+      "Quoting stage directions without interpreting them",
+      "Discussing themes without anchoring them in specific scenes"
+    ],
+    "exemplar_question_stems": [
+      "In a well-structured essay of 400-450 words, critically discuss the dramatic function of the antagonist in the prescribed play.",
+      "Refer to the extract: if you were the director, how would you instruct the actor to deliver these lines? Motivate your answer.",
+      "Comment on the dramatic irony in this scene and its effect on the audience.",
+      "Discuss how the playwright uses the opening scene to establish the central conflict of the play."
+    ]
+  },
+  {
+    "name": "Transactional and Shorter Writing",
+    "subtopics": [
+      "Formal and informal letters",
+      "Curriculum vitae and covering letter",
+      "Obituary, eulogy and speeches",
+      "Reports, reviews and newspaper/magazine articles",
+      "Dialogues and interviews",
+      "Format conventions, register and audience",
+      "Planning, drafting and editing transactional texts"
+    ],
+    "learning_objectives": [
+      "Apply the correct format for each prescribed transactional text",
+      "Select register and tone appropriate to audience and purpose",
+      "Develop content that fully addresses the task requirements",
+      "Structure texts logically within length requirements",
+      "Edit for accuracy, coherence and appropriate style"
+    ],
+    "key_concepts": [
+      "Format conventions",
+      "Register and audience",
+      "Purpose-driven content",
+      "Coherence",
+      "Editing"
+    ],
+    "assessment_objectives": [
+      "Produce transactional texts that satisfy format, register and content requirements",
+      "Demonstrate planning and editing in the writing process"
+    ],
+    "typical_question_styles": [
+      "Choice of transactional tasks with specified format and length",
+      "Task instructions embedding a scenario and audience"
+    ],
+    "exam_weight": 10,
+    "prerequisites": [
+      "Grade 11 English Home Language skills"
+    ],
+    "common_misconceptions": [
+      "Ignoring format marks by omitting headings, salutations or sign-offs",
+      "Writing informal content in a formal register task",
+      "Exceeding or undershooting length requirements substantially",
+      "Addressing only part of the task's content requirements"
+    ],
+    "exemplar_question_stems": [
+      "Your community newspaper has invited readers to review a local restaurant. Write the review, giving a balanced assessment of your experience.",
+      "Write a formal letter to the municipal manager requesting the repair of a dangerous intersection, proposing interim safety measures.",
+      "You have been asked to deliver a speech at your school's valedictory ceremony on the theme 'Beginnings hide inside endings'. Write the speech.",
+      "Write the interview between a journalist and a young entrepreneur who has started a recycling business."
+    ]
+  },
+  {
+    "name": "Essay Writing",
+    "subtopics": [
+      "Narrative essays and story craft",
+      "Descriptive essays and sensory writing",
+      "Discursive essays: balance and reasoning",
+      "Argumentative essays: stance and persuasion",
+      "Reflective essays and personal voice",
+      "Interpreting picture and quotation prompts",
+      "Planning, structure, style and editing"
+    ],
+    "learning_objectives": [
+      "Select and interpret essay topics including visual prompts",
+      "Plan essays with a controlling idea and coherent paragraph sequence",
+      "Sustain narrative or descriptive craft using imagery and pacing",
+      "Construct balanced discursive and persuasive argumentative essays",
+      "Develop a personal, reflective voice where appropriate",
+      "Edit for style, diction, sentence variety and correctness"
+    ],
+    "key_concepts": [
+      "Essay genres",
+      "Controlling idea",
+      "Paragraph coherence",
+      "Style and voice",
+      "Sensory detail",
+      "Process writing"
+    ],
+    "assessment_objectives": [
+      "Communicate ideas with originality, structure and linguistic control",
+      "Match content, style and register to the chosen genre"
+    ],
+    "typical_question_styles": [
+      "Choice of essay topics including quotations and images as stimuli",
+      "Essays of prescribed length assessed on content, language and structure"
+    ],
+    "exam_weight": 15,
+    "prerequisites": [
+      "Transactional and Shorter Writing"
+    ],
+    "common_misconceptions": [
+      "Retelling a memorised essay that ignores the topic",
+      "Confusing discursive balance with argumentative advocacy",
+      "Adding a moral summary where the narrative should end naturally",
+      "Sacrificing depth for length beyond the prescribed range"
+    ],
+    "exemplar_question_stems": [
+      "Write a narrative essay that begins with the words: 'The gate creaked once, and everything changed.'",
+      "'Comfort is the enemy of achievement.' Write an argumentative essay in which you defend or challenge this claim.",
+      "Write a descriptive essay on a marketplace at dawn, appealing to at least three senses.",
+      "The photograph shows an empty bench under a jacaranda tree. Write an essay inspired by the image, giving it your own title."
+    ]
+  }
+]
+$topics$::jsonb, 'verified', now())
+ON CONFLICT (curriculum, grade, subject)
+DO UPDATE SET
+  topics = EXCLUDED.topics,
+  source = 'verified',
+  verified_at = now(),
+  updated_at = now()
+WHERE curriculum_topic_templates.source IN ('ai', 'hybrid');
