@@ -41,7 +41,7 @@ export function PhotoSolveHistory() {
         .order("created_at", { ascending: false })
         .limit(5);
       if (error) return [] as AttemptRow[];
-      return (data ?? []) as AttemptRow[];
+      return (data ?? []) as unknown as AttemptRow[];
     },
   });
 
