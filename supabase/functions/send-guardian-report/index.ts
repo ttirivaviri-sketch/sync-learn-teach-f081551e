@@ -72,12 +72,19 @@ serve(async (req) => {
     // Accept the cron secret (pg_cron tick) OR the service key
     // (internal call from run-learning-ops-automation's guardian_digest job).
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const viaCron = Boolean(CRON_SECRET) && token === CRON_SECRET;
     const viaService = Boolean(SERVICE_KEY) && token === SERVICE_KEY;
-    if (!viaCron && !viaService) {
+    let authorized = viaCron || viaService;
+    if (!authorized && token) {
+      // Fallback: verify against the Vault copy of CRON_SECRET used by pg_cron.
+      const { data: cronOk } = await supabase.rpc("verify_cron_token", { _token: token });
+      authorized = cronOk === true;
+    }
+    if (!authorized) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
+
 
     const todayDow = new Date().getUTCDay(); // 0=Sun..6=Sat
     const now = new Date();
