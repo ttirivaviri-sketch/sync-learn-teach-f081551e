@@ -44,6 +44,12 @@ async function authorizeRequest(
   if (CRON_SECRET && token === CRON_SECRET) return { ok: true, via: "cron_secret" };
   if (token === SERVICE_KEY) return { ok: true, via: "service_key" };
 
+  // pg_cron sends the CRON_SECRET stored in Vault, which can drift from the
+  // function-env copy. Verify against Vault as a fallback (service-role only).
+  const { data: cronOk } = await sb.rpc("verify_cron_token", { _token: token });
+  if (cronOk === true) return { ok: true, via: "cron_secret_vault" };
+
+
   // Fall back to user JWT: must be an active staff member somewhere.
   const { data: userData, error } = await sb.auth.getUser(token);
   const userId = userData?.user?.id;

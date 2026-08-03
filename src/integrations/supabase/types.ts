@@ -7825,6 +7825,7 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      verify_cron_token: { Args: { _token: string }; Returns: boolean }
     }
     Enums: {
       announcement_audience: "school" | "grade" | "class"
