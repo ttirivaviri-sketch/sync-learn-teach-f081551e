@@ -7345,6 +7345,10 @@ export type Database = {
       current_school_ids: { Args: never; Returns: string[] }
       detect_kernel_alerts: { Args: { _school_id: string }; Returns: number }
       detect_kernel_alerts_all: { Args: never; Returns: number }
+      ensure_learning_workspace_for_school: {
+        Args: { _school_id: string }
+        Returns: string
+      }
       expire_stale_topic_sessions: { Args: never; Returns: number }
       generate_allocation_bookings: {
         Args: { p_allocation_id: string }
@@ -7517,6 +7521,8 @@ export type Database = {
         }
         Returns: string
       }
+      los_map_school_role: { Args: { _role: string }; Returns: string }
+      los_map_school_status: { Args: { _status: string }; Returns: string }
       mark_learner_onboarding_complete: { Args: never; Returns: undefined }
       match_school_chunks: {
         Args: {
