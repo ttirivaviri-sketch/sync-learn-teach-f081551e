@@ -19,16 +19,21 @@ Deno.serve(async (req) => {
     // Destructive, service-role-powered purge — only cron (CRON_SECRET) or
     // internal service-to-service calls (SERVICE_ROLE key) may invoke it.
     const token = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
-    const viaCron = !!CRON_SECRET && token === CRON_SECRET;
-    const viaService = !!token && token === SERVICE_ROLE;
-    if (!viaCron && !viaService) {
+    const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+    let authorized = (!!CRON_SECRET && token === CRON_SECRET) || (!!token && token === SERVICE_ROLE);
+    if (!authorized && token) {
+      // Fallback: verify against the Vault copy of CRON_SECRET used by pg_cron.
+      const { data: cronOk } = await sb.rpc("verify_cron_token", { _token: token });
+      authorized = cronOk === true;
+    }
+    if (!authorized) {
       console.warn("[purge-expired-lesson-data] unauthorized invocation blocked");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
+
     const { data: settings } = await sb.from("lesson_retention_settings").select("user_id,auto_delete_after_days,keep_notes_only");
     const defaultDays = 90;
 
