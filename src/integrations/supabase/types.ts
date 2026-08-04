@@ -7523,6 +7523,10 @@ export type Database = {
       }
       los_map_school_role: { Args: { _role: string }; Returns: string }
       los_map_school_status: { Args: { _status: string }; Returns: string }
+      map_template_topics_to_subject_shape: {
+        Args: { p_topics: Json }
+        Returns: Json
+      }
       mark_learner_onboarding_complete: { Args: never; Returns: undefined }
       match_school_chunks: {
         Args: {
