@@ -62,6 +62,11 @@ YOUR TASK: A student has submitted a photo of their handwritten (or typed) worki
 5. Identify any missing steps a model solution would include.
 6. Give ONE pinpointed next hint — the single most useful nudge to move them forward.
 7. Provide a full model solution in LaTeX.
+8. SUBJECT CHECK (critical): if the context below names a subject, decide whether the work in the photo actually belongs to that subject. Set "detected_subject" to the subject the work really is (e.g. "Mathematics", "Physics", "Chemistry", "Biology", "Accounting"), and set "subject_match" to:
+   - "match" when the work clearly belongs to the stated subject,
+   - "mismatch" when the work is clearly a different subject (e.g. pure algebra/calculus practice submitted under Physics, with no physical quantities, units, laws or context),
+   - "unclear" when you cannot tell, or no subject was provided.
+   Judge by the actual content: physics work uses physical quantities, units, formulas and context; pure mathematics work manipulates numbers/expressions with no physical meaning. Still grade the working accurately either way — the subject check only affects attribution.
 
 CORE RULES:
 - Be GENEROUS about handwriting and notation differences. Different valid methods that reach the right answer get full marks.
@@ -75,6 +80,8 @@ ${KATEX_RULES}
 Return ONLY valid JSON in this exact shape (no markdown fences):
 {
   "question_detected": "string",
+  "detected_subject": "string (the subject the work actually belongs to, or empty if unknown)",
+  "subject_match": "match" | "mismatch" | "unclear",
   "final_answer": "string (LaTeX where applicable)",
   "final_answer_correct": true | false | null,
   "steps": [
@@ -264,8 +271,14 @@ serve(async (req) => {
     }
     awarded = Math.max(0, Math.min(awarded, possible));
 
+    const subjectMatch = ["match", "mismatch", "unclear"].includes(parsed.subject_match)
+      ? parsed.subject_match
+      : "unclear";
+
     return jsonResponse({
       question_detected: String(parsed.question_detected ?? "").trim(),
+      detected_subject: String(parsed.detected_subject ?? "").trim(),
+      subject_match: subject ? subjectMatch : "unclear",
       final_answer: String(parsed.final_answer ?? "").trim(),
       final_answer_correct:
         typeof parsed.final_answer_correct === "boolean"

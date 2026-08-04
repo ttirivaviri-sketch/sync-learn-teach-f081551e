@@ -34,6 +34,10 @@ import { imageCompressionParams } from '@/lib/dataSaver';
 
 export interface PhotoSolveResult {
   question_detected: string;
+  /** Subject the AI thinks the photographed work actually belongs to. */
+  detected_subject?: string;
+  /** Whether the work matches the subject the learner is studying. */
+  subject_match?: 'match' | 'mismatch' | 'unclear';
   final_answer: string;
   final_answer_correct: boolean | null;
   steps: Array<{
@@ -189,6 +193,11 @@ export function PhotoSolvePanel({
       setResult(data);
       onResult?.(data);
 
+      // Subject guard: if the photographed work is clearly a different
+      // subject than the one being studied, we grade it but never attribute
+      // it to the current subject/topic (no XP, no mastery, no analytics).
+      const mismatched = !!subject?.name && data.subject_match === 'mismatch';
+
       // Persist the attempt (best-effort) so it can drive follow-up practice
       // and history. Failures never block the grading UX.
       try {
@@ -199,8 +208,10 @@ export function PhotoSolvePanel({
             .from('photo_solve_attempts')
             .insert({
               user_id: uid,
-              subject_name: subject?.name ?? null,
-              topic_name: topic?.name ?? null,
+              subject_name: mismatched
+                ? (data.detected_subject || null)
+                : (subject?.name ?? null),
+              topic_name: mismatched ? null : (topic?.name ?? null),
               curriculum: curriculum ?? null,
               question_detected: data.question_detected || null,
               final_answer: data.final_answer || null,
@@ -240,9 +251,11 @@ export function PhotoSolvePanel({
         studySyncHaptic('quiz.wrong');
       }
 
-      const xp = Math.max(5, correctCount * 6 + (allCorrect ? 10 : 0));
-      addXp.mutate(xp);
-      updateStreak.mutate();
+      if (!mismatched) {
+        const xp = Math.max(5, correctCount * 6 + (allCorrect ? 10 : 0));
+        addXp.mutate(xp);
+        updateStreak.mutate();
+      }
     } catch (e: any) {
       logger.error('photo-solve grade failed', e);
       const msg = String(e?.message || '');
@@ -283,6 +296,8 @@ export function PhotoSolvePanel({
       />
     );
   }
+
+  const subjectMismatch = !!subject?.name && result?.subject_match === 'mismatch';
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -396,6 +411,22 @@ export function PhotoSolvePanel({
       {/* Result */}
       {result && (
         <div className="space-y-4">
+          {subjectMismatch && (
+            <div className="p-3 rounded-xl bg-warning/10 border border-warning/40 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div className="text-xs text-foreground">
+                <p className="font-semibold mb-0.5">
+                  This looks like {result.detected_subject || 'a different subject'}, not{' '}
+                  {subject?.name}
+                </p>
+                <p className="text-muted-foreground">
+                  We still marked your working, but it won't count towards your{' '}
+                  {subject?.name} XP, topic mastery or progress. Switch to{' '}
+                  {result.detected_subject || 'the right subject'} and scan again to get credit.
+                </p>
+              </div>
+            </div>
+          )}
           {/* Score header */}
           <div
             className={cn(
@@ -542,7 +573,7 @@ export function PhotoSolvePanel({
           />
 
           {/* Practice the correction — 5 isomorphic variants */}
-          {result.question_detected && result.confidence >= 0.3 && (
+          {result.question_detected && result.confidence >= 0.3 && !subjectMismatch && (
             <Button
               onClick={() => setPractising(true)}
               className="w-full gradient-primary gap-2"
