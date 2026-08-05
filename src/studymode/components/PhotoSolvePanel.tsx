@@ -412,21 +412,54 @@ export function PhotoSolvePanel({
       {result && (
         <div className="space-y-4">
           {subjectMismatch && (
-            <div className="p-3 rounded-xl bg-warning/10 border border-warning/40 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
-              <div className="text-xs text-foreground">
-                <p className="font-semibold mb-0.5">
-                  This looks like {result.detected_subject || 'a different subject'}, not{' '}
-                  {subject?.name}
+            <div className="p-3 rounded-xl bg-warning/10 border border-warning/40 space-y-2">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+                <div className="text-xs text-foreground">
+                  <p className="font-semibold mb-0.5">
+                    Different subject detected — no credit awarded
+                  </p>
+                  <p className="text-muted-foreground">
+                    You're studying <span className="font-medium text-foreground">{subject?.name}</span>,
+                    but this working looks like{' '}
+                    <span className="font-medium text-foreground">
+                      {result.detected_subject || 'another subject'}
+                    </span>.
+                  </p>
+                </div>
+              </div>
+              <div className="text-xs rounded-lg bg-background/60 p-2 space-y-1">
+                <p>
+                  <span className="text-muted-foreground">Marked as: </span>
+                  <span className="font-medium">
+                    {result.detected_subject || 'Unknown subject'}
+                  </span>
+                </p>
+                <p>
+                  <span className="text-muted-foreground">Saved to history under: </span>
+                  <span className="font-medium">
+                    {result.detected_subject || 'Unknown subject'} (no topic)
+                  </span>
                 </p>
                 <p className="text-muted-foreground">
-                  We still marked your working, but it won't count towards your{' '}
-                  {subject?.name} XP, topic mastery or progress. Switch to{' '}
-                  {result.detected_subject || 'the right subject'} and scan again to get credit.
+                  No XP, streak, topic mastery or {subject?.name} analytics were updated.
                 </p>
               </div>
+              <div className="text-xs text-muted-foreground">
+                <p className="font-medium text-foreground mb-0.5">To get full credit:</p>
+                <ol className="list-decimal list-inside space-y-0.5">
+                  <li>Go back and switch to {result.detected_subject || 'the matching subject'}.</li>
+                  <li>Pick the topic this question belongs to.</li>
+                  <li>Scan the same page again — it will be marked and credited there.</li>
+                </ol>
+              </div>
+              <Button size="sm" variant="outline" className="w-full" onClick={reset}>
+                <Camera className="h-4 w-4 mr-2" />
+                Scan again
+              </Button>
             </div>
           )}
+
           {/* Score header */}
           <div
             className={cn(
