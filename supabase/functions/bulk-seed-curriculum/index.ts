@@ -21,7 +21,7 @@ async function seedOnce(item: { curriculum: string; grade: string; subject: stri
       'x-cron-secret': Deno.env.get('CRON_SECRET') ?? '',
     },
 
-    body: JSON.stringify({ ...item, force }),
+    body: JSON.stringify({ ...item, force, validate: false }),
   });
   const txt = await res.text();
   let json: any = {};
@@ -78,11 +78,36 @@ Deno.serve(async (req) => {
   }
 
   const body = await req.json().catch(() => ({}));
-  const { force = false, concurrency = 2, only } = body ?? {};
+  const { force = false, concurrency = 6, only, limit = 60 } = body ?? {};
 
-  const matrix = (only && Array.isArray(only) && only.length > 0)
+  let matrix = (only && Array.isArray(only) && only.length > 0)
     ? only
     : buildMatrix();
+
+  // Skip combos that already have a non-empty topic tree, without paying an
+  // HTTP round-trip per existing row (that was burning the wall-clock budget
+  // before any new work got done).
+  if (!force) {
+    const { data: existing } = await supabase
+      .from('curriculum_topic_templates')
+      .select('curriculum, grade, subject, topics');
+    const done = new Set(
+      (existing ?? [])
+        .filter((r: any) => Array.isArray(r.topics) && r.topics.length > 0)
+        .map((r: any) => `${r.curriculum}|${r.grade}|${r.subject}`),
+    );
+    matrix = matrix.filter((m: any) => !done.has(`${m.curriculum}|${m.grade}|${m.subject}`));
+  }
+
+  // Bound each invocation so it finishes inside the edge-function wall clock.
+  const remaining = matrix.length;
+  if (limit && matrix.length > limit) matrix = matrix.slice(0, limit);
+
+  if (matrix.length === 0) {
+    return new Response(JSON.stringify({ status: 'complete', remaining: 0 }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
 
   const { data: jobRow, error: jobErr } = await supabase
     .from('seeding_jobs')
@@ -141,6 +166,6 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    status: 'started', job_id: jobId, total: matrix.length,
+    status: 'started', job_id: jobId, total: matrix.length, remaining,
   }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
 });

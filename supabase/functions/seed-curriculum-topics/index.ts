@@ -176,7 +176,14 @@ Deno.serve(async (req) => {
 
     // 3. Generate
     const prompt = buildPrompt(curriculum, grade, subject, syllabusText);
-    let result = await callGemini(prompt, SYSTEM, callerId);
+    // Long syllabus trees occasionally come back truncated/unparseable — retry once.
+    let result: any;
+    try {
+      result = await callGemini(prompt, SYSTEM, callerId);
+    } catch (e) {
+      if (!/unparseable/i.test((e as Error).message)) throw e;
+      result = await callGemini(prompt, SYSTEM, callerId);
+    }
     let topics = Array.isArray(result?.topics) ? result.topics : [];
     if (topics.length === 0) throw new Error('AI returned no topics');
 
