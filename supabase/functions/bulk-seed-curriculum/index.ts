@@ -18,7 +18,9 @@ async function seedOnce(item: { curriculum: string; grade: string; subject: stri
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${ANON}`,
+      'x-cron-secret': Deno.env.get('CRON_SECRET') ?? '',
     },
+
     body: JSON.stringify({ ...item, force }),
   });
   const txt = await res.text();
