@@ -115,22 +115,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Each seed run is two expensive AI calls — require a signed-in user, then quota-gate.
-    if (!callerId) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+    // Trusted server-side callers (bulk seeder / cron) present the cron secret.
+    const cronSecret = req.headers.get('x-cron-secret');
+    let trusted = !!(cronSecret && Deno.env.get('CRON_SECRET') && cronSecret === Deno.env.get('CRON_SECRET'));
+    if (!trusted && cronSecret) {
+      const { data: ok } = await supabase.rpc('verify_cron_token', { _token: cronSecret });
+      trusted = ok === true;
     }
-    const quota = await enforceQuota(req, 'misc');
-    if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
 
-    // `force: true` bypasses the exists-check and regenerates — admin only.
-    let effectiveForce = false;
-    if (force && callerId) {
+    // Each seed run is two expensive AI calls — require a signed-in user, then quota-gate.
+    if (!trusted) {
+      if (!callerId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const quota = await enforceQuota(req, 'misc');
+      if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
+    }
+
+    // `force: true` bypasses the exists-check and regenerates — admin/trusted only.
+    let effectiveForce = trusted && force === true;
+    if (force && !effectiveForce && callerId) {
       const { data: isAdmin } = await supabase.rpc('has_role', { _user_id: callerId, _role: 'admin' });
       effectiveForce = isAdmin === true;
       if (!effectiveForce) console.warn('[seed-curriculum-topics] non-admin force ignored', callerId);
     }
+
 
     // 1. Skip if exists
     if (!effectiveForce) {
