@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { templateSubjectCandidates } from "@/lib/subjectAliases";
 
 /**
  * On first StudyMode entry, ensure the learner has a `subjects` row per
@@ -37,16 +38,27 @@ export function useSeedSubjectsFromProfile() {
           const hasTopics = Array.isArray(current?.topics) && current.topics.length > 0;
           if (hasTopics) continue;
 
-          // 1. Try template
-          let { data: tpl } = await supabase
-            .from("curriculum_topic_templates")
-            .select("topics")
-            .eq("curriculum", profile.curriculum)
-            .eq("grade", profile.grade)
-            .eq("subject", subjectName)
-            .maybeSingle();
+          // 1. Try template — exact name first, then curriculum-specific
+          //    aliases (e.g. ZIMSEC "English" -> "English Language",
+          //    "Accounting" -> "Accounts"). Fixes empty topic trees caused
+          //    by display-name vs template-name drift.
+          const candidates = templateSubjectCandidates(profile.curriculum, subjectName);
+          let tpl: { topics: unknown } | null = null;
+          for (const candidate of candidates) {
+            const { data } = await supabase
+              .from("curriculum_topic_templates")
+              .select("topics")
+              .eq("curriculum", profile.curriculum)
+              .eq("grade", profile.grade)
+              .eq("subject", candidate)
+              .maybeSingle();
+            if (data?.topics && Array.isArray(data.topics) && data.topics.length > 0) {
+              tpl = data as any;
+              break;
+            }
+          }
 
-          // 2. Lazy seed if missing
+          // 2. Lazy seed if missing (exact name only — the seeder owns naming)
           if (!tpl?.topics) {
             try {
               await supabase.functions.invoke("seed-curriculum-topics", {
