@@ -151,7 +151,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     }
 
     // Fetch JaaS JWT
-    const room = `room-${booking?.id || "demo"}`;
+    const room = booking?.room_name || `session-${booking?.id || "demo"}`;
     const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
     let appId = "", jwt = "";
     try {
@@ -202,7 +202,7 @@ const VideoMeeting = ({ sessionType, partnerName, subject, booking, onEndCall }:
     if (!jitsiContainer.current || jitsiApi.current) return;
     const appId = jaasAppId.current!;
     const jwt = jaasJwt.current!;
-    const room = `room-${booking?.id || "demo"}`;
+    const room = booking?.room_name || `session-${booking?.id || "demo"}`;
     const fullRoomName = `${appId}/${room}`;
     console.log("[VideoMeeting] Joining JaaS room:", fullRoomName);
     const displayName = sessionType === "tutor" ? "Tutor" : "Learner";
