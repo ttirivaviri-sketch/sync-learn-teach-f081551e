@@ -192,3 +192,6 @@ verify_jwt = true
 
 [functions.transcribe-lesson-chunk]
 verify_jwt = true
+
+[functions.apply-curriculum-seeds]
+verify_jwt = false
