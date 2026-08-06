@@ -80,15 +80,16 @@ export function useSeedSubjectsFromProfile() {
           if (!tpl?.topics) continue;
 
           // 3. Upsert into user subjects
+          const topics = tpl.topics as any;
           if (current) {
             await supabase.from("subjects")
-              .update({ topics: tpl.topics })
+              .update({ topics })
               .eq("id", current.id);
           } else {
             await supabase.from("subjects").insert({
               user_id: user.id,
               name: subjectName,
-              topics: tpl.topics,
+              topics,
             });
           }
         }
