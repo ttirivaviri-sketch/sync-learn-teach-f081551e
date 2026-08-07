@@ -11,10 +11,13 @@ Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "concept_review");
+    const auth = await requireCaller(req);
+    if (auth.response) return auth.response;
+    const quota = await enforceQuota(req, "concept_review", { userId: auth.caller.userId });
     if (!quota.allowed) {
       return quotaExceededResponse("concept_review", quota.used, quota.limit);
     }
+
 
     const { question, concept_map, depth } = await req.json();
     if (!question || !concept_map) {
