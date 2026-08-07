@@ -9,7 +9,7 @@
  * client instead of silently shipping bad content.
  */
 
-import { fingerprintStem } from "./provenance.ts";
+import { fingerprintStem } from "../provenance.ts";
 
 export interface ValidatorReport {
   ok: boolean;
