@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
 
     const data = await resp.json();
     if (data?.usage) {
-      const callerId = getUserIdFromRequest(req);
+      const callerId = authedUserId;
       if (callerId) {
         reportTokenUsage({
           userId: callerId,
