@@ -13,7 +13,8 @@
  * }
  * Response: { text: string, speaker: "tutor" | "learner" | "unknown" }
  */
-import { corsHeaders, reportTokenUsage, verifyCaller } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
+import { logBlockedRequest } from "../_shared/audit.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -23,9 +24,14 @@ Deno.serve(async (req) => {
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
 
     // Every chunk is a paid AI transcription call — require a verified session.
-    const caller = await verifyCaller(req);
+    const { caller, reason } = await verifyCallerDetailed(req);
     const authedUserId = caller?.userId ?? null;
     if (!caller || (!authedUserId && !caller.isService)) {
+      await logBlockedRequest(req, {
+        functionName: "transcribe-lesson-chunk",
+        reason: reason ?? "invalid_token",
+        status: 401,
+      });
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
