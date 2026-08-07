@@ -54,3 +54,29 @@ export function clearStudyIntent(): void {
     /* noop */
   }
 }
+
+/**
+ * Resolves which subject a study intent points at, given the learner's
+ * subjects. Matching order: exact id → case-insensitive name → subject that
+ * owns the intent's topic. Shared by Study Mode's Dashboard so Home buttons
+ * always land on the right destination.
+ */
+export function resolveIntentSubject<
+  T extends { id: string; name: string; topics?: Array<{ name: string }> }
+>(intent: StudyIntent | null | undefined, subjects: T[]): T | undefined {
+  if (!intent || subjects.length === 0) return undefined;
+  return (
+    subjects.find((s) => !!intent.subjectId && s.id === intent.subjectId) ??
+    subjects.find(
+      (s) => s.name.toLowerCase() === (intent.subjectName ?? "").toLowerCase()
+    ) ??
+    (intent.topic
+      ? subjects.find((s) =>
+          (s.topics ?? []).some(
+            (t) => t.name.toLowerCase() === intent.topic!.toLowerCase()
+          )
+        )
+      : undefined)
+  );
+}
+
