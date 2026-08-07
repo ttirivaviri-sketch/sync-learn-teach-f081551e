@@ -187,18 +187,27 @@ export async function aiRequestJSON<T = unknown>(
   if (!resp.ok) {
     const errData: any = await resp.json().catch(() => ({ error: `HTTP ${resp.status}` }));
     if (resp.status === 429 && errData?.error === 'daily_limit_reached') {
-      const err: any = new Error(errData.message || "You've used today's free AI. It resets at midnight, or upgrade to Premium.");
+      const message = errData.message || "You've used today's free AI. It resets at midnight, or upgrade to Premium.";
+      const err: any = new Error(message);
       err.code = 'daily_limit_reached';
       err.bucket = errData.bucket;
       err.used = errData.used;
       err.limit = errData.limit;
+      emitAiLimit({
+        reason: 'daily_limit_reached',
+        message,
+        used: errData.used,
+        limit: errData.limit,
+        bucket: errData.bucket,
+      });
       throw err;
     }
     if (resp.status === 402) {
-      const err: any = new Error(
-        'AI is temporarily unavailable — the workspace AI credits have run out. Please top up credits and try again.',
-      );
+      const message =
+        'You have run out of AI credits. Top up to keep generating tasks, quizzes and explanations.';
+      const err: any = new Error(message);
       err.code = 'credits_exhausted';
+      emitAiLimit({ reason: 'credits_exhausted', message });
       throw err;
     }
     throw new Error(errData.error || `AI request failed with status ${resp.status}`);
