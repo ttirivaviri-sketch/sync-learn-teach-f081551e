@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { enforceQuota, getUserIdFromRequest, quotaExceededResponse, reportTokenUsage } from '../_shared/ai-config.ts';
+import { enforceQuota, quotaExceededResponse, reportTokenUsage, verifyCaller } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
