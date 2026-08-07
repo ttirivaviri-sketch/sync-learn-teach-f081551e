@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { enforceQuota, quotaExceededResponse, reportTokenUsage, verifyCaller } from '../_shared/ai-config.ts';
+import { logBlockedRequest } from '../_shared/audit.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -126,6 +127,11 @@ Deno.serve(async (req) => {
     // Each seed run is two expensive AI calls — require a signed-in user, then quota-gate.
     if (!trusted) {
       if (!callerId) {
+        await logBlockedRequest(req, {
+          functionName: 'seed-curriculum-topics',
+          reason: 'invalid_token',
+          status: 401,
+        });
         return new Response(JSON.stringify({ error: 'Unauthorized' }), {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
