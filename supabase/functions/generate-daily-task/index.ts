@@ -355,7 +355,7 @@ Deno.serve(async (req: Request) => {
       { role: 'user', content: buildUserPrompt(body, selected, reason) },
     ];
 
-    const usageAttrib = { userId: getUserIdFromRequest(req), bucket: 'daily_task' };
+    const usageAttrib = { userId: authedUserId, bucket: 'daily_task' };
 
     let bundle = await callAI(messages, apiKey, usageAttrib);
     if (!bundle) {
