@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      const quota = await enforceQuota(req, 'misc');
+      const quota = await enforceQuota(req, 'misc', { userId: callerId });
       if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
     }
 
