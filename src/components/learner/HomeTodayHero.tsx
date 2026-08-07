@@ -16,6 +16,7 @@ import { useUserProgress } from "@/studymode/hooks/useUserProgress";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { useStudentTodayFeed } from "@/hooks/useSchoolAcademics";
 import { haptic } from "@/lib/haptics";
+import { setStudyIntent } from "@/studymode/lib/studyIntent";
 
 interface HomeTodayHeroProps {
   displayName?: string | null;
@@ -33,7 +34,7 @@ function useTodayStudyTasks() {
       const today = new Date().toISOString().slice(0, 10);
       const { data } = await supabase
         .from("study_schedule")
-        .select("id, topic_name, task_type, is_completed")
+        .select("id, topic_name, task_type, is_completed, subject_id, subject:subjects(name)")
         .eq("user_id", user.id)
         .eq("scheduled_date", today);
       const rows = data ?? [];
@@ -156,7 +157,16 @@ export function HomeTodayHero({
             {/* Study plan — blue left border */}
             {study && (
               <button
-                onClick={() => { haptic("light"); onOpenStudy(); }}
+                onClick={() => {
+                  haptic("light");
+                  setStudyIntent({
+                    subjectId: (study as any).subject_id ?? undefined,
+                    subjectName: (study as any).subject?.name ?? undefined,
+                    topic: study.topic_name,
+                    taskType: study.task_type,
+                  });
+                  onOpenStudy();
+                }}
                 className="w-full flex items-center gap-3 rounded-xl bg-card border border-border border-l-4 border-l-blue-500 px-3.5 py-3 text-left shadow-sm transition-colors hover:bg-muted/40 active:scale-[0.99]"
               >
                 <span className="flex-1 min-w-0">
