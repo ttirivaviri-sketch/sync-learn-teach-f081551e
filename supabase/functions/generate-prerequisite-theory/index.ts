@@ -25,6 +25,11 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
+
   try {
     const ai = getAIConfig();
     const body = await req.json();
