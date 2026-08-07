@@ -11,6 +11,8 @@
  *   5. safeJsonParse() — robust JSON extraction from AI responses
  */
 
+import { logBlockedRequest, type BlockReason } from "./audit.ts";
+
 // ─── CORS ────────────────────────────────────────────────────────────────────
 
 export const corsHeaders: Record<string, string> = {
