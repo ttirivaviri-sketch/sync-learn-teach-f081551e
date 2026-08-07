@@ -13,7 +13,7 @@
  * }
  * Response: { text: string, speaker: "tutor" | "learner" | "unknown" }
  */
-import { corsHeaders, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
+import { corsHeaders, guardBurst, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
 import { logBlockedRequest } from "../_shared/audit.ts";
 
 Deno.serve(async (req) => {
@@ -36,6 +36,9 @@ Deno.serve(async (req) => {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const burst = await guardBurst(req, "transcribe-lesson-chunk", caller, 30);
+    if (burst) return burst;
 
 
     const { audio_base64, mime_type, speaker_hint, display_name } = await req.json();

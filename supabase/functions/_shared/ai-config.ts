@@ -304,24 +304,153 @@ export async function verifyCaller(req: Request): Promise<VerifiedCaller | null>
   return caller;
 }
 
+// ─── Burst rate limiting ─────────────────────────────────────────────────────
+
+/**
+ * Default burst allowance per user, per function, per 60s window.
+ * Real usage is a handful of calls a minute; this only stops scripted abuse.
+ * Override per function via `requireCaller(req, name, { burstLimit })`.
+ */
+export const DEFAULT_BURST_LIMIT = 15;
+export const BURST_WINDOW_SECONDS = 60;
+
+/** Heavier endpoints get a tighter burst allowance. */
+const BURST_OVERRIDES: Record<string, number> = {
+  "photo-solve-grade": 6,
+  "generate-quiz": 8,
+  "generate-exam-questions": 8,
+  "render-question-visual": 10,
+  "transcribe-lesson-chunk": 30,
+};
+
+export function burstLimitFor(fnName: string): number {
+  return BURST_OVERRIDES[fnName] ?? DEFAULT_BURST_LIMIT;
+}
+
+export function rateLimitedResponse(fnName: string, retryAfter: number, limit: number): Response {
+  return new Response(
+    JSON.stringify({
+      error: "rate_limited",
+      message: `Too many requests. You can make up to ${limit} ${fnName} requests per minute — try again in ${retryAfter}s.`,
+      retry_after: retryAfter,
+      limit,
+    }),
+    {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "application/json",
+        "Retry-After": String(retryAfter),
+      },
+    }
+  );
+}
+
+/**
+ * Atomic per-user, per-function burst check (fixed 60s window) backed by the
+ * SECURITY DEFINER RPC `check_ai_rate_limit`. Service-role callers and anonymous
+ * requests are exempt. Fails open when the infra is unavailable so a DB blip
+ * never takes AI features down.
+ */
+export async function guardBurst(
+  req: Request,
+  fnName: string,
+  caller: { userId: string | null; isService: boolean },
+  limit?: number
+): Promise<Response | null> {
+  if (caller.isService || !caller.userId) return null;
+  const rl = await enforceRateLimit(fnName, caller.userId, { limit });
+  if (rl.allowed) return null;
+  await logBlockedRequest(req, {
+    functionName: fnName,
+    reason: "rate_limited",
+    status: 429,
+    userId: caller.userId,
+    context: { limit: rl.limit, count: rl.count, window_seconds: BURST_WINDOW_SECONDS },
+  });
+  return rateLimitedResponse(fnName, rl.retryAfter, rl.limit);
+}
+
+export async function enforceRateLimit(
+  fnName: string,
+  userId: string | null,
+  opts: { limit?: number; windowSeconds?: number } = {}
+): Promise<{ allowed: boolean; retryAfter: number; limit: number; count: number }> {
+  const limit = opts.limit ?? burstLimitFor(fnName);
+  if (!userId) return { allowed: true, retryAfter: 0, limit, count: 0 };
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return { allowed: true, retryAfter: 0, limit, count: 0 };
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/check_ai_rate_limit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        _user_id: userId,
+        _fn: fnName,
+        _limit: limit,
+        _window_seconds: opts.windowSeconds ?? BURST_WINDOW_SECONDS,
+      }),
+    });
+    if (!resp.ok) {
+      console.warn(`[enforceRateLimit] RPC failed ${resp.status} — failing open`);
+      return { allowed: true, retryAfter: 0, limit, count: 0 };
+    }
+    const data = await resp.json();
+    return {
+      allowed: data?.allowed !== false,
+      retryAfter: Number(data?.retry_after ?? BURST_WINDOW_SECONDS),
+      limit: Number(data?.limit ?? limit),
+      count: Number(data?.count ?? 0),
+    };
+  } catch (e) {
+    console.warn("[enforceRateLimit] error — failing open:", e);
+    return { allowed: true, retryAfter: 0, limit, count: 0 };
+  }
+}
+
 /**
  * Convenience gate for AI endpoints: returns the verified caller, or a ready
- * 401 `Response` to return immediately. Never fails open.
+ * 401 / 429 `Response` to return immediately. Never fails open on auth.
  * Every denial is written to the security audit trail.
  */
 export async function requireCaller(
   req: Request,
-  functionName?: string
+  functionName?: string,
+  opts: { burstLimit?: number; skipRateLimit?: boolean } = {}
 ): Promise<{ caller: VerifiedCaller; response?: never } | { caller?: never; response: Response }> {
+  const fnName = functionName ?? fnNameFromRequest(req);
   const { caller, reason } = await verifyCallerDetailed(req);
   if (!caller) {
     await logBlockedRequest(req, {
-      functionName: functionName ?? fnNameFromRequest(req),
+      functionName: fnName,
       reason: reason ?? "invalid_token",
       status: 401,
     });
     return { response: unauthorizedResponse() };
   }
+
+  // Burst guard: valid users are still capped per minute, per function.
+  if (!opts.skipRateLimit && !caller.isService && caller.userId) {
+    const rl = await enforceRateLimit(fnName, caller.userId, { limit: opts.burstLimit });
+    if (!rl.allowed) {
+      await logBlockedRequest(req, {
+        functionName: fnName,
+        reason: "rate_limited",
+        status: 429,
+        userId: caller.userId,
+        context: { limit: rl.limit, count: rl.count, window_seconds: BURST_WINDOW_SECONDS },
+      });
+      return { response: rateLimitedResponse(fnName, rl.retryAfter, rl.limit) };
+    }
+  }
+
   return { caller };
 }
 

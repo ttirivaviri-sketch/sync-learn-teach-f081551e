@@ -14,7 +14,7 @@
  * Body: { recording_id: string }
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
+import { corsHeaders, guardBurst, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
 import { logBlockedRequest } from "../_shared/audit.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
@@ -64,6 +64,9 @@ Deno.serve(async (req) => {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
+
+  const burst = await guardBurst(req, "process-lesson-recording", caller, 6);
+  if (burst) return burst;
 
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
