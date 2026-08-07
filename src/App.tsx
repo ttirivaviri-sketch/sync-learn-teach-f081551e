@@ -207,6 +207,7 @@ const App = () => (
 
             </Routes>
           </Suspense>
+          <AiCreditsDialog />
           <Toaster />
           <Sonner />
         </BrowserRouter>
