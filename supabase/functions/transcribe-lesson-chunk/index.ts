@@ -13,7 +13,7 @@
  * }
  * Response: { text: string, speaker: "tutor" | "learner" | "unknown" }
  */
-import { corsHeaders, getUserIdFromRequest, reportTokenUsage } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage, verifyCaller } from "../_shared/ai-config.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -22,13 +22,15 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not set");
 
-    // Every chunk is a paid AI transcription call — require a signed-in user.
-    const authedUserId = getUserIdFromRequest(req);
-    if (!authedUserId) {
+    // Every chunk is a paid AI transcription call — require a verified session.
+    const caller = await verifyCaller(req);
+    const authedUserId = caller?.userId ?? null;
+    if (!caller || (!authedUserId && !caller.isService)) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     const { audio_base64, mime_type, speaker_hint, display_name } = await req.json();
     if (!audio_base64 || typeof audio_base64 !== "string") {
