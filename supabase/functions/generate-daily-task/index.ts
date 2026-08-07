@@ -2,7 +2,7 @@
 // Returns a single bundle with 4 mandatory blocks, syllabus-locked, coverage-validated.
 
 import { buildProvenance, hashPrompt, attachMeta } from '../_shared/provenance.ts';
-import { getUserIdFromRequest, reportTokenUsage, type UsageAttribution } from '../_shared/ai-config.ts';
+import { requireCaller, reportTokenUsage, type UsageAttribution } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
