@@ -194,6 +194,13 @@ export async function aiRequestJSON<T = unknown>(
       err.limit = errData.limit;
       throw err;
     }
+    if (resp.status === 402) {
+      const err: any = new Error(
+        'AI is temporarily unavailable — the workspace AI credits have run out. Please top up credits and try again.',
+      );
+      err.code = 'credits_exhausted';
+      throw err;
+    }
     throw new Error(errData.error || `AI request failed with status ${resp.status}`);
   }
   return resp.json() as Promise<T>;
