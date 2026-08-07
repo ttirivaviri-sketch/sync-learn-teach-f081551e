@@ -319,7 +319,13 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
+
   try {
+
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
