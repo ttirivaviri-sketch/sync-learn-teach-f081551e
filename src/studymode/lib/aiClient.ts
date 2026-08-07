@@ -20,6 +20,7 @@
 
 import { supabase } from '../../integrations/supabase/client';
 import { logger } from "@/utils/logger";
+import { emitAiLimit } from "./aiLimitBus";
 
 // ─── Known Supabase project constants ─────────────────────────────────────────
 // These are public values (not secrets) — the anon key is safe to embed.
