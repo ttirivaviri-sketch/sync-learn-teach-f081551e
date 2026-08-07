@@ -146,12 +146,15 @@ async function isAdminUser(
 export async function enforceQuota(
   req: Request,
   bucket: QuotaBucket,
-  opts: { isPremium?: boolean; amount?: number } = {}
+  opts: { isPremium?: boolean; amount?: number; userId?: string | null } = {}
 ): Promise<{ allowed: boolean; used: number; limit: number; userId: string | null }> {
-  const userId = getUserIdFromRequest(req);
+  // Prefer an already-verified id from requireCaller(); fall back to the JWT
+  // payload only for trusted service-role invocations.
+  const userId = opts.userId ?? getUserIdFromRequest(req);
   if (!userId) {
     return { allowed: true, used: 0, limit: QUOTA_BUCKETS[bucket], userId: null };
   }
+
 
   const limit = QUOTA_BUCKETS[bucket] * (opts.isPremium ? PREMIUM_MULTIPLIER : 1);
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
