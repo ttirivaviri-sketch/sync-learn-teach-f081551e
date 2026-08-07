@@ -8,7 +8,7 @@ import {
   corsHeaders,
   getAIConfig,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   safeJsonParse,
   jsonResponse,
   errorResponse,
