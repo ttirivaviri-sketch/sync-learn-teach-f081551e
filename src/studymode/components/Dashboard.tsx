@@ -168,16 +168,8 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
 
   useEffect(() => {
     if (!pendingIntent || subjects.length === 0) return;
-    const match =
-      subjects.find((s) => s.id === pendingIntent.subjectId) ??
-      subjects.find(
-        (s) => s.name.toLowerCase() === (pendingIntent.subjectName ?? '').toLowerCase()
-      ) ??
-      (pendingIntent.topic
-        ? subjects.find((s) =>
-            s.topics.some((t) => t.name.toLowerCase() === pendingIntent.topic!.toLowerCase())
-          )
-        : undefined);
+    const match = resolveIntentSubject(pendingIntent, subjects);
+
 
     setActiveTab('subjects');
     if (match) setSelectedSubject(match);
