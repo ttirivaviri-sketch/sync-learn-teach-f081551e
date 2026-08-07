@@ -352,6 +352,25 @@ export function rateLimitedResponse(fnName: string, retryAfter: number, limit: n
  * requests are exempt. Fails open when the infra is unavailable so a DB blip
  * never takes AI features down.
  */
+export async function guardBurst(
+  req: Request,
+  fnName: string,
+  caller: { userId: string | null; isService: boolean },
+  limit?: number
+): Promise<Response | null> {
+  if (caller.isService || !caller.userId) return null;
+  const rl = await enforceRateLimit(fnName, caller.userId, { limit });
+  if (rl.allowed) return null;
+  await logBlockedRequest(req, {
+    functionName: fnName,
+    reason: "rate_limited",
+    status: 429,
+    userId: caller.userId,
+    context: { limit: rl.limit, count: rl.count, window_seconds: BURST_WINDOW_SECONDS },
+  });
+  return rateLimitedResponse(fnName, rl.retryAfter, rl.limit);
+}
+
 export async function enforceRateLimit(
   fnName: string,
   userId: string | null,
