@@ -11,7 +11,7 @@
  *   5. safeJsonParse() — robust JSON extraction from AI responses
  */
 
-import { logBlockedRequest, type BlockReason } from "./audit.ts";
+import { logBlockedRequest, clientIp, type BlockReason } from "./audit.ts";
 
 // ─── CORS ────────────────────────────────────────────────────────────────────
 
@@ -327,6 +327,123 @@ export function burstLimitFor(fnName: string): number {
   return BURST_OVERRIDES[fnName] ?? DEFAULT_BURST_LIMIT;
 }
 
+/**
+ * IP-based limits. These sit *alongside* the per-user counters so that an
+ * attacker who churns through many freshly created accounts from one host is
+ * still capped. They are deliberately looser than the per-user limits so that
+ * shared networks (schools, NAT, campus wifi) are not punished:
+ *
+ *   - per function, per 60s   : 6x the per-user burst limit (min 30)
+ *   - across all functions/hr : IP_HOURLY_LIMIT
+ */
+export const IP_BURST_MULTIPLIER = 6;
+export const IP_MIN_BURST_LIMIT = 30;
+export const IP_HOURLY_LIMIT = 400;
+export const IP_HOURLY_WINDOW_SECONDS = 3600;
+
+export function ipBurstLimitFor(fnName: string): number {
+  return Math.max(IP_MIN_BURST_LIMIT, burstLimitFor(fnName) * IP_BURST_MULTIPLIER);
+}
+
+/** Atomic per-IP fixed-window check backed by `check_ip_rate_limit`. Fails open. */
+export async function enforceIpRateLimit(
+  fnName: string,
+  ip: string | null,
+  opts: { limit?: number; windowSeconds?: number } = {}
+): Promise<{ allowed: boolean; retryAfter: number; limit: number; count: number }> {
+  const limit = opts.limit ?? ipBurstLimitFor(fnName);
+  if (!ip) return { allowed: true, retryAfter: 0, limit, count: 0 };
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!supabaseUrl || !serviceKey) return { allowed: true, retryAfter: 0, limit, count: 0 };
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/rest/v1/rpc/check_ip_rate_limit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+      },
+      body: JSON.stringify({
+        _ip: ip,
+        _fn: fnName,
+        _limit: limit,
+        _window_seconds: opts.windowSeconds ?? BURST_WINDOW_SECONDS,
+      }),
+    });
+    if (!resp.ok) {
+      console.warn(`[enforceIpRateLimit] RPC failed ${resp.status} — failing open`);
+      return { allowed: true, retryAfter: 0, limit, count: 0 };
+    }
+    const data = await resp.json();
+    return {
+      allowed: data?.allowed !== false,
+      retryAfter: Number(data?.retry_after ?? BURST_WINDOW_SECONDS),
+      limit: Number(data?.limit ?? limit),
+      count: Number(data?.count ?? 0),
+    };
+  } catch (e) {
+    console.warn("[enforceIpRateLimit] error — failing open:", e);
+    return { allowed: true, retryAfter: 0, limit, count: 0 };
+  }
+}
+
+/**
+ * Runs both IP guards (per-function burst + global hourly) and returns a ready
+ * 429 response when either trips. Service-role callers are exempt.
+ * Audited under reason "rate_limited" with scope "ip".
+ */
+export async function guardIp(
+  req: Request,
+  fnName: string,
+  caller?: { userId: string | null; isService: boolean } | null,
+  opts: { limit?: number } = {}
+): Promise<Response | null> {
+  if (caller?.isService) return null;
+  const ip = clientIp(req);
+  if (!ip) return null;
+
+  const perFn = await enforceIpRateLimit(fnName, ip, { limit: opts.limit });
+  if (!perFn.allowed) {
+    await logBlockedRequest(req, {
+      functionName: fnName,
+      reason: "rate_limited",
+      status: 429,
+      userId: caller?.userId ?? null,
+      context: {
+        scope: "ip",
+        limit: perFn.limit,
+        count: perFn.count,
+        window_seconds: BURST_WINDOW_SECONDS,
+      },
+    });
+    return rateLimitedResponse(fnName, perFn.retryAfter, perFn.limit);
+  }
+
+  const hourly = await enforceIpRateLimit("__all__", ip, {
+    limit: IP_HOURLY_LIMIT,
+    windowSeconds: IP_HOURLY_WINDOW_SECONDS,
+  });
+  if (!hourly.allowed) {
+    await logBlockedRequest(req, {
+      functionName: fnName,
+      reason: "rate_limited",
+      status: 429,
+      userId: caller?.userId ?? null,
+      context: {
+        scope: "ip_hourly",
+        limit: hourly.limit,
+        count: hourly.count,
+        window_seconds: IP_HOURLY_WINDOW_SECONDS,
+      },
+    });
+    return rateLimitedResponse(fnName, hourly.retryAfter, hourly.limit);
+  }
+  return null;
+}
+
 export function rateLimitedResponse(fnName: string, retryAfter: number, limit: number): Response {
   return new Response(
     JSON.stringify({
@@ -358,7 +475,10 @@ export async function guardBurst(
   caller: { userId: string | null; isService: boolean },
   limit?: number
 ): Promise<Response | null> {
-  if (caller.isService || !caller.userId) return null;
+  if (caller.isService) return null;
+  const ipBlocked = await guardIp(req, fnName, caller);
+  if (ipBlocked) return ipBlocked;
+  if (!caller.userId) return null;
   const rl = await enforceRateLimit(fnName, caller.userId, { limit });
   if (rl.allowed) return null;
   await logBlockedRequest(req, {
@@ -423,9 +543,17 @@ export async function enforceRateLimit(
 export async function requireCaller(
   req: Request,
   functionName?: string,
-  opts: { burstLimit?: number; skipRateLimit?: boolean } = {}
+  opts: { burstLimit?: number; ipBurstLimit?: number; skipRateLimit?: boolean } = {}
 ): Promise<{ caller: VerifiedCaller; response?: never } | { caller?: never; response: Response }> {
   const fnName = functionName ?? fnNameFromRequest(req);
+
+  // IP guard runs BEFORE auth so that unauthenticated floods and account-churn
+  // abuse from a single host are capped too.
+  if (!opts.skipRateLimit) {
+    const ipBlocked = await guardIp(req, fnName, null, { limit: opts.ipBurstLimit });
+    if (ipBlocked) return { response: ipBlocked };
+  }
+
   const { caller, reason } = await verifyCallerDetailed(req);
   if (!caller) {
     await logBlockedRequest(req, {
