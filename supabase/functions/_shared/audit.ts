@@ -17,14 +17,15 @@ export type BlockReason =
   | "auth_unavailable"
   | "not_participant"
   | "not_owner"
-  | "insufficient_role";
+  | "insufficient_role"
+  | "rate_limited";
 
 export interface BlockedRequestEvent {
   /** Edge function name, e.g. "process-tutor-payout". */
   functionName: string;
   reason: BlockReason;
   /** HTTP status returned to the caller. */
-  status: 401 | 403;
+  status: 401 | 403 | 429;
   /** Verified user id when the caller was authenticated but not authorised. */
   userId?: string | null;
   /** Extra non-sensitive context, e.g. { resource: "lesson_recording" }. */
