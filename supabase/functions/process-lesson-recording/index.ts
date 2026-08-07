@@ -51,6 +51,14 @@ type Speaker = "Tutor" | "Learner" | "Unknown";
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  // Runs on the service role — require a verified caller before any work.
+  const caller = await verifyCaller(req);
+  if (!caller) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
     const body = await req.json();
@@ -64,6 +72,15 @@ Deno.serve(async (req) => {
     const { data: rec, error: recErr } = await sb
       .from("lesson_recordings").select("*").eq("id", recording_id).single();
     if (recErr || !rec) throw new Error(`Recording not found: ${recErr?.message}`);
+
+    // Only the lesson's tutor/learner (or a trusted service call) may process
+    // that recording's audio and transcripts.
+    if (!caller.isService && caller.userId !== rec.tutor_id && caller.userId !== rec.learner_id) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     // ── Consent gate ──────────────────────────────────────────────────────
     const { data: consents } = await sb
