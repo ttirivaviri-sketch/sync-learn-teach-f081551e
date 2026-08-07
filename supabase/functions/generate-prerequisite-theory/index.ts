@@ -67,7 +67,7 @@ Missing concepts to cover: ${Array.isArray(missingConcepts) && missingConcepts.l
 Write the refresher now.`;
 
     const theory = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: getUserIdFromRequest(req), bucket: "concept_review" },
+      usage: { userId: authedUserId, bucket: "concept_review" },
       temperature: 0.4,
       maxTokens: 900,
     });
