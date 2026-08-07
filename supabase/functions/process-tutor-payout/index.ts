@@ -153,6 +153,13 @@ serve(async (req) => {
         _role: "admin",
       });
       if (isAdmin !== true) {
+        await logBlockedRequest(req, {
+          functionName: "process-tutor-payout",
+          reason: "not_owner",
+          status: 403,
+          userId: user.id,
+          context: { resource: "tutor_payout" },
+        });
         return errorResponse(
           new Error("Not authorized to process payouts for this tutor"),
           403
