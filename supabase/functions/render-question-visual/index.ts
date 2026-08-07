@@ -11,7 +11,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
-import { corsHeaders, getUserIdFromRequest, reportTokenUsage } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 
 const BUCKET = "question-diagrams";
 
