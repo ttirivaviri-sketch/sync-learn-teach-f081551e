@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
-import { consumeStudyIntent, clearStudyIntent, type StudyIntent } from '../lib/studyIntent';
+import { consumeStudyIntent, clearStudyIntent, resolveIntentSubject, type StudyIntent } from '../lib/studyIntent';
 import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles, MoreHorizontal, MessageCircle, Send, Award, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
