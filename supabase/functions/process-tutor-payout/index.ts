@@ -144,6 +144,22 @@ serve(async (req) => {
       );
     }
 
+    // ── Ownership check: only the tutor themself (or an admin) may trigger a
+    //    payout for a session. Without this any signed-in user could process
+    //    and credit payouts for an arbitrary tutor_id.
+    if (user.id !== tutor_id) {
+      const { data: isAdmin } = await supabase.rpc("has_role", {
+        _user_id: user.id,
+        _role: "admin",
+      });
+      if (isAdmin !== true) {
+        return errorResponse(
+          new Error("Not authorized to process payouts for this tutor"),
+          403
+        );
+      }
+    }
+
     // ── Step 1: Check for duplicate payout (idempotency) ──────────────────────
     const { data: existingPayout } = await supabase
       .from("tutor_payouts")
