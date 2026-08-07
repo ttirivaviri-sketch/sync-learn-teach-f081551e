@@ -136,6 +136,8 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
+      const burst = await guardBurst(req, 'seed-curriculum-topics', { userId: callerId, isService: false }, 4);
+      if (burst) return burst;
       const quota = await enforceQuota(req, 'misc', { userId: callerId });
       if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
     }
