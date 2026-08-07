@@ -52,8 +52,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   // Runs on the service role — require a verified caller before any work.
-  const caller = await verifyCaller(req);
+  const { caller, reason } = await verifyCallerDetailed(req);
   if (!caller) {
+    await logBlockedRequest(req, {
+      functionName: "process-lesson-recording",
+      reason: reason ?? "invalid_token",
+      status: 401,
+    });
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
