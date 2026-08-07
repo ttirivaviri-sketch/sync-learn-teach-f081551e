@@ -109,6 +109,11 @@ serve(async (req) => {
     // Authenticate caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      await logBlockedRequest(req, {
+        functionName: "process-tutor-payout",
+        reason: "missing_token",
+        status: 401,
+      });
       return errorResponse(new Error("Authorization required"), 401);
     }
 
@@ -120,6 +125,11 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
+      await logBlockedRequest(req, {
+        functionName: "process-tutor-payout",
+        reason: "invalid_token",
+        status: 401,
+      });
       return errorResponse(new Error("Invalid authentication"), 401);
     }
 
