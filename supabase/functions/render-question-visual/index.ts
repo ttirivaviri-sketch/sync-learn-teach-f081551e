@@ -102,7 +102,7 @@ Diagram requested: ${imagePrompt}`;
 
     const aiData = await aiResp.json();
     if (aiData?.usage) {
-      const callerId = getUserIdFromRequest(req);
+      const callerId = authedUserId;
       if (callerId) {
         reportTokenUsage({
           userId: callerId,
