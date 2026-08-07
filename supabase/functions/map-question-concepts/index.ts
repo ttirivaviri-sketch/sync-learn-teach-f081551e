@@ -1,4 +1,4 @@
-import { enforceQuota, quotaExceededResponse, reportTokenUsage } from "../_shared/ai-config.ts";
+import { enforceQuota, quotaExceededResponse, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -8,8 +8,11 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  const quota = await enforceQuota(req, 'misc');
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const quota = await enforceQuota(req, 'misc', { userId: auth.caller.userId });
   if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
+
 
   try {
     const { question, subject, curriculum, topic } = await req.json();

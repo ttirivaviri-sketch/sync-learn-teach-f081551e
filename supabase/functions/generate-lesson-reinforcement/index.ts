@@ -9,7 +9,7 @@
  * Body: { recording_id: string }
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders, reportTokenUsage } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage, verifyCaller } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -28,6 +28,15 @@ const gatewayChat = async (body: Record<string, unknown>) => {
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
+  // Runs on the service role — require a verified caller before any work.
+  const caller = await verifyCaller(req);
+  if (!caller) {
+    return new Response(JSON.stringify({ error: "unauthorized" }), {
+      status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { recording_id } = await req.json();
@@ -36,6 +45,15 @@ Deno.serve(async (req) => {
     const { data: rec, error: recErr } = await sb
       .from("lesson_recordings").select("*").eq("id", recording_id).single();
     if (recErr || !rec) throw new Error(`Recording not found`);
+
+    // Only the lesson's tutor/learner (or a trusted service call) may generate
+    // reinforcement content for that recording.
+    if (!caller.isService && caller.userId !== rec.tutor_id && caller.userId !== rec.learner_id) {
+      return new Response(JSON.stringify({ error: "forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     const { data: notes } = await sb
       .from("lesson_notes").select("summary,key_points,vocabulary")

@@ -146,12 +146,15 @@ async function isAdminUser(
 export async function enforceQuota(
   req: Request,
   bucket: QuotaBucket,
-  opts: { isPremium?: boolean; amount?: number } = {}
+  opts: { isPremium?: boolean; amount?: number; userId?: string | null } = {}
 ): Promise<{ allowed: boolean; used: number; limit: number; userId: string | null }> {
-  const userId = getUserIdFromRequest(req);
+  // Prefer an already-verified id from requireCaller(); fall back to the JWT
+  // payload only for trusted service-role invocations.
+  const userId = opts.userId ?? getUserIdFromRequest(req);
   if (!userId) {
     return { allowed: true, used: 0, limit: QUOTA_BUCKETS[bucket], userId: null };
   }
+
 
   const limit = QUOTA_BUCKETS[bucket] * (opts.isPremium ? PREMIUM_MULTIPLIER : 1);
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -220,6 +223,90 @@ export function quotaExceededResponse(
     }
   );
 }
+
+// ─── Authentication gate ─────────────────────────────────────────────────────
+
+/**
+ * Verified caller identity.
+ *  - `userId`   : the authenticated end user (null for trusted service calls)
+ *  - `isService`: true when the caller presented the service-role key (cron /
+ *                 server-to-server), which is trusted and bypasses quotas.
+ */
+export interface VerifiedCaller {
+  userId: string | null;
+  isService: boolean;
+}
+
+export function unauthorizedResponse(message = "Authentication required"): Response {
+  return new Response(JSON.stringify({ error: "unauthorized", message }), {
+    status: 401,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
+const VERIFIED_USER_CACHE = new Map<string, { userId: string; exp: number }>();
+
+/**
+ * Verifies the caller's Authorization header **against Supabase Auth** rather
+ * than trusting the unsigned JWT payload. Returns null when the request is
+ * anonymous or the token is invalid/expired, so callers can fail closed.
+ *
+ * Trusted service-role calls (cron jobs, other edge functions) are recognised
+ * and returned with `isService: true`.
+ */
+export async function verifyCaller(req: Request): Promise<VerifiedCaller | null> {
+  const auth = req.headers.get("Authorization") || "";
+  const token = auth.replace(/^Bearer\s+/i, "").trim();
+  if (!token) return null;
+
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (serviceKey && token === serviceKey) {
+    return { userId: null, isService: true };
+  }
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  if (!supabaseUrl || !anonKey) {
+    // Fail closed: we cannot verify the signature, so we must not trust it.
+    console.error("[verifyCaller] auth infra unavailable — rejecting request");
+    return null;
+  }
+
+  const cached = VERIFIED_USER_CACHE.get(token);
+  if (cached && cached.exp > Date.now()) {
+    return { userId: cached.userId, isService: false };
+  }
+
+  try {
+    const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
+      headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
+    });
+    if (!resp.ok) return null;
+    const user = await resp.json();
+    const userId = typeof user?.id === "string" ? user.id : null;
+    if (!userId) return null;
+    // Short cache so a burst of calls doesn't hammer the auth endpoint.
+    VERIFIED_USER_CACHE.set(token, { userId, exp: Date.now() + 60_000 });
+    return { userId, isService: false };
+  } catch (e) {
+    console.error("[verifyCaller] verification error — rejecting request:", e);
+    return null;
+  }
+}
+
+/**
+ * Convenience gate for AI endpoints: returns the verified caller, or a ready
+ * 401 `Response` to return immediately. Never fails open.
+ */
+export async function requireCaller(
+  req: Request
+): Promise<{ caller: VerifiedCaller; response?: never } | { caller?: never; response: Response }> {
+  const caller = await verifyCaller(req);
+  if (!caller) return { response: unauthorizedResponse() };
+  return { caller };
+}
+
+
 
 // ─── Shared response cache (per-bucket, content-keyed) ──────────────────────
 

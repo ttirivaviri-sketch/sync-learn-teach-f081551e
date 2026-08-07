@@ -14,7 +14,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   safeJsonParse,
   errorResponse,
   jsonResponse,
@@ -27,6 +27,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
 
   try {
     const ai = getAIConfig();
@@ -75,7 +80,7 @@ Subject: ${subject}
 Generate ${count} foundation-level MCQs now.`;
 
     const raw = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: getUserIdFromRequest(req), bucket: "quiz" },
+      usage: { userId: authedUserId, bucket: "quiz" },
       temperature: 0.4,
       jsonMode: true,
       maxTokens: 1400,

@@ -8,7 +8,7 @@ import {
   corsHeaders,
   getAIConfig,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   safeJsonParse,
   jsonResponse,
   errorResponse,
@@ -56,6 +56,11 @@ serve(async (req) => {
     return errorResponse(new Error("Method not allowed"), 405);
   }
 
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
+
   try {
     const body = await req.json();
 
@@ -86,7 +91,7 @@ serve(async (req) => {
     let parsed: unknown = null;
     try {
       const raw = await callAI(ai, SYSTEM_PROMPT, userPrompt, {
-        usage: { userId: getUserIdFromRequest(req), bucket: "insights" },
+        usage: { userId: authedUserId, bucket: "insights" },
         temperature: 0.4,
         maxTokens: 2000,
       });

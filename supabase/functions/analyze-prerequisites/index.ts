@@ -25,7 +25,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   safeJsonParse,
   normalizeArray,
   errorResponse,
@@ -36,6 +36,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
 
   try {
     const ai = getAIConfig();
@@ -126,7 +131,7 @@ Curriculum: ${curriculum}${grade ? `\nGrade: ${grade}` : ""}${gradeLevel ? `\nLe
     userPrompt += `\n\nList the prerequisite gaps now.`;
 
     const raw = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: getUserIdFromRequest(req), bucket: "topic_session" },
+      usage: { userId: authedUserId, bucket: "topic_session" },
       temperature: 0.3,
       jsonMode: true,
       maxTokens: 1200,

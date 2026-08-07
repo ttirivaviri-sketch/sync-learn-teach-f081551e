@@ -11,7 +11,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { crypto } from "https://deno.land/std@0.168.0/crypto/mod.ts";
-import { corsHeaders, getUserIdFromRequest, reportTokenUsage } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 
 const BUCKET = "question-diagrams";
 
@@ -26,6 +26,11 @@ async function md5(input: string): Promise<string> {
 serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
+
+  // Paid AI image generation + public-bucket upload — require a verified session.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
 
   try {
     const { imagePrompt } = await req.json();
@@ -97,7 +102,7 @@ Diagram requested: ${imagePrompt}`;
 
     const aiData = await aiResp.json();
     if (aiData?.usage) {
-      const callerId = getUserIdFromRequest(req);
+      const callerId = authedUserId;
       if (callerId) {
         reportTokenUsage({
           userId: callerId,

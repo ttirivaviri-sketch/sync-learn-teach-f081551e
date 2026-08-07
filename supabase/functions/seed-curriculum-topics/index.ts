@@ -1,5 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
-import { enforceQuota, getUserIdFromRequest, quotaExceededResponse, reportTokenUsage } from '../_shared/ai-config.ts';
+import { enforceQuota, quotaExceededResponse, reportTokenUsage, verifyCaller } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const callerId = getUserIdFromRequest(req);
+    const callerId = (await verifyCaller(req))?.userId ?? null;
     const body = await req.json();
     const { curriculum, grade, subject, force = false, validate = true } = body ?? {};
 
@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
           status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         });
       }
-      const quota = await enforceQuota(req, 'misc');
+      const quota = await enforceQuota(req, 'misc', { userId: callerId });
       if (!quota.allowed) return quotaExceededResponse('misc', quota.used, quota.limit);
     }
 

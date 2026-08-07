@@ -2,7 +2,7 @@
 // Returns a single bundle with 4 mandatory blocks, syllabus-locked, coverage-validated.
 
 import { buildProvenance, hashPrompt, attachMeta } from '../_shared/provenance.ts';
-import { getUserIdFromRequest, reportTokenUsage, type UsageAttribution } from '../_shared/ai-config.ts';
+import { requireCaller, reportTokenUsage, type UsageAttribution } from '../_shared/ai-config.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -319,7 +319,13 @@ Deno.serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
+
   try {
+
     const apiKey = Deno.env.get('LOVABLE_API_KEY');
     if (!apiKey) {
       return new Response(JSON.stringify({ error: 'LOVABLE_API_KEY not configured' }), {
@@ -349,7 +355,7 @@ Deno.serve(async (req: Request) => {
       { role: 'user', content: buildUserPrompt(body, selected, reason) },
     ];
 
-    const usageAttrib = { userId: getUserIdFromRequest(req), bucket: 'daily_task' };
+    const usageAttrib = { userId: authedUserId, bucket: 'daily_task' };
 
     let bundle = await callAI(messages, apiKey, usageAttrib);
     if (!bundle) {

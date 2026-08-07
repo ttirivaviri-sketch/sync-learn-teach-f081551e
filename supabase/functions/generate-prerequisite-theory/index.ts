@@ -14,7 +14,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   errorResponse,
   jsonResponse,
 } from "../_shared/ai-config.ts";
@@ -24,6 +24,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
+
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
 
   try {
     const ai = getAIConfig();
@@ -62,7 +67,7 @@ Missing concepts to cover: ${Array.isArray(missingConcepts) && missingConcepts.l
 Write the refresher now.`;
 
     const theory = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: getUserIdFromRequest(req), bucket: "concept_review" },
+      usage: { userId: authedUserId, bucket: "concept_review" },
       temperature: 0.4,
       maxTokens: 900,
     });

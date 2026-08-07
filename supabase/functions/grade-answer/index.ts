@@ -34,7 +34,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   safeJsonParse,
   normalizeArray,
   errorResponse,
@@ -44,6 +44,11 @@ import {
 serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
+
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
 
   try {
     const ai = getAIConfig();
@@ -130,7 +135,7 @@ ${student_answer.trim() || "(blank)"}
 Grade now. Return JSON only.`;
 
     const rawContent = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: getUserIdFromRequest(req), bucket: "explain" },
+      usage: { userId: authedUserId, bucket: "explain" },
       temperature: 0.2,
       jsonMode: true,
     });
