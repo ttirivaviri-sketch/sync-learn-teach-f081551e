@@ -1,5 +1,5 @@
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
-import { enforceQuota, quotaExceededResponse, reportTokenUsage } from "../_shared/ai-config.ts";
+import { enforceQuota, quotaExceededResponse, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
