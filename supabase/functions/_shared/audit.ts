@@ -32,7 +32,7 @@ export interface BlockedRequestEvent {
   context?: Record<string, string | number | boolean | null>;
 }
 
-function clientIp(req: Request): string | null {
+export function clientIp(req: Request): string | null {
   const fwd = req.headers.get("x-forwarded-for") || "";
   const first = fwd.split(",")[0]?.trim();
   if (first) return first;
