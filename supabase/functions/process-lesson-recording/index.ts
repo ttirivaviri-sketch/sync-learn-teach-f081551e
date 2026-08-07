@@ -65,6 +65,9 @@ Deno.serve(async (req) => {
     });
   }
 
+  const burst = await guardBurst(req, "process-lesson-recording", caller, 6);
+  if (burst) return burst;
+
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
     const body = await req.json();

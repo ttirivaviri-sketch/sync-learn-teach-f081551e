@@ -43,6 +43,9 @@ Deno.serve(async (req) => {
     });
   }
 
+  const burst = await guardBurst(req, "generate-lesson-reinforcement", caller, 6);
+  if (burst) return burst;
+
   try {
     const sb = createClient(SUPABASE_URL, SERVICE_ROLE);
     const { recording_id } = await req.json();

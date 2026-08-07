@@ -37,6 +37,9 @@ Deno.serve(async (req) => {
       });
     }
 
+    const burst = await guardBurst(req, "transcribe-lesson-chunk", caller, 30);
+    if (burst) return burst;
+
 
     const { audio_base64, mime_type, speaker_hint, display_name } = await req.json();
     if (!audio_base64 || typeof audio_base64 !== "string") {
