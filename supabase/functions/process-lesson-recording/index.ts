@@ -14,7 +14,8 @@
  * Body: { recording_id: string }
  */
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
-import { corsHeaders, reportTokenUsage, verifyCaller } from "../_shared/ai-config.ts";
+import { corsHeaders, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
+import { logBlockedRequest } from "../_shared/audit.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
@@ -52,8 +53,13 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   // Runs on the service role — require a verified caller before any work.
-  const caller = await verifyCaller(req);
+  const { caller, reason } = await verifyCallerDetailed(req);
   if (!caller) {
+    await logBlockedRequest(req, {
+      functionName: "process-lesson-recording",
+      reason: reason ?? "invalid_token",
+      status: 401,
+    });
     return new Response(JSON.stringify({ error: "unauthorized" }), {
       status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -76,6 +82,13 @@ Deno.serve(async (req) => {
     // Only the lesson's tutor/learner (or a trusted service call) may process
     // that recording's audio and transcripts.
     if (!caller.isService && caller.userId !== rec.tutor_id && caller.userId !== rec.learner_id) {
+      await logBlockedRequest(req, {
+        functionName: "process-lesson-recording",
+        reason: "not_participant",
+        status: 403,
+        userId: caller.userId,
+        context: { resource: "lesson_recording" },
+      });
       return new Response(JSON.stringify({ error: "forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

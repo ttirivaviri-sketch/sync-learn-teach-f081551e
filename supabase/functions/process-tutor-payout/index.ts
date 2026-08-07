@@ -10,6 +10,7 @@
  */
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { logBlockedRequest } from "../_shared/audit.ts";
 import {
   corsHeaders,
   getAIConfig,
@@ -109,6 +110,11 @@ serve(async (req) => {
     // Authenticate caller
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      await logBlockedRequest(req, {
+        functionName: "process-tutor-payout",
+        reason: "missing_token",
+        status: 401,
+      });
       return errorResponse(new Error("Authorization required"), 401);
     }
 
@@ -120,6 +126,11 @@ serve(async (req) => {
     } = await supabase.auth.getUser(token);
 
     if (authError || !user) {
+      await logBlockedRequest(req, {
+        functionName: "process-tutor-payout",
+        reason: "invalid_token",
+        status: 401,
+      });
       return errorResponse(new Error("Invalid authentication"), 401);
     }
 
@@ -153,6 +164,13 @@ serve(async (req) => {
         _role: "admin",
       });
       if (isAdmin !== true) {
+        await logBlockedRequest(req, {
+          functionName: "process-tutor-payout",
+          reason: "not_owner",
+          status: 403,
+          userId: user.id,
+          context: { resource: "tutor_payout" },
+        });
         return errorResponse(
           new Error("Not authorized to process payouts for this tutor"),
           403

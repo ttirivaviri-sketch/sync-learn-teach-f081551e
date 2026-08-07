@@ -11,6 +11,8 @@
  *   5. safeJsonParse() — robust JSON extraction from AI responses
  */
 
+import { logBlockedRequest, type BlockReason } from "./audit.ts";
+
 // ─── CORS ────────────────────────────────────────────────────────────────────
 
 export const corsHeaders: Record<string, string> = {
@@ -254,14 +256,17 @@ const VERIFIED_USER_CACHE = new Map<string, { userId: string; exp: number }>();
  * Trusted service-role calls (cron jobs, other edge functions) are recognised
  * and returned with `isService: true`.
  */
-export async function verifyCaller(req: Request): Promise<VerifiedCaller | null> {
+/** Verify a caller and also report why verification failed (for auditing). */
+export async function verifyCallerDetailed(
+  req: Request
+): Promise<{ caller: VerifiedCaller | null; reason?: BlockReason }> {
   const auth = req.headers.get("Authorization") || "";
   const token = auth.replace(/^Bearer\s+/i, "").trim();
-  if (!token) return null;
+  if (!token) return { caller: null, reason: "missing_token" };
 
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (serviceKey && token === serviceKey) {
-    return { userId: null, isService: true };
+    return { caller: { userId: null, isService: true } };
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -269,42 +274,67 @@ export async function verifyCaller(req: Request): Promise<VerifiedCaller | null>
   if (!supabaseUrl || !anonKey) {
     // Fail closed: we cannot verify the signature, so we must not trust it.
     console.error("[verifyCaller] auth infra unavailable — rejecting request");
-    return null;
+    return { caller: null, reason: "auth_unavailable" };
   }
 
   const cached = VERIFIED_USER_CACHE.get(token);
   if (cached && cached.exp > Date.now()) {
-    return { userId: cached.userId, isService: false };
+    return { caller: { userId: cached.userId, isService: false } };
   }
 
   try {
     const resp = await fetch(`${supabaseUrl}/auth/v1/user`, {
       headers: { apikey: anonKey, Authorization: `Bearer ${token}` },
     });
-    if (!resp.ok) return null;
+    if (!resp.ok) return { caller: null, reason: "invalid_token" };
     const user = await resp.json();
     const userId = typeof user?.id === "string" ? user.id : null;
-    if (!userId) return null;
+    if (!userId) return { caller: null, reason: "invalid_token" };
     // Short cache so a burst of calls doesn't hammer the auth endpoint.
     VERIFIED_USER_CACHE.set(token, { userId, exp: Date.now() + 60_000 });
-    return { userId, isService: false };
+    return { caller: { userId, isService: false } };
   } catch (e) {
     console.error("[verifyCaller] verification error — rejecting request:", e);
-    return null;
+    return { caller: null, reason: "invalid_token" };
   }
+}
+
+export async function verifyCaller(req: Request): Promise<VerifiedCaller | null> {
+  const { caller } = await verifyCallerDetailed(req);
+  return caller;
 }
 
 /**
  * Convenience gate for AI endpoints: returns the verified caller, or a ready
  * 401 `Response` to return immediately. Never fails open.
+ * Every denial is written to the security audit trail.
  */
 export async function requireCaller(
-  req: Request
+  req: Request,
+  functionName?: string
 ): Promise<{ caller: VerifiedCaller; response?: never } | { caller?: never; response: Response }> {
-  const caller = await verifyCaller(req);
-  if (!caller) return { response: unauthorizedResponse() };
+  const { caller, reason } = await verifyCallerDetailed(req);
+  if (!caller) {
+    await logBlockedRequest(req, {
+      functionName: functionName ?? fnNameFromRequest(req),
+      reason: reason ?? "invalid_token",
+      status: 401,
+    });
+    return { response: unauthorizedResponse() };
+  }
   return { caller };
 }
+
+/** Best-effort edge function name from the request URL (…/functions/v1/<name>). */
+export function fnNameFromRequest(req: Request): string {
+  try {
+    const parts = new URL(req.url).pathname.split("/").filter(Boolean);
+    return parts[parts.length - 1] || "unknown";
+  } catch (_) {
+    return "unknown";
+  }
+}
+
 
 
 
