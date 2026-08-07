@@ -21,7 +21,9 @@ function computeXP(level: string, accuracy: boolean, coverage: number, difficult
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  const quota = await enforceQuota(req, 'explain');
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const quota = await enforceQuota(req, 'explain', { userId: auth.caller.userId });
   if (!quota.allowed) return quotaExceededResponse('explain', quota.used, quota.limit);
 
   try {
