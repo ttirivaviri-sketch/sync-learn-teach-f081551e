@@ -14,7 +14,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   errorResponse,
   jsonResponse,
 } from "../_shared/ai-config.ts";
