@@ -1,4 +1,4 @@
-import { enforceQuota, quotaExceededResponse, reportTokenUsage } from "../_shared/ai-config.ts";
+import { enforceQuota, quotaExceededResponse, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 
 const corsHeaders = {
@@ -9,8 +9,11 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-  const quota = await enforceQuota(req, 'topic_session');
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const quota = await enforceQuota(req, 'topic_session', { userId: auth.caller.userId });
   if (!quota.allowed) return quotaExceededResponse('topic_session', quota.used, quota.limit);
+
 
   try {
     const { subject, curriculum, topic, subtopic, weak_concepts } = await req.json();
