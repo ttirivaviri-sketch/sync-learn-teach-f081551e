@@ -80,7 +80,7 @@ Subject: ${subject}
 Generate ${count} foundation-level MCQs now.`;
 
     const raw = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: getUserIdFromRequest(req), bucket: "quiz" },
+      usage: { userId: authedUserId, bucket: "quiz" },
       temperature: 0.4,
       jsonMode: true,
       maxTokens: 1400,
