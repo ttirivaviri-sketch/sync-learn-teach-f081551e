@@ -27,6 +27,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS")
     return new Response(null, { headers: corsHeaders });
 
+  // Paid AI image generation + public-bucket upload — require a verified session.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
+
   try {
     const { imagePrompt } = await req.json();
     if (!imagePrompt || typeof imagePrompt !== "string") {
