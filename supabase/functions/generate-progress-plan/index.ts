@@ -91,7 +91,7 @@ serve(async (req) => {
     let parsed: unknown = null;
     try {
       const raw = await callAI(ai, SYSTEM_PROMPT, userPrompt, {
-        usage: { userId: getUserIdFromRequest(req), bucket: "insights" },
+        usage: { userId: authedUserId, bucket: "insights" },
         temperature: 0.4,
         maxTokens: 2000,
       });
