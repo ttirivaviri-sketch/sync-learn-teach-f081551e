@@ -56,6 +56,11 @@ serve(async (req) => {
     return errorResponse(new Error("Method not allowed"), 405);
   }
 
+  // Paid AI call — require a verified session before doing any work.
+  const auth = await requireCaller(req);
+  if (auth.response) return auth.response;
+  const authedUserId = auth.caller.userId;
+
   try {
     const body = await req.json();
 
