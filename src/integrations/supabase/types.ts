@@ -77,6 +77,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ai_rate_limit_counters: {
+        Row: {
+          count: number
+          fn: string
+          updated_at: string
+          user_id: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          fn: string
+          updated_at?: string
+          user_id: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          fn?: string
+          updated_at?: string
+          user_id?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       ai_response_cache: {
         Row: {
           cache_key: string
@@ -7308,6 +7332,15 @@ export type Database = {
         }[]
       }
       auto_resolve_kernel_alerts: { Args: never; Returns: number }
+      check_ai_rate_limit: {
+        Args: {
+          _fn: string
+          _limit: number
+          _user_id: string
+          _window_seconds?: number
+        }
+        Returns: Json
+      }
       check_and_increment_ai_usage: {
         Args: {
           _amount?: number
@@ -7558,6 +7591,7 @@ export type Database = {
         Args: { p_staging_id: string }
         Returns: string
       }
+      prune_ai_rate_limit_counters: { Args: never; Returns: number }
       rebuild_school_analytics_today: {
         Args: { _school_id: string }
         Returns: undefined
