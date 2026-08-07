@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
+import { consumeStudyIntent, clearStudyIntent, type StudyIntent } from '../lib/studyIntent';
 import { Upload, BookOpen, BarChart3, Settings, Calendar, Brain, TrendingUp, Trophy, GraduationCap, FileText, AlertCircle, Clock, Lock, User, ChevronDown, ChevronUp, Sparkles, MoreHorizontal, MessageCircle, Send, Award, ChevronRight } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -153,6 +154,43 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const { progress, dailyStats } = useUserProgress();
   const subjects = dbSubjects ?? [];
   const hasSubjects = subjects.length > 0;
+
+  // ── Deep-link from Home: open the exact subject / resume the last topic ────
+  const [pendingIntent, setPendingIntent] = useState<StudyIntent | null>(() => consumeStudyIntent());
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as StudyIntent | undefined;
+      if (detail) { clearStudyIntent(); setPendingIntent(detail); }
+    };
+    window.addEventListener('studymode-intent', handler);
+    return () => window.removeEventListener('studymode-intent', handler);
+  }, []);
+
+  useEffect(() => {
+    if (!pendingIntent || subjects.length === 0) return;
+    const match =
+      subjects.find((s) => s.id === pendingIntent.subjectId) ??
+      subjects.find(
+        (s) => s.name.toLowerCase() === (pendingIntent.subjectName ?? '').toLowerCase()
+      ) ??
+      (pendingIntent.topic
+        ? subjects.find((s) =>
+            s.topics.some((t) => t.name.toLowerCase() === pendingIntent.topic!.toLowerCase())
+          )
+        : undefined);
+
+    setActiveTab('subjects');
+    if (match) setSelectedSubject(match);
+    if (pendingIntent.topic) {
+      setTopicStart({
+        subject: match?.name ?? pendingIntent.subjectName ?? pendingIntent.topic,
+        topic: pendingIntent.topic,
+        subjectId: match?.id ?? pendingIntent.subjectId,
+        curriculum,
+      });
+    }
+    setPendingIntent(null);
+  }, [pendingIntent, subjects, curriculum]);
   
   // Task persistence — enhanced with AI context
   const { getTasksForSubject, completeTask, ensureTasks, addBonusTask, yesterdayIncomplete, todayIncomplete, isLoading: tasksLoading, tasksCount } = useDailyTasks(subjects, aiContextPayload);
