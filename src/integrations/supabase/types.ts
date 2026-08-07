@@ -1383,6 +1383,30 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_rate_limit_counters: {
+        Row: {
+          count: number
+          fn: string
+          ip: string
+          updated_at: string
+          window_start: string
+        }
+        Insert: {
+          count?: number
+          fn: string
+          ip: string
+          updated_at?: string
+          window_start: string
+        }
+        Update: {
+          count?: number
+          fn?: string
+          ip?: string
+          updated_at?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       kernel_alerts: {
         Row: {
           acknowledged_at: string | null
@@ -7347,6 +7371,15 @@ export type Database = {
           _bucket: string
           _limit: number
           _user_id: string
+        }
+        Returns: Json
+      }
+      check_ip_rate_limit: {
+        Args: {
+          _fn: string
+          _ip: string
+          _limit: number
+          _window_seconds?: number
         }
         Returns: Json
       }
