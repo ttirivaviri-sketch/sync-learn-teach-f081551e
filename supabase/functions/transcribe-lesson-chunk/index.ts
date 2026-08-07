@@ -13,7 +13,7 @@
  * }
  * Response: { text: string, speaker: "tutor" | "learner" | "unknown" }
  */
-import { corsHeaders, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
+import { corsHeaders, guardBurst, reportTokenUsage, verifyCallerDetailed } from "../_shared/ai-config.ts";
 import { logBlockedRequest } from "../_shared/audit.ts";
 
 Deno.serve(async (req) => {
