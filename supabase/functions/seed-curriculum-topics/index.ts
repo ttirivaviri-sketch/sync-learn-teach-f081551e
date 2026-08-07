@@ -105,7 +105,7 @@ Deno.serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-    const callerId = getUserIdFromRequest(req);
+    const callerId = (await verifyCaller(req))?.userId ?? null;
     const body = await req.json();
     const { curriculum, grade, subject, force = false, validate = true } = body ?? {};
 
