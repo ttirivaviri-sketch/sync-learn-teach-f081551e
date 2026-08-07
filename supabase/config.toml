@@ -33,9 +33,6 @@ verify_jwt = false
 [functions.ai-tutor]
 verify_jwt = false
 
-[functions.run-migration]
-verify_jwt = false
-
 [functions.sail-agent]
 verify_jwt = false
 
