@@ -25,7 +25,7 @@ import {
   STUDYMODE_SYSTEM_IDENTITY,
   corsHeaders,
   callAI,
-  getUserIdFromRequest,
+  requireCaller,
   safeJsonParse,
   normalizeArray,
   errorResponse,
