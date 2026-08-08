@@ -2949,6 +2949,57 @@ export type Database = {
         }
         Relationships: []
       }
+      manual_payment_requests: {
+        Row: {
+          access_days: number
+          amount: number
+          created_at: string
+          currency: string
+          id: string
+          method: string
+          proof_path: string | null
+          reference: string
+          review_note: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_days?: number
+          amount: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method: string
+          proof_path?: string | null
+          reference: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_days?: number
+          amount?: number
+          created_at?: string
+          currency?: string
+          id?: string
+          method?: string
+          proof_path?: string | null
+          reference?: string
+          review_note?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_logs: {
         Row: {
           body: string
@@ -6061,6 +6112,7 @@ export type Database = {
       }
       subscriptions: {
         Row: {
+          access_until: string | null
           amount: number | null
           created_at: string
           currency: string | null
@@ -6075,6 +6127,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          access_until?: string | null
           amount?: number | null
           created_at?: string
           currency?: string | null
@@ -6089,6 +6142,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          access_until?: string | null
           amount?: number | null
           created_at?: string
           currency?: string | null
@@ -7790,6 +7844,7 @@ export type Database = {
       set_subscription_plan: {
         Args: { p_plan: string }
         Returns: {
+          access_until: string | null
           amount: number | null
           created_at: string
           currency: string | null
