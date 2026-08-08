@@ -117,6 +117,7 @@ const App = () => {
               <Route path="/" element={<Index />} />
               <Route path="/index" element={<Navigate to="/" replace />} />
               <Route path="/home" element={<Navigate to="/" replace />} />
+              <Route path="/app" element={<AppRedirect />} />
               <Route path="/learner" element={<LearnerApp />} />
               <Route path="/start-trial" element={<Navigate to="/learner/auth" replace />} />
               <Route path="/learner/auth" element={<LearnerAuth />} />
