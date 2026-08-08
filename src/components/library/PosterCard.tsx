@@ -48,6 +48,7 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
           <GeneratedCover
             title={resource.title}
             label={isPaper ? "Past Paper" : resource.tags?.subject || resource.category}
+            showText={false}
           />
         </div>
       )}
