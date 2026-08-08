@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LibraryResource } from "@/types/academicProfile";
+import { parseVideoSource } from "@/lib/videoUrl";
 
 interface StudyClipsFeedProps {
   videos: LibraryResource[];
@@ -19,11 +20,6 @@ interface StudyClipsFeedProps {
 }
 
 /* ── helpers ─────────────────────────────────────────────── */
-
-const YOUTUBE_RE =
-  /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-const VIMEO_RE = /vimeo\.com\/(\d+)/;
-const LOOM_RE = /loom\.com\/share\/([a-zA-Z0-9]+)/;
 
 function resolveVideoUrl(r: LibraryResource): string | null {
   if (r.videoUrl) return r.videoUrl;
@@ -42,25 +38,6 @@ function resolveVideoUrl(r: LibraryResource): string | null {
   return null;
 }
 
-function embedUrl(raw: string): { src: string; isEmbed: boolean; watchUrl: string } {
-  const yt = raw.match(YOUTUBE_RE);
-  if (yt) {
-    // loop=1 only works when paired with playlist=<id>
-    const id = yt[1];
-    const origin = typeof window !== "undefined" ? `&origin=${encodeURIComponent(window.location.origin)}` : "";
-    return {
-      src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&playsinline=1&controls=1&modestbranding=1&rel=0&enablejsapi=1${origin}`,
-      isEmbed: true,
-      watchUrl: `https://www.youtube.com/watch?v=${id}`,
-    };
-  }
-  const vm = raw.match(VIMEO_RE);
-  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&playsinline=1`, isEmbed: true, watchUrl: raw };
-  const lm = raw.match(LOOM_RE);
-  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`, isEmbed: true, watchUrl: raw };
-  return { src: raw, isEmbed: false, watchUrl: raw };
-}
-
 
 /* ── single slide ────────────────────────────────────────── */
 
@@ -74,45 +51,35 @@ interface SlideProps {
 
 function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: SlideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [paused, setPaused] = useState(false);
   const [liked, setLiked] = useState(false);
-  // Once a slide has been active we keep its iframe mounted so scrolling back
-  // does not reload (and re-blank) the player.
-  const [mounted, setMounted] = useState(isActive);
+  const [playRequested, setPlayRequested] = useState(false);
+  const [playerLoaded, setPlayerLoaded] = useState(false);
+  const [playerTimedOut, setPlayerTimedOut] = useState(false);
 
   const url = resolveVideoUrl(resource);
-  const resolved = url ? embedUrl(url) : null;
+  const source = url ? parseVideoSource(url) : null;
+  const showEmbed = isActive && playRequested && !!source?.embedUrl;
 
   useEffect(() => {
-    if (isActive) setMounted(true);
+    if (isActive) return;
+    setPlayRequested(false);
+    setPlayerLoaded(false);
+    setPlayerTimedOut(false);
+    videoRef.current?.pause();
   }, [isActive]);
 
   useEffect(() => {
-    if (!videoRef.current) return;
-    if (isActive && !paused) {
-      videoRef.current.play().catch(() => {});
-    } else {
-      videoRef.current.pause();
-    }
-  }, [isActive, paused]);
+    if (!showEmbed || playerLoaded) return;
+    const timeout = window.setTimeout(() => setPlayerTimedOut(true), 8000);
+    return () => window.clearTimeout(timeout);
+  }, [showEmbed, playerLoaded]);
 
-  // Pause/resume embedded players via the YouTube/Vimeo iframe API
-  useEffect(() => {
-    const win = iframeRef.current?.contentWindow;
-    if (!win || !resolved?.isEmbed) return;
-    const command = isActive ? "playVideo" : "pauseVideo";
-    try {
-      win.postMessage(JSON.stringify({ event: "command", func: command, args: [] }), "*");
-      win.postMessage(JSON.stringify({ method: isActive ? "play" : "pause" }), "*");
-    } catch {
-      /* cross-origin — ignore */
+  const requestPlay = () => {
+    setPlayerTimedOut(false);
+    setPlayRequested(true);
+    if (source?.isDirect) {
+      window.setTimeout(() => videoRef.current?.play().catch(() => {}), 0);
     }
-  }, [isActive, resolved?.isEmbed]);
-
-  const togglePause = () => {
-    if (!resolved || resolved.isEmbed) return;
-    setPaused((p) => !p);
   };
 
   const tutorName = resource.tutor?.name || resource.author || "Unknown";
@@ -121,42 +88,84 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
   return (
     <div className="h-[100dvh] w-full snap-start relative flex items-center justify-center bg-black shrink-0">
       {/* Video / Embed */}
-      {resolved ? (
-        resolved.isEmbed ? (
-          mounted ? (
+      {source ? (
+        source.embedUrl ? (
+          showEmbed ? (
+            <>
             <iframe
-              ref={iframeRef}
-              src={resolved.src}
+              src={source.embedUrl}
               title={resource.title}
               className="absolute inset-0 w-full h-full"
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen; accelerometer; gyroscope; clipboard-write"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen; accelerometer; gyroscope; clipboard-write; web-share"
               allowFullScreen
               referrerPolicy="strict-origin-when-cross-origin"
               frameBorder="0"
+              onLoad={() => {
+                setPlayerLoaded(true);
+                setPlayerTimedOut(false);
+              }}
             />
+            {playerTimedOut && (
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-black/90 px-8 text-center">
+                <p className="text-sm text-white">This video provider did not load in the app.</p>
+                <Button asChild variant="secondary" size="sm">
+                  <a href={source.originalUrl} target="_blank" rel="noopener noreferrer">Open video</a>
+                </Button>
+              </div>
+            )}
+            </>
           ) : (
             <div className="absolute inset-0 flex items-center justify-center bg-black">
-              <Play className="h-14 w-14 text-white/50" />
+              {resource.thumbnail && resource.thumbnail !== "/placeholder.svg" && (
+                <img src={resource.thumbnail} alt="" className="absolute inset-0 h-full w-full object-contain" />
+              )}
+              <div className="absolute inset-0 bg-black/25" />
+              {isActive && (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="secondary"
+                  className="relative z-10 h-16 w-16 rounded-full shadow-lg"
+                  onClick={requestPlay}
+                  aria-label={`Play ${resource.title}`}
+                >
+                  <Play className="h-7 w-7 fill-current" />
+                </Button>
+              )}
             </div>
           )
-        ) : (
+        ) : source.isDirect ? (
           <>
             <video
               ref={videoRef}
-              src={resolved.src}
+              src={source.originalUrl}
+              poster={resource.thumbnail !== "/placeholder.svg" ? resource.thumbnail : undefined}
               className="absolute inset-0 w-full h-full object-contain"
-              loop
-              muted
+              controls={playRequested}
               playsInline
               preload="metadata"
-              onClick={togglePause}
             />
-            {paused && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-                <Play className="h-16 w-16 text-white/80" />
-              </div>
+            {!playRequested && isActive && (
+              <Button
+                type="button"
+                size="icon"
+                variant="secondary"
+                className="absolute z-10 h-16 w-16 rounded-full shadow-lg"
+                onClick={requestPlay}
+                aria-label={`Play ${resource.title}`}
+              >
+                <Play className="h-7 w-7 fill-current" />
+              </Button>
             )}
           </>
+        ) : (
+          <div className="flex flex-col items-center gap-3 px-8 text-center text-white/70">
+            <Play className="h-12 w-12" />
+            <p className="text-sm">This video cannot play inside the app.</p>
+            <Button asChild variant="secondary" size="sm">
+              <a href={source.originalUrl} target="_blank" rel="noopener noreferrer">Open video</a>
+            </Button>
+          </div>
         )
       ) : (
         <div className="flex flex-col items-center gap-3 text-white/60">
@@ -227,9 +236,9 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
             </Badge>
           )}
         </div>
-        {resolved?.isEmbed && (
+        {source?.embedUrl && (
           <a
-            href={resolved.watchUrl}
+            href={source.originalUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mt-2 text-[11px] text-white/70 underline"
