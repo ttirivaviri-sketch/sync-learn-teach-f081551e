@@ -65,27 +65,34 @@ export function useLeaderboard(curriculum: string | null | undefined, subject?: 
   // Realtime subscription
   useEffect(() => {
     const channelName = subject
-      ? `subject_xp:${curr}:${subject}`
-      : `subject_xp:${curr}:overall`;
+      ? `leaderboard:${curr}:${subject}`
+      : `leaderboard:${curr}:overall`;
 
-    const filter = subject
-      ? `curriculum=eq.${curr}`
-      : `curriculum=eq.${curr}`;
-
-    const channel = supabase
+    let channel = supabase
       .channel(channelName)
       .on(
         'postgres_changes' as any,
-        { event: '*', schema: 'public', table: 'subject_xp', filter },
+        { event: '*', schema: 'public', table: 'subject_xp', filter: `curriculum=eq.${curr}` },
         () => debouncedInvalidate()
-      )
-      .subscribe();
+      );
+
+    // The overall board is ranked on total XP (user_progress), so watch it too.
+    if (!subject) {
+      channel = channel.on(
+        'postgres_changes' as any,
+        { event: '*', schema: 'public', table: 'user_progress' },
+        () => debouncedInvalidate()
+      );
+    }
+
+    channel.subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [curr, subject]);
+
 
   return query;
 }
