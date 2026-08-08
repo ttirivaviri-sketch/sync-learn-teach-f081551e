@@ -46,6 +46,7 @@ const Index = () => {
         <Footer />
         <PWAInstallPrompt />
         <CookieConsent />
+        <LandingStickyCTA />
       </Suspense>
 
       <a
