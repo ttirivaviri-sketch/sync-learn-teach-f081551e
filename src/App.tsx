@@ -189,6 +189,7 @@ const App = () => {
               )}
 
               {/* Dev tools */}
+              <Route path="/dev/submission-test" element={<DevSubmissionTest />} />
               <Route path="/dev/clip-test" element={<DevClipTest />} />
 
 
