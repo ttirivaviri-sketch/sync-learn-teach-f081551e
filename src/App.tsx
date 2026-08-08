@@ -68,6 +68,7 @@ const TeacherHomeworkReview = lazy(() => import("./pages/school/teacher/TeacherH
 const StudentWorkspace = lazy(() => import("./pages/school/student/StudentWorkspace"));
 const SchoolAnalytics = lazy(() => import("./pages/school/SchoolAnalytics"));
 const DevSubmissionTest = lazy(() => import("./pages/dev/DevSubmissionTest"));
+const DevClipTest = lazy(() => import("./pages/dev/DevClipTest"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
