@@ -161,8 +161,9 @@ export function useUserProgress() {
         } else {
           await supabase
             .from('user_progress')
-            .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] });
+            .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] }, { onConflict: 'user_id' });
         }
+
         if (leveledUp) studySyncHaptic('xp.levelup');
         return newXp;
       } catch (err) {
