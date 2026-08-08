@@ -15,6 +15,8 @@ import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { logger } from "@/utils/logger";
 import { useSeedSubjectsFromProfile } from './hooks/useSeedSubjectsFromProfile';
+import { useStudyAccess } from '@/hooks/useStudyAccess';
+import { StudyPaywall } from '@/components/paywall/StudyPaywall';
 
 // ── Lazy import of the heavy StudyMode component ──────────────────────────────
 // Dynamic-import failures are almost always stale chunk references after a new
