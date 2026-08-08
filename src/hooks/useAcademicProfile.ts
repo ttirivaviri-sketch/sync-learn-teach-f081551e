@@ -212,6 +212,48 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
             }
           }
 
+          // Remove subjects the learner de-selected so StudyMode matches
+          // the profile exactly. `subjects` rows are only dropped when the
+          // learner has no recorded mastery for them (avoid losing progress).
+          try {
+            const keep = new Set(data.subjects.map((s) => canonicalSubjectName(s)));
+
+            const { data: linkRows } = await supabase
+              .from("learner_subjects")
+              .select("id, subject")
+              .eq("user_id", userId);
+            const staleLinks = (linkRows ?? []).filter(
+              (r: any) => !keep.has(canonicalSubjectName(r.subject))
+            );
+            if (staleLinks.length > 0) {
+              await supabase
+                .from("learner_subjects")
+                .delete()
+                .in("id", staleLinks.map((r: any) => r.id));
+            }
+
+            const { data: subjectRows } = await supabase
+              .from("subjects")
+              .select("id, name")
+              .eq("user_id", userId);
+            const staleSubjects = (subjectRows ?? []).filter(
+              (r: any) => !keep.has(canonicalSubjectName(r.name))
+            );
+            for (const stale of staleSubjects as Array<{ id: string; name: string }>) {
+              const { count } = await supabase
+                .from("topic_mastery")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", userId)
+                .eq("subject_id", stale.id);
+              if (!count) {
+                await supabase.from("subjects").delete().eq("id", stale.id);
+              }
+            }
+          } catch (cleanupErr) {
+            logger.warn("[useAcademicProfile] subject cleanup skipped:", cleanupErr);
+          }
+
+
           // Sync exam dates to subject_exams for Study Mode calendar
           if (examDatesJson.length > 0) {
             for (const examEntry of examDatesJson) {
