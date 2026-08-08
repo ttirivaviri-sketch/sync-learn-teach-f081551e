@@ -162,6 +162,7 @@ const Payments = () => {
       <Tabs defaultValue="payments" className="mt-6">
         <TabsList>
           <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="deposits">Manual Deposits</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawal Requests</TabsTrigger>
         </TabsList>
 
