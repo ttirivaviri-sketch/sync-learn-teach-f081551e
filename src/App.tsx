@@ -100,7 +100,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
+const App = () => {
+  // Warm the Study Mode chunk on idle so it's cached before the user opens it.
+  useEffect(() => { prefetchStudyMode(); }, []);
+
+  return (
   <ErrorBoundary>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
