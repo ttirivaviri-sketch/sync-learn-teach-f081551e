@@ -18,6 +18,8 @@ import { track } from "@/utils/landingAnalytics";
 import heroTutorMarketplace from "@/assets/hero-tutor-marketplace.webp";
 import heroSmartLibrary from "@/assets/hero-smart-library.webp";
 import heroStudyPlanner from "@/assets/hero-study-planner.webp";
+import heroSchoolWorkspaces from "@/assets/hero-school-workspaces.png";
+import heroLearningOS from "@/assets/hero-learning-os.png";
 
 /* ─────────────────────────────────────────────────────────
    Floating badge chip used in slide 1
@@ -266,7 +268,7 @@ const HeroCarousel = () => {
     skipSnaps: false,
   });
   const [selected, setSelected] = useState(0);
-  const [snapCount, setSnapCount] = useState(4);
+  const [snapCount, setSnapCount] = useState(6);
 
   const scrollTo = useCallback(
     (i: number) => emblaApi?.scrollTo(i),
