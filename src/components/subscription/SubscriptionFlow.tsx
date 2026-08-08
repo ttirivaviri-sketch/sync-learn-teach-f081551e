@@ -545,7 +545,9 @@ function ReviewPayScreen({
       <Card className="p-4 space-y-2">
         <TrustBullet icon={<RefreshCw className="h-4 w-4" />}>Cancel anytime</TrustBullet>
         <TrustBullet icon={<Shield className="h-4 w-4" />}>No long-term contracts</TrustBullet>
-        <TrustBullet icon={<CreditCard className="h-4 w-4" />}>Secure payments via PayFast</TrustBullet>
+        <TrustBullet icon={<CreditCard className="h-4 w-4" />}>
+          Card payments are coming soon — for now pay by deposit, EFT or EcoCash
+        </TrustBullet>
         {group === "ai" && trialActive && (
           <TrustBullet icon={<Gift className="h-4 w-4" />}>7-day free trial included</TrustBullet>
         )}
@@ -560,6 +562,14 @@ function ReviewPayScreen({
           Your plan kicks in after your free trial ends.
         </p>
       )}
+
+      <div className="pt-2">
+        <p className="mb-2 text-center text-xs text-muted-foreground">
+          Then complete payment below — our team confirms it manually.
+        </p>
+        <ManualPaymentPanel planLabel={title} priceZar={total} accessDays={30} />
+      </div>
+
     </div>
   );
 }
