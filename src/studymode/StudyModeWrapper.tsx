@@ -17,12 +17,45 @@ import { logger } from "@/utils/logger";
 import { useSeedSubjectsFromProfile } from './hooks/useSeedSubjectsFromProfile';
 
 // ── Lazy import of the heavy StudyMode component ──────────────────────────────
-const StudyModeInner = lazy(() =>
-  import('./components/StudyMode').catch((err) => {
-    logger.error('[StudyMode] Failed to load StudyMode component:', err);
+// Dynamic-import failures are almost always stale chunk references after a new
+// deploy (Safari reports "Importing a module script failed"). We retry once,
+// then force a single hard reload to pick up the new asset manifest.
+const RELOAD_FLAG = 'ss-studymode-chunk-reload';
+
+const isChunkLoadError = (err: unknown) => {
+  const msg = String((err as Error)?.message ?? err ?? '');
+  return /Importing a module script failed|Failed to fetch dynamically imported module|error loading dynamically imported module|ChunkLoadError/i.test(msg);
+};
+
+const loadStudyMode = async (): Promise<{ default: React.ComponentType<any> }> => {
+  try {
+    const mod = await import('./components/StudyMode');
+    sessionStorage.removeItem(RELOAD_FLAG);
+    return mod as unknown as { default: React.ComponentType<any> };
+  } catch (err) {
+    logger.error('[StudyMode] Failed to load StudyMode component:', err as Error);
+
+    if (isChunkLoadError(err)) {
+      // Second chance: bust any cached/stale module graph entry.
+      try {
+        const mod = await import(/* @vite-ignore */ `./components/StudyMode?v=${Date.now()}`);
+        sessionStorage.removeItem(RELOAD_FLAG);
+        return mod as unknown as { default: React.ComponentType<any> };
+      } catch {
+        if (!sessionStorage.getItem(RELOAD_FLAG)) {
+          sessionStorage.setItem(RELOAD_FLAG, '1');
+          window.location.reload();
+          // Return a never-resolving promise so React keeps the fallback while reloading.
+          return new Promise(() => {});
+        }
+      }
+    }
     throw err;
-  })
-);
+  }
+};
+
+const StudyModeInner = lazy(loadStudyMode);
+
 
 // ── Loading skeleton shown while the lazy chunk is being fetched ──────────────
 function StudyModeLoadingFallback() {
@@ -86,8 +119,14 @@ class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
   }
 
   handleRetry = () => {
+    if (isChunkLoadError(this.state.error)) {
+      sessionStorage.removeItem(RELOAD_FLAG);
+      window.location.reload();
+      return;
+    }
     this.setState((prev) => ({ hasError: false, error: null, key: prev.key + 1 }));
   };
+
 
   render() {
     if (this.state.hasError && this.state.error) {
