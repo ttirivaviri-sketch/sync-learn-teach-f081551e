@@ -558,11 +558,15 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 <div className="p-8 text-center rounded-2xl border border-dashed border-border">
                   <BookOpen className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                   <h3 className="font-semibold text-foreground mb-1">No subjects yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Upload a syllabus to add your first subject.</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Pick your curriculum, grade and subjects in your Profile — we load the full topic
+                    tree for you automatically. Uploading a syllabus is optional.
+                  </p>
                   <Button variant="outline" size="sm" onClick={onUploadClick}>
                     <Upload className="mr-2 h-4 w-4" />
-                    Upload Syllabus
+                    Upload Syllabus (optional)
                   </Button>
+
                 </div>
               )}
             </>
