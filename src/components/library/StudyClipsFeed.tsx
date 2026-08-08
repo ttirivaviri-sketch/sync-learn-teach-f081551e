@@ -42,22 +42,25 @@ function resolveVideoUrl(r: LibraryResource): string | null {
   return null;
 }
 
-function embedUrl(raw: string): { src: string; isEmbed: boolean } {
+function embedUrl(raw: string): { src: string; isEmbed: boolean; watchUrl: string } {
   const yt = raw.match(YOUTUBE_RE);
   if (yt) {
     // loop=1 only works when paired with playlist=<id>
     const id = yt[1];
+    const origin = typeof window !== "undefined" ? `&origin=${encodeURIComponent(window.location.origin)}` : "";
     return {
-      src: `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&playsinline=1&controls=1&modestbranding=1&rel=0&enablejsapi=1`,
+      src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&playsinline=1&controls=1&modestbranding=1&rel=0&enablejsapi=1${origin}`,
       isEmbed: true,
+      watchUrl: `https://www.youtube.com/watch?v=${id}`,
     };
   }
   const vm = raw.match(VIMEO_RE);
-  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&playsinline=1`, isEmbed: true };
+  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&playsinline=1`, isEmbed: true, watchUrl: raw };
   const lm = raw.match(LOOM_RE);
-  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`, isEmbed: true };
-  return { src: raw, isEmbed: false };
+  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`, isEmbed: true, watchUrl: raw };
+  return { src: raw, isEmbed: false, watchUrl: raw };
 }
+
 
 /* ── single slide ────────────────────────────────────────── */
 
