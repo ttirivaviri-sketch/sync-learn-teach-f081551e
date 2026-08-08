@@ -166,6 +166,9 @@ const ChatInterface = ({
 
         const withSenderInfo = await Promise.all(
           (msgs || []).map(async (msg) => {
+            if (msg.sender_id === STUDYSYNC_TEAM_ID) {
+              return { ...msg, sender_name: STUDYSYNC_TEAM_NAME };
+            }
             const { data: profile } = await supabase
               .from("profiles")
               .select("full_name")
