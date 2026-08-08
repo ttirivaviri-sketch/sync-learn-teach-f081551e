@@ -227,7 +227,18 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
             </Badge>
           )}
         </div>
+        {resolved?.isEmbed && (
+          <a
+            href={resolved.watchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-2 text-[11px] text-white/70 underline"
+          >
+            Video not playing? Open it here
+          </a>
+        )}
       </div>
+
     </div>
   );
 }
