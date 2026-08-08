@@ -40,6 +40,10 @@ interface ChatInterfaceProps {
   otherUserName?: string;
 }
 
+// Official StudySync Team system account (no auth user — virtual contact)
+export const STUDYSYNC_TEAM_ID = "00000000-0000-0000-0000-000000000001";
+const STUDYSYNC_TEAM_NAME = "StudySync Team";
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function formatTime(timestamp: string) {
   const date = new Date(timestamp);
@@ -98,6 +102,13 @@ const ChatInterface = ({
   const loadConversations = useCallback(async () => {
     if (!session?.user) return;
     try {
+      // Every learner has an official StudySync Team contact
+      if (userType === "learner") {
+        await supabase.rpc("ensure_studysync_team_conversation" as never, {
+          _learner_id: session.user.id,
+        } as never);
+      }
+
       const { data: convos, error } = await supabase
         .from("conversations")
         .select("*")
@@ -108,6 +119,9 @@ const ChatInterface = ({
       const withUserInfo = await Promise.all(
         (convos || []).map(async (conv) => {
           const oId = userType === "tutor" ? conv.learner_id : conv.tutor_id;
+          if (oId === STUDYSYNC_TEAM_ID) {
+            return { ...conv, other_user_name: STUDYSYNC_TEAM_NAME };
+          }
           const { data: profile } = await supabase
             .from("profiles")
             .select("full_name, id")
@@ -119,6 +133,14 @@ const ChatInterface = ({
           };
         }),
       );
+
+      // Pin the StudySync Team conversation to the top
+      withUserInfo.sort((a, b) => {
+        const aTeam = a.tutor_id === STUDYSYNC_TEAM_ID ? 1 : 0;
+        const bTeam = b.tutor_id === STUDYSYNC_TEAM_ID ? 1 : 0;
+        return bTeam - aTeam;
+      });
+
       setConversations(withUserInfo);
     } catch (error) {
       logger.error("Error loading conversations:", error);
@@ -144,6 +166,9 @@ const ChatInterface = ({
 
         const withSenderInfo = await Promise.all(
           (msgs || []).map(async (msg) => {
+            if (msg.sender_id === STUDYSYNC_TEAM_ID) {
+              return { ...msg, sender_name: STUDYSYNC_TEAM_NAME };
+            }
             const { data: profile } = await supabase
               .from("profiles")
               .select("full_name")
