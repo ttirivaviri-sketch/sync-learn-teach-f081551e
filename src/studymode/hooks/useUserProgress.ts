@@ -161,8 +161,9 @@ export function useUserProgress() {
         } else {
           await supabase
             .from('user_progress')
-            .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] });
+            .upsert({ user_id: userId, xp: newXp, streak: 0, badges: [] }, { onConflict: 'user_id' });
         }
+
         if (leveledUp) studySyncHaptic('xp.levelup');
         return newXp;
       } catch (err) {
@@ -203,7 +204,11 @@ export function useUserProgress() {
 
         await supabase
           .from('user_progress')
-          .upsert({ user_id: userId, streak: newStreak, last_study_date: today, xp: progress?.xp ?? 0, badges: [] });
+          .upsert(
+            { user_id: userId, streak: newStreak, last_study_date: today, xp: progress?.xp ?? 0 },
+            { onConflict: 'user_id' }
+          );
+
 
         return newStreak;
       } catch (err) {
@@ -236,7 +241,11 @@ export function useUserProgress() {
 
         await supabase
           .from('user_progress')
-          .upsert({ user_id: userId, badges: badgesJson, xp: progress?.xp ?? 0, streak: progress?.streak ?? 0 });
+          .upsert(
+            { user_id: userId, badges: badgesJson, xp: progress?.xp ?? 0, streak: progress?.streak ?? 0 },
+            { onConflict: 'user_id' }
+          );
+
 
         return newBadges;
       } catch (err) {
