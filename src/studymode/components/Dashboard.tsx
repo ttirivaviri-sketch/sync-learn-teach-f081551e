@@ -949,21 +949,26 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             />
           )}
 
-          {/* Document upload card */}
+          {/* Document upload card — optional boost once curriculum topics exist */}
           {hasDocuments === false && (
             <Card className="border-accent/30 bg-accent/5">
               <CardContent className="p-5 text-center">
                 <FileText className="h-10 w-10 mx-auto text-accent-foreground mb-2" />
-                <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
+                <h3 className="font-bold text-foreground mb-1">
+                  {hasCurriculumTopics ? 'Boost accuracy with your own papers' : 'Upload Your Syllabus & Past Papers'}
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
+                  {hasCurriculumTopics
+                    ? "You're already set up with your curriculum topics. Adding your syllabus or past papers makes questions match your exam even more closely."
+                    : 'Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.'}
                 </p>
                 <Button className="gradient-primary" onClick={onUploadClick}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Documents
+                  {hasCurriculumTopics ? 'Add Documents (optional)' : 'Upload Documents'}
                 </Button>
               </CardContent>
             </Card>
+
           )}
 
           {/* Compact summary trigger only — full daily stats live on Home tab */}
