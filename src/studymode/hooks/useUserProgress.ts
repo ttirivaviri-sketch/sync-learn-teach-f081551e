@@ -204,7 +204,11 @@ export function useUserProgress() {
 
         await supabase
           .from('user_progress')
-          .upsert({ user_id: userId, streak: newStreak, last_study_date: today, xp: progress?.xp ?? 0, badges: [] });
+          .upsert(
+            { user_id: userId, streak: newStreak, last_study_date: today, xp: progress?.xp ?? 0 },
+            { onConflict: 'user_id' }
+          );
+
 
         return newStreak;
       } catch (err) {
