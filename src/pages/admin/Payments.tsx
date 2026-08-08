@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
 import type { Database } from "@/integrations/supabase/types";
 import AdminWithdrawalsPanel from "@/components/AdminWithdrawalsPanel";
+import AdminManualDepositsPanel from "@/components/AdminManualDepositsPanel";
 
 type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
@@ -161,6 +162,7 @@ const Payments = () => {
       <Tabs defaultValue="payments" className="mt-6">
         <TabsList>
           <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="deposits">Manual Deposits</TabsTrigger>
           <TabsTrigger value="withdrawals">Withdrawal Requests</TabsTrigger>
         </TabsList>
 
@@ -247,6 +249,10 @@ const Payments = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="deposits" className="mt-4">
+          <AdminManualDepositsPanel />
+        </TabsContent>
+
 
         <TabsContent value="withdrawals">
           <AdminWithdrawalsPanel />
