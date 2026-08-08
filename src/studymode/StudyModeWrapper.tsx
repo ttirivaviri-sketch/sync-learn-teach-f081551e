@@ -56,7 +56,7 @@ const loadStudyMode = async (): Promise<{ default: React.ComponentType<any> }> =
 
 const StudyModeInner = lazy(loadStudyMode);
 
-export { prefetchStudyMode } from '../prefetch';
+export { prefetchStudyMode } from './prefetch';
 
 
 // ── Loading skeleton shown while the lazy chunk is being fetched ──────────────
