@@ -27,6 +27,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { PRICING } from "@/sail/types";
 import { cn } from "@/lib/utils";
+import { ManualPaymentPanel } from "@/components/paywall/ManualPaymentPanel";
+
 
 type PlanGroup = "ai" | "tutor" | "combo";
 type AITier = "moderate" | "premium";
