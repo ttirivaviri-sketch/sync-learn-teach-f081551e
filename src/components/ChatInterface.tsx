@@ -40,6 +40,10 @@ interface ChatInterfaceProps {
   otherUserName?: string;
 }
 
+// Official StudySync Team system account (no auth user — virtual contact)
+export const STUDYSYNC_TEAM_ID = "00000000-0000-0000-0000-000000000001";
+const STUDYSYNC_TEAM_NAME = "StudySync Team";
+
 // ── Helpers ────────────────────────────────────────────────────────────────
 function formatTime(timestamp: string) {
   const date = new Date(timestamp);
