@@ -154,6 +154,14 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const { progress, dailyStats } = useUserProgress();
   const subjects = dbSubjects ?? [];
   const hasSubjects = subjects.length > 0;
+  // Curriculum templates already give every learner a full topic tree, so
+  // uploads are an enhancement — never a gate. Study Mode is usable the
+  // moment at least one subject has topics.
+  const hasCurriculumTopics = subjects.some(
+    (s: any) => Array.isArray(s.topics) && s.topics.length > 0
+  );
+  const needsDocuments = hasDocuments === false && !hasCurriculumTopics;
+
 
   // ── Deep-link from Home: open the exact subject / resume the last topic ────
   const [pendingIntent, setPendingIntent] = useState<StudyIntent | null>(() => consumeStudyIntent());
@@ -511,7 +519,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                             >
                               {daysUntil}d to exam
                             </Badge>
-                          ) : hasDocuments === false ? (
+                          ) : needsDocuments ? (
                             <Badge
                               variant="secondary"
                               className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
@@ -523,7 +531,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                           <SubjectCard
                             subject={subject}
                             onClick={() => {
-                              if (hasDocuments === false) {
+                              if (needsDocuments) {
                                 window.dispatchEvent(
                                   new CustomEvent('show-toast', {
                                     detail: {
@@ -536,6 +544,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                               }
                               setSelectedSubject(subject);
                             }}
+
                           />
                         </div>
                       );
@@ -549,11 +558,15 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                 <div className="p-8 text-center rounded-2xl border border-dashed border-border">
                   <BookOpen className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
                   <h3 className="font-semibold text-foreground mb-1">No subjects yet</h3>
-                  <p className="text-sm text-muted-foreground mb-4">Upload a syllabus to add your first subject.</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Pick your curriculum, grade and subjects in your Profile — we load the full topic
+                    tree for you automatically. Uploading a syllabus is optional.
+                  </p>
                   <Button variant="outline" size="sm" onClick={onUploadClick}>
                     <Upload className="mr-2 h-4 w-4" />
-                    Upload Syllabus
+                    Upload Syllabus (optional)
                   </Button>
+
                 </div>
               )}
             </>
@@ -940,21 +953,26 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
             />
           )}
 
-          {/* Document upload card */}
+          {/* Document upload card — optional boost once curriculum topics exist */}
           {hasDocuments === false && (
             <Card className="border-accent/30 bg-accent/5">
               <CardContent className="p-5 text-center">
                 <FileText className="h-10 w-10 mx-auto text-accent-foreground mb-2" />
-                <h3 className="font-bold text-foreground mb-1">Upload Your Syllabus & Past Papers</h3>
+                <h3 className="font-bold text-foreground mb-1">
+                  {hasCurriculumTopics ? 'Boost accuracy with your own papers' : 'Upload Your Syllabus & Past Papers'}
+                </h3>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.
+                  {hasCurriculumTopics
+                    ? "You're already set up with your curriculum topics. Adding your syllabus or past papers makes questions match your exam even more closely."
+                    : 'Study Mode needs your documents to generate personalised quizzes, tasks, and study plans.'}
                 </p>
                 <Button className="gradient-primary" onClick={onUploadClick}>
                   <Upload className="mr-2 h-4 w-4" />
-                  Upload Documents
+                  {hasCurriculumTopics ? 'Add Documents (optional)' : 'Upload Documents'}
                 </Button>
               </CardContent>
             </Card>
+
           )}
 
           {/* Compact summary trigger only — full daily stats live on Home tab */}
