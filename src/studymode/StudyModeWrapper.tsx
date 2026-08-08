@@ -154,13 +154,43 @@ interface StudyModeWrapperProps {
 
 export function StudyModeWrapper({ onDeactivate, onNeedHelp, onBrowseLibrary, academicProfile }: StudyModeWrapperProps) {
   useSeedSubjectsFromProfile();
+  const { state, canUseStudyMode } = useStudyAccess();
+
+  if (state === 'loading') {
+    return (
+      <div className="studymode-root">
+        <StudyModeLoadingFallback />
+      </div>
+    );
+  }
+
+  if (!canUseStudyMode) {
+    return (
+      <div className="studymode-root">
+        <StudyPaywall />
+      </div>
+    );
+  }
+
   return (
     <div className="studymode-root">
+      {state === 'trial_task' && <TrialBanner />}
       <StudyModeErrorBoundary onDeactivate={onDeactivate}>
         <Suspense fallback={<StudyModeLoadingFallback />}>
           <StudyModeInner onNeedHelp={onNeedHelp} onBrowseLibrary={onBrowseLibrary} academicProfile={academicProfile} />
         </Suspense>
       </StudyModeErrorBoundary>
+    </div>
+  );
+}
+
+function TrialBanner() {
+  return (
+    <div className="mx-4 mt-3 rounded-xl border border-primary/30 bg-primary/5 px-4 py-2.5 text-sm">
+      <span className="font-medium text-foreground">Free trial</span>{' '}
+      <span className="text-muted-foreground">
+        — this is your free daily task. After it, unlock Study Mode with a deposit, EFT or EcoCash payment.
+      </span>
     </div>
   );
 }
