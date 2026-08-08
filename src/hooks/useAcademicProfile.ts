@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { AcademicProfile, SubjectExamDate } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
-import { findExistingSubjectId } from "@/lib/subjectName";
+import { findExistingSubjectId, canonicalSubjectName } from "@/lib/subjectName";
 
 interface UseAcademicProfileReturn {
   profile: AcademicProfile | null;
