@@ -1,6 +1,8 @@
+import { useState } from "react";
 import {
-  Star, Download, Book, FileText, Video, Bookmark, Eye, Play, X, BadgeCheck,
+  Star, Download, Bookmark, Eye, Play, X, BadgeCheck,
 } from "lucide-react";
+import { GeneratedCover } from "./GeneratedCover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,12 +29,9 @@ export function ResourceCard({
   onRemoveFromLibrary,
 }: ResourceCardProps) {
   const id = String(resource.id);
-  const TypeIcon =
-    resource.type === "video"
-      ? Video
-      : resource.type === "pastpaper"
-      ? FileText
-      : Book;
+  const [imgFailed, setImgFailed] = useState(false);
+  const hasCover =
+    !!resource.thumbnail && resource.thumbnail !== "/placeholder.svg" && !imgFailed;
 
   const isOfficial =
     (resource.tutor?.name === "studysyncofficial") ||
@@ -43,14 +42,34 @@ export function ResourceCard({
       <CardContent className="p-4">
         {/* Thumbnail */}
         <div className="aspect-video bg-muted rounded-lg mb-3 flex items-center justify-center relative overflow-hidden">
-          {resource.type === "video" ? (
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+          {hasCover ? (
+            <img
+              src={resource.thumbnail}
+              alt={resource.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading="lazy"
+              decoding="async"
+              onError={() => setImgFailed(true)}
+            />
+          ) : (
+            <div className="absolute inset-0">
+              <GeneratedCover
+                title={resource.title}
+                label={
+                  resource.type === "pastpaper"
+                    ? "Past Paper"
+                    : resource.tags?.subject || resource.category
+                }
+              />
+            </div>
+          )}
+
+          {resource.type === "video" && (
+            <div className="absolute inset-0 flex items-center justify-center">
               <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
                 <Play className="h-5 w-5 text-primary ml-0.5" />
               </div>
             </div>
-          ) : (
-            <TypeIcon className="h-8 w-8 text-muted-foreground" />
           )}
 
           {resource.isOffline && (

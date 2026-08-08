@@ -1,5 +1,7 @@
-import { Book, FileText, BadgeCheck } from "lucide-react";
+import { useState } from "react";
+import { BadgeCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { GeneratedCover } from "./GeneratedCover";
 import type { LibraryResource } from "@/types/academicProfile";
 
 interface PosterCardProps {
@@ -14,8 +16,13 @@ interface PosterCardProps {
  */
 export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCardProps) {
   const isPaper = resource.type === "pastpaper";
-  const Icon = isPaper ? FileText : Book;
   const isOfficial = resource.author === "studysyncofficial";
+  const [imgFailed, setImgFailed] = useState(false);
+
+  const hasCover =
+    !!resource.thumbnail &&
+    resource.thumbnail !== "/placeholder.svg" &&
+    !imgFailed;
 
   return (
     <button
@@ -25,7 +32,7 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
       }`}
     >
       {/* Cover */}
-      {resource.thumbnail && resource.thumbnail !== "/placeholder.svg" ? (
+      {hasCover ? (
         <img
           src={resource.thumbnail}
           alt={resource.title}
@@ -34,18 +41,18 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
           className="absolute inset-0 w-full h-full object-cover"
           loading="lazy"
           decoding="async"
+          onError={() => setImgFailed(true)}
         />
       ) : (
-        <div
-          className={`absolute inset-0 flex items-center justify-center ${
-            isPaper
-              ? "bg-gradient-to-br from-orange-500/30 via-orange-700/40 to-orange-900/60"
-              : "bg-gradient-to-br from-primary/30 via-primary/50 to-primary/80"
-          }`}
-        >
-          <Icon className="h-12 w-12 text-white/80" />
+        <div className="absolute inset-0">
+          <GeneratedCover
+            title={resource.title}
+            label={isPaper ? "Past Paper" : resource.tags?.subject || resource.category}
+            showText={false}
+          />
         </div>
       )}
+
 
       {/* Top badge */}
       <Badge
