@@ -75,13 +75,22 @@ const Navbar = () => {
           </Button>
         </div>
 
-        <button
-          className="md:hidden text-gray-700"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle menu"
-        >
-          {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
+        <div className="flex items-center gap-2 md:hidden">
+          <Button
+            size="sm"
+            className="rounded-full bg-primary px-4 font-semibold text-primary-foreground hover:bg-primary-dark"
+            onClick={() => navigate("/learner/auth")}
+          >
+            Start
+          </Button>
+          <button
+            className="text-gray-700"
+            onClick={() => setOpen(!open)}
+            aria-label="Toggle menu"
+          >
+            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
+        </div>
       </div>
 
       {open && (
