@@ -56,30 +56,7 @@ const loadStudyMode = async (): Promise<{ default: React.ComponentType<any> }> =
 
 const StudyModeInner = lazy(loadStudyMode);
 
-/**
- * Warm the Study Mode chunk during idle time so the module graph is already in
- * cache by the time the user activates it. Safe to call multiple times.
- */
-let prefetchStarted = false;
-export function prefetchStudyMode() {
-  if (prefetchStarted || typeof window === 'undefined') return;
-  prefetchStarted = true;
-
-  const run = () => {
-    import('./components/StudyMode').catch((err) => {
-      // Silent: the real load path (with retry + reload) handles failures.
-      prefetchStarted = false;
-      logger.warn?.('[StudyMode] Prefetch failed (will retry on demand)', err as Error);
-    });
-  };
-
-  const idle = (window as unknown as {
-    requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
-  }).requestIdleCallback;
-
-  if (idle) idle(run, { timeout: 4000 });
-  else window.setTimeout(run, 2000);
-}
+export { prefetchStudyMode } from '../prefetch';
 
 
 // ── Loading skeleton shown while the lazy chunk is being fetched ──────────────
