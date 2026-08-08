@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
@@ -9,7 +9,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Lock, Clock, Upload, Loader2, CheckCircle2, Copy } from 'lucide-react';
-import { MANUAL_PAYMENT, METHOD_LABELS, type ManualPaymentMethod } from '@/lib/manualPayment';
+import {
+  MANUAL_PAYMENT,
+  METHOD_LABELS,
+  STUDY_PLANS,
+  SUPPORTED_CURRENCIES,
+  type ManualPaymentMethod,
+  type PaymentCurrency,
+  type StudyPlanId,
+} from '@/lib/manualPayment';
+import { useFxRate, symbol } from '@/lib/fx';
 import { useStudyAccess } from '@/hooks/useStudyAccess';
 import { logger } from '@/utils/logger';
 
@@ -39,10 +48,28 @@ export function StudyPaywall() {
   const qc = useQueryClient();
 
   const [method, setMethod] = useState<ManualPaymentMethod>('eft');
+  const [planId, setPlanId] = useState<StudyPlanId>('ai_moderate');
+  const [currency, setCurrency] = useState<PaymentCurrency>('ZAR');
   const [reference, setReference] = useState('');
-  const [amount, setAmount] = useState(String(MANUAL_PAYMENT.priceZar));
+  const [amount, setAmount] = useState('');
+
+  const plan = STUDY_PLANS.find((p) => p.id === planId) ?? STUDY_PLANS[0];
+  const usdRate = useFxRate('ZAR', 'USD');
+  const rate = currency === 'ZAR' ? 1 : usdRate;
+  const rateReady = rate !== null;
+  // Round USD up to 2dp so learners never underpay on conversion.
+  const dueAmount = rateReady
+    ? Math.ceil(plan.priceZar * (rate as number) * 100) / 100
+    : null;
+  const dueLabel = dueAmount === null
+    ? '—'
+    : `${symbol(currency)}${dueAmount.toFixed(currency === 'ZAR' ? 0 : 2)}`;
   const [file, setFile] = useState<File | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (dueAmount !== null) setAmount(dueAmount.toFixed(currency === 'ZAR' ? 0 : 2));
+  }, [dueAmount, currency]);
 
   if (state === 'pending_review') {
     return (
@@ -113,9 +140,9 @@ export function StudyPaywall() {
         method,
         reference: reference.trim().slice(0, 120),
         amount: amt,
-        currency: 'ZAR',
+        currency,
         proof_path: proofPath,
-        access_days: MANUAL_PAYMENT.accessDays,
+        access_days: plan.accessDays,
       });
       if (error) throw error;
 
@@ -142,10 +169,15 @@ export function StudyPaywall() {
         </div>
         <h2 className="text-xl font-semibold">Your free task is done</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Unlock unlimited Study Mode — daily tasks, quizzes, flashcards, Photo Solve and the AI tutor — for{' '}
-          <span className="font-semibold text-foreground">R{MANUAL_PAYMENT.priceZar}</span> /{' '}
-          {MANUAL_PAYMENT.accessDays} days.
+          {plan.blurb} — <span className="font-semibold text-foreground">{dueLabel}</span> for{' '}
+          {plan.accessDays} days.
         </p>
+        {currency === 'USD' && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            R{plan.priceZar} converted at the live mid-market rate
+            {usdRate ? ` (1 ZAR = $${usdRate.toFixed(4)})` : ''}.
+          </p>
+        )}
         {latestRequest?.status === 'rejected' && (
           <Badge variant="destructive" className="mt-3">
             Last submission: {latestRequest.review_note || 'not confirmed — please resubmit'}
@@ -155,7 +187,62 @@ export function StudyPaywall() {
 
       <Card className="mt-6">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">1. Pay by deposit, EFT or EcoCash</CardTitle>
+          <CardTitle className="text-base">1. Choose your plan &amp; currency</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-2">
+            {STUDY_PLANS.map((p) => {
+              const price = rateReady
+                ? Math.ceil(p.priceZar * (rate as number) * 100) / 100
+                : null;
+              const selected = p.id === planId;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setPlanId(p.id)}
+                  className={`flex items-start justify-between gap-3 rounded-lg border p-3 text-left transition ${
+                    selected ? 'border-primary bg-primary/5' : 'border-border'
+                  }`}
+                >
+                  <span>
+                    <span className="block text-sm font-semibold">{p.label}</span>
+                    <span className="block text-xs text-muted-foreground">{p.blurb}</span>
+                  </span>
+                  <span className="whitespace-nowrap text-sm font-semibold">
+                    {price === null ? '—' : `${symbol(currency)}${price.toFixed(currency === 'ZAR' ? 0 : 2)}`}
+                    <span className="block text-right text-[10px] font-normal text-muted-foreground">
+                      /{p.accessDays} days
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <div className="space-y-1.5">
+            <Label>Pay in</Label>
+            <Select value={currency} onValueChange={(v) => setCurrency(v as PaymentCurrency)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c === 'ZAR' ? 'South African Rand (ZAR)' : 'US Dollar (USD)'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              {currency === 'ZAR'
+                ? 'Bank deposit or EFT into the Standard Bank account below.'
+                : 'USD is accepted via EcoCash or an international transfer (use the SWIFT code below).'}
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mt-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base">2. Pay by deposit, EFT or EcoCash</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="rounded-lg border border-border p-3">
@@ -182,7 +269,7 @@ export function StudyPaywall() {
 
       <Card className="mt-4">
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">2. Send us the proof</CardTitle>
+          <CardTitle className="text-base">3. Send us the proof</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-1.5">
@@ -209,7 +296,7 @@ export function StudyPaywall() {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="mp-amount">Amount paid (ZAR)</Label>
+            <Label htmlFor="mp-amount">Amount paid ({currency})</Label>
             <Input
               id="mp-amount"
               type="number"
@@ -217,6 +304,7 @@ export function StudyPaywall() {
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
+            <p className="text-xs text-muted-foreground">Due: {dueLabel} for {plan.label}.</p>
           </div>
 
           <div className="space-y-1.5">

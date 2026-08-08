@@ -5,8 +5,33 @@
  * learners on the Study Mode paywall. Nothing here is a secret.
  */
 
+import { PRICING } from '@/sail/types';
+
+/** Official StudySync fee structure (single source of truth: PRICING). */
+export const STUDY_PLANS = [
+  {
+    id: 'ai_moderate',
+    label: 'AI Moderate',
+    blurb: 'Daily tasks, quizzes, flashcards, Photo Solve, AI tutor',
+    priceZar: PRICING.ai_moderate.monthly,
+    accessDays: 30,
+  },
+  {
+    id: 'ai_premium',
+    label: 'AI Premium',
+    blurb: 'Everything in Moderate + adaptive plans, past-paper analysis, unlimited AI',
+    priceZar: PRICING.ai_premium.monthly,
+    accessDays: 30,
+  },
+] as const;
+
+export type StudyPlanId = (typeof STUDY_PLANS)[number]['id'];
+
+export const SUPPORTED_CURRENCIES = ['ZAR', 'USD'] as const;
+export type PaymentCurrency = (typeof SUPPORTED_CURRENCIES)[number];
+
 export const MANUAL_PAYMENT = {
-  priceZar: 250,
+  priceZar: PRICING.ai_moderate.monthly,
   accessDays: 30,
   bank: {
     accountName: 'MISS. MISHELL DANDA',
