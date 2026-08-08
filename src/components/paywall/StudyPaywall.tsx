@@ -163,8 +163,13 @@ export function StudyPaywall() {
             <Row label="Account name" value={MANUAL_PAYMENT.bank.accountName} />
             <Row label="Bank" value={MANUAL_PAYMENT.bank.bank} />
             <Row label="Account number" value={MANUAL_PAYMENT.bank.accountNumber} />
+            <Row label="Branch" value={MANUAL_PAYMENT.bank.branch} />
             <Row label="Branch code" value={MANUAL_PAYMENT.bank.branchCode} />
+            {MANUAL_PAYMENT.bank.swiftCode && (
+              <Row label="SWIFT code" value={MANUAL_PAYMENT.bank.swiftCode} />
+            )}
             <Row label="Reference" value={MANUAL_PAYMENT.bank.reference} />
+
           </div>
           <div className="mt-3 rounded-lg border border-border p-3">
             <p className="mb-1 text-xs font-semibold uppercase text-muted-foreground">EcoCash</p>
