@@ -68,7 +68,6 @@ const TeacherHomeworkReview = lazy(() => import("./pages/school/teacher/TeacherH
 const StudentWorkspace = lazy(() => import("./pages/school/student/StudentWorkspace"));
 const SchoolAnalytics = lazy(() => import("./pages/school/SchoolAnalytics"));
 const DevSubmissionTest = lazy(() => import("./pages/dev/DevSubmissionTest"));
-const DevClipTest = lazy(() => import("./pages/dev/DevClipTest"));
 
 // Legal pages
 const LegalTerms = lazy(() => import("./pages/legal/Terms"));
@@ -190,7 +189,6 @@ const App = () => {
 
               {/* Dev tools */}
               <Route path="/dev/submission-test" element={<DevSubmissionTest />} />
-              <Route path="/dev/clip-test" element={<DevClipTest />} />
 
 
 
