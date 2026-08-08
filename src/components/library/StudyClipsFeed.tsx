@@ -42,22 +42,25 @@ function resolveVideoUrl(r: LibraryResource): string | null {
   return null;
 }
 
-function embedUrl(raw: string): { src: string; isEmbed: boolean } {
+function embedUrl(raw: string): { src: string; isEmbed: boolean; watchUrl: string } {
   const yt = raw.match(YOUTUBE_RE);
   if (yt) {
     // loop=1 only works when paired with playlist=<id>
     const id = yt[1];
+    const origin = typeof window !== "undefined" ? `&origin=${encodeURIComponent(window.location.origin)}` : "";
     return {
-      src: `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&playsinline=1&controls=1&modestbranding=1&rel=0&enablejsapi=1`,
+      src: `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&playsinline=1&controls=1&modestbranding=1&rel=0&enablejsapi=1${origin}`,
       isEmbed: true,
+      watchUrl: `https://www.youtube.com/watch?v=${id}`,
     };
   }
   const vm = raw.match(VIMEO_RE);
-  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&playsinline=1`, isEmbed: true };
+  if (vm) return { src: `https://player.vimeo.com/video/${vm[1]}?autoplay=1&muted=1&loop=1&playsinline=1`, isEmbed: true, watchUrl: raw };
   const lm = raw.match(LOOM_RE);
-  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`, isEmbed: true };
-  return { src: raw, isEmbed: false };
+  if (lm) return { src: `https://www.loom.com/embed/${lm[1]}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`, isEmbed: true, watchUrl: raw };
+  return { src: raw, isEmbed: false, watchUrl: raw };
 }
+
 
 /* ── single slide ────────────────────────────────────────── */
 
@@ -71,11 +74,19 @@ interface SlideProps {
 
 function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: SlideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [paused, setPaused] = useState(false);
   const [liked, setLiked] = useState(false);
+  // Once a slide has been active we keep its iframe mounted so scrolling back
+  // does not reload (and re-blank) the player.
+  const [mounted, setMounted] = useState(isActive);
 
   const url = resolveVideoUrl(resource);
   const resolved = url ? embedUrl(url) : null;
+
+  useEffect(() => {
+    if (isActive) setMounted(true);
+  }, [isActive]);
 
   useEffect(() => {
     if (!videoRef.current) return;
@@ -85,6 +96,19 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
       videoRef.current.pause();
     }
   }, [isActive, paused]);
+
+  // Pause/resume embedded players via the YouTube/Vimeo iframe API
+  useEffect(() => {
+    const win = iframeRef.current?.contentWindow;
+    if (!win || !resolved?.isEmbed) return;
+    const command = isActive ? "playVideo" : "pauseVideo";
+    try {
+      win.postMessage(JSON.stringify({ event: "command", func: command, args: [] }), "*");
+      win.postMessage(JSON.stringify({ method: isActive ? "play" : "pause" }), "*");
+    } catch {
+      /* cross-origin — ignore */
+    }
+  }, [isActive, resolved?.isEmbed]);
 
   const togglePause = () => {
     if (!resolved || resolved.isEmbed) return;
@@ -99,14 +123,22 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
       {/* Video / Embed */}
       {resolved ? (
         resolved.isEmbed ? (
-          <iframe
-            src={isActive ? resolved.src : "about:blank"}
-            className="absolute inset-0 w-full h-full"
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-            frameBorder="0"
-          />
+          mounted ? (
+            <iframe
+              ref={iframeRef}
+              src={resolved.src}
+              title={resource.title}
+              className="absolute inset-0 w-full h-full"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen; accelerometer; gyroscope; clipboard-write"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+              frameBorder="0"
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center bg-black">
+              <Play className="h-14 w-14 text-white/50" />
+            </div>
+          )
         ) : (
           <>
             <video
@@ -132,6 +164,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
           <p className="text-sm">No video available</p>
         </div>
       )}
+
 
       {/* Right-side interaction buttons */}
       <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5 z-20">
@@ -194,7 +227,18 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
             </Badge>
           )}
         </div>
+        {resolved?.isEmbed && (
+          <a
+            href={resolved.watchUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block mt-2 text-[11px] text-white/70 underline"
+          >
+            Video not playing? Open it here
+          </a>
+        )}
       </div>
+
     </div>
   );
 }
