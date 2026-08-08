@@ -36,7 +36,9 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useBookingPayments } from "@/hooks/useBookingPayments";
+import { useGoogleOAuthProfileSync } from "@/hooks/useGoogleOAuthProfileSync";
 import { useAcademicProfile } from "@/hooks/useAcademicProfile";
+
 
 // ── Tab sub-components (lazy-loaded so only the active tab mounts its hook tree) ──
 const LearnerHomeTab = lazy(() => import("./learner/LearnerHomeTab").then(m => ({ default: m.LearnerHomeTab })));
@@ -119,7 +121,11 @@ const LearnerApp = () => {
   // ── Data hooks ──────────────────────────────────────────────────────────
   const userId = session?.user?.id;
 
+  // Sync Google OAuth sign-ups to the correct role (trigger defaults to learner).
+  useGoogleOAuthProfileSync(userId);
+
   // Home-tab-only data (tutor search, geolocation, presence indicators) is
+
   // gated on the active tab so switching to Study/Library/Activity/Profile
   // tears down the tutor realtime channels + refetch loop + the presence
   // heartbeat instead of keeping them hot in the background. Previously

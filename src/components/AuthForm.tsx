@@ -163,6 +163,12 @@ export const AuthForm = ({
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
+      // Remember the intended role across the Google OAuth round-trip. Supabase
+      // does not forward custom metadata through `signInWithOAuth`, so we use
+      // localStorage as a short-lived intent token and reconcile it on the
+      // post-redirect landing page (see useGoogleOAuthProfileSync).
+      localStorage.setItem("ss-google-oauth-user-type", userType);
+
       // Build the post-OAuth redirect URL.
       // Must exactly match one of the "Redirect URLs" configured in
       // Supabase → Authentication → URL Configuration → Redirect URLs.
@@ -173,17 +179,16 @@ export const AuthForm = ({
         provider: "google",
         options: {
           redirectTo: redirectUrl,
-          // Pass user_type so the auth callback can route to the right profile
           queryParams: {
             access_type: "offline",
             prompt: "select_account",
           },
-          // Store user_type in state so it survives the redirect
           scopes: "email profile",
         },
       });
 
       if (error) {
+        localStorage.removeItem("ss-google-oauth-user-type");
         toast({
           title: "Google sign-in failed",
           description: error.message,
@@ -193,6 +198,7 @@ export const AuthForm = ({
       }
       // On success Supabase redirects the browser — no further action needed.
     } catch (err) {
+      localStorage.removeItem("ss-google-oauth-user-type");
       toast({
         title: "Could not start Google sign-in",
         description: "Please try again or use email/password.",
@@ -201,6 +207,7 @@ export const AuthForm = ({
       setLoading(false);
     }
   };
+
 
   // ── Forgot Password ─────────────────────────────────────────────────────
   const handleForgotPassword = async (e: React.FormEvent) => {
