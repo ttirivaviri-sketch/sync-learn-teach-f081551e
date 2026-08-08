@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AcademicProfile, SubjectExamDate } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
@@ -16,6 +17,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
   const [profile, setProfile] = useState<AcademicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const fetchProfile = useCallback(async () => {
     if (!userId) {
@@ -293,6 +295,12 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         }
 
         await fetchProfile();
+        // Refresh StudyMode-facing caches so subjects update immediately.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+          queryClient.invalidateQueries({ queryKey: ["learner-subjects"] }),
+          queryClient.invalidateQueries({ queryKey: ["subject-exams"] }),
+        ]);
         logger.info("[useAcademicProfile] Profile saved successfully");
         return true;
       } catch (err) {
@@ -302,7 +310,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         setSaving(false);
       }
     },
-    [userId, fetchProfile]
+    [userId, fetchProfile, queryClient]
   );
 
   return { profile, loading, saving, saveProfile, refetch: fetchProfile };
