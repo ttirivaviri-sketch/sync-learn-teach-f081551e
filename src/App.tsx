@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -10,6 +10,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
+import { prefetchStudyMode } from "@/studymode/prefetch";
 
 // ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
 const Index = lazy(() => import("./pages/Index"));
@@ -99,7 +100,11 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
+const App = () => {
+  // Warm the Study Mode chunk on idle so it's cached before the user opens it.
+  useEffect(() => { prefetchStudyMode(); }, []);
+
+  return (
   <ErrorBoundary>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
@@ -216,6 +221,7 @@ const App = () => (
     </QueryClientProvider>
     </ThemeProvider>
   </ErrorBoundary>
-);
+  );
+};
 
 export default App;
