@@ -36,7 +36,9 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
 import { useGeolocation } from "@/hooks/useGeolocation";
 import { useBookingPayments } from "@/hooks/useBookingPayments";
+import { useGoogleOAuthProfileSync } from "@/hooks/useGoogleOAuthProfileSync";
 import { useAcademicProfile } from "@/hooks/useAcademicProfile";
+
 
 // ── Tab sub-components (lazy-loaded so only the active tab mounts its hook tree) ──
 const LearnerHomeTab = lazy(() => import("./learner/LearnerHomeTab").then(m => ({ default: m.LearnerHomeTab })));
