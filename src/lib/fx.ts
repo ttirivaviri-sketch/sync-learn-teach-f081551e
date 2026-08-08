@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { CurrencyCode } from "./legal";
 
@@ -54,8 +55,8 @@ export async function getRate(base: string, quote: string): Promise<number> {
 
 /** React hook: live ZAR→currency rate with graceful fallback. */
 export function useFxRate(base: string, quote: string) {
-  const [rate, setRate] = useStateSafe(base === quote ? 1 : null);
-  useEffectSafe(() => {
+  const [rate, setRate] = useState<number | null>(base === quote ? 1 : null);
+  useEffect(() => {
     let alive = true;
     if (base === quote) { setRate(1); return () => { alive = false; }; }
     getRate(base, quote).then((r) => { if (alive) setRate(r); });
