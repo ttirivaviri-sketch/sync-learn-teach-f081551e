@@ -154,6 +154,14 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
   const { progress, dailyStats } = useUserProgress();
   const subjects = dbSubjects ?? [];
   const hasSubjects = subjects.length > 0;
+  // Curriculum templates already give every learner a full topic tree, so
+  // uploads are an enhancement — never a gate. Study Mode is usable the
+  // moment at least one subject has topics.
+  const hasCurriculumTopics = subjects.some(
+    (s: any) => Array.isArray(s.topics) && s.topics.length > 0
+  );
+  const needsDocuments = hasDocuments === false && !hasCurriculumTopics;
+
 
   // ── Deep-link from Home: open the exact subject / resume the last topic ────
   const [pendingIntent, setPendingIntent] = useState<StudyIntent | null>(() => consumeStudyIntent());
