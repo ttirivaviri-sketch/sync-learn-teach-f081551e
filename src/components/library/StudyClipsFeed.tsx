@@ -57,7 +57,11 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
   const [playerTimedOut, setPlayerTimedOut] = useState(false);
 
   const url = resolveVideoUrl(resource);
-  const source = url ? parseVideoSource(url) : null;
+  const source = url
+    ? parseVideoSource(url, {
+        origin: typeof window === "undefined" ? undefined : window.location.origin,
+      })
+    : null;
   // Mount the provider player as soon as the slide is active and let the
   // provider render its own play control — mobile browsers block autoplay,
   // and an extra custom gate only made clips look unplayable.
