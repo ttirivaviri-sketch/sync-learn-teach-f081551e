@@ -9,15 +9,17 @@ export const MANUAL_PAYMENT = {
   priceZar: 250,
   accessDays: 30,
   bank: {
-    accountName: 'StudySync (Pty) Ltd',
-    bank: 'FNB',
-    accountNumber: '0000000000',
-    branchCode: '250655',
+    accountName: 'MISS. MISHELL DANDA',
+    bank: 'Standard Bank',
+    accountNumber: '10 20 487 9092',
+    branch: 'MELVILLE',
+    branchCode: '006105',
+    swiftCode: 'SBZAZAJJ',
     reference: 'Your email address',
   },
   ecocash: {
-    name: 'StudySync',
-    number: '+263 00 000 0000',
+    name: 'Israel Tapiwa Potera',
+    number: '+263 78 204 1111',
     reference: 'Your email address',
   },
   whatsapp: '27686523995',
@@ -30,3 +32,4 @@ export const METHOD_LABELS: Record<ManualPaymentMethod, string> = {
   eft: 'Bank transfer (EFT)',
   ecocash: 'EcoCash',
 };
+
