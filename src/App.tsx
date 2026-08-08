@@ -10,7 +10,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
 import { FEATURE_SCHOOLS } from "@/lib/featureFlags";
-import { prefetchStudyMode } from "@/studymode/StudyModeWrapper";
+import { prefetchStudyMode } from "@/studymode/prefetch";
 
 // ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
 const Index = lazy(() => import("./pages/Index"));
