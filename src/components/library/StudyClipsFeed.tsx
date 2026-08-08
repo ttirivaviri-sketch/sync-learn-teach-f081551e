@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import {
-  X, Heart, Bookmark, GraduationCap, Share2, Play, Pause,
+  X, Heart, Bookmark, GraduationCap, Share2,
   ChevronUp, ChevronDown, BadgeCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LibraryResource } from "@/types/academicProfile";
 import { parseVideoSource } from "@/lib/videoUrl";
+import { SyncPlayButton } from "@/components/ui/SyncPlayButton";
 
 interface StudyClipsFeedProps {
   videos: LibraryResource[];
@@ -142,21 +143,17 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
               preload="metadata"
             />
             {!playRequested && isActive && (
-              <Button
-                type="button"
-                size="icon"
-                variant="secondary"
-                className="absolute z-10 h-16 w-16 rounded-full shadow-lg"
+              <SyncPlayButton
+                size={72}
+                className="absolute z-10"
                 onClick={requestPlay}
                 aria-label={`Play ${resource.title}`}
-              >
-                <Play className="h-7 w-7 fill-current" />
-              </Button>
+              />
             )}
           </>
         ) : (
           <div className="flex flex-col items-center gap-3 px-8 text-center text-white/70">
-            <Play className="h-12 w-12" />
+            <SyncPlayButton decorative size={56} className="opacity-60" />
             <p className="text-sm">This video cannot play inside the app.</p>
             <Button asChild variant="secondary" size="sm">
               <a href={source.originalUrl} target="_blank" rel="noopener noreferrer">Open video</a>
@@ -165,7 +162,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
         )
       ) : (
         <div className="flex flex-col items-center gap-3 text-white/60">
-          <Play className="h-12 w-12" />
+          <SyncPlayButton decorative size={56} className="opacity-50" />
           <p className="text-sm">No video available</p>
         </div>
       )}

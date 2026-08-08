@@ -25,7 +25,9 @@ export default defineConfig({
       statements: 70,
     },
     include: ['**/*.{test,spec}.{ts,tsx}'],
-    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache'],
+    // supabase/functions tests are Deno tests (https: imports) — they run via
+    // `deno test`, not vitest, and crash Node's ESM loader if picked up here.
+    exclude: ['node_modules', 'dist', '.idea', '.git', '.cache', 'supabase/functions/**'],
   },
   resolve: {
     alias: {
