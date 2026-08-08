@@ -7,6 +7,8 @@ interface GeneratedCoverProps {
   title: string;
   /** Small label shown at the top (e.g. "Book", "Past Paper", subject). */
   label?: string;
+  /** Set false when the parent renders its own title overlay. */
+  showText?: boolean;
   className?: string;
 }
 
@@ -25,7 +27,7 @@ function hashOf(s: string) {
   return Math.abs(h);
 }
 
-export function GeneratedCover({ title, label, className = "" }: GeneratedCoverProps) {
+export function GeneratedCover({ title, label, showText = true, className = "" }: GeneratedCoverProps) {
   const h = hashOf(title || "StudySync");
   const [c1, c2, c3] = PALETTES[h % PALETTES.length];
   const gid = `ssg-${h % 100000}`;
@@ -79,6 +81,7 @@ export function GeneratedCover({ title, label, className = "" }: GeneratedCoverP
       </svg>
 
       {/* Text layer */}
+      {showText && (
       <div className="absolute inset-0 flex flex-col justify-between p-2.5">
         <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-white/80">
           {label || "StudySync"}
@@ -92,6 +95,7 @@ export function GeneratedCover({ title, label, className = "" }: GeneratedCoverP
           </span>
         </div>
       </div>
+      )}
     </div>
   );
 }
