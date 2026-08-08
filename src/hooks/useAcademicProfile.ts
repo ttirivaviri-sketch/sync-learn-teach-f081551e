@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AcademicProfile, SubjectExamDate } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
-import { findExistingSubjectId } from "@/lib/subjectName";
+import { findExistingSubjectId, canonicalSubjectName } from "@/lib/subjectName";
 
 interface UseAcademicProfileReturn {
   profile: AcademicProfile | null;
@@ -16,6 +17,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
   const [profile, setProfile] = useState<AcademicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const queryClient = useQueryClient();
 
   const fetchProfile = useCallback(async () => {
     if (!userId) {
@@ -212,6 +214,48 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
             }
           }
 
+          // Remove subjects the learner de-selected so StudyMode matches
+          // the profile exactly. `subjects` rows are only dropped when the
+          // learner has no recorded mastery for them (avoid losing progress).
+          try {
+            const keep = new Set(data.subjects.map((s) => canonicalSubjectName(s)));
+
+            const { data: linkRows } = await supabase
+              .from("learner_subjects")
+              .select("id, subject")
+              .eq("user_id", userId);
+            const staleLinks = (linkRows ?? []).filter(
+              (r: any) => !keep.has(canonicalSubjectName(r.subject))
+            );
+            if (staleLinks.length > 0) {
+              await supabase
+                .from("learner_subjects")
+                .delete()
+                .in("id", staleLinks.map((r: any) => r.id));
+            }
+
+            const { data: subjectRows } = await supabase
+              .from("subjects")
+              .select("id, name")
+              .eq("user_id", userId);
+            const staleSubjects = (subjectRows ?? []).filter(
+              (r: any) => !keep.has(canonicalSubjectName(r.name))
+            );
+            for (const stale of staleSubjects as Array<{ id: string; name: string }>) {
+              const { count } = await supabase
+                .from("topic_mastery")
+                .select("id", { count: "exact", head: true })
+                .eq("user_id", userId)
+                .eq("subject_id", stale.id);
+              if (!count) {
+                await supabase.from("subjects").delete().eq("id", stale.id);
+              }
+            }
+          } catch (cleanupErr) {
+            logger.warn("[useAcademicProfile] subject cleanup skipped:", cleanupErr);
+          }
+
+
           // Sync exam dates to subject_exams for Study Mode calendar
           if (examDatesJson.length > 0) {
             for (const examEntry of examDatesJson) {
@@ -251,6 +295,12 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         }
 
         await fetchProfile();
+        // Refresh StudyMode-facing caches so subjects update immediately.
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["subjects"] }),
+          queryClient.invalidateQueries({ queryKey: ["learner-subjects"] }),
+          queryClient.invalidateQueries({ queryKey: ["subject-exams"] }),
+        ]);
         logger.info("[useAcademicProfile] Profile saved successfully");
         return true;
       } catch (err) {
@@ -260,7 +310,7 @@ export function useAcademicProfile(userId?: string): UseAcademicProfileReturn {
         setSaving(false);
       }
     },
-    [userId, fetchProfile]
+    [userId, fetchProfile, queryClient]
   );
 
   return { profile, loading, saving, saveProfile, refetch: fetchProfile };
