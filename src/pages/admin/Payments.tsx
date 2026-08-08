@@ -249,6 +249,10 @@ const Payments = () => {
             </CardContent>
           </Card>
         </TabsContent>
+        <TabsContent value="deposits" className="mt-4">
+          <AdminManualDepositsPanel />
+        </TabsContent>
+
 
         <TabsContent value="withdrawals">
           <AdminWithdrawalsPanel />
