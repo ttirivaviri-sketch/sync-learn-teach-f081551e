@@ -34,7 +34,9 @@ import { TutorProfileTab } from "./tutor/TutorProfileTab";
 import TutorOnboardingWizard from "./tutor/TutorOnboardingWizard";
 import { TutorPendingScreen } from "./tutor/TutorPendingScreen";
 import { useTutorVerificationGate } from "@/hooks/useTutorVerificationGate";
+import { useGoogleOAuthProfileSync } from "@/hooks/useGoogleOAuthProfileSync";
 import { SuccessSplash } from "@/components/onboarding/SuccessSplash";
+
 import { AppShell } from "@/components/layout/AppShell";
 
 // ── Local types ─────────────────────────────────────────────────────────────
