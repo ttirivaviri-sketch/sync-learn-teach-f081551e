@@ -119,8 +119,14 @@ class StudyModeErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundary
   }
 
   handleRetry = () => {
+    if (isChunkLoadError(this.state.error)) {
+      sessionStorage.removeItem(RELOAD_FLAG);
+      window.location.reload();
+      return;
+    }
     this.setState((prev) => ({ hasError: false, error: null, key: prev.key + 1 }));
   };
+
 
   render() {
     if (this.state.hasError && this.state.error) {
