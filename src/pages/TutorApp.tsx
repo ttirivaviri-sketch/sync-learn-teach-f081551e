@@ -79,7 +79,11 @@ const TutorApp = () => {
 
   const userId = session?.user?.id;
 
+  // Sync Google OAuth sign-ups to the correct role (trigger defaults to learner).
+  useGoogleOAuthProfileSync(userId);
+
   // ── Data hooks ──────────────────────────────────────────────────────────
+
   const {
     bookings,
     loading: bookingsLoading,
