@@ -519,7 +519,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                             >
                               {daysUntil}d to exam
                             </Badge>
-                          ) : hasDocuments === false ? (
+                          ) : needsDocuments ? (
                             <Badge
                               variant="secondary"
                               className="absolute -top-2 -right-2 z-10 text-[10px] px-1.5 py-0"
@@ -531,7 +531,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                           <SubjectCard
                             subject={subject}
                             onClick={() => {
-                              if (hasDocuments === false) {
+                              if (needsDocuments) {
                                 window.dispatchEvent(
                                   new CustomEvent('show-toast', {
                                     detail: {
@@ -544,6 +544,7 @@ export function Dashboard({ readiness, onUploadClick, onOpenChat, onNeedHelp, on
                               }
                               setSelectedSubject(subject);
                             }}
+
                           />
                         </div>
                       );
