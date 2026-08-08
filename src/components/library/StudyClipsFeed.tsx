@@ -58,7 +58,10 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
 
   const url = resolveVideoUrl(resource);
   const source = url ? parseVideoSource(url) : null;
-  const showEmbed = isActive && playRequested && !!source?.embedUrl;
+  // Mount the provider player as soon as the slide is active and let the
+  // provider render its own play control — mobile browsers block autoplay,
+  // and an extra custom gate only made clips look unplayable.
+  const showEmbed = isActive && !!source?.embedUrl;
 
   useEffect(() => {
     if (isActive) return;
@@ -70,7 +73,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
 
   useEffect(() => {
     if (!showEmbed || playerLoaded) return;
-    const timeout = window.setTimeout(() => setPlayerTimedOut(true), 8000);
+    const timeout = window.setTimeout(() => setPlayerTimedOut(true), 10000);
     return () => window.clearTimeout(timeout);
   }, [showEmbed, playerLoaded]);
 
@@ -96,7 +99,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
               src={source.embedUrl}
               title={resource.title}
               className="absolute inset-0 w-full h-full"
-              allow="autoplay; encrypted-media; picture-in-picture; fullscreen; accelerometer; gyroscope; clipboard-write; web-share"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen; accelerometer; gyroscope; clipboard-write"
               allowFullScreen
               referrerPolicy="strict-origin-when-cross-origin"
               frameBorder="0"
@@ -120,20 +123,9 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
                 <img src={resource.thumbnail} alt="" className="absolute inset-0 h-full w-full object-contain" />
               )}
               <div className="absolute inset-0 bg-black/25" />
-              {isActive && (
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="secondary"
-                  className="relative z-10 h-16 w-16 rounded-full shadow-lg"
-                  onClick={requestPlay}
-                  aria-label={`Play ${resource.title}`}
-                >
-                  <Play className="h-7 w-7 fill-current" />
-                </Button>
-              )}
             </div>
           )
+
         ) : source.isDirect ? (
           <>
             <video

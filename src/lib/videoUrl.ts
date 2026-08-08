@@ -23,8 +23,15 @@ function safeYouTubeId(value: string | null | undefined): string | null {
   return value;
 }
 
-export function parseVideoSource(url: string): ParsedVideoSource {
+export interface ParseVideoOptions {
+  /** Request provider autoplay. Off by default: mobile browsers block it and
+   *  the provider then renders a blank frame instead of its own play button. */
+  autoplay?: boolean;
+}
+
+export function parseVideoSource(url: string, options: ParseVideoOptions = {}): ParsedVideoSource {
   const originalUrl = url.trim();
+  const autoplay = options.autoplay ? 1 : 0;
 
   try {
     const parsed = new URL(originalUrl);
@@ -52,7 +59,7 @@ export function parseVideoSource(url: string): ParsedVideoSource {
       return {
         provider: "youtube",
         originalUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
-        embedUrl: `https://www.youtube-nocookie.com/embed/${youtubeId}?playsinline=1&controls=1&rel=0&modestbranding=1&autoplay=1`,
+        embedUrl: `https://www.youtube.com/embed/${youtubeId}?playsinline=1&controls=1&rel=0&modestbranding=1&autoplay=${autoplay}`,
         isDirect: false,
       };
     }
@@ -63,7 +70,7 @@ export function parseVideoSource(url: string): ParsedVideoSource {
         return {
           provider: "vimeo",
           originalUrl,
-          embedUrl: `https://player.vimeo.com/video/${id}?autoplay=1&playsinline=1`,
+          embedUrl: `https://player.vimeo.com/video/${id}?autoplay=${autoplay}&playsinline=1`,
           isDirect: false,
         };
       }
@@ -77,7 +84,7 @@ export function parseVideoSource(url: string): ParsedVideoSource {
         return {
           provider: "loom",
           originalUrl,
-          embedUrl: `https://www.loom.com/embed/${id}?autoplay=1&hide_owner=true&hide_share=true&hide_title=true`,
+          embedUrl: `https://www.loom.com/embed/${id}?hide_owner=true&hide_share=true&hide_title=true`,
           isDirect: false,
         };
       }
@@ -85,6 +92,7 @@ export function parseVideoSource(url: string): ParsedVideoSource {
   } catch {
     // The caller will render an external-link fallback for malformed URLs.
   }
+
 
   return { provider: "unknown", originalUrl, embedUrl: null, isDirect: false };
 }
