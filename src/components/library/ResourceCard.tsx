@@ -1,7 +1,8 @@
 import { useState } from "react";
 import {
-  Star, Download, Bookmark, Eye, Play, X, BadgeCheck,
+  Star, Download, Bookmark, Eye, X, BadgeCheck,
 } from "lucide-react";
+import { SyncPlayButton } from "@/components/ui/SyncPlayButton";
 import { GeneratedCover } from "./GeneratedCover";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -65,10 +66,8 @@ export function ResourceCard({
           )}
 
           {resource.type === "video" && (
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-sm">
-                <Play className="h-5 w-5 text-primary ml-0.5" />
-              </div>
+            <div className="absolute inset-0 flex items-center justify-center group">
+              <SyncPlayButton decorative size={44} />
             </div>
           )}
 
