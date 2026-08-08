@@ -14,6 +14,7 @@ import { prefetchStudyMode } from "@/studymode/prefetch";
 
 // ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
 const Index = lazy(() => import("./pages/Index"));
+const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
 const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
 const TutorApp = lazy(() => import("./pages/TutorApp"));
