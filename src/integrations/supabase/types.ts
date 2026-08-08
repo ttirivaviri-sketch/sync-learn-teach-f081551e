@@ -7952,6 +7952,7 @@ export type Database = {
             }
           }
       verify_cron_token: { Args: { _token: string }; Returns: boolean }
+      welcome_message_body: { Args: never; Returns: string }
     }
     Enums: {
       announcement_audience: "school" | "grade" | "class"
