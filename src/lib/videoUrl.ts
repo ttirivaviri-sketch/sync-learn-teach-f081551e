@@ -27,11 +27,15 @@ export interface ParseVideoOptions {
   /** Request provider autoplay. Off by default: mobile browsers block it and
    *  the provider then renders a blank frame instead of its own play button. */
   autoplay?: boolean;
+  /** Embedding page origin. YouTube uses this to identify iframe API clients;
+   *  omitting it can produce player error 153 in hosted previews/webviews. */
+  origin?: string;
 }
 
 export function parseVideoSource(url: string, options: ParseVideoOptions = {}): ParsedVideoSource {
   const originalUrl = url.trim();
   const autoplay = options.autoplay ? 1 : 0;
+  const embedOrigin = options.origin?.trim();
 
   try {
     const parsed = new URL(originalUrl);
@@ -56,10 +60,13 @@ export function parseVideoSource(url: string, options: ParseVideoOptions = {}): 
     }
 
     if (youtubeId) {
+      const identityParams = embedOrigin
+        ? `&enablejsapi=1&origin=${encodeURIComponent(embedOrigin)}&widget_referrer=${encodeURIComponent(embedOrigin)}`
+        : "";
       return {
         provider: "youtube",
         originalUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
-        embedUrl: `https://www.youtube.com/embed/${youtubeId}?playsinline=1&controls=1&rel=0&modestbranding=1&autoplay=${autoplay}`,
+        embedUrl: `https://www.youtube.com/embed/${youtubeId}?playsinline=1&controls=1&rel=0&modestbranding=1&autoplay=${autoplay}${identityParams}`,
         isDirect: false,
       };
     }
