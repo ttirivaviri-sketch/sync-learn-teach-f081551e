@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { logger } from "@/utils/logger";
 import type { Database } from "@/integrations/supabase/types";
 import AdminWithdrawalsPanel from "@/components/AdminWithdrawalsPanel";
+import AdminManualDepositsPanel from "@/components/AdminManualDepositsPanel";
 
 type PaymentStatus = Database["public"]["Enums"]["payment_status"];
 
