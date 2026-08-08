@@ -7469,6 +7469,10 @@ export type Database = {
         Args: { _school_id: string }
         Returns: string
       }
+      ensure_studysync_team_conversation: {
+        Args: { _learner_id: string }
+        Returns: string
+      }
       expire_stale_topic_sessions: { Args: never; Returns: number }
       generate_allocation_bookings: {
         Args: { p_allocation_id: string }
@@ -7840,6 +7844,10 @@ export type Database = {
       seed_learning_ops_default_schedules: {
         Args: { _workspace_id: string }
         Returns: undefined
+      }
+      send_studysync_team_message: {
+        Args: { _content: string; _learner_id: string }
+        Returns: string
       }
       set_subscription_plan: {
         Args: { p_plan: string }
