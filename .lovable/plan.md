@@ -1,42 +1,49 @@
-## What's broken
+# Make the app easy to find + gate Study Mode behind manual payment
 
-The published app (`sync-learn-teach.lovable.app` and `studysync.co.za`) renders an empty page. The HTML and title load fine, but JavaScript dies immediately with:
+Two changes: make the "open the app" path obvious on the landing page, and put Study Mode behind a one-free-daily-task trial followed by an admin-confirmed manual payment (deposit / EFT / EcoCash).
 
-```text
-Uncaught TypeError: Cannot read properties of undefined (reading 'createContext')
-```
+## Part 1 — Landing page discoverability
 
-Nothing renders after that, which is exactly the "blank state on all pages" you're seeing. The dev preview works because Vite does not bundle chunks in dev — the bug only exists in the production build.
+Today the only way in is a small "Get Started" button in the navbar (and it disappears into the hamburger on mobile). Changes:
 
-### Cause
+- **Sticky mobile CTA bar** at the bottom of the landing page: "Start learning" (→ `/learner/auth`) plus a smaller "Sign in" link. Always visible while scrolling.
+- **Mobile navbar**: show a compact "Start" button next to the hamburger so the entry point never hides behind a menu.
+- **Hero**: make the primary button unmistakably the student action ("Start learning free"), with "Become a tutor" demoted to a secondary link.
+- **Repeat entry points**: add a clear student CTA at the end of How It Works, Study Mode, and Pricing sections, and an "Open the app" link in the footer.
+- **`/app` shortcut route** that redirects signed-in users straight into the learner app and everyone else to `/learner/auth` — a short link that can be shared in WhatsApp/posters.
+- **PWA "Add to home screen" prompt** already exists; surface it once the user scrolls past the hero instead of only on load.
 
-`vite.config.ts` has a hand-written `manualChunks` function that splits `node_modules` into ~12 separate chunks (`react`, `router`, `radix`, `query`, `motion`, `vendor`, …). React ends up in its own chunk while libraries that touch React at module-evaluation time (react-is, use-sync-external-store, Radix internals) land in `vendor`. That produces a circular chunk import, so `vendor` runs before `react` has been initialised and `React` is `undefined` when something calls `React.createContext()`.
+No copy/positioning rewrite beyond CTA wording; layout and visual style stay as they are.
 
-The rule `if (id.includes('framer-motion') || id.includes('motion'))` also over-matches — any dependency path containing the substring "motion" gets pulled into that chunk, which makes the ordering worse.
+## Part 2 — Trial + manual payment gate for Study Mode
 
-## The fix
+### How it works for a learner
+1. New learner gets **one free daily task** (their trial). They can complete it fully — questions, flashcards, exam question.
+2. Once that task is finished (or a second one is requested), Study Mode is **locked** behind a paywall screen.
+3. The paywall shows the price, the deposit/EFT/EcoCash payment details, and a form to submit proof: reference number, amount, method, and an optional screenshot upload.
+4. Status becomes **Pending review**. The learner sees a clear "we're confirming your payment" state and can still use non-AI parts of the app (tutors, library, school workspace).
+5. When an admin approves, access unlocks immediately (realtime) for the paid period.
 
-1. `**vite.config.ts` — replace the fragile manual chunking.** Remove the custom `manualChunks` function. Vite/Rollup's default chunking already handles React ordering correctly, and the app already code-splits properly through the `React.lazy` route imports in `App.tsx`, so the first-paint savings the manual rule was chasing are largely preserved. Keep `minify`, `target`, `cssCodeSplit`, and `chunkSizeWarningLimit` as-is.
-  If we later want vendor splitting back, it must be done as an object map that keeps React, react-dom, scheduler, react-is, and every React-dependent UI library in one shared chunk — not as separate per-library chunks.
-2. **Verify the built bundle actually boots.** Run a production build and serve `dist/` locally, then load `/`, `/learner`, and `/school` in a headless browser asserting `#root` is non-empty and there are zero page errors. This is the check that was missing — the previous chunking change was never validated against a real production build.
+### How it works for admin
+A new **Payments → Manual deposits** queue in the admin area listing submitted proofs with learner, method, reference, amount, screenshot, and submitted date. Approve (with an access-until date) or reject with a reason. Both actions notify the learner.
 
-## Second issue found while auditing the recent PRs
+## Technical notes
 
-`src/App.tsx` declares `/school` twice:
+**Database**
+- `manual_payment_requests`: learner id, method (`deposit` | `eft` | `ecocash`), reference, amount, currency, proof file path, status (`pending` | `approved` | `rejected`), reviewer id, review note, access period requested, timestamps. RLS: learner reads/creates own; admins read/update all; explicit GRANTs.
+- Private storage bucket `payment-proofs` with owner-scoped upload and admin read.
+- Extend `subscriptions` with `access_until` (timestamptz) and allow `status = 'manual_active'`; approval sets `access_until` and status. No PayFast code touched.
+- `free_task_used` tracked from existing `daily_tasks` (count of tasks for the learner) rather than a new column — no extra state to keep in sync.
 
-- line 130 → `SchoolAdminPage` (the Learning-OS console)
-- line 158 → `SchoolLayout` + `SchoolDashboard`, behind the `FEATURE_SCHOOLS` flag
+**Access rule (single source of truth)**
+Extend `useSubscription` with `studyAccess()` returning one of `trial_task | active | locked | pending_review`, derived from: existing trial/premium logic, `access_until > now()`, pending manual request, and daily-task count. Everything else reads this hook — no duplicate rules.
 
-The first declaration wins, so the school portal's index page is unreachable; only `/school/:schoolId/*` works. I'll move the Learning-OS console to `/school-ops` and leave `/school` to `SchoolLayout`, so both surfaces are reachable.
+**Enforcement**
+- Client: `StudyModeWrapper` renders the paywall instead of Study Mode when locked; the Home tab's Study CTAs show a lock badge.
+- Server: the gated AI edge functions (`generate-daily-task` and siblings using `requireCaller`) get a shared `requireStudyAccess` check in `_shared/ai-config.ts`, returning `402` with a `reason` so the client opens the paywall. Client-only gating is not enough since these are paid AI calls.
 
-Related: `/teacher` (`TeacherCommandCenterPage`) currently redirects signed-out users to `/tutor/auth`. For a school teacher that's the wrong door. I'll flag this rather than change it unilaterally — tell me whether school teachers should authenticate through the tutor login or the learner/school login and I'll wire it accordingly.
+**Notifications**
+Reuse the existing notifications table/trigger pattern for "payment approved" / "payment needs attention".
 
-## What I verified as already fine
-
-- PRs #94–#100 (Cambridge IGCSE / O-Level / A-Level curriculum seeds) are merged **and** applied to the database: `curriculum_topic_templates` now carries CAMB IGCSE (15), O-Level (10) and A-Level (11) rows alongside the existing ZIMSEC / NSC / IEB sets.
-- The two newest commits only regenerated `bun.lock` and `src/integrations/supabase/types.ts` — no app-code changes, so they're not implicated in the blank page.
-- All public routes (`/`, `/learner`, `/tutor`, `/guardian`, `/admin`) render correctly against the dev server with no console errors.
-
-## Note on testing signed-in screens
-
-This project uses an external Supabase that Lovable can't mint a session for, so I can't run authenticated end-to-end checks. I'll verify the fix on public routes plus a production-build smoke test; you'll need to confirm the signed-in learner and school-student screens once it's deployed.
+## Out of scope
+Automating EcoCash/EFT confirmation, changing PayFast, or altering pricing values.
