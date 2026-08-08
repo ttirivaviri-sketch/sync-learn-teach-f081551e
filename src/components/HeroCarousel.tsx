@@ -358,6 +358,47 @@ const HeroCarousel = () => {
       imageAlt="Study planner with calendar and progress"
       accent="emerald"
     />,
+    <FeatureSlide
+      key="s5"
+      eyebrow="School Workspaces"
+      title="Your school,"
+      highlight="in one place."
+      description="Classrooms, teachers, students, homework and AI study tools — all inside a branded, closed ecosystem for your school."
+      bullets={[
+        "Branded by your school logo",
+        "Teacher & student workspaces",
+        "AI homework and class analytics",
+      ]}
+      ctaLabel="Explore school workspace"
+      onCta={() => {
+        track("cta_click", { id: "hero_school_workspace", slide: 5 });
+        openWhatsAppAdmin();
+      }}
+      image={heroSchoolWorkspaces}
+      imageAlt="School workspace dashboard with classrooms and analytics"
+      accent="purple"
+    />,
+    <FeatureSlide
+      key="s6"
+      eyebrow="Learning Operating System"
+      title="One brain,"
+      highlight="every subject."
+      description="A unified AI learning engine that tracks mastery, predicts gaps, and schedules the next best action across every learner."
+      bullets={[
+        "Mastery tracking across subjects",
+        "Predictive gap alerts",
+        "Automated next-action suggestions",
+        "Bridging the gap between private tutoring and school",
+      ]}
+      ctaLabel="See how it works"
+      onCta={() => {
+        track("cta_click", { id: "hero_learning_os", slide: 6 });
+        navigate("/learner/auth");
+      }}
+      image={heroLearningOS}
+      imageAlt="Learning operating system brain connecting every subject"
+      accent="blue"
+    />,
   ];
 
   return (
