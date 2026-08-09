@@ -577,30 +577,21 @@ export function useStartQuizAttempt() {
 export function useSubmitQuizAttempt() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { attempt: QuizAttempt; answers: Array<{ question_id: Id; response: any }>; questions: QuizQuestion[] }) => {
-      let score = 0, max = 0;
-      const per_question = input.questions.map((q) => {
-        const a = input.answers.find((x) => x.question_id === q.id);
-        max += Number(q.marks);
-        const ans = a?.response;
-        let correct = false;
-        if (q.type === "mcq" || q.type === "tf") correct = ans !== undefined && JSON.stringify(ans) === JSON.stringify(q.answer);
-        else if (q.type === "short") correct = typeof ans === "string" && typeof q.answer === "string" && ans.trim().toLowerCase() === q.answer.trim().toLowerCase();
-        // long: leave for teacher to grade — counts 0 here
-        if (correct) score += Number(q.marks);
-        return { question_id: q.id, response: ans ?? null, correct, awarded: correct ? Number(q.marks) : 0 };
+    mutationFn: async (input: { attempt: QuizAttempt; answers: Array<{ question_id: Id; response: any }>; questions?: QuizQuestion[] }) => {
+      // Grading happens server-side so answer keys never reach the client before submission.
+      const answers: Record<string, any> = {};
+      for (const a of input.answers) answers[a.question_id] = a.response ?? null;
+      const { data, error } = await (supabase as any).rpc("submit_school_quiz_attempt", {
+        p_attempt_id: input.attempt.id,
+        p_answers: answers,
       });
-      const { data, error } = await sb.from("school_quiz_attempts").update({
-        submitted_at: new Date().toISOString(),
-        status: "submitted",
-        score, max_score: max, per_question,
-      }).eq("id", input.attempt.id).select().single();
       if (error) throw error;
-      return data as QuizAttempt;
+      return (Array.isArray(data) ? data[0] : data) as QuizAttempt;
     },
     onSuccess: (a) => qc.invalidateQueries({ queryKey: ["quiz-attempts", a.quiz_id] }),
   });
 }
+
 export function useMyQuizAttempts(quizId?: Id) {
   return useQuery({
     queryKey: ["my-quiz-attempts", quizId],
