@@ -1,15 +1,29 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import { LEGAL_LAST_UPDATED, COMPANY } from "@/lib/legal";
+import { Seo } from "@/components/Seo";
 
 interface Props {
   title: string;
+  /** Optional page-specific meta description; falls back to a title-derived one. */
+  description?: string;
   children: React.ReactNode;
 }
 
-export default function LegalLayout({ title, children }: Props) {
+export default function LegalLayout({ title, description, children }: Props) {
+  const { pathname } = useLocation();
+
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title={`${title} — ${COMPANY.name}`}
+        description={
+          description ??
+          `Read the ${title.toLowerCase()} for ${COMPANY.name}, the AI study and tutoring platform for students in South Africa and Zimbabwe.`
+        }
+        path={pathname}
+        type="article"
+      />
       <header className="border-b bg-card">
         <div className="max-w-3xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
