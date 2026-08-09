@@ -5,6 +5,7 @@
  * Step 2: Tutor-specific verification document upload (unique to tutors).
  */
 import { useState } from "react";
+import { Seo } from "@/components/Seo";
 import { useNavigate } from "react-router-dom";
 import { Shield, GraduationCap, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
