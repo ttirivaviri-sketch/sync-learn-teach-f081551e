@@ -7536,6 +7536,19 @@ export type Database = {
           watch_count: number
         }[]
       }
+      get_quiz_questions_for_student: {
+        Args: { p_quiz_id: string }
+        Returns: {
+          id: string
+          marks: number
+          options: Json
+          ord: number
+          prompt: string
+          quiz_id: string
+          school_id: string
+          type: Database["public"]["Enums"]["quiz_question_type"]
+        }[]
+      }
       get_student_analytics: {
         Args: { _from?: string; _to?: string; _user_id?: string }
         Returns: Json
@@ -7887,6 +7900,29 @@ export type Database = {
         Returns: string
       }
       subject_canonical_name: { Args: { p_name: string }; Returns: string }
+      submit_school_quiz_attempt: {
+        Args: { p_answers: Json; p_attempt_id: string }
+        Returns: {
+          created_at: string
+          id: string
+          max_score: number | null
+          per_question: Json | null
+          quiz_id: string
+          school_id: string
+          score: number | null
+          started_at: string
+          status: Database["public"]["Enums"]["quiz_attempt_status"]
+          student_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "school_quiz_attempts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_academic_profile:
         | {
             Args: {
