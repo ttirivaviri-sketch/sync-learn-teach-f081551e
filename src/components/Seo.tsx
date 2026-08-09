@@ -5,9 +5,40 @@
  * social crawlers that don't execute JS; this component overrides them
  * for JS-executing crawlers on a per-route basis.
  */
+import { useEffect } from "react";
 import { Helmet } from "react-helmet-async";
 
 export const SITE_URL = "https://studysync.co.za";
+
+/**
+ * Helmet appends tags rather than replacing the static ones shipped in
+ * index.html, which would leave crawlers with two conflicting descriptions
+ * and og:urls. Once the app has hydrated, drop the static duplicates —
+ * non-JS social crawlers still see them in the raw HTML.
+ */
+const STATIC_DUPLICATE_SELECTORS = [
+  'meta[name="description"]',
+  'meta[property="og:title"]',
+  'meta[property="og:description"]',
+  'meta[property="og:url"]',
+  'meta[name="twitter:title"]',
+  'meta[name="twitter:description"]',
+  'meta[property="twitter:title"]',
+  'meta[property="twitter:description"]',
+  'meta[property="twitter:url"]',
+  "link[rel=canonical]",
+].join(",");
+
+function useStripStaticHeadDuplicates() {
+  useEffect(() => {
+    document
+      .head!.querySelectorAll(STATIC_DUPLICATE_SELECTORS)
+      .forEach((el) => {
+        if (!el.hasAttribute("data-rh")) el.remove();
+      });
+  }, []);
+}
+
 
 interface SeoProps {
   /** Under 60 chars. */
