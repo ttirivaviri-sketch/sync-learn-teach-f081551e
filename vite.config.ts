@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === 'development' &&
     componentTagger(),
+    prerenderOg(),
   ].filter(Boolean),
   resolve: {
     alias: {
