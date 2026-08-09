@@ -1,6 +1,7 @@
 import { Suspense, lazy, useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 import HeroSection from "@/components/HeroSection";
+import { Seo } from "@/components/Seo";
 import { analytics } from "@/utils/analytics";
 
 // Below-the-fold sections — lazy so the hero paints first.
