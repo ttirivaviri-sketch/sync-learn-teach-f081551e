@@ -108,6 +108,7 @@ const App = () => {
 
   return (
   <ErrorBoundary>
+    <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
