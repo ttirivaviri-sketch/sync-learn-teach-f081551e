@@ -54,6 +54,7 @@ interface SeoProps {
 
 export const Seo = ({ title, description, path, noindex, type = "website" }: SeoProps) => {
   const url = `${SITE_URL}${path === "/" ? "/" : path}`;
+  useStripStaticHeadDuplicates();
 
   return (
     <Helmet>
