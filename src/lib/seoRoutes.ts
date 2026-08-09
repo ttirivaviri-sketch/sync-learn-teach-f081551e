@@ -33,6 +33,27 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/home.jpg",
   },
   {
+    path: "/tutoring",
+    title: "Online Tutors in South Africa — StudySync",
+    description:
+      "Book verified online tutors for Maths, Sciences, English and more. CAPS, IEB, Cambridge and ZIMSEC tutoring with pay-per-session pricing and a free trial.",
+    image: "/og/tutor-auth.jpg",
+  },
+  {
+    path: "/past-papers",
+    title: "Past Exam Papers — ZIMSEC, Cambridge, CAPS | StudySync",
+    description:
+      "Practise with verified past exam papers: official ZIMSEC specimen papers and Cambridge IGCSE/A-Level papers with mark schemes, organised by subject and year.",
+    image: "/og/home.jpg",
+  },
+  {
+    path: "/books",
+    title: "Free Textbooks, Novels & Study Guides | StudySync",
+    description:
+      "Read free openly licensed textbooks, set-work novels and study guides for CAPS, IEB, Cambridge and ZIMSEC — organised by subject and grade in one library.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/learner/auth",
     title: "Sign in to StudySync — Start learning",
     description:

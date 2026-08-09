@@ -4,8 +4,9 @@ import { Instagram, Mail, Phone, MessageCircle } from "lucide-react";
 const footerLinks = {
   "For Students": [
     { label: "AI StudyMode", href: "/learner/auth" },
-    { label: "Find Tutors", href: "/learner/auth" },
-    { label: "Resource Library", href: "/learner/auth" },
+    { label: "Find Tutors", href: "/tutoring" },
+    { label: "Past Papers", href: "/past-papers" },
+    { label: "Books & Study Guides", href: "/books" },
     { label: "Pricing", href: "/#pricing" },
   ],
   "For Tutors": [
