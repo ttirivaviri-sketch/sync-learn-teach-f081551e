@@ -5,6 +5,7 @@
  * Step 2: Tutor-specific verification document upload (unique to tutors).
  */
 import { useState } from "react";
+import { Seo } from "@/components/Seo";
 import { useNavigate } from "react-router-dom";
 import { Shield, GraduationCap, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -136,9 +137,14 @@ const TutorAuth = () => {
   // ── Step 1: Auth Form ─────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
+      <Seo
+        title="Tutor Sign In — Teach on StudySync"
+        description="Sign in or apply to become a verified StudySync tutor. Set your own rates, manage bookings and teach students across South Africa and Zimbabwe online."
+        path="/tutor/auth"
+      />
       <div className="w-full max-w-md">
         <LogoBlock />
-        <p className="text-center text-2xl font-extrabold text-white mb-8">Confidence Starts Here</p>
+        <h1 className="text-center text-2xl font-extrabold text-white mb-8">Become a StudySync tutor</h1>
 
         <AuthForm
           userType="tutor"
