@@ -515,12 +515,17 @@ export function useQuizQuestions(quizId?: Id) {
     queryKey: ["quiz-questions", quizId],
     enabled: !!quizId,
     queryFn: async () => {
+      // Staff (owner/teacher/school admin) can read questions with answer keys.
       const { data, error } = await sb.from("quiz_questions").select("*").eq("quiz_id", quizId).order("ord");
-      if (error) throw error;
-      return (data ?? []) as QuizQuestion[];
+      if (!error && (data?.length ?? 0) > 0) return data as QuizQuestion[];
+      // Students: answers are stripped server-side and revealed only after submission.
+      const { data: safe, error: rpcError } = await (supabase as any).rpc("get_quiz_questions_for_student", { p_quiz_id: quizId });
+      if (rpcError) throw (error ?? rpcError);
+      return (safe ?? []) as QuizQuestion[];
     },
   });
 }
+
 export function useCreateQuiz() {
   const qc = useQueryClient();
   return useMutation({
