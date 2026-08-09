@@ -28,7 +28,7 @@ const LearnerAuth = () => (
         <p className="text-xs font-semibold tracking-widest uppercase text-white/75 mb-1">
           Education, in sync with your future
         </p>
-        <p className="text-2xl font-extrabold text-white">Confidence Starts Here</p>
+        <h1 className="text-2xl font-extrabold text-white">Sign in to StudySync</h1>
       </div>
 
       <AuthForm
