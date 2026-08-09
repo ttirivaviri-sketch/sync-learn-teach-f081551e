@@ -5,9 +5,15 @@
  * Only provides learner-specific branding (logo, tagline).
  */
 import { AuthForm } from "@/components/AuthForm";
+import { Seo } from "@/components/Seo";
 
 const LearnerAuth = () => (
   <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
+    <Seo
+      title="Student Sign In — StudySync"
+      description="Sign in or create a free StudySync student account to use AI StudyMode, book verified tutors and open the curriculum-aligned resource library."
+      path="/learner/auth"
+    />
     <div className="w-full max-w-md">
       {/* Branding */}
       <div className="text-center mb-8">
