@@ -85,15 +85,18 @@ const Slide1 = () => {
     <SlideShell
       left={
         <div className="text-center lg:text-left animate-fade-in">
-          <h1 className="text-[clamp(2rem,8vw,4rem)] font-extrabold text-gray-900 leading-[1.05] tracking-tight mb-4 max-w-[16ch] mx-auto lg:mx-0">
-            Learn <span className="text-gray-900">smarter.</span>
-            <br />
-            Pass <span className="text-primary">faster.</span>
+          <p className="text-sm md:text-base font-semibold tracking-wide uppercase text-primary mb-3">
+            Learn smarter. Pass faster.
+          </p>
+          <h1 className="text-[clamp(1.75rem,6vw,3.25rem)] font-extrabold text-gray-900 leading-[1.08] tracking-tight mb-4 max-w-[20ch] mx-auto lg:mx-0">
+            AI study tools &amp; verified tutors for{" "}
+            <span className="text-primary">ZIMSEC, Cambridge, IEB &amp; NSC</span>
           </h1>
           <p className="text-base md:text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0">
             AI-powered learning, expert tutors and a smart study library — all
             in one place to help you master your subjects.
           </p>
+
 
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2.5 mb-6 max-w-md mx-auto lg:mx-0">
             {checks.map((c) => (
