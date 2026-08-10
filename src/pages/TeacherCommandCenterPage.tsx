@@ -16,6 +16,7 @@ import { LoadingScreen } from "@/components/LoadingSpinner";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { useLosWorkspaceMembership } from "@/studymode/hooks/useLosWorkspaceMembership";
 import { TeacherCommandCenter } from "@/studymode/components/TeacherCommandCenter";
+import { Seo } from "@/components/Seo";
 
 const LOS_STAFF_ROLES = ["owner", "admin", "teacher"] as const;
 
@@ -35,6 +36,12 @@ export default function TeacherCommandCenterPage() {
   if (losMembership) {
     return (
       <div className="min-h-screen bg-background">
+        <Seo
+          title="Teacher Command Center — StudySync"
+          description="Track your classes on StudySync: set homework, review submissions, monitor mastery and act on class alerts from one teacher workspace."
+          path="/teacher"
+          noindex
+        />
         <header className="sticky top-0 z-30 border-b border-border/60 bg-background/95 backdrop-blur-lg">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

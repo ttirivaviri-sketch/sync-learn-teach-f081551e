@@ -16,6 +16,7 @@ import { LoadingScreen } from "@/components/LoadingSpinner";
 import { useMySchoolMemberships } from "@/hooks/useSchools";
 import { useLosWorkspaceMembership } from "@/studymode/hooks/useLosWorkspaceMembership";
 import { SchoolAdminConsole } from "@/studymode/components/SchoolAdminConsole";
+import { Seo } from "@/components/Seo";
 
 const LOS_STAFF_ROLES = ["owner", "admin", "teacher"] as const;
 
@@ -34,6 +35,12 @@ export default function SchoolAdminPage() {
   if (losMembership) {
     return (
       <div className="min-h-screen bg-background">
+        <Seo
+          title="School Admin Console — StudySync"
+          description="Manage your school workspace on StudySync: members, classes, academics and billing for your Learning OS school account."
+          path="/school"
+          noindex
+        />
         <header className="sticky top-0 z-30 border-b border-border/60 bg-background/95 backdrop-blur-lg">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center gap-2">
             <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>

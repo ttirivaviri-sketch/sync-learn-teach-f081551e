@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { Seo } from "@/components/Seo";
 import {
   ArrowLeft, BookOpen, CreditCard, HeartHandshake, Loader2,
   TrendingDown, TrendingUp,
@@ -132,6 +133,12 @@ export default function GuardianPortal() {
 
   return (
     <div className="min-h-screen bg-background">
+      <Seo
+        title="Parent & Guardian Portal — StudySync"
+        description="Follow your learner's StudySync progress: weekly study activity, score trends, recent tutoring sessions and subscription status in one place."
+        path="/guardian"
+        noindex
+      />
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={() => navigate("/")}>
