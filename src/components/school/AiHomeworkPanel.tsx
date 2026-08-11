@@ -123,6 +123,14 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
     });
   };
 
+  // Suggest a title from the chosen curriculum topic when the teacher hasn't typed one.
+  useEffect(() => {
+    if (sourceKind !== "curriculum") return;
+    if (title.trim()) return;
+    if (curTopic) setTitle(`${curTopic} homework`);
+    else if (curSubject) setTitle(`${curSubject} homework`);
+  }, [sourceKind, curTopic, curSubject]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleGenerate = async () => {
     if (sourceKind === "document" && !docId) return toast.error("Pick a source document");
     if (sourceKind === "curriculum" && (!curriculum || !grade || !curSubject)) {
@@ -262,9 +270,16 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
             Generate draft{queue.length > 0 ? ` (${queue.length + 1} left)` : ""}
           </Button>
         </div>
-        {(docs.data ?? []).length === 0 && !docs.isLoading && (
+        {sourceKind === "document" && (docs.data ?? []).length === 0 && !docs.isLoading && (
           <p className="text-xs text-muted-foreground">
-            No ingested documents yet. Upload teaching material in the school's Academic Library to use AI homework.
+            No ingested documents yet. Switch the source to “From curriculum topic” to generate homework straight from the
+            syllabus, or upload teaching material in the school's Academic Library.
+          </p>
+        )}
+        {sourceKind === "curriculum" && (
+          <p className="text-xs text-muted-foreground">
+            Questions are written from the official {curriculum || "selected"} syllabus outline for
+            {" "}{curSubject || "the chosen subject"}{grade ? ` (${grade})` : ""} — no upload required.
           </p>
         )}
       </Card>
@@ -285,6 +300,9 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground">
+                {h.source_kind === "curriculum" && h.source_curriculum
+                  ? `${h.source_curriculum} · ${h.source_grade ?? ""} · ${h.source_subject ?? ""} — `
+                  : ""}
                 {h.due_at ? `Due ${new Date(h.due_at).toLocaleString()}` : "No due date"} · {Number(h.total_marks || 0)} mk
               </div>
             </div>
