@@ -10,7 +10,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, errorResponse, jsonResponse, STUDYMODE_SYSTEM_IDENTITY } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 import { enforceSchoolContract, logContractDenial } from "../_shared/school-contract.ts";
-import { authenticateTeacher, loadDocumentChunks, callAIJson } from "../_shared/school-generators.ts";
+import { authenticateTeacher, loadDocumentChunks, loadCurriculumTopicText, callAIJson } from "../_shared/school-generators.ts";
 
 interface HwQuestionOut {
   prompt: string;
@@ -102,7 +102,7 @@ RUBRIC RULES:
 - common_mistakes: the specific wrong answers/methods students actually produce.
 - Anchor every question to the source content; NEVER invent facts not present in it.
 - Difficulty should progress from easier to harder across the set.`;
-    const prompt = `Topic: ${topic ?? doc.title}\nDifficulty: ${diff}\n\nSource content:\n${text}\n\nWrite ${n} homework questions. For each include the model answer, examiner notes (what marks are awarded for), common mistakes, and the concepts tested. JSON shape: { "questions": [{ "prompt": string (LaTeX where mathematical), "question_type": "multiple_choice"|"true_false"|"short_answer"|"long_answer"|"exam_style", "options": string[]?, "expected_answer": string, "examiner_notes": string, "common_mistakes": string, "concepts": string[], "marks": number, "visual": object? }] }`;
+    const prompt = `Topic: ${topic ?? sourceTitle}\nDifficulty: ${diff}\n\nSource material (curriculum syllabus or teaching document):\n${text}\n\nWrite ${n} homework questions. For each include the model answer, examiner notes (what marks are awarded for), common mistakes, and the concepts tested. JSON shape: { "questions": [{ "prompt": string (LaTeX where mathematical), "question_type": "multiple_choice"|"true_false"|"short_answer"|"long_answer"|"exam_style", "options": string[]?, "expected_answer": string, "examiner_notes": string, "common_mistakes": string, "concepts": string[], "marks": number, "visual": object? }] }`;
 
     const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system, {
       userId: auth.userId ?? null,
@@ -116,7 +116,11 @@ RUBRIC RULES:
 
     const { data: hw, error: hwErr } = await auth.svc.from("school_homework").insert({
       school_id, class_id, subject_id: subject_id ?? null, teacher_id: auth.userId,
-      source_document_id: document_id, title, topic: topic ?? doc.title,
+      source_document_id: mode === "document" ? document_id : null, title, topic: topic ?? sourceTitle,
+      source_kind: mode,
+      source_curriculum: mode === "curriculum" ? curriculum : null,
+      source_grade: mode === "curriculum" ? grade : null,
+      source_subject: mode === "curriculum" ? curriculum_subject : null,
       difficulty: diff, instructions: instructions ?? null,
       due_at: due_at ?? null, total_marks: totalMarks,
       auto_release_grades: autoGrades, auto_release_feedback: autoFeedback,
