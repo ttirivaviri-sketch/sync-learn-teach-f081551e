@@ -4699,7 +4699,11 @@ export type Database = {
           is_remediation: boolean
           remediation_topic: string | null
           school_id: string
+          source_curriculum: string | null
           source_document_id: string | null
+          source_grade: string | null
+          source_kind: string
+          source_subject: string | null
           status: string
           subject_id: string | null
           teacher_id: string
@@ -4720,7 +4724,11 @@ export type Database = {
           is_remediation?: boolean
           remediation_topic?: string | null
           school_id: string
+          source_curriculum?: string | null
           source_document_id?: string | null
+          source_grade?: string | null
+          source_kind?: string
+          source_subject?: string | null
           status?: string
           subject_id?: string | null
           teacher_id: string
@@ -4741,7 +4749,11 @@ export type Database = {
           is_remediation?: boolean
           remediation_topic?: string | null
           school_id?: string
+          source_curriculum?: string | null
           source_document_id?: string | null
+          source_grade?: string | null
+          source_kind?: string
+          source_subject?: string | null
           status?: string
           subject_id?: string | null
           teacher_id?: string
