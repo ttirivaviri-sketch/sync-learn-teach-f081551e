@@ -28,9 +28,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const body = await req.json();
-    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft, is_remediation, remediation_topic, kernel_alert_id } = body;
-    if (!school_id || !document_id || !class_id || !title) {
-      return errorResponse("school_id, document_id, class_id, title required", 400);
+    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft, is_remediation, remediation_topic, kernel_alert_id,
+      source_kind, curriculum, grade, curriculum_subject } = body;
+    const mode: "document" | "curriculum" = source_kind === "curriculum" ? "curriculum" : "document";
+    if (!school_id || !class_id || !title) {
+      return errorResponse("school_id, class_id, title required", 400);
+    }
+    if (mode === "document" && !document_id) return errorResponse("document_id required", 400);
+    if (mode === "curriculum" && (!curriculum || !grade || !curriculum_subject)) {
+      return errorResponse("curriculum, grade and curriculum_subject required", 400);
     }
     const startStatus = as_draft === true ? "draft" : "published";
 
@@ -47,8 +53,23 @@ serve(async (req) => {
     });
     if ("response" in gate) return gate.response;
 
-    const { doc, text } = await loadDocumentChunks(auth.svc, school_id, document_id, 16000, topic);
-    if (!doc || !text) return errorResponse("Document not ready or empty", 400);
+    let sourceTitle = "";
+    let text = "";
+    if (mode === "curriculum") {
+      const cur = await loadCurriculumTopicText(auth.svc, {
+        curriculum, grade, subject: curriculum_subject, topic,
+      });
+      if (!cur) return errorResponse("No curriculum topics found for that curriculum/grade/subject", 400);
+      sourceTitle = cur.title;
+      text = cur.text;
+    } else {
+      const loaded = await loadDocumentChunks(auth.svc, school_id, document_id, 16000, topic);
+      if (!loaded.doc || !loaded.text) return errorResponse("Document not ready or empty", 400);
+      sourceTitle = loaded.doc.title ?? "";
+      text = loaded.text;
+    }
+
+
 
     // Teacher AI defaults
     const { data: settings } = await auth.svc.from("teacher_ai_settings")
