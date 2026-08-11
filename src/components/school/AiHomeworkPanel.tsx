@@ -3,7 +3,7 @@
  * document, review/edit it as a draft, then publish with a due date.
  * Lives inside the Homework tab of TeacherClassDetail.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ import { Sparkles, Loader2, Pencil, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
   useTeacherSchoolDocuments, useGenerateHomework, useAiHomeworkForClass,
+  useCurriculumTemplates,
 } from "@/hooks/useSchoolStudyMode";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { AiHomeworkEditor } from "./AiHomeworkEditor";
 
 export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; classId: string }) {
@@ -23,6 +26,30 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   const list = useAiHomeworkForClass(classId);
   const gen = useGenerateHomework();
 
+  const templates = useCurriculumTemplates();
+
+  // Class defaults (curriculum + grade) so curriculum mode is usually one click.
+  const classInfo = useQuery({
+    queryKey: ["class-curriculum-defaults", classId],
+    enabled: !!classId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("classes")
+        .select("curriculum, grades(name)")
+        .eq("id", classId)
+        .maybeSingle();
+      return {
+        curriculum: (data as any)?.curriculum as string | null,
+        grade: (data as any)?.grades?.name as string | null,
+      };
+    },
+  });
+
+  const [sourceKind, setSourceKind] = useState<"document" | "curriculum">("curriculum");
+  const [curriculum, setCurriculum] = useState("");
+  const [grade, setGrade] = useState("");
+  const [curSubject, setCurSubject] = useState("");
+  const [curTopic, setCurTopic] = useState("");
   const [docId, setDocId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [count, setCount] = useState("5");
@@ -31,6 +58,35 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   const [queue, setQueue] = useState<Array<{ topic: string; alertId?: string }>>([]);
   const [activeAlertId, setActiveAlertId] = useState<string | undefined>(undefined);
   const generatorRef = useRef<HTMLDivElement | null>(null);
+
+  const rows = templates.data ?? [];
+  const curriculumOptions = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.curriculum))).sort(),
+    [rows],
+  );
+  const gradeOptions = useMemo(
+    () => Array.from(new Set(rows.filter((r) => r.curriculum === curriculum).map((r) => r.grade))).sort(),
+    [rows, curriculum],
+  );
+  const subjectOptions = useMemo(
+    () => Array.from(new Set(rows.filter((r) => r.curriculum === curriculum && r.grade === grade).map((r) => r.subject))).sort(),
+    [rows, curriculum, grade],
+  );
+  const topicOptions = useMemo(() => {
+    const row = rows.find((r) => r.curriculum === curriculum && r.grade === grade && r.subject === curSubject);
+    return (row?.topics ?? []).map((t) => String(t?.name ?? "")).filter(Boolean);
+  }, [rows, curriculum, grade, curSubject]);
+
+  // Seed curriculum + grade from the class once templates are loaded.
+  useEffect(() => {
+    if (!classInfo.data || curriculumOptions.length === 0) return;
+    const c = classInfo.data.curriculum;
+    if (c && !curriculum && curriculumOptions.includes(c)) setCurriculum(c);
+  }, [classInfo.data, curriculumOptions, curriculum]);
+  useEffect(() => {
+    const g = classInfo.data?.grade;
+    if (g && !grade && gradeOptions.includes(g)) setGrade(g);
+  }, [classInfo.data, gradeOptions, grade]);
 
   // Kernel-driven remediation: ClassKernelPanel / KernelAlertsPanel dispatch
   // this event. Detail can be { topic } for a single prefill, or { topics }
@@ -68,13 +124,22 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   };
 
   const handleGenerate = async () => {
-    if (!docId) return toast.error("Pick a source document");
+    if (sourceKind === "document" && !docId) return toast.error("Pick a source document");
+    if (sourceKind === "curriculum" && (!curriculum || !grade || !curSubject)) {
+      return toast.error("Pick a curriculum, grade and subject");
+    }
     if (!title.trim()) return toast.error("Title required");
     const isRemediation = title.startsWith("Remediation: ");
     const remediationTopic = isRemediation ? title.replace(/^Remediation:\s*/, "") : undefined;
     try {
       const res = await gen.mutateAsync({
-        schoolId, classId, documentId: docId, title: title.trim(),
+        schoolId, classId, title: title.trim(),
+        sourceKind,
+        documentId: sourceKind === "document" ? docId : undefined,
+        curriculum: sourceKind === "curriculum" ? curriculum : undefined,
+        grade: sourceKind === "curriculum" ? grade : undefined,
+        curriculumSubject: sourceKind === "curriculum" ? curSubject : undefined,
+        topic: sourceKind === "curriculum" ? (curTopic || undefined) : (remediationTopic || undefined),
         difficulty, count: Number(count) || 5, asDraft: true,
         isRemediation, remediationTopic, kernelAlertId: activeAlertId,
       });
