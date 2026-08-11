@@ -686,7 +686,13 @@ export async function upsertConceptCatalogEntries(args: {
   const concepts = dedupe(args.concepts);
   if (concepts.length === 0) return 0;
 
+  // RLS scopes catalog writes to rows the staff member owns (admins bypass).
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
   const rows = concepts.map((concept) => ({
+    created_by: user?.id ?? null,
     subject_id: args.subjectId ?? null,
     curriculum: args.curriculum,
     subject_name: args.subjectName,

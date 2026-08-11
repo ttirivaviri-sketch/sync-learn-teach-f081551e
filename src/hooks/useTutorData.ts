@@ -121,10 +121,8 @@ export const useTutorData = (
           .select('tutor_id')
           .in('status', ['requested', 'confirmed'])
           .abortSignal(controller.signal),
-        supabase
-          .from('qualifications')
-          .select('id, user_id, qualification_type, institution, year_obtained')
-          .abortSignal(controller.signal),
+        // Directory RPC — never exposes document_url of tutor certificates.
+        supabase.rpc('get_public_qualifications').abortSignal(controller.signal),
         supabase
           .from('tutor_teaching_profile')
           .select('user_id, curriculums, grades')
