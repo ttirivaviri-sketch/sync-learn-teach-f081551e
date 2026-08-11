@@ -102,9 +102,12 @@ RUBRIC RULES:
 - common_mistakes: the specific wrong answers/methods students actually produce.
 - Anchor every question to the source content; NEVER invent facts not present in it.
 - Difficulty should progress from easier to harder across the set.`;
+    const modeNote = mode === "curriculum"
+      ? "\n\nSOURCE MODE: official curriculum syllabus outline. Write questions that a national examiner would set for these topics, subtopics and key concepts. Stay strictly within the listed scope and the stated grade level; do not go beyond the syllabus."
+      : "";
     const prompt = `Topic: ${topic ?? sourceTitle}\nDifficulty: ${diff}\n\nSource material (curriculum syllabus or teaching document):\n${text}\n\nWrite ${n} homework questions. For each include the model answer, examiner notes (what marks are awarded for), common mistakes, and the concepts tested. JSON shape: { "questions": [{ "prompt": string (LaTeX where mathematical), "question_type": "multiple_choice"|"true_false"|"short_answer"|"long_answer"|"exam_style", "options": string[]?, "expected_answer": string, "examiner_notes": string, "common_mistakes": string, "concepts": string[], "marks": number, "visual": object? }] }`;
 
-    const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system, {
+    const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system + modeNote, {
       userId: auth.userId ?? null,
       bucket: "homework_generated",
       schoolId: school_id,
