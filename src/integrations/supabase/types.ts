@@ -1605,6 +1605,7 @@ export type Database = {
           concept_name: string
           confidence: number | null
           created_at: string
+          created_by: string | null
           curriculum: string
           id: string
           ingested_at: string | null
@@ -1624,6 +1625,7 @@ export type Database = {
           concept_name: string
           confidence?: number | null
           created_at?: string
+          created_by?: string | null
           curriculum: string
           id?: string
           ingested_at?: string | null
@@ -1643,6 +1645,7 @@ export type Database = {
           concept_name?: string
           confidence?: number | null
           created_at?: string
+          created_by?: string | null
           curriculum?: string
           id?: string
           ingested_at?: string | null
@@ -7511,6 +7514,16 @@ export type Database = {
       get_overall_leaderboard: {
         Args: { p_curriculum: string; p_limit?: number }
         Returns: Json
+      }
+      get_public_qualifications: {
+        Args: never
+        Returns: {
+          id: string
+          institution: string
+          qualification_type: string
+          user_id: string
+          year_obtained: number
+        }[]
       }
       get_published_tutorials: {
         Args: { p_curriculum?: string; p_subject?: string }
