@@ -159,21 +159,75 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
           <h3 className="font-semibold text-sm">Generate AI homework</h3>
         </div>
         <div className="grid sm:grid-cols-2 gap-2">
-          <div>
-            <Label>Source document</Label>
-            <Select value={docId} onValueChange={setDocId}>
-              <SelectTrigger><SelectValue placeholder={docs.isLoading ? "Loading…" : "Pick a document"} /></SelectTrigger>
+          <div className="sm:col-span-2">
+            <Label>Source</Label>
+            <Select value={sourceKind} onValueChange={(v: any) => setSourceKind(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(docs.data ?? []).map((d: any) => (
-                  <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
-                ))}
+                <SelectItem value="curriculum">From curriculum topic (no upload needed)</SelectItem>
+                <SelectItem value="document">From an uploaded document</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {sourceKind === "document" ? (
+            <div>
+              <Label>Source document</Label>
+              <Select value={docId} onValueChange={setDocId}>
+                <SelectTrigger><SelectValue placeholder={docs.isLoading ? "Loading…" : "Pick a document"} /></SelectTrigger>
+                <SelectContent>
+                  {(docs.data ?? []).map((d: any) => (
+                    <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label>Curriculum</Label>
+                <Select value={curriculum} onValueChange={(v) => { setCurriculum(v); setGrade(""); setCurSubject(""); setCurTopic(""); }}>
+                  <SelectTrigger><SelectValue placeholder={templates.isLoading ? "Loading…" : "Pick a curriculum"} /></SelectTrigger>
+                  <SelectContent>
+                    {curriculumOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Grade / level</Label>
+                <Select value={grade} onValueChange={(v) => { setGrade(v); setCurSubject(""); setCurTopic(""); }} disabled={!curriculum}>
+                  <SelectTrigger><SelectValue placeholder="Pick a grade" /></SelectTrigger>
+                  <SelectContent>
+                    {gradeOptions.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Subject</Label>
+                <Select value={curSubject} onValueChange={(v) => { setCurSubject(v); setCurTopic(""); }} disabled={!grade}>
+                  <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
+                  <SelectContent>
+                    {subjectOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Topic (optional)</Label>
+                <Select value={curTopic || "__all__"} onValueChange={(v) => setCurTopic(v === "__all__" ? "" : v)} disabled={!curSubject}>
+                  <SelectTrigger><SelectValue placeholder="Whole syllabus" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Whole syllabus</SelectItem>
+                    {topicOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
           <div>
             <Label>Title</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Photosynthesis homework" />
           </div>
+
           <div>
             <Label># questions</Label>
             <Input type="number" min={3} max={15} value={count} onChange={(e) => setCount(e.target.value)} />
