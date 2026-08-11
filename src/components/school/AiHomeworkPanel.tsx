@@ -3,7 +3,7 @@
  * document, review/edit it as a draft, then publish with a due date.
  * Lives inside the Homework tab of TeacherClassDetail.
  */
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,10 @@ import { Sparkles, Loader2, Pencil, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import {
   useTeacherSchoolDocuments, useGenerateHomework, useAiHomeworkForClass,
+  useCurriculumTemplates,
 } from "@/hooks/useSchoolStudyMode";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { AiHomeworkEditor } from "./AiHomeworkEditor";
 
 export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; classId: string }) {
@@ -23,6 +26,30 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   const list = useAiHomeworkForClass(classId);
   const gen = useGenerateHomework();
 
+  const templates = useCurriculumTemplates();
+
+  // Class defaults (curriculum + grade) so curriculum mode is usually one click.
+  const classInfo = useQuery({
+    queryKey: ["class-curriculum-defaults", classId],
+    enabled: !!classId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("classes")
+        .select("curriculum, grades(name)")
+        .eq("id", classId)
+        .maybeSingle();
+      return {
+        curriculum: (data as any)?.curriculum as string | null,
+        grade: (data as any)?.grades?.name as string | null,
+      };
+    },
+  });
+
+  const [sourceKind, setSourceKind] = useState<"document" | "curriculum">("curriculum");
+  const [curriculum, setCurriculum] = useState("");
+  const [grade, setGrade] = useState("");
+  const [curSubject, setCurSubject] = useState("");
+  const [curTopic, setCurTopic] = useState("");
   const [docId, setDocId] = useState<string>("");
   const [title, setTitle] = useState("");
   const [count, setCount] = useState("5");
@@ -31,6 +58,35 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
   const [queue, setQueue] = useState<Array<{ topic: string; alertId?: string }>>([]);
   const [activeAlertId, setActiveAlertId] = useState<string | undefined>(undefined);
   const generatorRef = useRef<HTMLDivElement | null>(null);
+
+  const rows = templates.data ?? [];
+  const curriculumOptions = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.curriculum))).sort(),
+    [rows],
+  );
+  const gradeOptions = useMemo(
+    () => Array.from(new Set(rows.filter((r) => r.curriculum === curriculum).map((r) => r.grade))).sort(),
+    [rows, curriculum],
+  );
+  const subjectOptions = useMemo(
+    () => Array.from(new Set(rows.filter((r) => r.curriculum === curriculum && r.grade === grade).map((r) => r.subject))).sort(),
+    [rows, curriculum, grade],
+  );
+  const topicOptions = useMemo(() => {
+    const row = rows.find((r) => r.curriculum === curriculum && r.grade === grade && r.subject === curSubject);
+    return (row?.topics ?? []).map((t) => String(t?.name ?? "")).filter(Boolean);
+  }, [rows, curriculum, grade, curSubject]);
+
+  // Seed curriculum + grade from the class once templates are loaded.
+  useEffect(() => {
+    if (!classInfo.data || curriculumOptions.length === 0) return;
+    const c = classInfo.data.curriculum;
+    if (c && !curriculum && curriculumOptions.includes(c)) setCurriculum(c);
+  }, [classInfo.data, curriculumOptions, curriculum]);
+  useEffect(() => {
+    const g = classInfo.data?.grade;
+    if (g && !grade && gradeOptions.includes(g)) setGrade(g);
+  }, [classInfo.data, gradeOptions, grade]);
 
   // Kernel-driven remediation: ClassKernelPanel / KernelAlertsPanel dispatch
   // this event. Detail can be { topic } for a single prefill, or { topics }
@@ -67,14 +123,31 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
     });
   };
 
+  // Suggest a title from the chosen curriculum topic when the teacher hasn't typed one.
+  useEffect(() => {
+    if (sourceKind !== "curriculum") return;
+    if (title.trim()) return;
+    if (curTopic) setTitle(`${curTopic} homework`);
+    else if (curSubject) setTitle(`${curSubject} homework`);
+  }, [sourceKind, curTopic, curSubject]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleGenerate = async () => {
-    if (!docId) return toast.error("Pick a source document");
+    if (sourceKind === "document" && !docId) return toast.error("Pick a source document");
+    if (sourceKind === "curriculum" && (!curriculum || !grade || !curSubject)) {
+      return toast.error("Pick a curriculum, grade and subject");
+    }
     if (!title.trim()) return toast.error("Title required");
     const isRemediation = title.startsWith("Remediation: ");
     const remediationTopic = isRemediation ? title.replace(/^Remediation:\s*/, "") : undefined;
     try {
       const res = await gen.mutateAsync({
-        schoolId, classId, documentId: docId, title: title.trim(),
+        schoolId, classId, title: title.trim(),
+        sourceKind,
+        documentId: sourceKind === "document" ? docId : undefined,
+        curriculum: sourceKind === "curriculum" ? curriculum : undefined,
+        grade: sourceKind === "curriculum" ? grade : undefined,
+        curriculumSubject: sourceKind === "curriculum" ? curSubject : undefined,
+        topic: sourceKind === "curriculum" ? (curTopic || undefined) : (remediationTopic || undefined),
         difficulty, count: Number(count) || 5, asDraft: true,
         isRemediation, remediationTopic, kernelAlertId: activeAlertId,
       });
@@ -94,21 +167,75 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
           <h3 className="font-semibold text-sm">Generate AI homework</h3>
         </div>
         <div className="grid sm:grid-cols-2 gap-2">
-          <div>
-            <Label>Source document</Label>
-            <Select value={docId} onValueChange={setDocId}>
-              <SelectTrigger><SelectValue placeholder={docs.isLoading ? "Loading…" : "Pick a document"} /></SelectTrigger>
+          <div className="sm:col-span-2">
+            <Label>Source</Label>
+            <Select value={sourceKind} onValueChange={(v: any) => setSourceKind(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {(docs.data ?? []).map((d: any) => (
-                  <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
-                ))}
+                <SelectItem value="curriculum">From curriculum topic (no upload needed)</SelectItem>
+                <SelectItem value="document">From an uploaded document</SelectItem>
               </SelectContent>
             </Select>
           </div>
+
+          {sourceKind === "document" ? (
+            <div>
+              <Label>Source document</Label>
+              <Select value={docId} onValueChange={setDocId}>
+                <SelectTrigger><SelectValue placeholder={docs.isLoading ? "Loading…" : "Pick a document"} /></SelectTrigger>
+                <SelectContent>
+                  {(docs.data ?? []).map((d: any) => (
+                    <SelectItem key={d.id} value={d.id}>{d.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label>Curriculum</Label>
+                <Select value={curriculum} onValueChange={(v) => { setCurriculum(v); setGrade(""); setCurSubject(""); setCurTopic(""); }}>
+                  <SelectTrigger><SelectValue placeholder={templates.isLoading ? "Loading…" : "Pick a curriculum"} /></SelectTrigger>
+                  <SelectContent>
+                    {curriculumOptions.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Grade / level</Label>
+                <Select value={grade} onValueChange={(v) => { setGrade(v); setCurSubject(""); setCurTopic(""); }} disabled={!curriculum}>
+                  <SelectTrigger><SelectValue placeholder="Pick a grade" /></SelectTrigger>
+                  <SelectContent>
+                    {gradeOptions.map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Subject</Label>
+                <Select value={curSubject} onValueChange={(v) => { setCurSubject(v); setCurTopic(""); }} disabled={!grade}>
+                  <SelectTrigger><SelectValue placeholder="Pick a subject" /></SelectTrigger>
+                  <SelectContent>
+                    {subjectOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Topic (optional)</Label>
+                <Select value={curTopic || "__all__"} onValueChange={(v) => setCurTopic(v === "__all__" ? "" : v)} disabled={!curSubject}>
+                  <SelectTrigger><SelectValue placeholder="Whole syllabus" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Whole syllabus</SelectItem>
+                    {topicOptions.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
           <div>
             <Label>Title</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Photosynthesis homework" />
           </div>
+
           <div>
             <Label># questions</Label>
             <Input type="number" min={3} max={15} value={count} onChange={(e) => setCount(e.target.value)} />
@@ -143,9 +270,16 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
             Generate draft{queue.length > 0 ? ` (${queue.length + 1} left)` : ""}
           </Button>
         </div>
-        {(docs.data ?? []).length === 0 && !docs.isLoading && (
+        {sourceKind === "document" && (docs.data ?? []).length === 0 && !docs.isLoading && (
           <p className="text-xs text-muted-foreground">
-            No ingested documents yet. Upload teaching material in the school's Academic Library to use AI homework.
+            No ingested documents yet. Switch the source to “From curriculum topic” to generate homework straight from the
+            syllabus, or upload teaching material in the school's Academic Library.
+          </p>
+        )}
+        {sourceKind === "curriculum" && (
+          <p className="text-xs text-muted-foreground">
+            Questions are written from the official {curriculum || "selected"} syllabus outline for
+            {" "}{curSubject || "the chosen subject"}{grade ? ` (${grade})` : ""} — no upload required.
           </p>
         )}
       </Card>
@@ -166,6 +300,9 @@ export function AiHomeworkPanel({ schoolId, classId }: { schoolId: string; class
                 </Badge>
               </div>
               <div className="text-xs text-muted-foreground">
+                {h.source_kind === "curriculum" && h.source_curriculum
+                  ? `${h.source_curriculum} · ${h.source_grade ?? ""} · ${h.source_subject ?? ""} — `
+                  : ""}
                 {h.due_at ? `Due ${new Date(h.due_at).toLocaleString()}` : "No due date"} · {Number(h.total_marks || 0)} mk
               </div>
             </div>

@@ -10,7 +10,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, errorResponse, jsonResponse, STUDYMODE_SYSTEM_IDENTITY } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
 import { enforceSchoolContract, logContractDenial } from "../_shared/school-contract.ts";
-import { authenticateTeacher, loadDocumentChunks, callAIJson } from "../_shared/school-generators.ts";
+import { authenticateTeacher, loadDocumentChunks, loadCurriculumTopicText, callAIJson } from "../_shared/school-generators.ts";
 
 interface HwQuestionOut {
   prompt: string;
@@ -28,9 +28,15 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   try {
     const body = await req.json();
-    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft, is_remediation, remediation_topic, kernel_alert_id } = body;
-    if (!school_id || !document_id || !class_id || !title) {
-      return errorResponse("school_id, document_id, class_id, title required", 400);
+    const { school_id, document_id, class_id, subject_id, title, topic, difficulty, count, due_at, instructions, as_draft, is_remediation, remediation_topic, kernel_alert_id,
+      source_kind, curriculum, grade, curriculum_subject } = body;
+    const mode: "document" | "curriculum" = source_kind === "curriculum" ? "curriculum" : "document";
+    if (!school_id || !class_id || !title) {
+      return errorResponse("school_id, class_id, title required", 400);
+    }
+    if (mode === "document" && !document_id) return errorResponse("document_id required", 400);
+    if (mode === "curriculum" && (!curriculum || !grade || !curriculum_subject)) {
+      return errorResponse("curriculum, grade and curriculum_subject required", 400);
     }
     const startStatus = as_draft === true ? "draft" : "published";
 
@@ -47,8 +53,23 @@ serve(async (req) => {
     });
     if ("response" in gate) return gate.response;
 
-    const { doc, text } = await loadDocumentChunks(auth.svc, school_id, document_id, 16000, topic);
-    if (!doc || !text) return errorResponse("Document not ready or empty", 400);
+    let sourceTitle = "";
+    let text = "";
+    if (mode === "curriculum") {
+      const cur = await loadCurriculumTopicText(auth.svc, {
+        curriculum, grade, subject: curriculum_subject, topic,
+      });
+      if (!cur) return errorResponse("No curriculum topics found for that curriculum/grade/subject", 400);
+      sourceTitle = cur.title;
+      text = cur.text;
+    } else {
+      const loaded = await loadDocumentChunks(auth.svc, school_id, document_id, 16000, topic);
+      if (!loaded.doc || !loaded.text) return errorResponse("Document not ready or empty", 400);
+      sourceTitle = loaded.doc.title ?? "";
+      text = loaded.text;
+    }
+
+
 
     // Teacher AI defaults
     const { data: settings } = await auth.svc.from("teacher_ai_settings")
@@ -81,9 +102,12 @@ RUBRIC RULES:
 - common_mistakes: the specific wrong answers/methods students actually produce.
 - Anchor every question to the source content; NEVER invent facts not present in it.
 - Difficulty should progress from easier to harder across the set.`;
-    const prompt = `Topic: ${topic ?? doc.title}\nDifficulty: ${diff}\n\nSource content:\n${text}\n\nWrite ${n} homework questions. For each include the model answer, examiner notes (what marks are awarded for), common mistakes, and the concepts tested. JSON shape: { "questions": [{ "prompt": string (LaTeX where mathematical), "question_type": "multiple_choice"|"true_false"|"short_answer"|"long_answer"|"exam_style", "options": string[]?, "expected_answer": string, "examiner_notes": string, "common_mistakes": string, "concepts": string[], "marks": number, "visual": object? }] }`;
+    const modeNote = mode === "curriculum"
+      ? "\n\nSOURCE MODE: official curriculum syllabus outline. Write questions that a national examiner would set for these topics, subtopics and key concepts. Stay strictly within the listed scope and the stated grade level; do not go beyond the syllabus."
+      : "";
+    const prompt = `Topic: ${topic ?? sourceTitle}\nDifficulty: ${diff}\n\nSource material (curriculum syllabus or teaching document):\n${text}\n\nWrite ${n} homework questions. For each include the model answer, examiner notes (what marks are awarded for), common mistakes, and the concepts tested. JSON shape: { "questions": [{ "prompt": string (LaTeX where mathematical), "question_type": "multiple_choice"|"true_false"|"short_answer"|"long_answer"|"exam_style", "options": string[]?, "expected_answer": string, "examiner_notes": string, "common_mistakes": string, "concepts": string[], "marks": number, "visual": object? }] }`;
 
-    const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system, {
+    const result = await callAIJson<{ questions: HwQuestionOut[] }>(prompt, system + modeNote, {
       userId: auth.userId ?? null,
       bucket: "homework_generated",
       schoolId: school_id,
@@ -95,7 +119,11 @@ RUBRIC RULES:
 
     const { data: hw, error: hwErr } = await auth.svc.from("school_homework").insert({
       school_id, class_id, subject_id: subject_id ?? null, teacher_id: auth.userId,
-      source_document_id: document_id, title, topic: topic ?? doc.title,
+      source_document_id: mode === "document" ? document_id : null, title, topic: topic ?? sourceTitle,
+      source_kind: mode,
+      source_curriculum: mode === "curriculum" ? curriculum : null,
+      source_grade: mode === "curriculum" ? grade : null,
+      source_subject: mode === "curriculum" ? curriculum_subject : null,
       difficulty: diff, instructions: instructions ?? null,
       due_at: due_at ?? null, total_marks: totalMarks,
       auto_release_grades: autoGrades, auto_release_feedback: autoFeedback,

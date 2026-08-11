@@ -153,10 +153,10 @@ export function useSaveSchoolQuizFromPreview() {
 export function useGenerateHomework() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { schoolId: string; documentId: string; classId: string; subjectId?: string; title: string; topic?: string; difficulty?: string; count?: number; dueAt?: string; instructions?: string; asDraft?: boolean; isRemediation?: boolean; remediationTopic?: string; kernelAlertId?: string; }) =>
+    mutationFn: async (args: { schoolId: string; documentId?: string; classId: string; subjectId?: string; title: string; topic?: string; difficulty?: string; count?: number; dueAt?: string; instructions?: string; asDraft?: boolean; isRemediation?: boolean; remediationTopic?: string; kernelAlertId?: string; sourceKind?: "document" | "curriculum"; curriculum?: string; grade?: string; curriculumSubject?: string; }) =>
       invokeWithContract<{ ok: boolean; homework_id: string; count: number; total_marks: number }>(() =>
         supabase.functions.invoke("studymode-generate-homework", {
-          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, difficulty: args.difficulty, count: args.count, due_at: args.dueAt, instructions: args.instructions, as_draft: args.asDraft, is_remediation: args.isRemediation, remediation_topic: args.remediationTopic, kernel_alert_id: args.kernelAlertId },
+          body: { school_id: args.schoolId, document_id: args.documentId, class_id: args.classId, subject_id: args.subjectId, title: args.title, topic: args.topic, difficulty: args.difficulty, count: args.count, due_at: args.dueAt, instructions: args.instructions, as_draft: args.asDraft, is_remediation: args.isRemediation, remediation_topic: args.remediationTopic, kernel_alert_id: args.kernelAlertId, source_kind: args.sourceKind ?? "document", curriculum: args.curriculum, grade: args.grade, curriculum_subject: args.curriculumSubject },
         }),
       ),
     onSuccess: (_d, v) => {
@@ -169,6 +169,29 @@ export function useGenerateHomework() {
   });
 }
 
+// ── Curriculum topic templates (source for document-free AI homework) ──────
+export type CurriculumTemplateRow = {
+  curriculum: string;
+  grade: string;
+  subject: string;
+  topics: Array<{ name?: string; subtopics?: string[] }> | null;
+};
+
+export function useCurriculumTemplates() {
+  return useQuery({
+    queryKey: ["curriculum-templates-index"],
+    staleTime: 10 * 60 * 1000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("curriculum_topic_templates")
+        .select("curriculum,grade,subject,topics")
+        .order("curriculum", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as unknown as CurriculumTemplateRow[];
+    },
+  });
+}
+
 // ── Teacher: AI homework for a class (drafts + published) ──────────────────
 export function useAiHomeworkForClass(classId?: string) {
   return useQuery({
@@ -176,7 +199,7 @@ export function useAiHomeworkForClass(classId?: string) {
     enabled: !!classId,
     queryFn: async () => {
       const { data, error } = await supabase.from("school_homework")
-        .select("id,school_id,class_id,title,topic,due_at,total_marks,status,created_at")
+        .select("id,school_id,class_id,title,topic,due_at,total_marks,status,created_at,source_kind,source_curriculum,source_grade,source_subject")
         .eq("class_id", classId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -184,6 +207,7 @@ export function useAiHomeworkForClass(classId?: string) {
     },
   });
 }
+
 
 export function useHomeworkQuestions(homeworkId?: string) {
   return useQuery({

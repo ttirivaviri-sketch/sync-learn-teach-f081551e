@@ -150,3 +150,58 @@ export async function callAIJson<T>(
   const text = j.choices?.[0]?.message?.content ?? "";
   return safeJsonParse<T>(text);
 }
+
+/**
+ * loadCurriculumTopicText — build grounding material from the seeded
+ * curriculum topic trees (curriculum_topic_templates) instead of an
+ * uploaded document. Used when a teacher generates homework straight
+ * from the syllabus with no ingested material.
+ */
+export async function loadCurriculumTopicText(
+  svc: SupabaseClient,
+  args: { curriculum: string; grade: string; subject: string; topic?: string | null },
+  maxChars = 12000,
+): Promise<{ title: string; text: string } | null> {
+  const { data } = await svc
+    .from("curriculum_topic_templates")
+    .select("curriculum, grade, subject, topics")
+    .eq("curriculum", args.curriculum)
+    .eq("grade", args.grade)
+    .eq("subject", args.subject)
+    .maybeSingle();
+
+  const topics = Array.isArray(data?.topics) ? (data!.topics as Array<Record<string, unknown>>) : [];
+  if (topics.length === 0) return null;
+
+  const wanted = (args.topic ?? "").trim().toLowerCase();
+  const selected = wanted
+    ? topics.filter((t) => String(t.name ?? "").toLowerCase().includes(wanted))
+    : topics;
+  const use = selected.length > 0 ? selected : topics;
+
+  const blocks: string[] = [];
+  for (const t of use) {
+    const name = String(t.name ?? "").trim();
+    if (!name) continue;
+    const subs = Array.isArray(t.subtopics) ? (t.subtopics as unknown[]).map(String) : [];
+    const keys = Array.isArray(t.key_concepts) ? (t.key_concepts as unknown[]).map(String) : [];
+    const weight = t.exam_weight != null ? ` (exam weight: ${t.exam_weight}%)` : "";
+    const block = [
+      `TOPIC: ${name}${weight}`,
+      subs.length ? `Subtopics:\n- ${subs.join("\n- ")}` : "",
+      keys.length ? `Key concepts: ${keys.join(", ")}` : "",
+    ].filter(Boolean).join("\n");
+    if (blocks.join("\n\n").length + block.length > maxChars) break;
+    blocks.push(block);
+  }
+  if (blocks.length === 0) return null;
+
+  const title = wanted && selected.length > 0
+    ? use[0].name as string
+    : `${args.subject} — ${args.grade} (${args.curriculum})`;
+
+  return {
+    title: String(title),
+    text: `Curriculum: ${args.curriculum}\nGrade/Level: ${args.grade}\nSubject: ${args.subject}\n\n${blocks.join("\n\n")}`,
+  };
+}
