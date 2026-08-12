@@ -70,6 +70,7 @@ const TeacherWorkspace = lazy(() => import("./pages/school/teacher/TeacherWorksp
 const TeacherClassDetail = lazy(() => import("./pages/school/teacher/TeacherClassDetail"));
 const TeacherHomeworkReview = lazy(() => import("./pages/school/teacher/TeacherHomeworkReview"));
 const StudentWorkspace = lazy(() => import("./pages/school/student/StudentWorkspace"));
+const StudentHomework = lazy(() => import("./pages/school/student/StudentHomework"));
 const SchoolAnalytics = lazy(() => import("./pages/school/SchoolAnalytics"));
 const DevSubmissionTest = lazy(() => import("./pages/dev/DevSubmissionTest"));
 
@@ -191,6 +192,7 @@ const App = () => {
                     <Route path="teach/:classId" element={<TeacherClassDetail />} />
                     <Route path="homework-review" element={<TeacherHomeworkReview />} />
                     <Route path="learn" element={<StudentWorkspace />} />
+                    <Route path="homework" element={<StudentHomework />} />
                     <Route path="analytics" element={<SchoolAnalytics />} />
                   </Route>
                   <Route path="/invite/:token" element={<AcceptInvitation />} />

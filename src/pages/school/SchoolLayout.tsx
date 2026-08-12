@@ -133,6 +133,7 @@ export default function SchoolLayout() {
     { label: "Teach", to: `/school/${schoolId}/teach`, icon: BookOpenCheck, show: isTeacher },
     { label: "Homework review", to: `/school/${schoolId}/homework-review`, icon: BookOpenCheck, show: isTeacher },
     { label: "My classes", to: `/school/${schoolId}/learn`, icon: Backpack, show: isStudent },
+    { label: "My homework", to: `/school/${schoolId}/homework`, icon: BookOpenCheck, show: isStudent },
     { label: "Announcements", to: `/school/${schoolId}/announcements`, icon: Megaphone, show: true },
     { label: "Analytics", to: `/school/${schoolId}/analytics`, icon: BarChart3, show: isTeacher },
     { label: "Invitations", to: `/school/${schoolId}/invitations`, icon: Mail, show: isAdmin },
