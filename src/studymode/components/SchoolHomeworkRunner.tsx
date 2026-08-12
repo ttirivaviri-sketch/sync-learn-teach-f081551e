@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, CheckCircle2, Lock, GraduationCap, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle2, Lock, GraduationCap, AlertTriangle, CalendarClock, ListChecks } from "lucide-react";
 import { useHomeworkDetail, useSubmitHomework } from "@/hooks/useSchoolStudyMode";
 import { useToast } from "@/hooks/use-toast";
 import { MathMarkdown } from "./MathMarkdown";
