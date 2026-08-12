@@ -100,6 +100,11 @@ export function SchoolHomeworkRunner({
   const isChoice = (q: any) =>
     Array.isArray(q.options) && q.options.length > 0;
 
+  const dueMs = hw.due_at ? new Date(hw.due_at).getTime() - Date.now() : null;
+  const dueText = hw.due_at
+    ? (dueMs! < 0 ? "Overdue" : `Due ${new Date(hw.due_at).toLocaleString()}`)
+    : "No due date";
+
   return (
     <div className="space-y-4">
       <Card className="p-4">
@@ -112,7 +117,41 @@ export function SchoolHomeworkRunner({
           </div>
           <Badge variant="outline">{hw.total_marks} marks</Badge>
         </div>
+
+        <div className={`mt-3 inline-flex items-center gap-1.5 text-xs rounded-full px-2.5 py-1 ${
+          dueMs !== null && dueMs < 0
+            ? "bg-destructive/10 text-destructive"
+            : dueMs !== null && dueMs < 3 * 86400000
+              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              : "bg-muted text-muted-foreground"}`}>
+          <CalendarClock className="h-3.5 w-3.5" /> {dueText}
+        </div>
+
         {hw.instructions && <p className="text-sm mt-3 text-muted-foreground">{hw.instructions}</p>}
+
+        {/* Marking rubric — how the marks are split across questions. */}
+        {questions.length > 0 && (
+          <div className="mt-3 rounded-lg border border-border p-3">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              <ListChecks className="h-4 w-4 text-primary" /> Marking rubric
+            </div>
+            <ul className="mt-2 space-y-1">
+              {questions.map((q, i) => (
+                <li key={q.id} className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+                  <span className="truncate">
+                    Q{i + 1} · {isChoice(q) ? "Multiple choice" : (q.question_type ?? "Written answer")}
+                  </span>
+                  <span className="shrink-0">{q.marks} mk</span>
+                </li>
+              ))}
+            </ul>
+            <p className="text-[11px] text-muted-foreground mt-2">
+              Marks are awarded per marking point. Show your working for multi-mark questions —
+              full detailed feedback appears once your teacher releases it.
+            </p>
+          </div>
+        )}
+
         {/* Progress */}
         <div className="mt-3 flex items-center gap-2">
           <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
@@ -126,6 +165,7 @@ export function SchoolHomeworkRunner({
           </span>
         </div>
       </Card>
+
 
       {questions.map((q, i) => {
         const resp = responseById.get(q.id);
