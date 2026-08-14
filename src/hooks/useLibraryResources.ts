@@ -457,7 +457,21 @@ export function useLibraryResources(
     const fetchLibraryResources = async () => {
       setLoading(true);
       try {
-        const [tutorialsResult, systemResourcesResult] = await Promise.all([
+        // NOTE: PostgREST caps each query at 1000 rows. Past papers now number
+        // in the thousands, so a single unfiltered query would return only past
+        // papers and hide every book and clip. Fetch each kind separately.
+        const systemQuery = (kind: string, limit: number) =>
+          supabase
+            .from("library_system_resources")
+            // select("*") on purpose: stays resilient if the past-paper
+            // metadata migration hasn't been applied yet (missing columns
+            // in an explicit select would 400 the whole library fetch).
+            .select("*")
+            .eq("kind", kind)
+            .order("created_at", { ascending: false })
+            .limit(limit);
+
+        const [tutorialsResult, booksResult, videosResult, papersResult] = await Promise.all([
           supabase
             .from("tutor_tutorials")
           .select(
@@ -468,18 +482,22 @@ export function useLibraryResources(
           )
           .eq("status", "published")
             .order("created_at", { ascending: false }),
-          supabase
-            .from("library_system_resources")
-            // select("*") on purpose: stays resilient if the past-paper
-            // metadata migration hasn't been applied yet (missing columns
-            // in an explicit select would 400 the whole library fetch).
-            .select("*")
-            .order("created_at", { ascending: false }),
-
+          systemQuery("textbook", 1000),
+          systemQuery("video", 1000),
+          systemQuery("past_paper", 1000),
         ]);
 
         const { data: directData, error: directError } = tutorialsResult;
-        const { data: systemData, error: systemError } = systemResourcesResult;
+        const systemError =
+          booksResult.error && videosResult.error && papersResult.error
+            ? booksResult.error
+            : null;
+        const systemData = [
+          ...(booksResult.data ?? []),
+          ...(videosResult.data ?? []),
+          ...(papersResult.data ?? []),
+        ];
+
 
         if (directError && systemError) {
           logger.warn("tutor_tutorials direct query failed:", directError.message);
