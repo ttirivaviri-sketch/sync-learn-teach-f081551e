@@ -35,6 +35,7 @@ import {
   errorResponse,
   jsonResponse,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
   buildCacheKey,
   getCached,
@@ -49,11 +50,14 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
+    const gate = await requireCaller(req, "generate-quiz");
+    if (gate.response) return gate.response;
+
     const ai = getAIConfig("standard");
     const body = await req.json();
 
     // ── Per-user daily quota (Moderate tier) ────────────────────────────────
-    const quota = await enforceQuota(req, "quiz", { amount: Math.min(Math.max(Number(body.count) || 1, 1), 5) });
+    const quota = await enforceQuota(req, "quiz", { userId: gate.caller.userId, amount: Math.min(Math.max(Number(body.count) || 1, 1), 5) });
     if (!quota.allowed) {
       return quotaExceededResponse("quiz", quota.used, quota.limit);
     }

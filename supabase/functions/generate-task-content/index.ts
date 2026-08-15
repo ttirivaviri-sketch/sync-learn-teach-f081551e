@@ -24,6 +24,7 @@ import {
   errorResponse,
   callAIStream,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
@@ -254,7 +255,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "topic_session");
+    const gate = await requireCaller(req, "generate-task-content");
+    if (gate.response) return gate.response;
+
+    const quota = await enforceQuota(req, "topic_session", { userId: gate.caller.userId });
     if (!quota.allowed) {
       return quotaExceededResponse("topic_session", quota.used, quota.limit);
     }

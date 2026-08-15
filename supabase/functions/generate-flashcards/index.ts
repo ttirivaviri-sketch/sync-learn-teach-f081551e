@@ -36,6 +36,7 @@ import {
   errorResponse,
   jsonResponse,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
@@ -47,7 +48,10 @@ serve(async (req: Request) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "flashcards");
+    const gate = await requireCaller(req, "generate-flashcards");
+    if (gate.response) return gate.response;
+
+    const quota = await enforceQuota(req, "flashcards", { userId: gate.caller.userId });
     if (!quota.allowed) return quotaExceededResponse("flashcards", quota.used, quota.limit);
     const ai = getAIConfig("cheap");
     const body = await req.json();
