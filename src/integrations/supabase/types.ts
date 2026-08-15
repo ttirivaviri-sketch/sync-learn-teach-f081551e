@@ -3163,6 +3163,7 @@ export type Database = {
           due_soon_alerts: boolean
           homework_release_alerts: boolean
           push_enabled: boolean
+          session_reminder_alerts: boolean
           updated_at: string
           user_id: string
         }
@@ -3171,6 +3172,7 @@ export type Database = {
           due_soon_alerts?: boolean
           homework_release_alerts?: boolean
           push_enabled?: boolean
+          session_reminder_alerts?: boolean
           updated_at?: string
           user_id: string
         }
@@ -3179,6 +3181,7 @@ export type Database = {
           due_soon_alerts?: boolean
           homework_release_alerts?: boolean
           push_enabled?: boolean
+          session_reminder_alerts?: boolean
           updated_at?: string
           user_id?: string
         }
@@ -5527,6 +5530,38 @@ export type Database = {
         }
         Relationships: []
       }
+      session_reminder_sent: {
+        Row: {
+          booking_id: string
+          id: string
+          kind: string
+          sent_at: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          id?: string
+          kind: string
+          sent_at?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          id?: string
+          kind?: string
+          sent_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_reminder_sent_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_analytics_daily: {
         Row: {
           created_at: string
@@ -7596,6 +7631,13 @@ export type Database = {
         Args: { p_curriculum: string; p_limit?: number; p_subject: string }
         Returns: Json
       }
+      get_tutor_busy_slots: {
+        Args: { _from: string; _to: string; _tutor_id: string }
+        Returns: {
+          duration_minutes: number
+          scheduled_at: string
+        }[]
+      }
       get_tutor_directory: {
         Args: never
         Returns: {
@@ -7718,6 +7760,7 @@ export type Database = {
         Returns: undefined
       }
       notify_homework_due_soon: { Args: never; Returns: undefined }
+      notify_session_reminders: { Args: never; Returns: undefined }
       promote_concept_ingestion: {
         Args: { p_staging_id: string }
         Returns: string
