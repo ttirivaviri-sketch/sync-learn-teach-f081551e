@@ -7662,6 +7662,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_tutor_user: { Args: { _user_id: string }; Returns: boolean }
       learner_weekly_digest: {
         Args: { _user_id: string }
         Returns: {
