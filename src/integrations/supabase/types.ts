@@ -7478,6 +7478,7 @@ export type Database = {
         }[]
       }
       current_school_ids: { Args: never; Returns: string[] }
+      current_user_verified_email: { Args: never; Returns: string }
       detect_kernel_alerts: { Args: { _school_id: string }; Returns: number }
       detect_kernel_alerts_all: { Args: never; Returns: number }
       ensure_learning_workspace_for_school: {
