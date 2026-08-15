@@ -23,6 +23,7 @@ import {
   errorResponse,
   streamResponse,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
   callAIStream,
 } from "../_shared/ai-config.ts";
@@ -33,7 +34,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "tutor");
+    const gate = await requireCaller(req, "ai-tutor");
+    if (gate.response) return gate.response;
+
+    const quota = await enforceQuota(req, "tutor", { userId: gate.caller.userId });
     if (!quota.allowed) return quotaExceededResponse("tutor", quota.used, quota.limit);
     const ai = getAIConfig("standard");
     const body = await req.json();

@@ -39,6 +39,7 @@ import {
   errorResponse,
   jsonResponse,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
@@ -50,7 +51,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "quiz");
+    const gate = await requireCaller(req, "generate-exam-questions");
+    if (gate.response) return gate.response;
+
+    const quota = await enforceQuota(req, "quiz", { userId: gate.caller.userId });
     if (!quota.allowed) return quotaExceededResponse("quiz", quota.used, quota.limit);
     const ai = getAIConfig("standard");
     const body = await req.json();

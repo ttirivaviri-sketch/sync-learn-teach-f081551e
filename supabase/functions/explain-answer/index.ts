@@ -43,6 +43,7 @@ import {
   jsonResponse,
   streamResponse,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
 } from "../_shared/ai-config.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
@@ -52,7 +53,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "explain");
+    const gate = await requireCaller(req, "explain-answer");
+    if (gate.response) return gate.response;
+
+    const quota = await enforceQuota(req, "explain", { userId: gate.caller.userId });
     if (!quota.allowed) return quotaExceededResponse("explain", quota.used, quota.limit);
     const ai = getAIConfig("cheap");
     const body = await req.json();

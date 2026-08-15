@@ -47,6 +47,7 @@ import {
   errorResponse,
   jsonResponse,
   enforceQuota,
+  requireCaller,
   quotaExceededResponse,
   reportTokenUsage,
 } from "../_shared/ai-config.ts";
@@ -106,7 +107,10 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const quota = await enforceQuota(req, "misc");
+    const gate = await requireCaller(req, "photo-solve-grade");
+    if (gate.response) return gate.response;
+
+    const quota = await enforceQuota(req, "misc", { userId: gate.caller.userId });
     if (!quota.allowed)
       return quotaExceededResponse("misc", quota.used, quota.limit);
 
