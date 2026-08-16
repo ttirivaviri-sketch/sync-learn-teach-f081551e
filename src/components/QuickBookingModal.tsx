@@ -49,6 +49,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
   const [notes, setNotes] = useState('');
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [busySlots, setBusySlots] = useState<{ start: number; end: number }[]>([]);
   const { toast } = useToast();
 
   // Fetch tutor availability when modal opens
