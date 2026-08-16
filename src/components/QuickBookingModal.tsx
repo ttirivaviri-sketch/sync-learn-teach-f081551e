@@ -119,7 +119,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
   }, [availableDates, availability]);
 
   // Generate time slots based on tutor's availability for the selected date
-  const timeSlots = useMemo(() => {
+  const rawTimeSlots = useMemo(() => {
     const selectedDateObj = availableDates.find(d => d.value === selectedDate);
     if (!selectedDateObj) return [];
 
