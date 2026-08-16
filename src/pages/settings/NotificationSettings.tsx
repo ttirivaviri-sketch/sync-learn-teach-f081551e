@@ -144,6 +144,18 @@ export default function NotificationSettings() {
 
               <div className="flex items-start justify-between gap-4 py-2 border-t border-border/50">
                 <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Session reminders</Label>
+                  <p className="text-xs text-muted-foreground">Alerts 24 hours and 1 hour before each booked tutoring session.</p>
+                </div>
+                <Switch
+                  checked={sessionReminders}
+                  disabled={saving}
+                  onCheckedChange={(v) => { setSessionReminders(v); save({ session_reminder_alerts: v }); }}
+                />
+              </div>
+
+              <div className="flex items-start justify-between gap-4 py-2 border-t border-border/50">
+                <div className="space-y-0.5">
                   <Label className="text-sm font-medium">Send to my devices</Label>
                   <p className="text-xs text-muted-foreground">Also deliver via push when the app isn't open (requires browser/device permission).</p>
                 </div>
