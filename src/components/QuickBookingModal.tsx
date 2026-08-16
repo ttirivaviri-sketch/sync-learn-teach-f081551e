@@ -66,6 +66,31 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       });
   }, [isOpen, tutor.id]);
 
+  // Fetch already-booked slots for this tutor (next 14 days) so taken times are hidden
+  useEffect(() => {
+    if (!isOpen || !tutor.id) return;
+    const from = new Date();
+    const to = new Date(Date.now() + 15 * 86_400_000);
+    (supabase as any)
+      .rpc('get_tutor_busy_slots', {
+        _tutor_id: tutor.id,
+        _from: from.toISOString(),
+        _to: to.toISOString(),
+      })
+      .then(({ data, error }: any) => {
+        if (error) {
+          logger.error('busy slots error', error);
+          return;
+        }
+        setBusySlots(
+          (data || []).map((b: { scheduled_at: string; duration_minutes: number }) => ({
+            start: new Date(b.scheduled_at).getTime(),
+            end: new Date(b.scheduled_at).getTime() + (b.duration_minutes || 60) * 60_000,
+          }))
+        );
+      });
+  }, [isOpen, tutor.id]);
+
   // Generate next 14 days
   const availableDates = useMemo(() => {
     const dates: { value: string; label: string; dayOfWeek: number }[] = [];
