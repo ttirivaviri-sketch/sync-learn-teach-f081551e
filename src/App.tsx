@@ -218,6 +218,7 @@ const App = () => {
               {/* Settings */}
               <Route path="/settings/data-compliance" element={<SettingsDataCompliance />} />
               <Route path="/settings/notifications" element={<SettingsNotifications />} />
+              <Route path="/settings/ai-usage" element={<SettingsAiUsage />} />
 
               {/* Debug */}
               <Route path="/debug/haptics" element={<DebugHaptics />} />
