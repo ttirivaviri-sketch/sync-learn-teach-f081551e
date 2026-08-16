@@ -242,7 +242,14 @@ serve(async (req) => {
       );
     }
 
-    const effectiveTutorId = tutor_id || user.id;
+    // Never trust a client-supplied tutor_id: content is always attributed to the
+    // authenticated caller unless the caller is a verified admin.
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
+    const effectiveTutorId = isAdmin && tutor_id ? tutor_id : user.id;
+
 
     // ── Step 1: Detect video type & generate embed URL ────────────────────────
     const videoInfo = detectVideoType(video_url);

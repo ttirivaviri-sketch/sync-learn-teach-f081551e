@@ -242,24 +242,32 @@ serve(async (req) => {
       );
     }
 
-    // Verify the requester is a tutor who has had sessions with this student
-    const effectiveTutorId = tutor_id || user.id;
-    const { data: tutorBookings, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("tutor_id", effectiveTutorId)
-      .eq("learner_id", student_id)
-      .limit(1);
+    // Authorization is always derived from the verified caller. A client-supplied
+    // tutor_id is only honoured for verified admins acting on behalf of a tutor.
+    const { data: isAdmin } = await supabase.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
 
-    if (bookingsError || !tutorBookings || tutorBookings.length === 0) {
-      // Also allow admin access
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+    if (!isAdmin && tutor_id && tutor_id !== user.id) {
+      return jsonResponse(
+        { error: "Unauthorized: tutor_id must match the authenticated user" },
+        403
+      );
+    }
 
-      if (profile?.role !== "admin") {
+    const effectiveTutorId = isAdmin ? tutor_id || user.id : user.id;
+
+    if (!isAdmin) {
+      // Verify the caller is a tutor who has had sessions with this student
+      const { data: tutorBookings, error: bookingsError } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("tutor_id", user.id)
+        .eq("learner_id", student_id)
+        .limit(1);
+
+      if (bookingsError || !tutorBookings || tutorBookings.length === 0) {
         return jsonResponse(
           {
             error:
@@ -269,6 +277,7 @@ serve(async (req) => {
         );
       }
     }
+
 
     // ── Step 1: Gather student activity data ──────────────────────────────────
 
