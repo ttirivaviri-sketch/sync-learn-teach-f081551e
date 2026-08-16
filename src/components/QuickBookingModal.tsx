@@ -220,11 +220,38 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       setNotes('');
     } catch (error) {
       logger.error('Booking error:', error);
-      toast({
-        title: "Booking Failed",
-        description: "There was an error sending your booking request. Please try again.",
-        variant: "destructive",
-      });
+      const msg = String((error as any)?.message ?? '');
+      const code = (error as any)?.code;
+      if (code === '23P01' || msg.includes('TUTOR_SLOT_TAKEN') || msg.includes('LEARNER_SLOT_TAKEN')) {
+        const learnerClash = msg.includes('LEARNER_SLOT_TAKEN');
+        toast({
+          title: learnerClash ? "You're already booked then" : "That slot was just taken",
+          description: learnerClash
+            ? "You already have a session at this time. Pick another slot."
+            : "Another learner booked this time. Choose a different slot — we've refreshed availability.",
+          variant: "destructive",
+        });
+        setSelectedTime('');
+        const from = new Date();
+        const to = new Date(Date.now() + 15 * 86_400_000);
+        const { data } = await (supabase as any).rpc('get_tutor_busy_slots', {
+          _tutor_id: tutor.id,
+          _from: from.toISOString(),
+          _to: to.toISOString(),
+        });
+        setBusySlots(
+          (data || []).map((b: { scheduled_at: string; duration_minutes: number }) => ({
+            start: new Date(b.scheduled_at).getTime(),
+            end: new Date(b.scheduled_at).getTime() + (b.duration_minutes || 60) * 60_000,
+          }))
+        );
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: "There was an error sending your booking request. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }
