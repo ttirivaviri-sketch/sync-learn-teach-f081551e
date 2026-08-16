@@ -87,6 +87,7 @@ const LegalDataCompliance = lazy(() => import("./pages/legal/DataCompliance"));
 // Settings
 const SettingsDataCompliance = lazy(() => import("./pages/settings/DataCompliance"));
 const SettingsNotifications = lazy(() => import("./pages/settings/NotificationSettings"));
+const SettingsAiUsage = lazy(() => import("./pages/settings/AiUsage"));
 const DebugHaptics = lazy(() => import("./pages/DebugHaptics"));
 
 
