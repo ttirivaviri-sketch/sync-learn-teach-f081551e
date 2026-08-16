@@ -51,6 +51,7 @@ export default function NotificationSettings() {
       if (data && !cancelled) {
         setHomeworkRelease(!!data.homework_release_alerts);
         setDueSoon(!!data.due_soon_alerts);
+        setSessionReminders(data.session_reminder_alerts ?? true);
         setPushEnabled(!!data.push_enabled);
       }
       setLoading(false);
