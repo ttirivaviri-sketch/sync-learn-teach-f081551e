@@ -59,13 +59,14 @@ export default function NotificationSettings() {
     return () => { cancelled = true; };
   }, [navigate]);
 
-  const save = async (patch: Partial<{ homework_release_alerts: boolean; due_soon_alerts: boolean; push_enabled: boolean }>) => {
+  const save = async (patch: Partial<{ homework_release_alerts: boolean; due_soon_alerts: boolean; session_reminder_alerts: boolean; push_enabled: boolean }>) => {
     if (!userId) return;
     setSaving(true);
     const next = {
       user_id: userId,
       homework_release_alerts: homeworkRelease,
       due_soon_alerts: dueSoon,
+      session_reminder_alerts: sessionReminders,
       push_enabled: pushEnabled,
       ...patch,
     };
