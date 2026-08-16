@@ -155,6 +155,24 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
     return slots;
   }, [selectedDate, availability, availableDates]);
 
+  // Remove slots that clash with an existing booking, or that are in the past
+  const durationMs = parseInt(duration || '60') * 60_000;
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    const now = Date.now();
+    return rawTimeSlots.filter((t) => {
+      const start = new Date(`${selectedDate}T${t}`).getTime();
+      if (start <= now) return false;
+      const end = start + durationMs;
+      return !busySlots.some((b) => start < b.end && end > b.start);
+    });
+  }, [rawTimeSlots, busySlots, selectedDate, durationMs]);
+
+  // Clear a chosen time if it becomes unavailable (e.g. duration change)
+  useEffect(() => {
+    if (selectedTime && !timeSlots.includes(selectedTime)) setSelectedTime('');
+  }, [timeSlots, selectedTime]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
