@@ -29,6 +29,7 @@ export default function NotificationSettings() {
   const [userId, setUserId] = useState<string | null>(null);
   const [homeworkRelease, setHomeworkRelease] = useState(true);
   const [dueSoon, setDueSoon] = useState(true);
+  const [sessionReminders, setSessionReminders] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [perm, setPerm] = useState<PermState>(currentPermission());
 
@@ -50,6 +51,7 @@ export default function NotificationSettings() {
       if (data && !cancelled) {
         setHomeworkRelease(!!data.homework_release_alerts);
         setDueSoon(!!data.due_soon_alerts);
+        setSessionReminders(data.session_reminder_alerts ?? true);
         setPushEnabled(!!data.push_enabled);
       }
       setLoading(false);
@@ -57,13 +59,14 @@ export default function NotificationSettings() {
     return () => { cancelled = true; };
   }, [navigate]);
 
-  const save = async (patch: Partial<{ homework_release_alerts: boolean; due_soon_alerts: boolean; push_enabled: boolean }>) => {
+  const save = async (patch: Partial<{ homework_release_alerts: boolean; due_soon_alerts: boolean; session_reminder_alerts: boolean; push_enabled: boolean }>) => {
     if (!userId) return;
     setSaving(true);
     const next = {
       user_id: userId,
       homework_release_alerts: homeworkRelease,
       due_soon_alerts: dueSoon,
+      session_reminder_alerts: sessionReminders,
       push_enabled: pushEnabled,
       ...patch,
     };
@@ -136,6 +139,18 @@ export default function NotificationSettings() {
                   checked={dueSoon}
                   disabled={saving}
                   onCheckedChange={(v) => { setDueSoon(v); save({ due_soon_alerts: v }); }}
+                />
+              </div>
+
+              <div className="flex items-start justify-between gap-4 py-2 border-t border-border/50">
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-medium">Session reminders</Label>
+                  <p className="text-xs text-muted-foreground">Alerts 24 hours and 1 hour before each booked tutoring session.</p>
+                </div>
+                <Switch
+                  checked={sessionReminders}
+                  disabled={saving}
+                  onCheckedChange={(v) => { setSessionReminders(v); save({ session_reminder_alerts: v }); }}
                 />
               </div>
 

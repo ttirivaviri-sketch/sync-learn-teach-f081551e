@@ -49,6 +49,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
   const [notes, setNotes] = useState('');
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
   const [loadingAvailability, setLoadingAvailability] = useState(true);
+  const [busySlots, setBusySlots] = useState<{ start: number; end: number }[]>([]);
   const { toast } = useToast();
 
   // Fetch tutor availability when modal opens
@@ -63,6 +64,31 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       .then(({ data }) => {
         setAvailability((data as AvailabilitySlot[]) || []);
         setLoadingAvailability(false);
+      });
+  }, [isOpen, tutor.id]);
+
+  // Fetch already-booked slots for this tutor (next 14 days) so taken times are hidden
+  useEffect(() => {
+    if (!isOpen || !tutor.id) return;
+    const from = new Date();
+    const to = new Date(Date.now() + 15 * 86_400_000);
+    (supabase as any)
+      .rpc('get_tutor_busy_slots', {
+        _tutor_id: tutor.id,
+        _from: from.toISOString(),
+        _to: to.toISOString(),
+      })
+      .then(({ data, error }: any) => {
+        if (error) {
+          logger.error('busy slots error', error);
+          return;
+        }
+        setBusySlots(
+          (data || []).map((b: { scheduled_at: string; duration_minutes: number }) => ({
+            start: new Date(b.scheduled_at).getTime(),
+            end: new Date(b.scheduled_at).getTime() + (b.duration_minutes || 60) * 60_000,
+          }))
+        );
       });
   }, [isOpen, tutor.id]);
 
@@ -93,7 +119,7 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
   }, [availableDates, availability]);
 
   // Generate time slots based on tutor's availability for the selected date
-  const timeSlots = useMemo(() => {
+  const rawTimeSlots = useMemo(() => {
     const selectedDateObj = availableDates.find(d => d.value === selectedDate);
     if (!selectedDateObj) return [];
 
@@ -128,6 +154,24 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
     }
     return slots;
   }, [selectedDate, availability, availableDates]);
+
+  // Remove slots that clash with an existing booking, or that are in the past
+  const durationMs = parseInt(duration || '60') * 60_000;
+  const timeSlots = useMemo(() => {
+    if (!selectedDate) return [];
+    const now = Date.now();
+    return rawTimeSlots.filter((t) => {
+      const start = new Date(`${selectedDate}T${t}`).getTime();
+      if (start <= now) return false;
+      const end = start + durationMs;
+      return !busySlots.some((b) => start < b.end && end > b.start);
+    });
+  }, [rawTimeSlots, busySlots, selectedDate, durationMs]);
+
+  // Clear a chosen time if it becomes unavailable (e.g. duration change)
+  useEffect(() => {
+    if (selectedTime && !timeSlots.includes(selectedTime)) setSelectedTime('');
+  }, [timeSlots, selectedTime]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,11 +220,38 @@ export const QuickBookingModal = ({ isOpen, onClose, tutor, onSubmit }: QuickBoo
       setNotes('');
     } catch (error) {
       logger.error('Booking error:', error);
-      toast({
-        title: "Booking Failed",
-        description: "There was an error sending your booking request. Please try again.",
-        variant: "destructive",
-      });
+      const msg = String((error as any)?.message ?? '');
+      const code = (error as any)?.code;
+      if (code === '23P01' || msg.includes('TUTOR_SLOT_TAKEN') || msg.includes('LEARNER_SLOT_TAKEN')) {
+        const learnerClash = msg.includes('LEARNER_SLOT_TAKEN');
+        toast({
+          title: learnerClash ? "You're already booked then" : "That slot was just taken",
+          description: learnerClash
+            ? "You already have a session at this time. Pick another slot."
+            : "Another learner booked this time. Choose a different slot — we've refreshed availability.",
+          variant: "destructive",
+        });
+        setSelectedTime('');
+        const from = new Date();
+        const to = new Date(Date.now() + 15 * 86_400_000);
+        const { data } = await (supabase as any).rpc('get_tutor_busy_slots', {
+          _tutor_id: tutor.id,
+          _from: from.toISOString(),
+          _to: to.toISOString(),
+        });
+        setBusySlots(
+          (data || []).map((b: { scheduled_at: string; duration_minutes: number }) => ({
+            start: new Date(b.scheduled_at).getTime(),
+            end: new Date(b.scheduled_at).getTime() + (b.duration_minutes || 60) * 60_000,
+          }))
+        );
+      } else {
+        toast({
+          title: "Booking Failed",
+          description: "There was an error sending your booking request. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
       setLoading(false);
     }

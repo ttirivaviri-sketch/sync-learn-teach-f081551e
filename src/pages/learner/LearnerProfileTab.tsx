@@ -249,6 +249,11 @@ export const LearnerProfileTab = ({
           onClick={() => onNavigate("/settings/notifications")}
         />
         <MenuRow
+          icon={<Sparkles className="h-4 w-4" />}
+          label="AI usage & quota"
+          onClick={() => onNavigate("/settings/ai-usage")}
+        />
+        <MenuRow
           icon={<Shield className="h-4 w-4" />}
           label="Data & Compliance"
           onClick={() => onNavigate("/settings/data-compliance")}
