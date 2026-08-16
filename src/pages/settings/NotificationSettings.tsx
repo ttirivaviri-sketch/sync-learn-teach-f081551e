@@ -29,6 +29,7 @@ export default function NotificationSettings() {
   const [userId, setUserId] = useState<string | null>(null);
   const [homeworkRelease, setHomeworkRelease] = useState(true);
   const [dueSoon, setDueSoon] = useState(true);
+  const [sessionReminders, setSessionReminders] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(true);
   const [perm, setPerm] = useState<PermState>(currentPermission());
 
