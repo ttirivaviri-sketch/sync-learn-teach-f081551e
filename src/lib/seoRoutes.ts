@@ -47,6 +47,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/home.jpg",
   },
   {
+    path: "/past-papers/ieb",
+    title: "IEB Past Papers & Memos — Grade 12 | StudySync",
+    description:
+      "Practise IEB past papers for Mathematics, Physical Sciences, Life Sciences and English, with marking guidelines, organised by subject, grade and year.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/books",
     title: "Free Textbooks, Novels & Study Guides | StudySync",
     description:

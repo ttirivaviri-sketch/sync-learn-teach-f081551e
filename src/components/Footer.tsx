@@ -6,6 +6,7 @@ const footerLinks = {
     { label: "AI StudyMode", href: "/learner/auth" },
     { label: "Find Tutors", href: "/tutoring" },
     { label: "Past Papers", href: "/past-papers" },
+    { label: "IEB Past Papers", href: "/past-papers/ieb" },
     { label: "Books & Study Guides", href: "/books" },
     { label: "Pricing", href: "/#pricing" },
   ],
