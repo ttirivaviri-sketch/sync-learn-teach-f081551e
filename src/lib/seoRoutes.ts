@@ -29,7 +29,8 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/",
     title: "StudySync — Tutors & AI StudyMode for students",
     description:
-      "Book verified tutors and study smarter with AI StudyMode: past papers and memos, quizzes, flashcards and progress tracking for ZIMSEC O Level & A Level, Cambridge IGCSE, CAPS/NSC matric and IEB Grade 12.",
+      "Book verified tutors and study with AI StudyMode: past papers and memos, quizzes and flashcards for ZIMSEC O & A Level, Cambridge IGCSE, matric (CAPS/NSC) and IEB Grade 12.",
+
     image: "/og/home.jpg",
   },
   {
