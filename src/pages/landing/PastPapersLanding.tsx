@@ -138,6 +138,16 @@ const PastPapersLanding = () => {
           ))}
         </div>
 
+        <div className="mt-12 rounded-2xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing IEB exams?</h2>
+          <p className="mb-3 text-sm leading-relaxed text-gray-600">
+            The Independent Examinations Board sets its own papers and marking guidelines.
+          </p>
+          <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/ieb">
+            Browse IEB past papers &amp; memos →
+          </Link>
+        </div>
+
         <div className="mt-12 rounded-2xl bg-blue-600 p-8 text-center sm:p-10">
           <h2 className="text-2xl font-bold text-white">Start practising with real papers today</h2>
           <p className="mx-auto mt-2 max-w-xl text-blue-100">

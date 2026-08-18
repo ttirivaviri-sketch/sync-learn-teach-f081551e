@@ -17,6 +17,7 @@ import { prefetchStudyMode } from "@/studymode/prefetch";
 const Index = lazy(() => import("./pages/Index"));
 const TutoringLanding = lazy(() => import("./pages/landing/TutoringLanding"));
 const PastPapersLanding = lazy(() => import("./pages/landing/PastPapersLanding"));
+const IebPastPapersLanding = lazy(() => import("./pages/landing/IebPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
@@ -127,6 +128,7 @@ const App = () => {
               <Route path="/tutoring" element={<TutoringLanding />} />
               <Route path="/tutors" element={<Navigate to="/tutoring" replace />} />
               <Route path="/past-papers" element={<PastPapersLanding />} />
+              <Route path="/past-papers/ieb" element={<IebPastPapersLanding />} />
               <Route path="/books" element={<BooksLanding />} />
               <Route path="/textbooks" element={<Navigate to="/books" replace />} />
               <Route path="/app" element={<AppRedirect />} />
