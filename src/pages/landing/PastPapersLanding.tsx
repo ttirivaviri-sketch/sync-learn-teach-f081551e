@@ -13,19 +13,19 @@ import LandingPageLayout, { type LandingFaq } from "@/components/landing/Landing
 
 const PAPER_SETS = [
   {
-    name: "ZIMSEC O-Level & A-Level",
+    name: "ZIMSEC O Level & A Level",
     detail:
-      "Official ZIMSEC specimen papers across Maths, Combined Science, English, Geography, Accounts and more — sourced from ZIMSEC's own published downloads.",
+      "Official ZIMSEC O Level (Form 4) and A Level (Upper 6) specimen papers across Maths, Combined Science, English, Geography, Accounts and more — sourced from ZIMSEC's own published downloads.",
   },
   {
-    name: "Cambridge IGCSE, O & A-Level",
+    name: "Cambridge IGCSE, O Level & AS/A Level",
     detail:
-      "Freely published Cambridge International question papers with matching mark schemes, so you can mark your own attempts properly.",
+      "Freely published Cambridge International IGCSE, O Level and AS/A Level question papers with matching mark schemes and memos, so you can mark your own attempts properly.",
   },
   {
-    name: "CAPS / NSC & IEB",
+    name: "CAPS / NSC matric & IEB Grade 12",
     detail:
-      "South African exam preparation resources aligned to the national curriculum, organised by grade and subject.",
+      "Grade 10, Grade 11 and Grade 12 matric (NSC) exam preparation aligned to the South African national curriculum, plus IEB papers — organised by grade, subject and year.",
   },
 ];
 
@@ -47,7 +47,19 @@ const FAQS: LandingFaq[] = [
   },
   {
     question: "Which subjects have past papers?",
-    answer: "Mathematics, Combined Science, Physics, Chemistry, Biology, English, Geography, History, Accounts/Accounting, Business Studies and more, across ZIMSEC, Cambridge, CAPS and IEB.",
+    answer: "Mathematics, Maths Literacy, Combined Science, Physical Sciences (Physics and Chemistry), Life Sciences/Biology, English, Afrikaans, Geography, History, Accounts/Accounting, Business Studies, Economics and more, across ZIMSEC O and A Level, Cambridge IGCSE and AS/A Level, CAPS/NSC Grade 10-12 and IEB.",
+  },
+  {
+    question: "Where can I download Grade 12 matric past papers and memos?",
+    answer: "Sign in to the StudySync library and filter to CAPS/NSC, Grade 12. You get matric past exam papers with memos where they have been published, alongside Grade 10 and Grade 11 papers for earlier revision, and IEB papers on the dedicated IEB page.",
+  },
+  {
+    question: "Do you have ZIMSEC O Level and A Level past papers?",
+    answer: "Yes. The library links official ZIMSEC specimen papers for O Level (Form 4) and A Level (Lower and Upper 6) across Maths, Combined Science, Sciences, English, Commerce, Accounts, Geography and History, so Zimbabwean learners can practise in the exact exam format.",
+  },
+  {
+    question: "What is the difference between Cambridge IGCSE, O Level and A Level papers?",
+    answer: "IGCSE and O Level are taken around Form 4 / Grade 11 and cover a broad subject spread; AS and A Level are the advanced, two-year qualifications taken in Lower and Upper 6. StudySync separates all three so you only practise the papers you actually write.",
   },
   {
     question: "How much does it cost to access past papers?",
@@ -66,8 +78,8 @@ const PastPapersLanding = () => {
 
   return (
     <LandingPageLayout
-      title="Past Exam Papers — ZIMSEC, Cambridge, CAPS | StudySync"
-      description="Practise with verified past exam papers: official ZIMSEC specimen papers and Cambridge IGCSE/A-Level papers with mark schemes, organised by subject and year."
+      title="Past Exam Papers &amp; Memos — ZIMSEC, Cambridge, Grade 12"
+      description="Download past exam papers with memos: ZIMSEC O Level & A Level, Cambridge IGCSE, O Level & AS/A Level, and CAPS/NSC Grade 12 matric papers — sorted by subject, grade and year."
       path="/past-papers"
       faqs={FAQS}
     >
@@ -78,13 +90,14 @@ const PastPapersLanding = () => {
             Verified exam practice
           </p>
           <h1 className="text-4xl font-extrabold leading-tight text-gray-900 sm:text-5xl">
-            Past exam papers, organised the way you revise
+            Past exam papers &amp; memos, organised the way you revise
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-gray-600">
             Stop hunting through broken links. The StudySync library gives you{" "}
-            <strong>official ZIMSEC specimen papers</strong> and{" "}
-            <strong>Cambridge question papers with mark schemes</strong> — every link verified,
-            filtered by curriculum, subject, level and year.
+            <strong>official ZIMSEC O Level and A Level specimen papers</strong>,{" "}
+            <strong>Cambridge IGCSE, O Level and AS/A Level papers with mark schemes</strong>, and{" "}
+            <strong>Grade 12 matric (CAPS/NSC) and IEB exam papers with memos</strong> — every link
+            verified, filtered by curriculum, subject, grade, level and year.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
