@@ -89,8 +89,8 @@ const IebPastPapersLanding = () => {
 
   return (
     <LandingPageLayout
-      title="IEB Past Papers & Memos — Grade 12 | StudySync"
-      description="Practise IEB past papers for Mathematics, Physical Sciences, Life Sciences and English, with marking guidelines, organised by subject, grade and year."
+      title="IEB Past Papers &amp; Memos — Grade 12 Matric | StudySync"
+      description="Practise IEB Grade 12 matric past papers for Mathematics, Physical Sciences, Life Sciences and English, with marking guidelines and memos by subject, grade and year."
       path="/past-papers/ieb"
       faqs={FAQS}
     >
@@ -101,7 +101,7 @@ const IebPastPapersLanding = () => {
             For South African independent schools
           </p>
           <h1 className="text-4xl font-extrabold leading-tight text-gray-900 sm:text-5xl">
-            IEB past papers, sorted by subject, grade and year
+            IEB past papers &amp; memos, sorted by subject, grade and year
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-gray-600">
             Everything an IEB learner needs to revise properly:{" "}
@@ -175,7 +175,7 @@ const IebPastPapersLanding = () => {
           <ul className="grid gap-2 text-sm text-blue-700 sm:grid-cols-3">
             <li>
               <Link className="hover:underline" to="/past-papers">
-                All past papers (ZIMSEC, Cambridge, CAPS)
+                All past papers (ZIMSEC O &amp; A Level, Cambridge IGCSE, matric)
               </Link>
             </li>
             <li>

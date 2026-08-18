@@ -29,37 +29,40 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/",
     title: "StudySync — Tutors & AI StudyMode for students",
     description:
-      "Book verified tutors and study smarter with AI StudyMode: past papers, quizzes, flashcards and progress tracking for ZIMSEC, CAPS, IEB and Cambridge.",
+      "Book verified tutors and study with AI StudyMode: past papers and memos, quizzes and flashcards for ZIMSEC O & A Level, Cambridge IGCSE, matric (CAPS/NSC) and IEB.",
+
+
     image: "/og/home.jpg",
   },
   {
     path: "/tutoring",
-    title: "Online Tutors in South Africa — StudySync",
+    title: "Online Tutors South Africa & Zimbabwe — StudySync",
     description:
-      "Book verified online tutors for Maths, Sciences, English and more. CAPS, IEB, Cambridge and ZIMSEC tutoring with pay-per-session pricing and a free trial.",
+      "Book verified online tutors for Maths, Physical Sciences and English — Grade 12 matric (CAPS/NSC), IEB, Cambridge IGCSE, O Level & A Level and ZIMSEC. Pay per session, free trial.",
     image: "/og/tutor-auth.jpg",
   },
   {
     path: "/past-papers",
-    title: "Past Exam Papers — ZIMSEC, Cambridge, CAPS | StudySync",
+    title: "Past Exam Papers & Memos — ZIMSEC, Cambridge, Grade 12",
     description:
-      "Practise with verified past exam papers: official ZIMSEC specimen papers and Cambridge IGCSE/A-Level papers with mark schemes, organised by subject and year.",
+      "Download past exam papers with memos: ZIMSEC O Level & A Level, Cambridge IGCSE, O Level & AS/A Level, and CAPS/NSC Grade 12 matric papers — sorted by subject, grade and year.",
     image: "/og/home.jpg",
   },
   {
     path: "/past-papers/ieb",
-    title: "IEB Past Papers & Memos — Grade 12 | StudySync",
+    title: "IEB Past Papers & Memos — Grade 12 Matric | StudySync",
     description:
-      "Practise IEB past papers for Mathematics, Physical Sciences, Life Sciences and English, with marking guidelines, organised by subject, grade and year.",
+      "Practise IEB Grade 12 matric past papers for Mathematics, Physical Sciences, Life Sciences and English, with marking guidelines and memos by subject, grade and year.",
     image: "/og/home.jpg",
   },
   {
     path: "/books",
-    title: "Free Textbooks, Novels & Study Guides | StudySync",
+    title: "Free Textbooks, Set Works & Study Guides | StudySync",
     description:
-      "Read free openly licensed textbooks, set-work novels and study guides for CAPS, IEB, Cambridge and ZIMSEC — organised by subject and grade in one library.",
+      "Free openly licensed textbooks, English set-work novels and study guides for CAPS/NSC Grade 10–12, IEB, Cambridge IGCSE/A Level and ZIMSEC O & A Level — by subject and grade.",
     image: "/og/home.jpg",
   },
+
   {
     path: "/learner/auth",
     title: "Sign in to StudySync — Start learning",

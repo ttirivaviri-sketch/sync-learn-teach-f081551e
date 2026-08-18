@@ -20,10 +20,10 @@ const SUBJECTS = [
 ];
 
 const CURRICULA = [
-  { name: "CAPS / NSC", detail: "South African national curriculum, Grades 8–12 and matric exam prep." },
-  { name: "IEB", detail: "Independent Examinations Board — support for independent-school learners." },
-  { name: "Cambridge", detail: "IGCSE, O-Level and A-Level tutoring aligned to Cambridge International." },
-  { name: "ZIMSEC", detail: "Zimbabwe School Examinations Council — Form 1 to Upper 6 support." },
+  { name: "CAPS / NSC", detail: "South African national curriculum — Grade 8 to Grade 12, including matric (National Senior Certificate) exam prep and Grade 11 controlled tests." },
+  { name: "IEB", detail: "Independent Examinations Board — Grade 12 matric support for independent-school learners, matched to IEB papers and marking guidelines." },
+  { name: "Cambridge", detail: "IGCSE, O Level, AS Level and A Level tutoring aligned to Cambridge International syllabuses and mark schemes." },
+  { name: "ZIMSEC", detail: "Zimbabwe School Examinations Council — Form 1 to Form 4 O Level and Lower/Upper 6 A Level tutoring, in line with ZIMSEC syllabuses." },
 ];
 
 const FAQS: LandingFaq[] = [
@@ -37,7 +37,15 @@ const FAQS: LandingFaq[] = [
   },
   {
     question: "Which curricula do StudySync tutors cover?",
-    answer: "Tutors cover CAPS/NSC, IEB, Cambridge (IGCSE, O-Level and A-Level) and ZIMSEC, from Grade 8 / Form 1 up to matric and Upper 6.",
+    answer: "Tutors cover CAPS/NSC, IEB, Cambridge (IGCSE, O Level, AS and A Level) and ZIMSEC (O Level and A Level), from Grade 8 / Form 1 up to Grade 12 matric and Upper 6.",
+  },
+  {
+    question: "Can I get a matric maths tutor for Grade 12?",
+    answer: "Yes. Grade 12 matric Mathematics and Maths Literacy are the most requested subjects on StudySync, for both CAPS/NSC and IEB. Tutors work through past papers and memos with you and target the exam sections costing you marks.",
+  },
+  {
+    question: "Do you have ZIMSEC O Level and A Level tutors in Zimbabwe?",
+    answer: "Yes. Zimbabwean learners can book tutors for ZIMSEC O Level (Form 1 to Form 4) and A Level (Lower and Upper 6) in Maths, Combined Science, Sciences, English, Accounts, Commerce, Geography and History. Lessons are online, so location is not a limit.",
   },
   {
     question: "Are lessons online or in person?",
@@ -56,7 +64,7 @@ const TutoringLanding = () => {
 
   return (
     <LandingPageLayout
-      title="Online Tutors in South Africa — StudySync"
+      title="Online Tutors South Africa &amp; Zimbabwe — StudySync"
       description={`Book verified online tutors for Maths, Sciences, English and more. CAPS, IEB, Cambridge and ZIMSEC. R${PRICING.tutor.perSession} per session, ${TRIAL_DURATION_DAYS}-day free trial.`}
       path="/tutoring"
       faqs={FAQS}
@@ -72,7 +80,8 @@ const TutoringLanding = () => {
           </h1>
           <p className="mt-5 text-lg leading-relaxed text-gray-600">
             StudySync connects learners with verified tutors for Mathematics, Physical Sciences,
-            English and more — across CAPS, IEB, Cambridge and ZIMSEC. Sessions are{" "}
+            English and more — across CAPS/NSC (Grade 8 to Grade 12 matric), IEB, Cambridge IGCSE,
+            O Level and A Level, and ZIMSEC O Level and A Level. Sessions are{" "}
             <strong>R{PRICING.tutor.perSession} each</strong>, booked online at times that suit you,
             with no long-term contracts.
           </p>
