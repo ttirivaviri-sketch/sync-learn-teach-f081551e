@@ -67,8 +67,8 @@ const BooksLanding = () => {
 
   return (
     <LandingPageLayout
-      title="Free Textbooks, Novels & Study Guides | StudySync"
-      description="Read free openly licensed textbooks, set-work novels and study guides for CAPS, IEB, Cambridge and ZIMSEC — organised by subject and grade in one library."
+      title="Free Textbooks, Set Works & Study Guides | StudySync"
+      description="Free openly licensed textbooks, set-work novels and study guides for CAPS/NSC Grade 10–12, IEB, Cambridge IGCSE/A Level and ZIMSEC O & A Level."
       path="/books"
       faqs={FAQS}
     >
