@@ -38,14 +38,14 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/tutoring",
     title: "Online Tutors South Africa & Zimbabwe — StudySync",
     description:
-      "Book verified online tutors for Maths, Physical Sciences and English — Grade 12 matric (CAPS/NSC), IEB, Cambridge IGCSE, O Level & A Level and ZIMSEC. Pay per session, free trial.",
+      "Book verified online tutors for Maths, Sciences, English — Grade 12 matric, IEB, Cambridge IGCSE, O/A Level and ZIMSEC. Pay per session, free trial.",
     image: "/og/tutor-auth.jpg",
   },
   {
     path: "/past-papers",
     title: "Past Exam Papers & Memos — ZIMSEC, Cambridge, Grade 12",
     description:
-      "Download past exam papers with memos: ZIMSEC O Level & A Level, Cambridge IGCSE, O Level & AS/A Level, and CAPS/NSC Grade 12 matric papers — sorted by subject, grade and year.",
+      "Download past exam papers with memos: ZIMSEC O & A Level, Cambridge IGCSE, O/A Level, and CAPS/NSC Grade 12 matric — sorted by subject, grade and year.",
     image: "/og/home.jpg",
   },
   {
@@ -59,7 +59,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/books",
     title: "Free Textbooks, Set Works & Study Guides | StudySync",
     description:
-      "Free openly licensed textbooks, English set-work novels and study guides for CAPS/NSC Grade 10–12, IEB, Cambridge IGCSE/A Level and ZIMSEC O & A Level — by subject and grade.",
+      "Free openly licensed textbooks, set-work novels and study guides for CAPS/NSC Grade 10–12, IEB, Cambridge IGCSE/A Level and ZIMSEC O & A Level.",
     image: "/og/home.jpg",
   },
 
