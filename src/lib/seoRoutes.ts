@@ -59,7 +59,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/books",
     title: "Free Textbooks, Set Works & Study Guides | StudySync",
     description:
-      "Free openly licensed textbooks, English set-work novels and study guides for CAPS/NSC Grade 10–12, IEB, Cambridge IGCSE/A Level and ZIMSEC O & A Level — by subject and grade.",
+      "Free openly licensed textbooks, set-work novels and study guides for CAPS/NSC Grade 10–12, IEB, Cambridge IGCSE/A Level and ZIMSEC O & A Level.",
     image: "/og/home.jpg",
   },
 
