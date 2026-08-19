@@ -38,7 +38,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/tutoring",
     title: "Online Tutors South Africa & Zimbabwe — StudySync",
     description:
-      "Book verified online tutors for Maths, Physical Sciences and English — Grade 12 matric (CAPS/NSC), IEB, Cambridge IGCSE, O Level & A Level and ZIMSEC. Pay per session, free trial.",
+      "Book verified online tutors for Maths, Sciences, English — Grade 12 matric, IEB, Cambridge IGCSE, O/A Level and ZIMSEC. Pay per session, free trial.",
     image: "/og/tutor-auth.jpg",
   },
   {

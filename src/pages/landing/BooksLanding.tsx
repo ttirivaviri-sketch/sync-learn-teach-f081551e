@@ -15,7 +15,7 @@ const COLLECTIONS = [
     icon: BookOpen,
     name: "Free openly licensed textbooks",
     detail:
-      "Peer-reviewed OpenStax textbooks for Maths, Physics, Chemistry, Biology, Economics, Business and more — full PDFs, free to read, legally licensed.",
+      "Peer-reviewed OpenStax textbooks for Maths, Physics, Chemistry, Biology, Economics, Business and more — full PDFs for Grade 10–12 / Form 4 and A Level, free to read, legally licensed.",
   },
   {
     icon: BookMarked,
@@ -27,7 +27,7 @@ const COLLECTIONS = [
     icon: Library,
     name: "Syllabi & study guides",
     detail:
-      "Official syllabus documents and curriculum-aligned guides so you always know exactly what your exam expects you to cover.",
+      "Official syllabus documents and curriculum-aligned guides for CAPS/NSC, IEB, Cambridge IGCSE / O Level / A Level and ZIMSEC O & A Level so you always know exactly what your exam expects.",
   },
   {
     icon: PlayCircle,
@@ -44,7 +44,7 @@ const FAQS: LandingFaq[] = [
   },
   {
     question: "Which subjects have textbooks and study guides?",
-    answer: "Mathematics, Physics, Chemistry, Biology, Economics, Business Studies, Accounting, English and more — organised for CAPS, IEB, Cambridge and ZIMSEC learners by grade and level.",
+    answer: "Mathematics, Physics, Chemistry, Biology, Economics, Business Studies, Accounting, English and more — organised for CAPS/NSC Grade 10–12 matric, IEB, Cambridge IGCSE / O Level / A Level and ZIMSEC O & A Level learners by grade and level.",
   },
   {
     question: "Do you have the set-work novels for English literature?",
@@ -84,7 +84,7 @@ const BooksLanding = () => {
           <p className="mt-5 text-lg leading-relaxed text-gray-600">
             Textbooks are expensive — good ones don't have to be. StudySync curates{" "}
             <strong>openly licensed textbooks</strong>, <strong>public-domain set-work novels</strong>{" "}
-            and study guides for CAPS, IEB, Cambridge and ZIMSEC, organised by your subject and grade.
+            and study guides for CAPS/NSC Grade 10–12 matric, IEB, Cambridge IGCSE, O Level &amp; A Level and ZIMSEC O &amp; A Level — organised by your subject and grade.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
