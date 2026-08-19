@@ -45,7 +45,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/past-papers",
     title: "Past Exam Papers & Memos — ZIMSEC, Cambridge, Grade 12",
     description:
-      "Download past exam papers with memos: ZIMSEC O Level & A Level, Cambridge IGCSE, O Level & AS/A Level, and CAPS/NSC Grade 12 matric papers — sorted by subject, grade and year.",
+      "Download past exam papers with memos: ZIMSEC O & A Level, Cambridge IGCSE, O/A Level, and CAPS/NSC Grade 12 matric — sorted by subject, grade and year.",
     image: "/og/home.jpg",
   },
   {
