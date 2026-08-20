@@ -1,5 +1,4 @@
 import { useEffect, useRef } from "react";
-import ribbonAsset from "@/assets/logo-ribbon.webm.asset.json";
 
 /**
  * CurriculumRibbon — full-bleed trust strip of exam-board logos that scroll
@@ -46,7 +45,7 @@ const CurriculumRibbon = () => {
       >
         <video
           ref={videoRef}
-          src={ribbonAsset.url}
+          src="/curriculum-ribbon.webm"
           className="absolute left-0 top-1/2 w-full -translate-y-1/2 scale-[2.2] sm:scale-[1.7] lg:scale-[1.25]"
           autoPlay
           muted
