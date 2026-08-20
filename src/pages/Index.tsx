@@ -5,6 +5,7 @@ import { Seo } from "@/components/Seo";
 import { analytics } from "@/utils/analytics";
 
 // Below-the-fold sections — lazy so the hero paints first.
+const CurriculumRibbon = lazy(() => import("@/components/CurriculumRibbon"));
 const AppShowcase = lazy(() => import("@/components/AppShowcase"));
 const TrustSection = lazy(() => import("@/components/TrustSection"));
 const FeaturesSection = lazy(() => import("@/components/FeaturesSection"));
