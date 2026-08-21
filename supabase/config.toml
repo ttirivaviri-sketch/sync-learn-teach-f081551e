@@ -189,3 +189,6 @@ verify_jwt = true
 
 [functions.transcribe-lesson-chunk]
 verify_jwt = true
+
+[functions.gsc-search-queries]
+verify_jwt = true
