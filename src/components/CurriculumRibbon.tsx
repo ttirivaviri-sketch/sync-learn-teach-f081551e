@@ -69,7 +69,7 @@ const CurriculumRibbon = () => {
           className="pointer-events-none absolute left-0 top-1/2 w-full -translate-y-1/2 scale-[3.6] sm:scale-[2.6] lg:scale-[1.9]"
           autoPlay
           muted
-          defaultMuted
+          
           loop
           playsInline
           disablePictureInPicture
