@@ -24,6 +24,7 @@ import {
   FileCheck,
   BookOpen,
   Building2,
+  Search,
 } from "lucide-react";
 
 const items = [
@@ -40,6 +41,7 @@ const items = [
   { title: "Support", url: "/admin/support", icon: LifeBuoy },
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
   { title: "Study Analytics", url: "/admin/study-analytics", icon: BarChart3 },
+  { title: "Search Queries", url: "/admin/search-queries", icon: Search },
   { title: "Roles", url: "/admin/roles", icon: ShieldCheck },
   { title: "Security", url: "/admin/security", icon: Shield },
   { title: "Refunds", url: "/admin/refunds", icon: RotateCcw },
