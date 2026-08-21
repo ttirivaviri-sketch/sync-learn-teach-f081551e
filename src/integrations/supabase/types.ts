@@ -1326,6 +1326,45 @@ export type Database = {
           },
         ]
       }
+      gsc_query_snapshots: {
+        Row: {
+          created_at: string
+          dimension: string
+          end_date: string
+          id: string
+          range_days: number
+          refreshed_at: string
+          rows: Json
+          site_url: string
+          start_date: string
+          totals: Json
+        }
+        Insert: {
+          created_at?: string
+          dimension?: string
+          end_date: string
+          id?: string
+          range_days: number
+          refreshed_at?: string
+          rows?: Json
+          site_url: string
+          start_date: string
+          totals?: Json
+        }
+        Update: {
+          created_at?: string
+          dimension?: string
+          end_date?: string
+          id?: string
+          range_days?: number
+          refreshed_at?: string
+          rows?: Json
+          site_url?: string
+          start_date?: string
+          totals?: Json
+        }
+        Relationships: []
+      }
       guardian_links: {
         Row: {
           accepted_at: string | null
