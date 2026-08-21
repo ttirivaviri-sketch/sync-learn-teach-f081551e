@@ -5,6 +5,11 @@ import { useEffect, useRef } from "react";
  * off both edges of the screen. The source clip is a 16:9 white frame whose
  * ribbon occupies only the middle band, so the section crops to that band and
  * scales the video up for a clean, zoomed-in view.
+ *
+ * Playback notes: MP4/H.264 is listed first for iOS Safari (VP9 WebM is not
+ * decodable on older iOS), and the element is muted + playsInline so mobile
+ * browsers allow autoplay without a tap. If autoplay is still blocked we retry
+ * on the first user interaction and whenever the tab becomes visible again.
  */
 const CurriculumRibbon = () => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -12,11 +17,27 @@ const CurriculumRibbon = () => {
   useEffect(() => {
     const el = videoRef.current;
     if (!el) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      el.pause();
-      return;
-    }
-    void el.play().catch(() => undefined);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const tryPlay = () => {
+      if (!el.paused) return;
+      void el.play().catch(() => undefined);
+    };
+
+    tryPlay();
+    el.addEventListener("canplay", tryPlay);
+    document.addEventListener("visibilitychange", tryPlay);
+    window.addEventListener("touchstart", tryPlay, { passive: true });
+    window.addEventListener("click", tryPlay);
+    window.addEventListener("scroll", tryPlay, { passive: true });
+
+    return () => {
+      el.removeEventListener("canplay", tryPlay);
+      document.removeEventListener("visibilitychange", tryPlay);
+      window.removeEventListener("touchstart", tryPlay);
+      window.removeEventListener("click", tryPlay);
+      window.removeEventListener("scroll", tryPlay);
+    };
   }, []);
 
   return (
@@ -45,16 +66,21 @@ const CurriculumRibbon = () => {
       >
         <video
           ref={videoRef}
-          src="/curriculum-ribbon.webm"
-          className="absolute left-0 top-1/2 w-full -translate-y-1/2 scale-[3.6] sm:scale-[2.6] lg:scale-[1.9]"
+          className="pointer-events-none absolute left-0 top-1/2 w-full -translate-y-1/2 scale-[2.6] sm:scale-[2.0] lg:scale-[1.6]"
           autoPlay
           muted
+          
           loop
           playsInline
-          preload="metadata"
+          disablePictureInPicture
+          disableRemotePlayback
+          preload="auto"
           aria-hidden="true"
           tabIndex={-1}
-        />
+        >
+          <source src="/curriculum-ribbon.mp4" type="video/mp4" />
+          <source src="/curriculum-ribbon.webm" type="video/webm" />
+        </video>
       </div>
     </section>
   );
