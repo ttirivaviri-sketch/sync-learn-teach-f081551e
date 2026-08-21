@@ -66,7 +66,7 @@ const CurriculumRibbon = () => {
       >
         <video
           ref={videoRef}
-          className="pointer-events-none absolute left-0 top-1/2 w-full -translate-y-1/2 scale-[3.6] sm:scale-[2.6] lg:scale-[1.9]"
+          className="pointer-events-none absolute left-0 top-1/2 w-full -translate-y-1/2 scale-[1.8] sm:scale-[1.5] lg:scale-[1.3]"
           autoPlay
           muted
           
