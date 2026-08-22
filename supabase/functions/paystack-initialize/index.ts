@@ -142,7 +142,7 @@ Deno.serve(async (req) => {
       await serviceClient.from("payments").insert({
         booking_id: bookingId,
         payer_id: userData.user.id,
-        amount: amount,
+        amount: chargeAmount,
         currency,
         provider: "paystack",
         provider_ref: reference,
