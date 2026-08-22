@@ -7995,8 +7995,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
       start_topic_session: {
         Args: {
           p_curriculum?: string
