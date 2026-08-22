@@ -76,9 +76,10 @@ serve(async (req) => {
       paymentMethod,
     }: PaymentRequest = await req.json();
 
-    if (!bookingId || !amount || !itemName) {
+    if (!bookingId || !itemName) {
       throw new Error("Missing required payment fields");
     }
+
 
     // Validate the booking exists and belongs to this user
     const { data: bookingData, error: bookingError } = await supabase
