@@ -10,7 +10,7 @@ const corsHeaders = {
 
 interface PaymentRequest {
   bookingId: string;
-  amount: number;
+  amount?: number;
   itemName: string;
   returnUrl: string;
   cancelUrl: string;
@@ -147,7 +147,7 @@ serve(async (req) => {
       .insert({
         booking_id: bookingId,
         payer_id: user.id,
-        amount: amount,
+        amount: chargeAmount,
         currency: "ZAR",
         status: "pending",
         provider: "payfast",
@@ -174,7 +174,7 @@ serve(async (req) => {
       name_last: (profile.full_name?.split(" ").slice(1).join(" ") || "").substring(0, 100),
       email_address: (profile.email || user.email || "").substring(0, 100),
       m_payment_id: payment.id,
-      amount: amount.toFixed(2),
+      amount: chargeAmount.toFixed(2),
       item_name: itemName.substring(0, 100),
       item_description: `StudySync tutoring session booking ${bookingId.slice(0, 8)}`.substring(0, 255),
       email_confirmation: "1",
@@ -229,7 +229,7 @@ serve(async (req) => {
       : "https://www.payfast.co.za/eng/process";
 
     console.log(
-      `Payment created: ${payment.id} for booking ${bookingId}, amount R${amount.toFixed(
+      `Payment created: ${payment.id} for booking ${bookingId}, amount R${chargeAmount.toFixed(
         2
       )}, sandbox: ${isSandbox}`
     );
