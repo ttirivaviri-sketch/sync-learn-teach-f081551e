@@ -100,6 +100,19 @@ serve(async (req) => {
       throw new Error("Cannot pay for a cancelled booking");
     }
 
+    // NEVER trust the client-supplied amount: the booking price is enforced
+    // server-side (trg_enforce_booking_price) from the tutor's hourly rate.
+    const chargeAmount = Number(bookingData.price);
+    if (!Number.isFinite(chargeAmount) || chargeAmount <= 0) {
+      throw new Error("Invalid booking price");
+    }
+    if (typeof amount === "number" && Math.abs(amount - chargeAmount) > 0.01) {
+      console.warn(
+        `Client amount ${amount} != server price ${chargeAmount} for booking ${bookingId}`,
+      );
+    }
+
+
     // Check if there's already a succeeded payment for this booking
     const { data: existingPayments } = await supabase
       .from("payments")
