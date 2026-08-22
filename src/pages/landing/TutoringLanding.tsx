@@ -133,6 +133,13 @@ const TutoringLanding = () => {
           From foundation concepts to final exam preparation, book a tutor for the subjects that
           matter most to your results.
         </p>
+        <p className="mb-8 max-w-2xl text-gray-600">
+          Looking for maths specifically? See our dedicated{" "}
+          <Link to="/tutoring/maths" className="font-medium text-blue-600 hover:underline">
+            online maths tutor page
+          </Link>{" "}
+          for CAPS/NSC, IEB, Cambridge and ZIMSEC Mathematics and Maths Literacy.
+        </p>
         <ul className="flex flex-wrap gap-2.5">
           {SUBJECTS.map((s) => (
             <li key={s} className="rounded-full border border-gray-200 bg-gray-50 px-4 py-2 text-sm font-medium text-gray-700">
