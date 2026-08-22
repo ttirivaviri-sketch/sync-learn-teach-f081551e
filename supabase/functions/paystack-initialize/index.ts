@@ -49,10 +49,48 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For setup mode use 100 cents (1 ZAR) auth charge; for charge use booking amount
-    const amountMinor = mode === "setup"
-      ? 100
-      : Math.round((amount ?? 0) * 100);
+    // For setup mode use 100 cents (1 ZAR) auth charge. For charge mode the
+    // amount is ALWAYS derived from the booking row (price enforced server-side
+    // by trg_enforce_booking_price) — never from the client request body.
+    let chargeAmount = 0;
+    if (mode === "charge") {
+      if (!bookingId) {
+        return new Response(JSON.stringify({ error: "bookingId is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: booking, error: bookingErr } = await supabase
+        .from("bookings")
+        .select("id, learner_id, status, price")
+        .eq("id", bookingId)
+        .single();
+
+      if (bookingErr || !booking) {
+        return new Response(JSON.stringify({ error: "Booking not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (booking.learner_id !== userData.user.id) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (booking.status === "canceled") {
+        return new Response(JSON.stringify({ error: "Cannot pay for a cancelled booking" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      chargeAmount = Number(booking.price);
+      if (typeof amount === "number" && Math.abs(amount - chargeAmount) > 0.01) {
+        console.warn(`Client amount ${amount} != server price ${chargeAmount} for ${bookingId}`);
+      }
+    }
+
+    const amountMinor = mode === "setup" ? 100 : Math.round(chargeAmount * 100);
 
     if (mode === "charge" && amountMinor <= 0) {
       return new Response(JSON.stringify({ error: "Invalid amount" }), {
@@ -60,6 +98,7 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
 
     const reference = `ps_${mode}_${userData.user.id.slice(0, 8)}_${Date.now()}`;
 
