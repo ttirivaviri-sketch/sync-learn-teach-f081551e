@@ -42,6 +42,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/tutor-auth.jpg",
   },
   {
+    path: "/tutoring/maths",
+    title: "Maths Tutor Online — Grade 12, IEB, Cambridge, ZIMSEC",
+    description:
+      "Book a verified online maths tutor for Mathematics & Maths Literacy — CAPS/NSC Grade 12 matric, IEB, Cambridge IGCSE/A Level and ZIMSEC. Pay per session.",
+    image: "/og/tutor-auth.jpg",
+  },
+  {
     path: "/past-papers",
     title: "Past Exam Papers & Memos — ZIMSEC, Cambridge, Grade 12",
     description:

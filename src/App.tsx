@@ -16,6 +16,7 @@ import { prefetchStudyMode } from "@/studymode/prefetch";
 // ── Lazy-loaded page routes (code-splitting) ──────────────────────────────────
 const Index = lazy(() => import("./pages/Index"));
 const TutoringLanding = lazy(() => import("./pages/landing/TutoringLanding"));
+const MathsTutorLanding = lazy(() => import("./pages/landing/MathsTutorLanding"));
 const PastPapersLanding = lazy(() => import("./pages/landing/PastPapersLanding"));
 const IebPastPapersLanding = lazy(() => import("./pages/landing/IebPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
@@ -127,6 +128,8 @@ const App = () => {
               <Route path="/index" element={<Navigate to="/" replace />} />
               <Route path="/home" element={<Navigate to="/" replace />} />
               <Route path="/tutoring" element={<TutoringLanding />} />
+              <Route path="/tutoring/maths" element={<MathsTutorLanding />} />
+              <Route path="/maths-tutor" element={<Navigate to="/tutoring/maths" replace />} />
               <Route path="/tutors" element={<Navigate to="/tutoring" replace />} />
               <Route path="/past-papers" element={<PastPapersLanding />} />
               <Route path="/past-papers/ieb" element={<IebPastPapersLanding />} />
