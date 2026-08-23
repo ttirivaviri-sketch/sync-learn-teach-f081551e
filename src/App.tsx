@@ -19,6 +19,7 @@ const TutoringLanding = lazy(() => import("./pages/landing/TutoringLanding"));
 const MathsTutorLanding = lazy(() => import("./pages/landing/MathsTutorLanding"));
 const PastPapersLanding = lazy(() => import("./pages/landing/PastPapersLanding"));
 const IebPastPapersLanding = lazy(() => import("./pages/landing/IebPastPapersLanding"));
+const AccountingPastPapersLanding = lazy(() => import("./pages/landing/AccountingPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
@@ -133,6 +134,8 @@ const App = () => {
               <Route path="/tutors" element={<Navigate to="/tutoring" replace />} />
               <Route path="/past-papers" element={<PastPapersLanding />} />
               <Route path="/past-papers/ieb" element={<IebPastPapersLanding />} />
+              <Route path="/past-papers/accounting" element={<AccountingPastPapersLanding />} />
+              <Route path="/accounting-past-papers" element={<Navigate to="/past-papers/accounting" replace />} />
               <Route path="/books" element={<BooksLanding />} />
               <Route path="/textbooks" element={<Navigate to="/books" replace />} />
               <Route path="/app" element={<AppRedirect />} />

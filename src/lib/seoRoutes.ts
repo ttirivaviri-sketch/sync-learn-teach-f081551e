@@ -63,6 +63,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/home.jpg",
   },
   {
+    path: "/past-papers/accounting",
+    title: "Accounting Past Papers & Memos — Grade 10-12 Matric",
+    description:
+      "Grade 10, 11 and 12 Accounting past papers with memos for CAPS/NSC matric and IEB — financial statements, cash flow, ratios, cost accounting and budgeting.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/books",
     title: "Free Textbooks, Set Works & Study Guides | StudySync",
     description:
