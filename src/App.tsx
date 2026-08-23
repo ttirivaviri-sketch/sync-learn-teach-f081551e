@@ -19,6 +19,7 @@ const TutoringLanding = lazy(() => import("./pages/landing/TutoringLanding"));
 const MathsTutorLanding = lazy(() => import("./pages/landing/MathsTutorLanding"));
 const PastPapersLanding = lazy(() => import("./pages/landing/PastPapersLanding"));
 const IebPastPapersLanding = lazy(() => import("./pages/landing/IebPastPapersLanding"));
+const AccountingPastPapersLanding = lazy(() => import("./pages/landing/AccountingPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
