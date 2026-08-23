@@ -7,6 +7,7 @@ const footerLinks = {
     { label: "Find Tutors", href: "/tutoring" },
     { label: "Past Papers", href: "/past-papers" },
     { label: "IEB Past Papers", href: "/past-papers/ieb" },
+    { label: "Accounting Past Papers", href: "/past-papers/accounting" },
     { label: "Books & Study Guides", href: "/books" },
     { label: "Pricing", href: "/#pricing" },
   ],
