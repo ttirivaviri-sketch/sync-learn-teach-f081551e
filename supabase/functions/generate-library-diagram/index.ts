@@ -99,13 +99,18 @@ serve(async (req) => {
       });
     }
 
-    // 2. Cache hit — image already rendered
+    // 2. Cache hit — image already rendered (bucket is private → re-sign)
     if (row.image_url) {
+      const cachedPath = `${row.id}.png`;
+      const { data: signed } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(cachedPath, SIGNED_URL_TTL);
       return new Response(
-        JSON.stringify({ url: row.image_url, cached: true }),
+        JSON.stringify({ url: signed?.signedUrl ?? row.image_url, cached: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
 
     if (!row.diagram_spec) {
       return new Response(
