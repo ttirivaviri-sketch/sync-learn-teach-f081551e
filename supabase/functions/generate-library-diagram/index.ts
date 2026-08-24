@@ -21,6 +21,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 
 const BUCKET = "library-diagrams";
+/** Bucket is private (workspace blocks public buckets) → serve signed URLs. */
+const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 days
+
 
 interface SpecElement { label: string; role: string }
 interface DiagramSpec {
@@ -99,13 +102,18 @@ serve(async (req) => {
       });
     }
 
-    // 2. Cache hit — image already rendered
+    // 2. Cache hit — image already rendered (bucket is private → re-sign)
     if (row.image_url) {
+      const cachedPath = `${row.id}.png`;
+      const { data: signed } = await supabase.storage
+        .from(BUCKET)
+        .createSignedUrl(cachedPath, SIGNED_URL_TTL);
       return new Response(
-        JSON.stringify({ url: row.image_url, cached: true }),
+        JSON.stringify({ url: signed?.signedUrl ?? row.image_url, cached: true }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
+
 
     if (!row.diagram_spec) {
       return new Response(
@@ -154,7 +162,7 @@ serve(async (req) => {
       throw new Error("AI returned no image");
     }
 
-    // 4. Upload to the public bucket
+    // 4. Upload to the private bucket
     const base64 = dataUrl.split(",")[1];
     const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
     const filePath = `${row.id}.png`;
@@ -167,19 +175,23 @@ serve(async (req) => {
       throw new Error("Failed to cache diagram");
     }
 
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(filePath, SIGNED_URL_TTL);
+    if (signErr || !signed?.signedUrl) throw new Error("Failed to sign diagram URL");
 
-    // 5. Persist the URL on the row (also becomes the nicer thumbnail)
+    // 5. Persist the storage path marker on the row so later opens are cache hits
     const { error: updErr } = await supabase
       .from("library_system_resources")
-      .update({ image_url: pub.publicUrl, thumbnail_url: pub.publicUrl })
+      .update({ image_url: filePath })
       .eq("id", row.id);
     if (updErr) console.error("Row update error:", updErr);
 
     return new Response(
-      JSON.stringify({ url: pub.publicUrl, cached: false }),
+      JSON.stringify({ url: signed.signedUrl, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (err) {
     console.error("generate-library-diagram error:", err);
     return new Response(
