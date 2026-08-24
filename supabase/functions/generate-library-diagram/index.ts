@@ -159,7 +159,7 @@ serve(async (req) => {
       throw new Error("AI returned no image");
     }
 
-    // 4. Upload to the public bucket
+    // 4. Upload to the private bucket
     const base64 = dataUrl.split(",")[1];
     const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
     const filePath = `${row.id}.png`;
@@ -172,19 +172,23 @@ serve(async (req) => {
       throw new Error("Failed to cache diagram");
     }
 
-    const { data: pub } = supabase.storage.from(BUCKET).getPublicUrl(filePath);
+    const { data: signed, error: signErr } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUrl(filePath, SIGNED_URL_TTL);
+    if (signErr || !signed?.signedUrl) throw new Error("Failed to sign diagram URL");
 
-    // 5. Persist the URL on the row (also becomes the nicer thumbnail)
+    // 5. Persist the storage path marker on the row so later opens are cache hits
     const { error: updErr } = await supabase
       .from("library_system_resources")
-      .update({ image_url: pub.publicUrl, thumbnail_url: pub.publicUrl })
+      .update({ image_url: filePath })
       .eq("id", row.id);
     if (updErr) console.error("Row update error:", updErr);
 
     return new Response(
-      JSON.stringify({ url: pub.publicUrl, cached: false }),
+      JSON.stringify({ url: signed.signedUrl, cached: false }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
+
   } catch (err) {
     console.error("generate-library-diagram error:", err);
     return new Response(
