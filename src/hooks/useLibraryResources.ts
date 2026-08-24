@@ -607,13 +607,20 @@ export function useLibraryResources(
             summary: row.description || "",
             rating: 0,
             reviews: row.view_count || 0,
-            thumbnail: (isDiagram && row.image_url) || row.thumbnail_url || "/placeholder.svg",
+            thumbnail:
+              (isDiagram && typeof row.image_url === "string" && row.image_url.startsWith("http")
+                ? row.image_url
+                : null) || row.thumbnail_url || "/placeholder.svg",
             isOffline: false,
             duration: isDiagram ? "Diagram" : isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
             isTutorial: isVideo,
             videoUrl: isVideo ? rawVideoUrl ?? undefined : isDiagram ? undefined : row.pdf_url,
             pdfSource: isVideo || isDiagram ? undefined : "system",
-            imageUrl: isDiagram ? row.image_url ?? null : undefined,
+            // image_url may be a private storage path — only pass through real URLs.
+            imageUrl: isDiagram && typeof row.image_url === "string" && row.image_url.startsWith("http")
+              ? row.image_url
+              : null,
+
             diagramSpec: isDiagram ? row.diagram_spec ?? undefined : undefined,
             paperMeta: isPastPaper
               ? {
