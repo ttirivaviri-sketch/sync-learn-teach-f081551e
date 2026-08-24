@@ -192,3 +192,9 @@ verify_jwt = true
 
 [functions.gsc-search-queries]
 verify_jwt = true
+
+[functions.generate-library-diagram]
+verify_jwt = false
+
+[functions.explain-diagram]
+verify_jwt = false

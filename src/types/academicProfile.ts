@@ -68,7 +68,7 @@ export interface SubjectRisk {
 
 // ─── Library Resource Types ───────────────────────────────────────────────────
 
-export type ResourceType = "video" | "book" | "pdf" | "pastpaper" | "guide";
+export type ResourceType = "video" | "book" | "pdf" | "pastpaper" | "guide" | "diagram";
 
 export interface ResourceTag {
   subject: string;
@@ -116,6 +116,10 @@ export interface LibraryResource {
     paperNumber?: string | null;
     markingSchemeUrl?: string | null;
   };
+  /** Rendered diagram image URL when type === "diagram" (null until first render). */
+  imageUrl?: string | null;
+  /** Structured diagram spec (elements, relationships, depth notes) when type === "diagram". */
+  diagramSpec?: unknown;
 }
 
 // ─── Tutor Ranking ────────────────────────────────────────────────────────────

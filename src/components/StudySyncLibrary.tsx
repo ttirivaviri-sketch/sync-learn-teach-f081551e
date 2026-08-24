@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, Sparkles, X, ChevronRight,
+  Archive, Brain, Loader2, Sparkles, X, ChevronRight, Shapes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +21,7 @@ import { StuckPrompt } from "@/components/library/StuckPrompt";
 import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
 import { PosterCard } from "@/components/library/PosterCard";
 import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
+import { DiagramViewerOverlay } from "@/components/library/DiagramViewerOverlay";
 import { MatchExplanation } from "@/components/library/MatchExplanation";
 
 // Study Mode is a top-level nav tab now — no in-Library toggle needed.
@@ -45,6 +46,7 @@ const StudySyncLibrary = ({
   const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
   const [activeDocument, setActiveDocument] = useState<{ resource: LibraryResource } | null>(null);
+  const [activeDiagram, setActiveDiagram] = useState<LibraryResource | null>(null);
   const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
 
@@ -65,6 +67,15 @@ const StudySyncLibrary = ({
     !!r.isTutorial || r.type === "video" || (!!r.videoUrl && VIDEO_URL_RE.test(r.videoUrl));
   const isBookish = (r: LibraryResource) =>
     !isClip(r) && (r.type === "book" || r.type === "guide");
+  const isDiagram = (r: LibraryResource) => r.type === "diagram";
+
+  // Diagrams rack: personalized first, then everything else (deduped)
+  const personalizedDiagrams = personalizedResources.filter(isDiagram);
+  const personalizedDiagramIds = new Set(personalizedDiagrams.map((r) => r.id));
+  const diagramFeed = [
+    ...personalizedDiagrams,
+    ...allResources.filter((r) => isDiagram(r) && !personalizedDiagramIds.has(r.id)),
+  ];
 
   // Clips feed: personalized clips first, then every other uploaded/seeded clip
   // (deduped) — so new uploads always land in the Clips feed instead of Browse.
@@ -122,6 +133,7 @@ const StudySyncLibrary = ({
     { id: "books", name: "Books", icon: Book, color: "text-secondary" },
     { id: "tutorials", name: "Clips", icon: Video, color: "text-rose-500" },
     { id: "papers", name: "Papers", icon: FileText, color: "text-accent-foreground" },
+    { id: "diagrams", name: "Diagrams", icon: Shapes, color: "text-emerald-600" },
     { id: "mylibrary", name: "Saved", icon: Archive, color: "text-purple-600" },
   ];
 
@@ -154,6 +166,12 @@ const StudySyncLibrary = ({
   };
 
   const openResource = (resource: LibraryResource) => {
+    // AI study diagrams open in the diagram viewer with the explain chat.
+    if (resource.type === "diagram") {
+      setActiveDiagram(resource);
+      return;
+    }
+
     // Documents (books, guides, past papers) open in the protected in-app viewer.
     if (["book", "guide", "pastpaper", "pdf"].includes(resource.type)) {
       const extra = resource as unknown as Record<string, unknown>;
@@ -379,7 +397,16 @@ const StudySyncLibrary = ({
                 />
               )}
               <ContentRack title="Past Exam Papers" items={pastPapers.slice(0, 4)} icon={FileText} {...rackProps} />
-              <ContentRack title="All Resources" items={allResources.filter((r) => !isClip(r)).slice(0, 4)} icon={BookOpen} {...rackProps} />
+              {diagramFeed.length > 0 && (
+                <ContentRack
+                  title="Study Diagrams"
+                  subtitle="AI-illustrated diagrams you can ask questions about"
+                  items={diagramFeed.slice(0, 4)}
+                  icon={Shapes}
+                  {...rackProps}
+                />
+              )}
+              <ContentRack title="All Resources" items={allResources.filter((r) => !isClip(r) && !isDiagram(r)).slice(0, 4)} icon={BookOpen} {...rackProps} />
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")} />
             </TabsContent>
 
@@ -516,6 +543,43 @@ const StudySyncLibrary = ({
               )}
             </TabsContent>
 
+            {/* Diagrams Tab — subject-grouped poster racks */}
+            <TabsContent value="diagrams" className="space-y-5 mt-4">
+              {diagramFeed.length === 0 ? (
+                <Card className="bg-muted/30">
+                  <CardContent className="p-6 text-center">
+                    <Shapes className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <h4 className="font-medium mb-2">No diagrams yet</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Study diagrams are being added — check back soon.
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                Object.entries(
+                  diagramFeed.reduce<Record<string, LibraryResource[]>>((acc, d) => {
+                    const k = d.category || "General";
+                    (acc[k] ||= []).push(d);
+                    return acc;
+                  }, {})
+                ).map(([subject, items]) => (
+                  <div key={subject} className="space-y-2">
+                    <h3 className="font-semibold text-sm">{subject}</h3>
+                    <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1">
+                      {items.map((r) => (
+                        <PosterCard
+                          key={String(r.id)}
+                          resource={r}
+                          variant="landscape"
+                          onOpen={openResource}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))
+              )}
+            </TabsContent>
+
             {/* My Library Tab */}
             <TabsContent value="mylibrary" className="space-y-4 mt-4">
               <div className="flex items-center justify-between">
@@ -569,6 +633,15 @@ const StudySyncLibrary = ({
         <DocumentViewerOverlay
           resource={activeDocument.resource}
           onClose={() => setActiveDocument(null)}
+        />
+      )}
+
+      {/* Diagram Viewer + Explain chat */}
+      {activeDiagram && (
+        <DiagramViewerOverlay
+          resource={activeDiagram}
+          academicProfile={academicProfile}
+          onClose={() => setActiveDiagram(null)}
         />
       )}
 

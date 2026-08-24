@@ -64,7 +64,8 @@ export function PosterCard({ resource, variant = "portrait", onOpen }: PosterCar
           ? resource.paperMeta?.year
             ? `${resource.paperMeta.year}${resource.paperMeta.session ? ` ${resource.paperMeta.session.slice(0, 3)}` : ""}`
             : "Past Paper"
-          : resource.type === "guide" ? "Guide" : "Book"}
+          : resource.type === "guide" ? "Guide"
+          : resource.type === "diagram" ? "Diagram" : "Book"}
       </Badge>
 
       {/* Marking-scheme indicator */}
