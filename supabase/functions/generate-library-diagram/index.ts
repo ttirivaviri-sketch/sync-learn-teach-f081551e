@@ -21,6 +21,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders, reportTokenUsage, requireCaller } from "../_shared/ai-config.ts";
 
 const BUCKET = "library-diagrams";
+/** Bucket is private (workspace blocks public buckets) → serve signed URLs. */
+const SIGNED_URL_TTL = 60 * 60 * 24 * 7; // 7 days
+
 
 interface SpecElement { label: string; role: string }
 interface DiagramSpec {
