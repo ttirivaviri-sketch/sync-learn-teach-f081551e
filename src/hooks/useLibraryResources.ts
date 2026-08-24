@@ -471,7 +471,7 @@ export function useLibraryResources(
             .order("created_at", { ascending: false })
             .limit(limit);
 
-        const [tutorialsResult, booksResult, videosResult, papersResult] = await Promise.all([
+        const [tutorialsResult, booksResult, videosResult, papersResult, diagramsResult] = await Promise.all([
           supabase
             .from("tutor_tutorials")
           .select(
@@ -485,6 +485,7 @@ export function useLibraryResources(
           systemQuery("textbook", 1000),
           systemQuery("video", 1000),
           systemQuery("past_paper", 1000),
+          systemQuery("diagram", 1000),
         ]);
 
         const { data: directData, error: directError } = tutorialsResult;
@@ -496,6 +497,8 @@ export function useLibraryResources(
           ...(booksResult.data ?? []),
           ...(videosResult.data ?? []),
           ...(papersResult.data ?? []),
+          // Diagrams query fails gracefully (empty) if migration not applied yet.
+          ...(diagramsResult.data ?? []),
         ];
 
 
@@ -584,9 +587,10 @@ export function useLibraryResources(
 
         const VIDEO_URL_RE = /(youtube\.com|youtu\.be|vimeo\.com|loom\.com|\.(mp4|webm|mov|m4v)(\?|$))/i;
         const mappedSystemResources: LibraryResource[] = ((systemData as any[]) || []).map((row) => {
+          const isDiagram = row.kind === "diagram";
           const rawVideoUrl = row.video_url || (row.pdf_url && VIDEO_URL_RE.test(row.pdf_url) ? row.pdf_url : null);
-          const urlSaysVideo = !!rawVideoUrl;
-          const isVideo = row.kind === "video" || urlSaysVideo;
+          const urlSaysVideo = !isDiagram && !!rawVideoUrl;
+          const isVideo = !isDiagram && (row.kind === "video" || urlSaysVideo);
           if (isVideo && row.kind !== "video") {
             logger.warn("[useLibraryResources] row classified as video by URL but kind=", row.kind, row.id);
           }
@@ -596,19 +600,21 @@ export function useLibraryResources(
           return {
             id: row.id,
             title: row.title,
-            author: row.curriculum,
-            type: isVideo ? "video" : isPastPaper ? "pastpaper" : "book",
+            author: row.curriculum ?? (isDiagram ? "StudySync" : row.curriculum),
+            type: isDiagram ? "diagram" : isVideo ? "video" : isPastPaper ? "pastpaper" : "book",
             category: row.subject || "General",
             gradeLevel: gradeLevels.join(" • ") || "All Grades",
             summary: row.description || "",
             rating: 0,
             reviews: row.view_count || 0,
-            thumbnail: row.thumbnail_url || "/placeholder.svg",
+            thumbnail: (isDiagram && row.image_url) || row.thumbnail_url || "/placeholder.svg",
             isOffline: false,
-            duration: isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
+            duration: isDiagram ? "Diagram" : isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
             isTutorial: isVideo,
-            videoUrl: isVideo ? rawVideoUrl ?? undefined : row.pdf_url,
-            pdfSource: isVideo ? undefined : "system",
+            videoUrl: isVideo ? rawVideoUrl ?? undefined : isDiagram ? undefined : row.pdf_url,
+            pdfSource: isVideo || isDiagram ? undefined : "system",
+            imageUrl: isDiagram ? row.image_url ?? null : undefined,
+            diagramSpec: isDiagram ? row.diagram_spec ?? undefined : undefined,
             paperMeta: isPastPaper
               ? {
                   year: row.paper_year ?? null,
