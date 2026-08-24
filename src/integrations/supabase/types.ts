@@ -2891,8 +2891,10 @@ export type Database = {
           created_at: string
           curriculum: string
           description: string | null
+          diagram_spec: Json | null
           grade_levels: string[]
           id: string
+          image_url: string | null
           kind: string
           marking_scheme_url: string | null
           pages: number | null
@@ -2913,8 +2915,10 @@ export type Database = {
           created_at?: string
           curriculum: string
           description?: string | null
+          diagram_spec?: Json | null
           grade_levels?: string[]
           id?: string
+          image_url?: string | null
           kind: string
           marking_scheme_url?: string | null
           pages?: number | null
@@ -2935,8 +2939,10 @@ export type Database = {
           created_at?: string
           curriculum?: string
           description?: string | null
+          diagram_spec?: Json | null
           grade_levels?: string[]
           id?: string
+          image_url?: string | null
           kind?: string
           marking_scheme_url?: string | null
           pages?: number | null
