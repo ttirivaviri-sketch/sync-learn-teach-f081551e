@@ -4,6 +4,7 @@ import { ResourceCard } from "./ResourceCard";
 
 interface ContentRackProps {
   title: string;
+  subtitle?: string;
   items: LibraryResource[];
   emptyMessage?: string;
   icon?: React.ElementType;
@@ -17,6 +18,7 @@ interface ContentRackProps {
 
 export function ContentRack({
   title,
+  subtitle,
   items,
   emptyMessage,
   icon: Icon,
@@ -33,10 +35,16 @@ export function ContentRack({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           {Icon && <Icon className="h-4 w-4 text-primary" />}
-          <h3 className="font-semibold text-sm">{title}</h3>
+          <div className="min-w-0">
+            <h3 className="font-semibold text-sm">{title}</h3>
+            {subtitle && (
+              <p className="truncate text-[11px] text-muted-foreground">{subtitle}</p>
+            )}
+          </div>
         </div>
         <ChevronRight className="h-4 w-4 text-muted-foreground" />
       </div>
+
       {items.length === 0 ? (
         <p className="text-xs text-muted-foreground">{emptyMessage}</p>
       ) : (
