@@ -122,45 +122,93 @@ serve(async (req) => {
       );
     }
 
-    // 3. Render via the AI gateway image model
-    const prompt = buildPrompt(row.diagram_spec as DiagramSpec);
+    // 3. Render via the AI gateway image model.
+    //    The image model intermittently replies with text only (no image part),
+    //    so retry a couple of times with an increasingly explicit instruction
+    //    before surfacing an error to the student.
+    const basePrompt = buildPrompt(row.diagram_spec as DiagramSpec);
 
-    const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
-        messages: [{ role: "user", content: prompt }],
-        modalities: ["image", "text"],
-      }),
-    });
+    /** Pull the image out of whichever shape the gateway returned. */
+    const extractImage = (data: unknown): string | undefined => {
+      const msg = (data as any)?.choices?.[0]?.message;
+      const candidates = [
+        msg?.images?.[0]?.image_url?.url,
+        msg?.images?.[0]?.url,
+        (data as any)?.data?.[0]?.url,
+      ].filter((v) => typeof v === "string" && v.startsWith("data:image/"));
+      if (candidates[0]) return candidates[0];
+      const b64 = msg?.images?.[0]?.b64_json ?? (data as any)?.data?.[0]?.b64_json;
+      return typeof b64 === "string" && b64.length > 0 ? `data:image/png;base64,${b64}` : undefined;
+    };
 
-    if (!aiResp.ok) {
-      if (aiResp.status === 429) throw new Error("Rate limit — please try again shortly.");
-      if (aiResp.status === 402) throw new Error("AI credits exhausted.");
-      const t = await aiResp.text();
-      console.error("Image model error:", aiResp.status, t);
-      throw new Error("Diagram rendering failed");
-    }
+    let dataUrl: string | undefined;
+    let lastStatus = 0;
 
-    const aiData = await aiResp.json();
-    if (aiData?.usage) {
-      reportTokenUsage({
-        userId: authedUserId,
-        bucket: "misc",
-        tokensIn: Number(aiData.usage.prompt_tokens ?? 0),
-        tokensOut: Number(aiData.usage.completion_tokens ?? 0),
+    for (let attempt = 0; attempt < 3 && !dataUrl; attempt++) {
+      const prompt =
+        attempt === 0
+          ? basePrompt
+          : `${basePrompt}\n\nIMPORTANT: Respond with the rendered IMAGE itself. Do not reply with text, questions or a description.`;
+
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash-image",
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
       });
+
+      lastStatus = aiResp.status;
+
+      if (!aiResp.ok) {
+        // Non-retryable, user-actionable failures bail out immediately.
+        if (aiResp.status === 429) throw new Error("Rate limit — please try again shortly.");
+        if (aiResp.status === 402) throw new Error("AI credits exhausted.");
+        const t = await aiResp.text();
+        console.error("Image model error:", aiResp.status, t.slice(0, 500));
+        // 5xx from the gateway is worth another attempt.
+        if (aiResp.status < 500) throw new Error("Diagram rendering failed");
+        await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
+        continue;
+      }
+
+      const aiData = await aiResp.json();
+      if (aiData?.usage) {
+        reportTokenUsage({
+          userId: authedUserId,
+          bucket: "misc",
+          tokensIn: Number(aiData.usage.prompt_tokens ?? 0),
+          tokensOut: Number(aiData.usage.completion_tokens ?? 0),
+        });
+      }
+
+      dataUrl = extractImage(aiData);
+      if (!dataUrl) {
+        console.warn(
+          `No image on attempt ${attempt + 1}; text was:`,
+          String(aiData?.choices?.[0]?.message?.content ?? "").slice(0, 300),
+        );
+        await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+      }
     }
 
-    const dataUrl: string | undefined =
-      aiData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-    if (!dataUrl?.startsWith("data:image/")) {
-      throw new Error("AI returned no image");
+    if (!dataUrl) {
+      console.error("Diagram render gave no image after retries; last status", lastStatus);
+      return new Response(
+        JSON.stringify({
+          error:
+            "The illustrator couldn't draw this diagram just now. Please tap to try again in a moment.",
+          retryable: true,
+        }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
 
     // 4. Upload to the private bucket
     const base64 = dataUrl.split(",")[1];
