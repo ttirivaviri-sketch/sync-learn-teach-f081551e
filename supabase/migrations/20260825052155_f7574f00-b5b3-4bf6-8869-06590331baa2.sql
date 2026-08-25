@@ -1,0 +1,1 @@
+ALTER TABLE public.library_system_resources ALTER COLUMN curriculum DROP NOT NULL;

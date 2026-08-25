@@ -2889,7 +2889,7 @@ export type Database = {
       library_system_resources: {
         Row: {
           created_at: string
-          curriculum: string
+          curriculum: string | null
           description: string | null
           diagram_spec: Json | null
           grade_levels: string[]
@@ -2913,7 +2913,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          curriculum: string
+          curriculum?: string | null
           description?: string | null
           diagram_spec?: Json | null
           grade_levels?: string[]
@@ -2937,7 +2937,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          curriculum?: string
+          curriculum?: string | null
           description?: string | null
           diagram_spec?: Json | null
           grade_levels?: string[]
