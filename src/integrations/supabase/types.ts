@@ -7700,6 +7700,13 @@ export type Database = {
           user_type: string
         }[]
       }
+      get_tutor_ratings: {
+        Args: never
+        Returns: {
+          rating: number
+          reviewed_id: string
+        }[]
+      }
       get_upstream_prerequisites: {
         Args: { p_concept_id: string; p_max_depth?: number }
         Returns: {

@@ -115,7 +115,8 @@ export const useTutorData = (
 
       const [subjectsResult, reviewsResult, activeBookingsResult, qualificationsResult, teachingResult] = await Promise.all([
         supabase.from('tutor_subjects').select('*').abortSignal(controller.signal),
-        supabase.from('reviews').select('reviewed_id, rating').abortSignal(controller.signal),
+        // Ratings RPC — exposes only tutor id + rating, never reviewer identity or comments.
+        supabase.rpc('get_tutor_ratings').abortSignal(controller.signal),
         supabase
           .from('bookings')
           .select('tutor_id')
