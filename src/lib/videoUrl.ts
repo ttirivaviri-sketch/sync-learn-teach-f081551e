@@ -5,7 +5,10 @@ export interface ParsedVideoSource {
   originalUrl: string;
   embedUrl: string | null;
   isDirect: boolean;
+  /** Provider-side id (YouTube video id, Vimeo id, Loom share id). */
+  videoId?: string;
 }
+
 
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov", ".m4v", ".avi", ".mkv"];
 const SAFE_YOUTUBE_ID = /^[a-zA-Z0-9_-]{11}$/;
