@@ -97,7 +97,15 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
     <div className="h-[100dvh] w-full snap-start relative flex items-center justify-center bg-black shrink-0">
       {/* Video / Embed */}
       {source ? (
-        source.embedUrl ? (
+        source.provider === "youtube" && source.videoId ? (
+          <YouTubeClipPlayer
+            videoId={source.videoId}
+            title={resource.title}
+            isActive={isActive}
+            poster={resource.thumbnail}
+            watchUrl={source.originalUrl}
+          />
+        ) : source.embedUrl ? (
           showEmbed ? (
             <>
             <iframe
@@ -130,6 +138,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
               <div className="absolute inset-0 bg-black/25" />
             </div>
           )
+
 
         ) : source.isDirect ? (
           <>
