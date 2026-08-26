@@ -5,7 +5,10 @@ export interface ParsedVideoSource {
   originalUrl: string;
   embedUrl: string | null;
   isDirect: boolean;
+  /** Provider-side id (YouTube video id, Vimeo id, Loom share id). */
+  videoId?: string;
 }
+
 
 const VIDEO_EXTENSIONS = [".mp4", ".webm", ".ogg", ".mov", ".m4v", ".avi", ".mkv"];
 const SAFE_YOUTUBE_ID = /^[a-zA-Z0-9_-]{11}$/;
@@ -68,8 +71,10 @@ export function parseVideoSource(url: string, options: ParseVideoOptions = {}): 
         originalUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
         embedUrl: `https://www.youtube.com/embed/${youtubeId}?playsinline=1&controls=1&rel=0&modestbranding=1&autoplay=${autoplay}${identityParams}`,
         isDirect: false,
+        videoId: youtubeId,
       };
     }
+
 
     if (host.includes("vimeo.com")) {
       const id = parsed.pathname.split("/").filter(Boolean).pop();
