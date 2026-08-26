@@ -71,8 +71,10 @@ export function parseVideoSource(url: string, options: ParseVideoOptions = {}): 
         originalUrl: `https://www.youtube.com/watch?v=${youtubeId}`,
         embedUrl: `https://www.youtube.com/embed/${youtubeId}?playsinline=1&controls=1&rel=0&modestbranding=1&autoplay=${autoplay}${identityParams}`,
         isDirect: false,
+        videoId: youtubeId,
       };
     }
+
 
     if (host.includes("vimeo.com")) {
       const id = parsed.pathname.split("/").filter(Boolean).pop();
