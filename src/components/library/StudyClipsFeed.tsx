@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { LibraryResource } from "@/types/academicProfile";
 import { parseVideoSource } from "@/lib/videoUrl";
 import { SyncPlayButton } from "@/components/ui/SyncPlayButton";
+import { YouTubeClipPlayer } from "@/components/library/YouTubeClipPlayer";
+
 
 interface StudyClipsFeedProps {
   videos: LibraryResource[];
