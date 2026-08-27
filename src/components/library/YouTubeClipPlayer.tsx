@@ -119,7 +119,9 @@ export function YouTubeClipPlayer({
             },
             onStateChange: (event: { data: number }) => {
               if (cancelled) return;
-              setPlaying(event.data === YT.PlayerState.PLAYING);
+              // Only mark started once playback actually begins; pauses and
+              // buffering must not re-cover the player with the overlay.
+              if (event.data === YT.PlayerState.PLAYING) setStarted(true);
             },
             onError: () => {
               if (!cancelled) setFailed(true);
