@@ -90,7 +90,7 @@ export function YouTubeClipPlayer({
     if (!isActive) return;
     let cancelled = false;
     setReady(false);
-    setPlaying(false);
+    setStarted(false);
     setFailed(false);
 
     loadYouTubeApi()
