@@ -160,7 +160,7 @@ export function YouTubeClipPlayer({
     <div className="absolute inset-0 bg-black">
       <div ref={hostRef} className="absolute inset-0" />
 
-      {!playing && !failed && (
+      {!started && !failed && (
         <button
           type="button"
           aria-label={`Play ${title}`}
@@ -174,7 +174,7 @@ export function YouTubeClipPlayer({
           className="absolute inset-0 z-10 flex items-center justify-center bg-black/25"
         >
           {poster && poster !== "/placeholder.svg" && (
-            <img src={poster} alt="" className="absolute inset-0 h-full w-full object-contain -z-10" />
+            <img src={poster} alt="" className="absolute inset-0 h-full w-full object-contain opacity-80" />
           )}
           <SyncPlayButton decorative size={72} className={ready ? "" : "opacity-50"} />
         </button>
