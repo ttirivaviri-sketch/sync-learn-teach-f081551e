@@ -83,7 +83,7 @@ export function YouTubeClipPlayer({
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
-  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
