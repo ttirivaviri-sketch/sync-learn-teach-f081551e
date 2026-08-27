@@ -83,14 +83,14 @@ export function YouTubeClipPlayer({
   const hostRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
   const [ready, setReady] = useState(false);
-  const [playing, setPlaying] = useState(false);
+  const [started, setStarted] = useState(false);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!isActive) return;
     let cancelled = false;
     setReady(false);
-    setPlaying(false);
+    setStarted(false);
     setFailed(false);
 
     loadYouTubeApi()
@@ -119,7 +119,9 @@ export function YouTubeClipPlayer({
             },
             onStateChange: (event: { data: number }) => {
               if (cancelled) return;
-              setPlaying(event.data === YT.PlayerState.PLAYING);
+              // Only mark started once playback actually begins; pauses and
+              // buffering must not re-cover the player with the overlay.
+              if (event.data === YT.PlayerState.PLAYING) setStarted(true);
             },
             onError: () => {
               if (!cancelled) setFailed(true);
@@ -158,7 +160,7 @@ export function YouTubeClipPlayer({
     <div className="absolute inset-0 bg-black">
       <div ref={hostRef} className="absolute inset-0" />
 
-      {!playing && !failed && (
+      {!started && !failed && (
         <button
           type="button"
           aria-label={`Play ${title}`}
@@ -172,7 +174,7 @@ export function YouTubeClipPlayer({
           className="absolute inset-0 z-10 flex items-center justify-center bg-black/25"
         >
           {poster && poster !== "/placeholder.svg" && (
-            <img src={poster} alt="" className="absolute inset-0 h-full w-full object-contain -z-10" />
+            <img src={poster} alt="" className="absolute inset-0 h-full w-full object-contain opacity-80" />
           )}
           <SyncPlayButton decorative size={72} className={ready ? "" : "opacity-50"} />
         </button>
