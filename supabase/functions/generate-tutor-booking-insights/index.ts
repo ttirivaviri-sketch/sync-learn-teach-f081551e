@@ -145,7 +145,10 @@ serve(async (req) => {
 
     // Exam date for this subject. `exam_dates` may legacy-store an object map
     // ({ "Maths": "2026-11-02" }) instead of an array — normalise before .find().
-    const rawExamDates = profile?.exam_dates;
+    let rawExamDates: unknown = profile?.exam_dates;
+    if (typeof rawExamDates === "string") {
+      try { rawExamDates = JSON.parse(rawExamDates); } catch { rawExamDates = []; }
+    }
     const examDates: Array<{ subject: string; date: string }> = Array.isArray(rawExamDates)
       ? rawExamDates.filter((e: any) => e && typeof e.subject === "string" && e.date)
       : rawExamDates && typeof rawExamDates === "object"
