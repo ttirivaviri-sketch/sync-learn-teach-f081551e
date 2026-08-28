@@ -262,9 +262,12 @@ serve(async (req) => {
 
         const sentTutorIds: string[] = existing?.sent_to_tutors || [];
         let sentGuardianFlag = existing?.sent_to_guardian || false;
+        const deliveryErrors: string[] = [];
 
         // 1) Guardian
-        if (profile.guardian_email && !sentGuardianFlag) {
+        if (!profile.guardian_email) {
+          deliveryErrors.push("no guardian_email on academic_profile");
+        } else if (!sentGuardianFlag) {
           const payload: InsightsPayload = { ...baseInsights, audience: "guardian" };
           const res = await sendOne({
             to: profile.guardian_email,
@@ -274,6 +277,7 @@ serve(async (req) => {
             html: buildInsightsHtml(payload),
           });
           if (res.ok) { sentGuardian++; sentGuardianFlag = true; }
+          else deliveryErrors.push(`guardian: ${res.error}`);
         }
 
         // 2) Booked tutors (deduped, exclude already-sent)
@@ -294,15 +298,22 @@ serve(async (req) => {
             html: buildInsightsHtml(payload),
           });
           if (res.ok) { sentTutor++; sentTutorIds.push(tid); }
+          else deliveryErrors.push(`tutor ${tid}: ${res.error}`);
         }
 
-        // Record the run
+        if (deliveryErrors.length) {
+          console.error("[insights] delivery_errors", JSON.stringify({ user_id: profile.user_id, errors: deliveryErrors }));
+        }
+
+        // Record the run — surface delivery failures instead of always
+        // reporting "completed" with sent_to_guardian:false and no reason.
         await supabase.from("scheduled_insight_runs").upsert({
           user_id: profile.user_id,
           week_start: weekStartStr,
           sent_to_guardian: sentGuardianFlag,
           sent_to_tutors: sentTutorIds,
-          status: "completed",
+          status: deliveryErrors.length ? "partial" : "completed",
+          error_message: deliveryErrors.length ? deliveryErrors.join(" | ").slice(0, 2000) : null,
         }, { onConflict: "user_id,week_start" });
 
         if (sentGuardianFlag) {
