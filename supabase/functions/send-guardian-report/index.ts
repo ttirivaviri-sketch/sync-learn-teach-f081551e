@@ -174,7 +174,7 @@ serve(async (req) => {
           if (a.score != null) slot.scores.push(Number(a.score));
           if (a.topic) slot.topics.add(a.topic);
         }
-        const examDates: Array<{subject: string; date: string}> = profile.exam_dates || [];
+        const examDates = normaliseExamDates(profile.exam_dates);
         const subjects: SubjectInsight[] = Object.entries(subjMap).map(([name, s]) => {
           const total = s.completed + s.missed;
           const completion = total ? s.completed / total : 0;
