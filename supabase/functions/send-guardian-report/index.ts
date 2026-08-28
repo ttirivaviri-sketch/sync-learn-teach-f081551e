@@ -82,6 +82,10 @@ async function sendOne(opts: {
  * Normalise to shape 1 so `.find()` never explodes.
  */
 function normaliseExamDates(raw: unknown): Array<{ subject: string; date: string }> {
+  // Some rows store exam_dates double-encoded as a JSON string.
+  if (typeof raw === "string") {
+    try { return normaliseExamDates(JSON.parse(raw)); } catch { return []; }
+  }
   if (Array.isArray(raw)) {
     return raw
       .filter((e): e is { subject: string; date: string } =>
