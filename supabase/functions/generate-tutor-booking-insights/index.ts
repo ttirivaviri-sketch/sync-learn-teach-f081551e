@@ -143,9 +143,17 @@ serve(async (req) => {
     const completionRate = completed + missed > 0 ? completed / (completed + missed) : 0;
     const topics = [...new Set(activityList.filter((a: any) => a.topic).map((a: any) => a.topic))];
 
-    // Exam date for this subject
-    const examDates = profile?.exam_dates || [];
-    const examEntry = examDates.find((e: any) => e.subject?.toLowerCase() === subject.toLowerCase());
+    // Exam date for this subject. `exam_dates` may legacy-store an object map
+    // ({ "Maths": "2026-11-02" }) instead of an array — normalise before .find().
+    const rawExamDates = profile?.exam_dates;
+    const examDates: Array<{ subject: string; date: string }> = Array.isArray(rawExamDates)
+      ? rawExamDates.filter((e: any) => e && typeof e.subject === "string" && e.date)
+      : rawExamDates && typeof rawExamDates === "object"
+        ? Object.entries(rawExamDates as Record<string, unknown>)
+            .filter(([, v]) => typeof v === "string")
+            .map(([s, v]) => ({ subject: s, date: String(v) }))
+        : [];
+    const examEntry = examDates.find((e) => e.subject?.toLowerCase() === subject.toLowerCase());
     const now = new Date();
     const daysUntilExam = examEntry
       ? Math.ceil((new Date(examEntry.date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
