@@ -62,9 +62,42 @@ async function sendOne(opts: {
         html: opts.html,
       }),
     });
-    if (!r.ok) return { ok: false, error: await r.text() };
+    if (!r.ok) {
+      const body = await r.text();
+      console.error("[insights] resend_send_failed", JSON.stringify({ to: opts.to, from: RESEND_FROM, status: r.status, body }));
+      return { ok: false, error: `resend ${r.status}: ${body}` };
+    }
     return { ok: true };
-  } catch (e) { return { ok: false, error: String(e) }; }
+  } catch (e) {
+    console.error("[insights] resend_exception", String(e));
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * `academic_profiles.exam_dates` has been stored in three shapes over time:
+ *   1. [{ subject, date }]            (current)
+ *   2. { "Maths": "2026-11-02", ... } (legacy object map)
+ *   3. null / garbage
+ * Normalise to shape 1 so `.find()` never explodes.
+ */
+function normaliseExamDates(raw: unknown): Array<{ subject: string; date: string }> {
+  // Some rows store exam_dates double-encoded as a JSON string.
+  if (typeof raw === "string") {
+    try { return normaliseExamDates(JSON.parse(raw)); } catch { return []; }
+  }
+  if (Array.isArray(raw)) {
+    return raw
+      .filter((e): e is { subject: string; date: string } =>
+        !!e && typeof e === "object" && typeof (e as any).subject === "string" && !!(e as any).date)
+      .map((e) => ({ subject: String(e.subject), date: String(e.date) }));
+  }
+  if (raw && typeof raw === "object") {
+    return Object.entries(raw as Record<string, unknown>)
+      .filter(([, v]) => typeof v === "string" || v instanceof Date)
+      .map(([subject, v]) => ({ subject, date: String(v) }));
+  }
+  return [];
 }
 
 serve(async (req) => {
@@ -145,7 +178,7 @@ serve(async (req) => {
           if (a.score != null) slot.scores.push(Number(a.score));
           if (a.topic) slot.topics.add(a.topic);
         }
-        const examDates: Array<{subject: string; date: string}> = profile.exam_dates || [];
+        const examDates = normaliseExamDates(profile.exam_dates);
         const subjects: SubjectInsight[] = Object.entries(subjMap).map(([name, s]) => {
           const total = s.completed + s.missed;
           const completion = total ? s.completed / total : 0;
@@ -233,9 +266,12 @@ serve(async (req) => {
 
         const sentTutorIds: string[] = existing?.sent_to_tutors || [];
         let sentGuardianFlag = existing?.sent_to_guardian || false;
+        const deliveryErrors: string[] = [];
 
         // 1) Guardian
-        if (profile.guardian_email && !sentGuardianFlag) {
+        if (!profile.guardian_email) {
+          deliveryErrors.push("no guardian_email on academic_profile");
+        } else if (!sentGuardianFlag) {
           const payload: InsightsPayload = { ...baseInsights, audience: "guardian" };
           const res = await sendOne({
             to: profile.guardian_email,
@@ -245,6 +281,7 @@ serve(async (req) => {
             html: buildInsightsHtml(payload),
           });
           if (res.ok) { sentGuardian++; sentGuardianFlag = true; }
+          else deliveryErrors.push(`guardian: ${res.error}`);
         }
 
         // 2) Booked tutors (deduped, exclude already-sent)
@@ -265,15 +302,22 @@ serve(async (req) => {
             html: buildInsightsHtml(payload),
           });
           if (res.ok) { sentTutor++; sentTutorIds.push(tid); }
+          else deliveryErrors.push(`tutor ${tid}: ${res.error}`);
         }
 
-        // Record the run
+        if (deliveryErrors.length) {
+          console.error("[insights] delivery_errors", JSON.stringify({ user_id: profile.user_id, errors: deliveryErrors }));
+        }
+
+        // Record the run — surface delivery failures instead of always
+        // reporting "completed" with sent_to_guardian:false and no reason.
         await supabase.from("scheduled_insight_runs").upsert({
           user_id: profile.user_id,
           week_start: weekStartStr,
           sent_to_guardian: sentGuardianFlag,
           sent_to_tutors: sentTutorIds,
-          status: "completed",
+          status: deliveryErrors.length ? "partial" : "completed",
+          error_message: deliveryErrors.length ? deliveryErrors.join(" | ").slice(0, 2000) : null,
         }, { onConflict: "user_id,week_start" });
 
         if (sentGuardianFlag) {
