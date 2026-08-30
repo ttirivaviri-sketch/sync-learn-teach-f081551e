@@ -106,6 +106,7 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
             isActive={isActive}
             poster={resource.thumbnail}
             watchUrl={source.originalUrl}
+            embedUrl={source.embedUrl}
           />
         ) : source.embedUrl ? (
           showEmbed ? (
