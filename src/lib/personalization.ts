@@ -227,6 +227,18 @@ function subjectKey(s: string | null | undefined): string {
   return SUBJECT_TO_CANONICAL.get(c) ?? c;
 }
 
+/**
+ * All known alias spellings for a subject (including itself), e.g.
+ * "Physics" → ["physics", "physical sciences", "physical science"].
+ * Used to build `.in()`-style DB filters that respect subject aliasing.
+ */
+export function subjectAliases(s: string | null | undefined): string[] {
+  const key = subjectKey(s);
+  if (!key) return [];
+  const group = SUBJECT_ALIAS_GROUPS.find((g) => g[0] === key);
+  return group ? [...group] : [key];
+}
+
 export function subjectMatches(
   resourceSubject: string | null | undefined,
   learnerSubjects: string[] | null | undefined,

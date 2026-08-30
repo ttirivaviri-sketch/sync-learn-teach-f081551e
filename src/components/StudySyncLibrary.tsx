@@ -22,6 +22,7 @@ import { StudyClipsFeed } from "@/components/library/StudyClipsFeed";
 import { PosterCard } from "@/components/library/PosterCard";
 import { DocumentViewerOverlay } from "@/components/library/DocumentViewerOverlay";
 import { DiagramViewerOverlay } from "@/components/library/DiagramViewerOverlay";
+import { ClipsTopicBrowser } from "@/components/library/ClipsTopicBrowser";
 import { MatchExplanation } from "@/components/library/MatchExplanation";
 
 // Study Mode is a top-level nav tab now — no in-Library toggle needed.
@@ -49,6 +50,9 @@ const StudySyncLibrary = ({
   const [activeDiagram, setActiveDiagram] = useState<LibraryResource | null>(null);
   const [reelsFeedOpen, setReelsFeedOpen] = useState(false);
   const [reelsStartIndex, setReelsStartIndex] = useState(0);
+  // Scoped reels: which clip list the feed plays (a topic shelf, the
+  // personalized set, or everything). null = default tutorialFeed.
+  const [reelsFeedVideos, setReelsFeedVideos] = useState<LibraryResource[] | null>(null);
 
   const {
     allResources,
@@ -94,12 +98,13 @@ const StudySyncLibrary = ({
   );
 
 
-  // Tabs handler: when user picks "tutorials", drop them straight into the carousel
+  // Tabs handler: "tutorials" now lands on the topic-first browser
+  // (subject → topic shelves) instead of a single ~2,000-clip firehose.
   const handleTabChange = (next: string) => {
     if (next === "tutorials") {
       if (tutorialFeed.length > 0) {
-        setReelsStartIndex(0);
-        setReelsFeedOpen(true);
+        setPreviousCategory(activeCategory);
+        setActiveCategory("tutorials");
       } else {
         // Build a precise reason string from match stats
         let reason = "No clips have been uploaded yet — tutors are adding more weekly.";
@@ -207,6 +212,7 @@ const StudySyncLibrary = ({
     if (resource.type === "video" && videoUrl) {
       const idx = tutorialFeed.findIndex((r) => String(r.id) === String(resource.id));
       if (idx >= 0 && tutorialFeed.length > 0) {
+        setReelsFeedVideos(null); // full feed, starting at this clip
         setReelsStartIndex(idx);
         setReelsFeedOpen(true);
       } else {
@@ -354,7 +360,7 @@ const StudySyncLibrary = ({
               {/* Videos live in the Clips feed, not Browse — teaser opens the reels */}
               {tutorialFeed.length > 0 && (
                 <button
-                  onClick={() => { setReelsStartIndex(0); setReelsFeedOpen(true); }}
+                  onClick={() => handleTabChange("tutorials")}
                   className="w-full flex items-center gap-3 rounded-2xl px-4 py-4 text-left shadow-md transition-transform active:scale-[0.99]"
                   style={{ background: 'linear-gradient(135deg, hsl(340 82% 58%), hsl(20 90% 60%))' }}
                 >
@@ -364,7 +370,7 @@ const StudySyncLibrary = ({
                   <span className="flex-1 min-w-0">
                     <span className="block text-[10px] font-bold uppercase tracking-widest text-white/70">Study Clips</span>
                     <span className="block text-sm font-semibold text-white truncate">
-                      {tutorialFeed.length} clip{tutorialFeed.length === 1 ? "" : "s"} — watch now
+                      {tutorialFeed.length} clip{tutorialFeed.length === 1 ? "" : "s"} — browse by topic
                     </span>
                   </span>
                   <ChevronRight className="h-5 w-5 text-white/80 shrink-0" />
@@ -410,15 +416,28 @@ const StudySyncLibrary = ({
               <StuckPrompt onNeedHelp={onNeedHelp} onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")} />
             </TabsContent>
 
-            {/* Tutorials Tab — handled via handleTabChange (auto-opens carousel).
-                If empty, surface the inline match-reason card here too. */}
+            {/* Tutorials Tab — topic-first browser: subject → topic shelves
+                that open the reels scoped to just that topic. */}
             <TabsContent value="tutorials" className="mt-4">
-              <MatchExplanation
-                stats={tutorialStats}
-                profile={academicProfile}
-                resourceLabel="clips"
-                onEditProfile={onEditProfile}
-              />
+              {tutorialFeed.length > 0 ? (
+                <ClipsTopicBrowser
+                  clips={tutorialFeed}
+                  personalizedClips={personalizedClips}
+                  academicProfile={academicProfile}
+                  onOpenFeed={(videos, startIndex) => {
+                    setReelsFeedVideos(videos);
+                    setReelsStartIndex(startIndex);
+                    setReelsFeedOpen(true);
+                  }}
+                />
+              ) : (
+                <MatchExplanation
+                  stats={tutorialStats}
+                  profile={academicProfile}
+                  resourceLabel="clips"
+                  onEditProfile={onEditProfile}
+                />
+              )}
             </TabsContent>
 
             {/* Books Tab — Netflix-style poster racks (strict personalization) */}
@@ -645,12 +664,12 @@ const StudySyncLibrary = ({
         />
       )}
 
-      {/* Study Clips Feed */}
-      {reelsFeedOpen && tutorialFeed.length > 0 && (
+      {/* Study Clips Feed — plays a scoped list (topic shelf / For You) or the full feed */}
+      {reelsFeedOpen && (reelsFeedVideos ?? tutorialFeed).length > 0 && (
         <StudyClipsFeed
-          videos={tutorialFeed}
+          videos={reelsFeedVideos ?? tutorialFeed}
           startIndex={reelsStartIndex}
-          onClose={() => setReelsFeedOpen(false)}
+          onClose={() => { setReelsFeedOpen(false); setReelsFeedVideos(null); }}
           onBookTutor={handleBookTutor}
           onAddToLibrary={addToLibrary}
           onRemoveFromLibrary={removeFromLibrary}
