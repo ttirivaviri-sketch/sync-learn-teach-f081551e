@@ -145,9 +145,17 @@ function expandSingleToken(raw: string): string[] {
  * Parse any human grade label into a normalized set of atoms.
  * Handles combined labels split on `/`, `•`, `·`, `,`, `&`.
  */
+// Grade labels are massively repetitive across resources ("10", "11", "12",
+// "Form 4", ...), but expansion is regex-heavy. Memoize: with thousands of
+// library rows this turns O(rows × regexes) into O(unique labels).
+const gradeTokenCache = new Map<string, string[]>();
+
 export function expandGradeTokens(raw: string | null | undefined): string[] {
   if (!raw) return [];
-  const parts = String(raw)
+  const key = String(raw);
+  const cached = gradeTokenCache.get(key);
+  if (cached) return cached;
+  const parts = key
     .split(/[\/•·,&]/)
     .map((p) => p.trim())
     .filter(Boolean);
@@ -155,7 +163,10 @@ export function expandGradeTokens(raw: string | null | undefined): string[] {
   for (const p of parts) {
     for (const atom of expandSingleToken(p)) out.add(atom);
   }
-  return Array.from(out);
+  const result = Array.from(out);
+  // Bound the cache defensively (labels are finite in practice).
+  if (gradeTokenCache.size < 5000) gradeTokenCache.set(key, result);
+  return result;
 }
 
 /** True if any of the resource's grade labels overlaps the learner's grade. */

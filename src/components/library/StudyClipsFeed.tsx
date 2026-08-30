@@ -279,23 +279,31 @@ export function StudyClipsFeed({
     target?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
   }, [startIndex]);
 
-  // IntersectionObserver to track active slide
+  // Track active slide from scroll position. Every slide is exactly the
+  // container height, so index = round(scrollTop / slideHeight). This stays
+  // correct with windowed rendering (placeholder slides swap in/out of the
+  // DOM, which would invalidate an IntersectionObserver's observed nodes).
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const idx = Array.from(el.children).indexOf(entry.target as HTMLElement);
-            if (idx >= 0) setActiveIndex(idx);
-          }
-        }
-      },
-      { root: el, threshold: 0.7 }
-    );
-    Array.from(el.children).forEach((child) => observer.observe(child));
-    return () => observer.disconnect();
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const h = el.clientHeight;
+        if (h <= 0) return;
+        const idx = Math.max(
+          0,
+          Math.min(videos.length - 1, Math.round(el.scrollTop / h))
+        );
+        setActiveIndex((prev) => (prev === idx ? prev : idx));
+      });
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      el.removeEventListener("scroll", onScroll);
+    };
   }, [videos.length]);
 
   // Lock body scroll
@@ -337,20 +345,34 @@ export function StudyClipsFeed({
         ref={containerRef}
         className="h-full w-full overflow-y-auto snap-y snap-mandatory scrollbar-none"
       >
-        {videos.map((video, idx) => (
-          <ReelSlide
-            key={String(video.id)}
-            resource={video}
-            isActive={idx === activeIndex}
-            isSaved={myLibraryItems.includes(String(video.id))}
-            onBookTutor={() => {
-              const tid = video.tutor?.id || "";
-              const tname = video.tutor?.name || video.author || "Unknown";
-              if (tid) onBookTutor(tid, tname);
-            }}
-            onToggleSave={() => toggleSave(String(video.id), video.title)}
-          />
-        ))}
+        {videos.map((video, idx) => {
+          // Windowing: with thousands of clips, mounting every slide
+          // (each 100dvh with players/overlays) freezes the app. Only
+          // slides near the viewport render for real; the rest are cheap
+          // same-height placeholders that keep scroll geometry intact.
+          if (Math.abs(idx - activeIndex) > 2) {
+            return (
+              <div
+                key={String(video.id)}
+                className="h-[100dvh] w-full snap-start shrink-0 bg-black"
+              />
+            );
+          }
+          return (
+            <ReelSlide
+              key={String(video.id)}
+              resource={video}
+              isActive={idx === activeIndex}
+              isSaved={myLibraryItems.includes(String(video.id))}
+              onBookTutor={() => {
+                const tid = video.tutor?.id || "";
+                const tname = video.tutor?.name || video.author || "Unknown";
+                if (tid) onBookTutor(tid, tname);
+              }}
+              onToggleSave={() => toggleSave(String(video.id), video.title)}
+            />
+          );
+        })}
       </div>
     </div>
   );

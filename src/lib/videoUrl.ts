@@ -38,7 +38,11 @@ export interface ParseVideoOptions {
 export function parseVideoSource(url: string, options: ParseVideoOptions = {}): ParsedVideoSource {
   const originalUrl = url.trim();
   const autoplay = options.autoplay ? 1 : 0;
-  const embedOrigin = options.origin?.trim();
+  // Only pass real http(s) origins to YouTube. Webview schemes
+  // (capacitor://, file://) get rejected by the player and the embed
+  // errors out instead of playing.
+  const rawOrigin = options.origin?.trim();
+  const embedOrigin = rawOrigin && /^https?:\/\//i.test(rawOrigin) ? rawOrigin : undefined;
 
   try {
     const parsed = new URL(originalUrl);
