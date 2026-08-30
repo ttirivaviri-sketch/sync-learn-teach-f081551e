@@ -15,6 +15,7 @@ import { ConceptMasteryBreakdown } from './ConceptMasteryBreakdown';
 import { Leaderboard } from './Leaderboard';
 import { PhotoSolvePanel } from './PhotoSolvePanel';
 import { LearningOpsOverview } from './LearningOpsOverview';
+import { TopicClipsRail } from './TopicClipsRail';
 import { useTopicProgression } from '../hooks/useTopicProgression';
 import { useUserProgress } from '../hooks/useUserProgress';
 import { useSubjectXP } from '../hooks/useSubjectXP';
@@ -417,6 +418,13 @@ export function SubjectDetail({ subject, tasks, onBack, onOpenChat, onCompleteTa
           </Button>
         )}
       </div>
+
+      {/* ── Clips for this topic — context-aware library clips ─────────── */}
+      <TopicClipsRail
+        subject={subject.name}
+        topic={subject.currentTopic.name}
+        curriculum={curriculum}
+      />
 
       {/* ── Quick Launch: Active Recall, Exam Mode, Insights, Mastery ─── */}
       <div className="grid grid-cols-2 gap-3">

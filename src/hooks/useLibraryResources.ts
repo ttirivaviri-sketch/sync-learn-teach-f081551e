@@ -471,7 +471,17 @@ export function useLibraryResources(
             .order("created_at", { ascending: false })
             .limit(limit);
 
-        const [tutorialsResult, booksResult, videosResult, papersResult, diagramsResult] = await Promise.all([
+        // Videos now exceed the 1000-row PostgREST cap (large seeded clip
+        // catalogue) — page a second range so topic shelves see everything.
+        const systemQueryRange = (kind: string, from: number, to: number) =>
+          supabase
+            .from("library_system_resources")
+            .select("*")
+            .eq("kind", kind)
+            .order("created_at", { ascending: false })
+            .range(from, to);
+
+        const [tutorialsResult, booksResult, videosResult, videosResult2, papersResult, diagramsResult] = await Promise.all([
           supabase
             .from("tutor_tutorials")
           .select(
@@ -484,6 +494,7 @@ export function useLibraryResources(
             .order("created_at", { ascending: false }),
           systemQuery("textbook", 1000),
           systemQuery("video", 1000),
+          systemQueryRange("video", 1000, 1999),
           systemQuery("past_paper", 1000),
           systemQuery("diagram", 1000),
         ]);
@@ -496,6 +507,8 @@ export function useLibraryResources(
         const systemData = [
           ...(booksResult.data ?? []),
           ...(videosResult.data ?? []),
+          // Second video page fails gracefully (empty) when total ≤ 1000.
+          ...(videosResult2.data ?? []),
           ...(papersResult.data ?? []),
           // Diagrams query fails gracefully (empty) if migration not applied yet.
           ...(diagramsResult.data ?? []),
