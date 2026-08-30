@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { LibraryResource, AcademicProfile } from "@/types/academicProfile";
 import { logger } from "@/utils/logger";
@@ -442,14 +442,14 @@ export function useLibraryResources(
   // Show only DB resources once fetched; show seed data only as initial loading placeholder.
   // Study-skills seeds are ALWAYS merged in (deduplicated by id) so the rack is visible
   // even before the DB migration has run on the remote instance.
-  const allResources: LibraryResource[] = (() => {
+  const allResources: LibraryResource[] = useMemo(() => {
     if (dbFetched) {
       // DB is the source of truth — Study Skills books now seeded in DB with real UUIDs.
       return dbResources;
     }
     // Pre-fetch placeholders only (seeds have non-UUID ids and can't be streamed).
     return [...SEED_TUTORIALS, ...SEED_STUDY_SKILLS];
-  })();
+  }, [dbFetched, dbResources]);
 
 
   // Fetch tutor-uploaded tutorials AND PDFs from Supabase
@@ -698,7 +698,9 @@ export function useLibraryResources(
 
   // Strict personalization for subject-specific resources.
   // Study-skills guides bypass the subject filter (they're universal).
-  const personalizedResources = academicProfile
+  // Memoized: with thousands of library rows this regex-heavy filter must
+  // NOT run on every render (it made the whole app feel slow).
+  const personalizedResources = useMemo(() => academicProfile
     ? allResources.filter((r) => {
         if (!r.tags) return false;
 
@@ -727,24 +729,31 @@ export function useLibraryResources(
         const matchSubject = subjectMatches(r, academicProfile.subjects);
         return matchCurriculum && matchGrade && matchSubject;
       })
-    : [];
+    : [], [allResources, academicProfile]);
 
   const visibleResources = personalizedResources;
 
-  const recommendedTutorials = visibleResources.filter((r) => r.isTutorial);
+  const recommendedTutorials = useMemo(
+    () => visibleResources.filter((r) => r.isTutorial),
+    [visibleResources]
+  );
 
-  const pastPapers = visibleResources
+  const pastPapers = useMemo(() => visibleResources
     .filter(
       (r) =>
         r.type === "pastpaper" ||
         (r.category || "").toLowerCase().includes("past paper")
     )
     // Newest exam year first; papers without a year sink to the end.
-    .sort((a, b) => (b.paperMeta?.year ?? 0) - (a.paperMeta?.year ?? 0));
+    .sort((a, b) => (b.paperMeta?.year ?? 0) - (a.paperMeta?.year ?? 0)),
+    [visibleResources]
+  );
 
-  const topTutors = visibleResources
+  const topTutors = useMemo(() => visibleResources
     .filter((r) => r.isTutorial && r.tutor)
-    .sort((a, b) => (b.tutor?.rating || 0) - (a.tutor?.rating || 0));
+    .sort((a, b) => (b.tutor?.rating || 0) - (a.tutor?.rating || 0)),
+    [visibleResources]
+  );
 
   // ── Match diagnostics ─────────────────────────────────────────────────────
   const computeStats = useCallback(
@@ -806,7 +815,7 @@ export function useLibraryResources(
     [allResources, academicProfile]
   );
 
-  const matchStats = computeStats();
+  const matchStats = useMemo(() => computeStats(), [computeStats]);
   const getMatchStatsFor = useCallback(
     (predicate: (r: LibraryResource) => boolean) => computeStats(predicate),
     [computeStats]
@@ -814,7 +823,7 @@ export function useLibraryResources(
 
 
 
-  const searchResults = searchQuery.trim()
+  const searchResults = useMemo(() => searchQuery.trim()
     ? personalizedResources.filter((r) => {
         const q = searchQuery.toLowerCase();
         return (
@@ -828,7 +837,7 @@ export function useLibraryResources(
           false
         );
       })
-    : [];
+    : [], [searchQuery, personalizedResources]);
 
   const getBySubject = useCallback(
     (subject: string) =>

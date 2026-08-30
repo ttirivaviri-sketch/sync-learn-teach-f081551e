@@ -136,7 +136,12 @@ export function YouTubeClipPlayer({
             rel: 0,
             modestbranding: 1,
             fs: 1,
-            origin: window.location.origin,
+            // Only send origin when it's a real http(s) origin. Webviews
+            // (capacitor://, file://) produce origins YouTube rejects,
+            // which surfaces as player errors and "dead" clips.
+            ...(window.location.origin.startsWith("http")
+              ? { origin: window.location.origin }
+              : {}),
           },
           events: {
             onReady: () => {
@@ -149,7 +154,13 @@ export function YouTubeClipPlayer({
               if (event.data === YT.PlayerState.PLAYING) setStarted(true);
             },
             onError: () => {
-              if (!cancelled) setFailed(true);
+              if (cancelled) return;
+              // Don't give up on first error — API-created players fail in
+              // environments where a plain embed iframe still plays fine
+              // (origin rejection, webview quirks). Fall back before
+              // prompting the user to leave the app.
+              if (embedUrl) setUseIframeFallback(true);
+              else setFailed(true);
             },
           },
         });
