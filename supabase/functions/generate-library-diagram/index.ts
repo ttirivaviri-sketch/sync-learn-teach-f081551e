@@ -167,8 +167,16 @@ serve(async (req) => {
 
       if (!aiResp.ok) {
         // Non-retryable, user-actionable failures bail out immediately.
-        if (aiResp.status === 429) throw new Error("Rate limit — please try again shortly.");
-        if (aiResp.status === 402) throw new Error("AI credits exhausted.");
+        if (aiResp.status === 429 || aiResp.status === 402) {
+          const message =
+            aiResp.status === 402
+              ? "AI credits exhausted. Please top up to generate diagrams."
+              : "Rate limit reached — please try again shortly.";
+          return new Response(JSON.stringify({ error: message, retryable: aiResp.status === 429 }), {
+            status: aiResp.status,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         const t = await aiResp.text();
         console.error("Image model error:", aiResp.status, t.slice(0, 500));
         // 5xx from the gateway is worth another attempt.
@@ -176,6 +184,7 @@ serve(async (req) => {
         await new Promise((r) => setTimeout(r, 800 * (attempt + 1)));
         continue;
       }
+
 
       const aiData = await aiResp.json();
       if (aiData?.usage) {
