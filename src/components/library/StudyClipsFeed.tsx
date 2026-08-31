@@ -20,6 +20,13 @@ interface StudyClipsFeedProps {
   onAddToLibrary: (resourceId: string, resourceTitle: string) => void;
   onRemoveFromLibrary: (resourceId: string) => void;
   myLibraryItems: string[];
+  /** Persisted like state + toggle (optional — hides Like when absent). */
+  likedItems?: string[];
+  onToggleLike?: (resourceId: string) => void;
+  /** Feed context label, e.g. "Trigonometry" — shown next to the counter. */
+  contextLabel?: string;
+  /** Called after a clip has been actively viewed for ~3s (watch signal). */
+  onWatch?: (resourceId: string) => void;
 }
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -48,13 +55,37 @@ interface SlideProps {
   resource: LibraryResource;
   isActive: boolean;
   isSaved: boolean;
-  onBookTutor: () => void;
+  isLiked: boolean;
+  /** undefined → clip has no bookable tutor; Book button is hidden. */
+  onBookTutor?: () => void;
   onToggleSave: () => void;
+  onToggleLike?: () => void;
 }
 
-function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: SlideProps) {
+function shareClip(resource: LibraryResource, url: string | null) {
+  const shareUrl = url || (typeof window !== "undefined" ? window.location.href : "");
+  const payload = {
+    title: resource.title,
+    text: `Watch "${resource.title}" on StudySync`,
+    url: shareUrl,
+  };
+  if (typeof navigator !== "undefined" && navigator.share) {
+    navigator.share(payload).catch(() => {});
+  } else if (typeof navigator !== "undefined" && navigator.clipboard) {
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      window.dispatchEvent(
+        new CustomEvent("show-toast", {
+          detail: { title: "Link copied", description: "Clip link copied to clipboard" },
+        })
+      );
+    }).catch(() => {});
+  }
+}
+
+function ReelSlide({ resource, isActive, isSaved, isLiked, onBookTutor, onToggleSave, onToggleLike }: SlideProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [liked, setLiked] = useState(false);
+  const [localLiked, setLocalLiked] = useState(false);
+  const liked = onToggleLike ? isLiked : localLiked;
   const [playRequested, setPlayRequested] = useState(false);
   const [playerLoaded, setPlayerLoaded] = useState(false);
   const [playerTimedOut, setPlayerTimedOut] = useState(false);
@@ -183,8 +214,10 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
       {/* Right-side interaction buttons */}
       <div className="absolute right-3 bottom-32 flex flex-col items-center gap-5 z-20">
         <button
-          onClick={() => setLiked((l) => !l)}
+          onClick={() => (onToggleLike ? onToggleLike() : setLocalLiked((l) => !l))}
           className="flex flex-col items-center gap-1"
+          aria-label={liked ? "Unlike this clip" : "Like this clip"}
+          aria-pressed={liked}
         >
           <Heart
             className={`h-7 w-7 ${liked ? "fill-red-500 text-red-500" : "text-white"}`}
@@ -192,22 +225,34 @@ function ReelSlide({ resource, isActive, isSaved, onBookTutor, onToggleSave }: S
           <span className="text-white text-[10px]">Like</span>
         </button>
 
-        <button onClick={onToggleSave} className="flex flex-col items-center gap-1">
+        <button
+          onClick={onToggleSave}
+          className="flex flex-col items-center gap-1"
+          aria-label={isSaved ? "Remove from saved" : "Save to library"}
+          aria-pressed={isSaved}
+        >
           <Bookmark
             className={`h-7 w-7 ${isSaved ? "fill-primary text-primary" : "text-white"}`}
           />
           <span className="text-white text-[10px]">Save</span>
         </button>
 
-        <button
-          onClick={() => onBookTutor()}
-          className="flex flex-col items-center gap-1"
-        >
-          <GraduationCap className="h-7 w-7 text-white" />
-          <span className="text-white text-[10px]">Book</span>
-        </button>
+        {onBookTutor && (
+          <button
+            onClick={() => onBookTutor()}
+            className="flex flex-col items-center gap-1"
+            aria-label="Book this tutor"
+          >
+            <GraduationCap className="h-7 w-7 text-white" />
+            <span className="text-white text-[10px]">Book</span>
+          </button>
+        )}
 
-        <button className="flex flex-col items-center gap-1">
+        <button
+          onClick={() => shareClip(resource, source?.originalUrl ?? null)}
+          className="flex flex-col items-center gap-1"
+          aria-label="Share this clip"
+        >
           <Share2 className="h-7 w-7 text-white" />
           <span className="text-white text-[10px]">Share</span>
         </button>
@@ -267,9 +312,29 @@ export function StudyClipsFeed({
   onAddToLibrary,
   onRemoveFromLibrary,
   myLibraryItems,
+  likedItems,
+  onToggleLike,
+  contextLabel,
+  onWatch,
 }: StudyClipsFeedProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(startIndex);
+
+  // Watch signal: a clip counts as "watched" after 3s as the active slide.
+  // Each clip fires at most once per feed session.
+  const watchedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!onWatch) return;
+    const video = videos[activeIndex];
+    if (!video) return;
+    const id = String(video.id);
+    if (watchedRef.current.has(id)) return;
+    const t = setTimeout(() => {
+      watchedRef.current.add(id);
+      onWatch(id);
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [activeIndex, videos, onWatch]);
 
   // Scroll to start index on mount
   useEffect(() => {
@@ -329,14 +394,15 @@ export function StudyClipsFeed({
       <button
         onClick={onClose}
         className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/40 backdrop-blur-sm"
+        aria-label="Close clips feed"
       >
         <X className="h-6 w-6 text-white" />
       </button>
 
-      {/* Scroll indicator */}
-      <div className="absolute top-4 left-4 z-30">
-        <span className="text-white/70 text-xs">
-          {activeIndex + 1} / {videos.length}
+      {/* Scroll indicator — shows topic context in scoped feeds */}
+      <div className="absolute top-4 left-4 z-30 max-w-[70%]">
+        <span className="text-white/70 text-xs truncate block">
+          {contextLabel ? `${contextLabel} · ` : ""}{activeIndex + 1} of {videos.length}
         </span>
       </div>
 
@@ -364,12 +430,16 @@ export function StudyClipsFeed({
               resource={video}
               isActive={idx === activeIndex}
               isSaved={myLibraryItems.includes(String(video.id))}
-              onBookTutor={() => {
-                const tid = video.tutor?.id || "";
-                const tname = video.tutor?.name || video.author || "Unknown";
-                if (tid) onBookTutor(tid, tname);
-              }}
+              isLiked={!!likedItems?.includes(String(video.id))}
+              onBookTutor={
+                video.tutor?.id
+                  ? () => onBookTutor(video.tutor!.id, video.tutor!.name || video.author || "Tutor")
+                  : undefined
+              }
               onToggleSave={() => toggleSave(String(video.id), video.title)}
+              onToggleLike={
+                onToggleLike ? () => onToggleLike(String(video.id)) : undefined
+              }
             />
           );
         })}

@@ -35,6 +35,10 @@ export interface ClipContext {
   topic?: string | null;
   /** Concept labels the learner is currently weak on (highest priority). */
   weakConcepts?: string[];
+  /** Clip ids the learner liked — mild boost (proven-useful signal). */
+  likedIds?: string[];
+  /** Clip id → watch count — already-watched clips sink so fresh ones surface. */
+  watchCounts?: Record<string, number>;
 }
 
 /**
@@ -86,6 +90,16 @@ export function scoreClipRelevance(clip: LibraryResource, ctx: ClipContext): num
       if (matched >= Math.max(1, Math.ceil(tokens.length / 2))) conceptHits++;
     }
     score += Math.min(conceptHits * 12, 36);
+  }
+
+  // Engagement signals — only adjust clips that already match on content.
+  if (score > 0) {
+    const id = String(clip.id);
+    if (ctx.likedIds?.includes(id)) score += 10;
+    const watches = ctx.watchCounts?.[id] ?? 0;
+    // Repeat-watch penalty: watched clips sink (but stay in the pool for revision).
+    if (watches > 0) score -= Math.min(watches * 8, 24);
+    if (score <= 0) score = 1; // matching clips never fully disappear
   }
 
   return score;

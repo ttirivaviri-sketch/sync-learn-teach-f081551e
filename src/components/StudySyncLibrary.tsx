@@ -1,15 +1,19 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
-  Archive, Brain, Loader2, Sparkles, X, ChevronRight, Shapes,
+  Archive, Brain, Sparkles, X, ChevronRight, Shapes,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
 import { TopicTutorRack } from "@/components/TopicTutorRack";
 import { useLibraryResources } from "@/hooks/useLibraryResources";
+import { useResourceEngagement } from "@/hooks/useResourceEngagement";
 import type { AcademicProfile, LibraryResource } from "@/types/academicProfile";
 
 // Sub-components
@@ -41,7 +45,16 @@ const StudySyncLibrary = ({
   onEditProfile,
 }: StudySyncLibraryProps) => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [myLibraryItems, setMyLibraryItems] = useState<string[]>([]);
+  const {
+    savedIds: myLibraryItems,
+    likedIds,
+    lastOpened,
+    toggleSave,
+    toggleLike,
+    recordOpen,
+    recordWatch,
+    watchCounts,
+  } = useResourceEngagement();
   // studyModeActive removed — Study Mode is a top-level nav tab now.
   const [activeCategory, setActiveCategory] = useState("all");
   const [previousCategory, setPreviousCategory] = useState("all");
@@ -53,6 +66,10 @@ const StudySyncLibrary = ({
   // Scoped reels: which clip list the feed plays (a topic shelf, the
   // personalized set, or everything). null = default tutorialFeed.
   const [reelsFeedVideos, setReelsFeedVideos] = useState<LibraryResource[] | null>(null);
+  const [reelsContextLabel, setReelsContextLabel] = useState<string | undefined>(undefined);
+  // Working filters (applied to search results): resource type + subject
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [subjectFilter, setSubjectFilter] = useState<string | null>(null);
 
   const {
     allResources,
@@ -83,7 +100,16 @@ const StudySyncLibrary = ({
 
   // Clips feed: personalized clips first, then every other uploaded/seeded clip
   // (deduped) — so new uploads always land in the Clips feed instead of Browse.
-  const personalizedClips = personalizedResources.filter(isClip);
+  // Watch-history ordering: unwatched clips surface first; liked float up.
+  const engagementOrder = (a: LibraryResource, b: LibraryResource) => {
+    const wa = watchCounts[String(a.id)] ?? 0;
+    const wb = watchCounts[String(b.id)] ?? 0;
+    if ((wa === 0) !== (wb === 0)) return wa === 0 ? -1 : 1;
+    const la = likedIds.includes(String(a.id)) ? 1 : 0;
+    const lb = likedIds.includes(String(b.id)) ? 1 : 0;
+    return lb - la;
+  };
+  const personalizedClips = personalizedResources.filter(isClip).sort(engagementOrder);
   const personalizedClipIds = new Set(personalizedClips.map((r) => r.id));
   const tutorialFeed = [
     ...personalizedClips,
@@ -144,10 +170,37 @@ const StudySyncLibrary = ({
 
   // ── Handlers ─────────────────────────────────────────────────────────────
 
+  // Debounce the expensive 6.5k-row filter pass; input stays instant.
+  const [debouncedSearch] = useDebouncedCallback((value: string) => search(value), 250);
   const handleSearch = (value: string) => {
     setSearchQuery(value);
-    search(value);
+    debouncedSearch(value);
   };
+
+  const TYPE_FILTERS = [
+    { id: "video", label: "Clips" },
+    { id: "book", label: "Books" },
+    { id: "pastpaper", label: "Past Papers" },
+    { id: "diagram", label: "Diagrams" },
+  ];
+
+  const subjectOptions = useMemo(() => {
+    const subjects = new Set<string>();
+    for (const r of allResources) {
+      const s = r.tags?.subject || r.category;
+      if (s && s !== "General") subjects.add(s);
+    }
+    return Array.from(subjects).sort();
+  }, [allResources]);
+
+  const applyFilters = (items: LibraryResource[]) =>
+    items.filter((r) => {
+      if (typeFilter && !(typeFilter === "book" ? r.type === "book" || r.type === "guide" : r.type === typeFilter)) return false;
+      if (subjectFilter && (r.tags?.subject || r.category) !== subjectFilter) return false;
+      return true;
+    });
+
+  const activeFilterCount = (typeFilter ? 1 : 0) + (subjectFilter ? 1 : 0);
 
   const dispatchToast = (title: string, description: string) => {
     window.dispatchEvent(
@@ -155,22 +208,49 @@ const StudySyncLibrary = ({
     );
   };
 
+  // Source discriminator for the engagement table.
+  const sourceOf = (r: LibraryResource): "system" | "tutorial" =>
+    r.pdfSource === "tutorial" || r.tutor ? "tutorial" : "system";
+
+  const findResource = (id: string) =>
+    allResources.find((r) => String(r.id) === id);
+
   const addToLibrary = (resourceId: string, resourceTitle: string) => {
     if (!myLibraryItems.includes(resourceId)) {
-      setMyLibraryItems((prev) => [...prev, resourceId]);
+      const r = findResource(resourceId);
+      toggleSave(resourceId, r ? sourceOf(r) : "system");
       dispatchToast("Added to Library!", `${resourceTitle} saved to your library`);
     }
   };
 
   const removeFromLibrary = (resourceId: string) => {
-    setMyLibraryItems((prev) => prev.filter((id) => id !== resourceId));
+    if (myLibraryItems.includes(resourceId)) {
+      const r = findResource(resourceId);
+      toggleSave(resourceId, r ? sourceOf(r) : "system");
+    }
   };
 
-  const downloadResource = (_id: string, title: string) => {
-    dispatchToast("Download Started", `${title} is being downloaded for offline access`);
+  const downloadResource = (id: string, title: string) => {
+    // Real download: open the attached file (PDFs) in a new tab / trigger save.
+    const r = findResource(id);
+    const fileUrl = r?.videoUrl; // for documents videoUrl carries the pdf/file url
+    if (r && ["book", "guide", "pastpaper", "pdf"].includes(r.type) && fileUrl) {
+      const a = document.createElement("a");
+      a.href = fileUrl;
+      a.download = `${title}.pdf`;
+      a.target = "_blank";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      dispatchToast("Download Started", `${title} is downloading`);
+    } else {
+      dispatchToast("No file to download", "This resource doesn't have a downloadable file.");
+    }
   };
 
   const openResource = (resource: LibraryResource) => {
+    recordOpen(String(resource.id), sourceOf(resource));
     // AI study diagrams open in the diagram viewer with the explain chat.
     if (resource.type === "diagram") {
       setActiveDiagram(resource);
@@ -213,6 +293,7 @@ const StudySyncLibrary = ({
       const idx = tutorialFeed.findIndex((r) => String(r.id) === String(resource.id));
       if (idx >= 0 && tutorialFeed.length > 0) {
         setReelsFeedVideos(null); // full feed, starting at this clip
+        setReelsContextLabel(undefined);
         setReelsStartIndex(idx);
         setReelsFeedOpen(true);
       } else {
@@ -263,14 +344,69 @@ const StudySyncLibrary = ({
             className="pl-10"
           />
           {searchQuery && (
-            <button className="absolute right-3 top-3" onClick={() => handleSearch("")}>
+            <button
+              className="absolute right-3 top-3"
+              onClick={() => handleSearch("")}
+              aria-label="Clear search"
+            >
               <X className="h-4 w-4 text-muted-foreground hover:text-foreground" />
             </button>
           )}
         </div>
-        <Button variant="outline" size="icon">
-          <Filter className="h-4 w-4" />
-        </Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" className="relative" aria-label="Filter resources">
+              <Filter className="h-4 w-4" />
+              {activeFilterCount > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">
+                  {activeFilterCount}
+                </span>
+              )}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-64 space-y-3">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Type</p>
+              <div className="flex flex-wrap gap-1.5">
+                {TYPE_FILTERS.map((t) => (
+                  <Badge
+                    key={t.id}
+                    variant={typeFilter === t.id ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setTypeFilter(typeFilter === t.id ? null : t.id)}
+                  >
+                    {t.label}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Subject</p>
+              <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto">
+                {subjectOptions.map((s) => (
+                  <Badge
+                    key={s}
+                    variant={subjectFilter === s ? "default" : "outline"}
+                    className="cursor-pointer"
+                    onClick={() => setSubjectFilter(subjectFilter === s ? null : s)}
+                  >
+                    {s}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+            {activeFilterCount > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full"
+                onClick={() => { setTypeFilter(null); setSubjectFilter(null); }}
+              >
+                Clear filters
+              </Button>
+            )}
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* ── Single filter row — spec p.4: curriculum/grade context + subject chips merged into one row ── */}
@@ -297,11 +433,11 @@ const StudySyncLibrary = ({
         )}
       </div>
 
-      {/* ── Search Results ── */}
-      {searchQuery.trim() ? (
+      {/* ── Search Results — also shown when filters are active without a query ── */}
+      {searchQuery.trim() || activeFilterCount > 0 ? (
         <SearchResultsView
-          searchQuery={searchQuery}
-          searchResults={searchResults}
+          searchQuery={searchQuery.trim() ? searchQuery : "Filtered resources"}
+          searchResults={applyFilters(searchQuery.trim() ? searchResults : personalizedResources)}
           myLibraryItems={myLibraryItems}
           onNeedHelp={onNeedHelp}
           onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")}
@@ -326,15 +462,39 @@ const StudySyncLibrary = ({
             {/* Browse Tab */}
             <TabsContent value="all" className="space-y-6 mt-4">
               {loading && (
-                <div className="flex justify-center py-6">
-                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                <div className="space-y-5" aria-busy="true" aria-label="Loading library">
+                  <Skeleton className="h-16 w-full rounded-2xl" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-40" />
+                    <div className="flex gap-3 overflow-hidden">
+                      {[0, 1, 2].map((i) => (
+                        <Skeleton key={i} className="h-36 w-64 shrink-0 rounded-xl" />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-32" />
+                    <div className="flex gap-3 overflow-hidden">
+                      {[0, 1, 2, 3].map((i) => (
+                        <Skeleton key={i} className="h-52 w-36 shrink-0 rounded-xl" />
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 
               {/* Continue Reading — gradient banner (spec p.4) */}
               {(() => {
+                // Continue Reading = the book the learner most recently OPENED,
+                // falling back to saved/personalized picks.
+                const openedBooks = Object.entries(lastOpened)
+                  .sort((a, b) => (a[1] < b[1] ? 1 : -1))
+                  .map(([id]) => findResource(id))
+                  .filter((r): r is LibraryResource => !!r && isBookish(r));
                 const continueBook =
-                  myLibraryResources.find(isBookish) ?? personalizedResources.find(isBookish);
+                  openedBooks[0] ??
+                  myLibraryResources.find(isBookish) ??
+                  personalizedResources.find(isBookish);
                 if (!continueBook) return null;
                 return (
                   <button
@@ -424,8 +584,9 @@ const StudySyncLibrary = ({
                   clips={tutorialFeed}
                   personalizedClips={personalizedClips}
                   academicProfile={academicProfile}
-                  onOpenFeed={(videos, startIndex) => {
+                  onOpenFeed={(videos, startIndex, label) => {
                     setReelsFeedVideos(videos);
+                    setReelsContextLabel(label);
                     setReelsStartIndex(startIndex);
                     setReelsFeedOpen(true);
                   }}
@@ -565,15 +726,12 @@ const StudySyncLibrary = ({
             {/* Diagrams Tab — subject-grouped poster racks */}
             <TabsContent value="diagrams" className="space-y-5 mt-4">
               {diagramFeed.length === 0 ? (
-                <Card className="bg-muted/30">
-                  <CardContent className="p-6 text-center">
-                    <Shapes className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <h4 className="font-medium mb-2">No diagrams yet</h4>
-                    <p className="text-sm text-muted-foreground">
-                      Study diagrams are being added — check back soon.
-                    </p>
-                  </CardContent>
-                </Card>
+                <MatchExplanation
+                  stats={getMatchStatsFor(isDiagram)}
+                  profile={academicProfile}
+                  resourceLabel="diagrams"
+                  onEditProfile={onEditProfile}
+                />
               ) : (
                 Object.entries(
                   diagramFeed.reduce<Record<string, LibraryResource[]>>((acc, d) => {
@@ -669,11 +827,21 @@ const StudySyncLibrary = ({
         <StudyClipsFeed
           videos={reelsFeedVideos ?? tutorialFeed}
           startIndex={reelsStartIndex}
-          onClose={() => { setReelsFeedOpen(false); setReelsFeedVideos(null); }}
+          onClose={() => { setReelsFeedOpen(false); setReelsFeedVideos(null); setReelsContextLabel(undefined); }}
           onBookTutor={handleBookTutor}
           onAddToLibrary={addToLibrary}
           onRemoveFromLibrary={removeFromLibrary}
           myLibraryItems={myLibraryItems}
+          likedItems={likedIds}
+          onToggleLike={(id) => {
+            const r = findResource(id);
+            toggleLike(id, r ? sourceOf(r) : "system");
+          }}
+          contextLabel={reelsContextLabel}
+          onWatch={(id) => {
+            const r = findResource(id);
+            recordWatch(id, r ? sourceOf(r) : "system");
+          }}
         />
       )}
 

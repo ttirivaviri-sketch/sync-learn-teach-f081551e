@@ -423,8 +423,6 @@ interface UseLibraryResourcesReturn {
   searchResults: LibraryResource[];
   loading: boolean;
   search: (query: string) => void;
-  getBySubject: (subject: string) => LibraryResource[];
-  getByTopic: (topic: string) => LibraryResource[];
   /** Per-filter match diagnostics for empty-state explanations. */
   matchStats: LibraryMatchStats;
   /** Same as matchStats, but scoped to a single resource type (book/pastpaper/video). */
@@ -852,26 +850,6 @@ export function useLibraryResources(
       })
     : [], [searchQuery, personalizedResources]);
 
-  const getBySubject = useCallback(
-    (subject: string) =>
-      allResources.filter(
-        (r) =>
-          r.category.toLowerCase() === subject.toLowerCase() ||
-          r.tags?.subject.toLowerCase() === subject.toLowerCase()
-      ),
-    [allResources]
-  );
-
-  const getByTopic = useCallback(
-    (topic: string) =>
-      allResources.filter(
-        (r) =>
-          r.tags?.topic?.toLowerCase().includes(topic.toLowerCase()) ||
-          r.title.toLowerCase().includes(topic.toLowerCase())
-      ),
-    [allResources]
-  );
-
   return {
     allResources,
     personalizedResources,
@@ -881,8 +859,6 @@ export function useLibraryResources(
     searchResults,
     loading,
     search: setSearchQuery,
-    getBySubject,
-    getByTopic,
     matchStats,
     getMatchStatsFor,
   };

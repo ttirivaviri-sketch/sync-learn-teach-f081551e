@@ -11,7 +11,7 @@ interface ClipsTopicBrowserProps {
   personalizedClips: LibraryResource[];
   academicProfile?: AcademicProfile | null;
   /** Open the vertical reels player scoped to `videos`, starting at `startIndex`. */
-  onOpenFeed: (videos: LibraryResource[], startIndex: number) => void;
+  onOpenFeed: (videos: LibraryResource[], startIndex: number, contextLabel?: string) => void;
 }
 
 const INITIAL_SHELVES = 12;
@@ -50,8 +50,9 @@ function ShelfRow({ shelf, onOpenFeed }: { shelf: TopicShelf; onOpenFeed: ClipsT
   return (
     <div className="space-y-2">
       <button
-        onClick={() => onOpenFeed(shelf.clips, 0)}
+        onClick={() => onOpenFeed(shelf.clips, 0, shelf.topic)}
         className="flex w-full items-center gap-1.5 text-left"
+        aria-label={`Play all ${shelf.topic} clips`}
       >
         <h3 className="font-semibold text-sm truncate">{shelf.topic}</h3>
         <span className="text-xs text-muted-foreground shrink-0">
@@ -64,7 +65,7 @@ function ShelfRow({ shelf, onOpenFeed }: { shelf: TopicShelf; onOpenFeed: ClipsT
           <ClipThumb
             key={String(clip.id)}
             clip={clip}
-            onClick={() => onOpenFeed(shelf.clips, idx)}
+            onClick={() => onOpenFeed(shelf.clips, idx, shelf.topic)}
           />
         ))}
       </div>
@@ -99,8 +100,9 @@ export function ClipsTopicBrowser({
       {forYou.length > 0 && (
         <div className="space-y-2">
           <button
-            onClick={() => onOpenFeed(personalizedClips, 0)}
+            onClick={() => onOpenFeed(personalizedClips, 0, "For You")}
             className="flex w-full items-center gap-1.5 text-left"
+            aria-label="Play your personalized clips"
           >
             <Sparkles className="h-4 w-4 text-primary shrink-0" />
             <h3 className="font-semibold text-sm">For You</h3>
@@ -114,7 +116,7 @@ export function ClipsTopicBrowser({
               <ClipThumb
                 key={String(clip.id)}
                 clip={clip}
-                onClick={() => onOpenFeed(personalizedClips, idx)}
+                onClick={() => onOpenFeed(personalizedClips, idx, "For You")}
               />
             ))}
           </div>
