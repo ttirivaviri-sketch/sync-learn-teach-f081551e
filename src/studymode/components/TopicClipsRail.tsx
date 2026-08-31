@@ -3,6 +3,7 @@ import { Play, Video } from 'lucide-react';
 import type { LibraryResource } from '@/types/academicProfile';
 import { useTopicClips } from '../hooks/useTopicClips';
 import { StudyClipsFeed } from '@/components/library/StudyClipsFeed';
+import { useResourceEngagement } from '@/hooks/useResourceEngagement';
 
 interface TopicClipsRailProps {
   subject: string;
@@ -18,6 +19,7 @@ interface TopicClipsRailProps {
  */
 export function TopicClipsRail({ subject, topic, curriculum }: TopicClipsRailProps) {
   const { clips, loading } = useTopicClips(subject, topic, curriculum);
+  const { savedIds, likedIds, toggleSave, toggleLike, recordWatch } = useResourceEngagement();
   const [feedOpen, setFeedOpen] = useState(false);
   const [startIndex, setStartIndex] = useState(0);
 
@@ -76,10 +78,14 @@ export function TopicClipsRail({ subject, topic, curriculum }: TopicClipsRailPro
           videos={clips}
           startIndex={startIndex}
           onClose={() => setFeedOpen(false)}
-          onBookTutor={() => {}}
-          onAddToLibrary={() => {}}
-          onRemoveFromLibrary={() => {}}
-          myLibraryItems={[]}
+          onBookTutor={() => {}} // seeded clips have no tutor — Book hides itself per-slide
+          onAddToLibrary={(id) => toggleSave(id, 'system')}
+          onRemoveFromLibrary={(id) => toggleSave(id, 'system')}
+          myLibraryItems={savedIds}
+          likedItems={likedIds}
+          onToggleLike={(id) => toggleLike(id, 'system')}
+          contextLabel={topic}
+          onWatch={(id) => recordWatch(id, 'system')}
         />
       )}
     </div>

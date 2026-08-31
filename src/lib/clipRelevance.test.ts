@@ -84,6 +84,38 @@ describe("scoreClipRelevance", () => {
   });
 });
 
+describe("engagement signals", () => {
+  const base = clip({ title: "Solving Quadratic Equations", id: "q1" } as any);
+  const ctx = { subject: "Mathematics", topic: "Algebra" };
+
+  it("boosts liked clips", () => {
+    const plain = scoreClipRelevance(base, ctx);
+    const liked = scoreClipRelevance(base, { ...ctx, likedIds: ["q1"] });
+    expect(liked).toBe(plain + 10);
+  });
+
+  it("penalizes already-watched clips without dropping them", () => {
+    const plain = scoreClipRelevance(base, ctx);
+    const watchedOnce = scoreClipRelevance(base, { ...ctx, watchCounts: { q1: 1 } });
+    const watchedLots = scoreClipRelevance(base, { ...ctx, watchCounts: { q1: 10 } });
+    expect(watchedOnce).toBe(plain - 8);
+    expect(watchedLots).toBe(plain - 24); // capped penalty
+    expect(watchedLots).toBeGreaterThan(0); // never fully disappears
+  });
+
+  it("ignores engagement on non-matching clips", () => {
+    const unrelated = clip({ title: "Photosynthesis", category: "Life Sciences", id: "p1", tags: { subject: "Life Sciences", topic: "Plants", grade: "10", curriculum: null } } as any);
+    expect(scoreClipRelevance(unrelated, { subject: "Accounting", likedIds: ["p1"] })).toBe(0);
+  });
+
+  it("ranks fresh clips above watched ones at equal content relevance", () => {
+    const a = clip({ title: "Algebra basics part one", id: "a" } as any);
+    const b = clip({ title: "Algebra basics part two", id: "b" } as any);
+    const ranked = rankClipsForContext([a, b], { subject: "Mathematics", topic: "Algebra", watchCounts: { a: 2 } });
+    expect(String(ranked[0].id)).toBe("b");
+  });
+});
+
 describe("rankClipsForContext", () => {
   it("orders by relevance and drops zero-score clips", () => {
     const clips = [

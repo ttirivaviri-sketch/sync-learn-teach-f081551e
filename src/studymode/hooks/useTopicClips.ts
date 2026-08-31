@@ -5,6 +5,7 @@ import type { LibraryResource } from '@/types/academicProfile';
 import { subjectAliases } from '@/lib/personalization';
 import { rankClipsForContext } from '@/lib/clipRelevance';
 import { useWeakConcepts } from './useWeakConcepts';
+import { useResourceEngagement } from '@/hooks/useResourceEngagement';
 
 /**
  * Context-aware clips for Study Mode: fetches library clips for the
@@ -47,6 +48,7 @@ export function useTopicClips(
   limit = 10,
 ) {
   const { weakConcepts } = useWeakConcepts(subject, curriculum ?? undefined);
+  const { likedIds, watchCounts } = useResourceEngagement();
 
   const query = useQuery({
     queryKey: ['topic_clips', subject],
@@ -78,7 +80,7 @@ export function useTopicClips(
   const weakLabels = (weakConcepts ?? []).map((w) => w.concept);
   const clips = rankClipsForContext(
     subjectClips,
-    { subject, topic, weakConcepts: weakLabels },
+    { subject, topic, weakConcepts: weakLabels, likedIds, watchCounts },
     limit,
   );
 

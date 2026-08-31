@@ -130,17 +130,23 @@ export function ResourceCard({
           {/* Grade */}
           <p className="text-xs text-accent-foreground">{resource.gradeLevel}</p>
 
-          {/* Rating */}
-          <div className="flex items-center gap-1">
-            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-            <span className="text-xs font-medium">{resource.rating}</span>
-            <span className="text-xs text-muted-foreground">({resource.reviews})</span>
-            {resource.watchCount ? (
-              <span className="text-xs text-muted-foreground ml-1">
-                · {resource.watchCount.toLocaleString()} views
-              </span>
-            ) : null}
-          </div>
+          {/* Rating — only when real rating data exists ("0 ★ (0)" looks broken) */}
+          {(resource.rating > 0 || (resource.watchCount ?? 0) > 0) && (
+            <div className="flex items-center gap-1">
+              {resource.rating > 0 && (
+                <>
+                  <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                  <span className="text-xs font-medium">{resource.rating}</span>
+                  <span className="text-xs text-muted-foreground">({resource.reviews})</span>
+                </>
+              )}
+              {resource.watchCount ? (
+                <span className="text-xs text-muted-foreground ml-1">
+                  · {resource.watchCount.toLocaleString()} views
+                </span>
+              ) : null}
+            </div>
+          )}
 
           {/* Summary */}
           <p className="text-xs text-muted-foreground line-clamp-2">
@@ -189,11 +195,15 @@ export function ResourceCard({
               </Button>
             )}
 
-            {!resource.tutor && (
+            {/* Download only for document types with an attached file */}
+            {!resource.tutor &&
+              ["book", "guide", "pastpaper", "pdf"].includes(resource.type) &&
+              !!resource.videoUrl && (
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => onDownload(id, resource.title)}
+                aria-label={`Download ${resource.title}`}
               >
                 <Download className="h-3 w-3" />
               </Button>
