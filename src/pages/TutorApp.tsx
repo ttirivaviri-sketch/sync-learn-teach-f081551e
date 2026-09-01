@@ -19,6 +19,7 @@ import { useTutorMessageHaptic } from "@/hooks/useTutorMessageHaptic";
 import { useTutorManagement } from "@/hooks/useTutorManagement";
 import { usePresenceTracking } from "@/hooks/usePresenceTracking";
 import { useTutorStats } from "@/hooks/useTutorStats";
+import { useTutorPayouts } from "@/hooks/useTutorPayouts";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -100,6 +101,7 @@ const TutorApp = () => {
   const { setOnlineStatus, onlineUsers } = usePresenceTracking(session);
   const { formattedStats, weeklyData, recentEarnings, loading: statsLoading } =
     useTutorStats(session?.user?.id);
+  const { processPayout } = useTutorPayouts(userId);
   const gate = useTutorVerificationGate(userId);
 
   // ── Load tutor's own subjects (real-time) ───────────────────────────────
@@ -173,6 +175,37 @@ const TutorApp = () => {
       toast({ title: "Request Declined", description: `Declined session with ${booking.learner_profile?.full_name}` });
     } catch {
       toast({ title: "Error", description: "Failed to decline booking request", variant: "destructive" });
+    }
+  };
+
+  // Mark a finished session completed, then trigger the payout. The edge
+  // function is idempotent (UNIQUE session_id+tutor_id) and rejects unpaid
+  // or non-completed sessions server-side, so this is safe to retry.
+  const handleCompleteSession = async (booking: BookingRequest) => {
+    try {
+      await updateBookingStatus(booking.id, "completed");
+    } catch {
+      toast({ title: "Error", description: "Failed to mark session as completed", variant: "destructive" });
+      return;
+    }
+    const result = await processPayout(booking.id);
+    if (result?.status === "processed") {
+      toast({
+        title: "Session completed \u2014 payout received!",
+        description: `R${result.net_payout.toFixed(2)} added to your wallet (after ${Math.round(result.commission_rate * 100)}% platform fee).`,
+      });
+    } else if (result?.status === "already_processed") {
+      toast({ title: "Session completed", description: "Payout was already credited for this session." });
+    } else if (result?.status === "rejected") {
+      toast({
+        title: "Session completed \u2014 payout pending",
+        description: result.reason || "Payout will be processed once the learner's payment is confirmed.",
+      });
+    } else {
+      toast({
+        title: "Session completed",
+        description: "Payout processing hit a snag \u2014 it will be retried from your wallet panel.",
+      });
     }
   };
 
@@ -350,6 +383,7 @@ const TutorApp = () => {
               tutorId={userId || ""}
               onAccept={handleAcceptRequest}
               onDecline={handleDeclineRequest}
+              onComplete={handleCompleteSession}
               onJoinSession={handleJoinVideoSession}
               onStartChat={(booking) => {
                 setChatWithUserId(booking.learner_id);

@@ -18,7 +18,9 @@
     "audit:images": "node scripts/audit-images.mjs",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:backup": "node scripts/db-backup.mjs",
-    "db:restore": "node scripts/db-restore.mjs"
+    "db:restore": "node scripts/db-restore.mjs",
+    "db:push": "bash scripts/db-push-safe.sh",
+    "db:push:dry": "bash scripts/db-push-safe.sh --dry"
   },
   "overrides": {
     "zod": "^3.23.8"

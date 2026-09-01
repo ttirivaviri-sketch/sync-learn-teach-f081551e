@@ -21,6 +21,7 @@ interface TutorBookingManagerProps {
   onDecline: (booking: BookingRequest) => void | Promise<void>;
   onJoinSession: (booking: BookingRequest) => void;
   onStartChat: (booking: BookingRequest) => void;
+  onComplete?: (booking: BookingRequest) => void | Promise<void>;
 }
 
 type FilterStatus = "all" | "requested" | "confirmed" | "completed" | "canceled";
@@ -32,6 +33,7 @@ export const TutorBookingManager = ({
   onDecline,
   onJoinSession,
   onStartChat,
+  onComplete,
 }: TutorBookingManagerProps) => {
   const [rescheduleBooking, setRescheduleBooking] = useState<BookingRequest | null>(null);
   const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
@@ -115,6 +117,12 @@ export const TutorBookingManager = ({
     try { await onDecline(booking); } finally { setProcessingId(null); }
   };
 
+  const handleCompleteWithLoading = async (booking: BookingRequest) => {
+    if (!onComplete) return;
+    setProcessingId(booking.id);
+    try { await onComplete(booking); } finally { setProcessingId(null); }
+  };
+
   const isSessionReady = (booking: BookingRequest) => {
     const sessionTime = new Date(booking.scheduled_at);
     return booking.status === "confirmed" && Math.abs(sessionTime.getTime() - Date.now()) < 15 * 60 * 1000;
@@ -175,6 +183,7 @@ export const TutorBookingManager = ({
             learnerSubjects={learnerSubjectsMap[booking.learner_id]}
             onAccept={() => handleAcceptWithLoading(booking)}
             onDecline={() => handleDeclineWithLoading(booking)}
+            onComplete={onComplete ? () => handleCompleteWithLoading(booking) : undefined}
             onReschedule={() => setRescheduleBooking(booking)}
             onJoinSession={() => onJoinSession(booking)}
             onStartChat={() => onStartChat(booking)}
@@ -251,12 +260,15 @@ export const TutorBookingManager = ({
         </TabsContent>
 
         <TabsContent value="history" className="mt-4 space-y-3">
+          {/* showActions=true so past confirmed sessions expose Mark Complete
+              (which triggers the payout); completed/cancelled cards only show
+              the receipt button. */}
           {renderBookingList(
             pastSessions,
             <Clock className="h-12 w-12 mx-auto text-muted-foreground mb-3" />,
             "No past sessions",
             "Your completed and cancelled sessions will appear here.",
-            false,
+            true,
             2,
             showAllPast,
             () => setShowAllPast(!showAllPast)
