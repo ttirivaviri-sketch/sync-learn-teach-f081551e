@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { BookingRequest } from "@/hooks/useRealtimeBookings";
-import { format, formatDistanceToNow, isToday, isTomorrow } from "date-fns";
+import { format, formatDistanceToNow, isPast, isToday, isTomorrow } from "date-fns";
 import { StudentInsightsPanel } from "@/components/StudentInsightsPanel";
 import { BookingReceiptButton } from "@/components/BookingReceiptButton";
 
@@ -33,6 +33,9 @@ interface BookingCardProps {
   onJoinSession: () => void;
   onStartChat: () => void;
   onToggleProfile: () => void;
+  /** Shown on confirmed sessions whose end time has passed — marks the
+   *  session completed and triggers the tutor payout. */
+  onComplete?: () => void;
 }
 
 function getDateLabel(dateStr: string) {
@@ -71,6 +74,7 @@ export function BookingCard({
   tutorId,
   onAccept,
   onDecline,
+  onComplete,
   onReschedule,
   onJoinSession,
   onStartChat,
@@ -227,6 +231,26 @@ export function BookingCard({
                     <Video className="h-4 w-4 mr-1" />Join Now
                   </Button>
                 )}
+                {onComplete &&
+                  isPast(
+                    new Date(
+                      new Date(booking.scheduled_at).getTime() +
+                        (booking.duration_minutes || 60) * 60_000,
+                    ),
+                  ) && (
+                    <Button
+                      size="sm"
+                      onClick={onComplete}
+                      disabled={isProcessing}
+                      className="flex-1"
+                    >
+                      {isProcessing ? (
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <><CheckCircle className="h-4 w-4 mr-1" />Mark Complete</>
+                      )}
+                    </Button>
+                  )}
                 <Button size="sm" variant="outline" onClick={onReschedule}>
                   <RefreshCw className="h-4 w-4 mr-1" />Reschedule
                 </Button>

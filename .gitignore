@@ -31,3 +31,6 @@ core.*
 .build.log
 .spec_extract.txt
 .spec_pages/
+
+# DB backups (local snapshots from scripts/db-push-safe.sh)
+backups/
