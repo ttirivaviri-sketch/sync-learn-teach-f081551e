@@ -84,6 +84,27 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      // Double-charge guard (parity with payfast-create-payment): if a
+      // succeeded payment already exists for this booking, refuse to open
+      // another checkout for it.
+      const serviceGuard = createClient(
+        supabaseUrl,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+      );
+      const { data: existingPaid } = await serviceGuard
+        .from("payments")
+        .select("id")
+        .eq("booking_id", bookingId)
+        .eq("status", "succeeded")
+        .limit(1);
+      if (existingPaid && existingPaid.length > 0) {
+        return new Response(JSON.stringify({ error: "This booking has already been paid for" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       chargeAmount = Number(booking.price);
       if (typeof amount === "number" && Math.abs(amount - chargeAmount) > 0.01) {
         console.warn(`Client amount ${amount} != server price ${chargeAmount} for ${bookingId}`);

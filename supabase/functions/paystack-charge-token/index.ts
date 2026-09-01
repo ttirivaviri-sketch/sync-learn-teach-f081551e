@@ -66,13 +66,37 @@ Deno.serve(async (req) => {
 
     const { data: booking, error: bookingErr } = await service
       .from("bookings")
-      .select("id, price, learner_id")
+      .select("id, price, learner_id, status")
       .eq("id", bookingId)
       .single();
 
     if (bookingErr || !booking || booking.learner_id !== userData.user.id) {
       return new Response(JSON.stringify({ error: "Booking not found" }), {
         status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (booking.status === "canceled") {
+      return new Response(JSON.stringify({ error: "Cannot pay for a cancelled booking" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Double-charge guard: never charge a booking that already has a
+    // succeeded payment (e.g. user taps twice, or paid via hosted checkout
+    // and then retries with a saved card).
+    const { data: existingPaid } = await service
+      .from("payments")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .eq("status", "succeeded")
+      .limit(1);
+
+    if (existingPaid && existingPaid.length > 0) {
+      return new Response(JSON.stringify({ error: "This booking has already been paid for" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -118,7 +142,13 @@ Deno.serve(async (req) => {
       .eq("provider_ref", reference);
 
     if (success) {
-      await service.from("bookings").update({ status: "confirmed" }).eq("id", bookingId);
+      // Only lift out of payment-pending states — never resurrect a booking
+      // that was cancelled/completed while the charge was in flight.
+      await service
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", bookingId)
+        .in("status", ["requested", "confirmed"]);
     }
 
     return new Response(
