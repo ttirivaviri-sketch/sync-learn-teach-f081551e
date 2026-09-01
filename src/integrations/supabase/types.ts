@@ -1548,6 +1548,51 @@ export type Database = {
         }
         Relationships: []
       }
+      learner_resource_engagement: {
+        Row: {
+          created_at: string
+          id: string
+          last_opened_at: string | null
+          last_watched_at: string | null
+          liked: boolean
+          open_count: number
+          resource_id: string
+          resource_source: string
+          saved: boolean
+          updated_at: string
+          user_id: string
+          watch_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_opened_at?: string | null
+          last_watched_at?: string | null
+          liked?: boolean
+          open_count?: number
+          resource_id: string
+          resource_source?: string
+          saved?: boolean
+          updated_at?: string
+          user_id: string
+          watch_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_opened_at?: string | null
+          last_watched_at?: string | null
+          liked?: boolean
+          open_count?: number
+          resource_id?: string
+          resource_source?: string
+          saved?: boolean
+          updated_at?: string
+          user_id?: string
+          watch_count?: number
+        }
+        Relationships: []
+      }
       learner_state: {
         Row: {
           attempts: number
@@ -7856,6 +7901,10 @@ export type Database = {
           _tokens_out?: number
           _user_id: string
         }
+        Returns: undefined
+      }
+      record_clip_watch: {
+        Args: { p_resource_id: string; p_source?: string }
         Returns: undefined
       }
       refresh_student_context_snapshot: {
