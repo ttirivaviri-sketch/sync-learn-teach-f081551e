@@ -7,13 +7,8 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// PayFast valid hosts for verification
-const VALID_HOSTS = [
-  "www.payfast.co.za",
-  "sandbox.payfast.co.za",
-  "w1w.payfast.co.za",
-  "w2w.payfast.co.za",
-];
+// PayFast sandbox merchant id — selects which host to confirm the ITN against
+const SANDBOX_MERCHANT_ID = "10000100";
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -77,6 +72,40 @@ serve(async (req) => {
       throw new Error("Invalid signature");
     }
 
+    // Step 1b: Verify the notification is for OUR merchant account.
+    // Without this (and especially with no passphrase set), the MD5
+    // signature is computable from public data and an ITN can be forged.
+    const PAYFAST_MERCHANT_ID = Deno.env.get("PAYFAST_MERCHANT_ID");
+    if (PAYFAST_MERCHANT_ID && pfData.merchant_id !== PAYFAST_MERCHANT_ID) {
+      console.error("Merchant ID mismatch:", pfData.merchant_id);
+      throw new Error("Merchant ID mismatch");
+    }
+
+    // Step 1c: Confirm the ITN with PayFast's servers (required by PayFast
+    // docs). This defeats forged notifications even if the signature
+    // scheme is compromised: PayFast only answers VALID for notifications
+    // it actually sent.
+    const pfHost =
+      pfData.merchant_id === SANDBOX_MERCHANT_ID
+        ? "sandbox.payfast.co.za"
+        : "www.payfast.co.za";
+    try {
+      const validateRes = await fetch(`https://${pfHost}/eng/query/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: signatureString,
+      });
+      const validateText = (await validateRes.text()).trim();
+      if (validateText !== "VALID") {
+        console.error("PayFast server validation failed:", validateText);
+        throw new Error("PayFast server validation failed");
+      }
+    } catch (validateError) {
+      // A network failure here must NOT let the payment through unverified.
+      console.error("PayFast validate call failed:", validateError);
+      throw new Error("PayFast server validation unavailable");
+    }
+
     // Step 2: Validate payment data
     const paymentId = pfData.m_payment_id;
     const paymentStatus = pfData.payment_status;
@@ -85,6 +114,35 @@ serve(async (req) => {
 
     if (!paymentId) {
       throw new Error("Missing payment ID");
+    }
+
+    // Card-setup flow: m_payment_id is `setup_<user-uuid>_<ts>`, not a
+    // payments row. Previously this fell through to the payment lookup,
+    // threw "Payment not found", and the card token was silently dropped.
+    if (paymentId.startsWith("setup_")) {
+      const setupUserId = paymentId.slice("setup_".length).replace(/_\d+$/, "");
+      if (paymentStatus === "COMPLETE" && pfData.token && setupUserId) {
+        await supabase.from("saved_payment_methods").upsert(
+          {
+            user_id: setupUserId,
+            provider: "payfast",
+            token: pfData.token,
+            card_last4: pfData.card_last4 || null,
+            card_brand: pfData.card_type || null,
+            is_default: true,
+          },
+          { onConflict: "user_id,token" }
+        );
+        console.log(`Card token saved for user ${setupUserId} via setup flow`);
+      } else {
+        console.log(
+          `Setup ITN ignored: status=${paymentStatus}, token=${pfData.token ? "present" : "absent"}`
+        );
+      }
+      return new Response("OK", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
     }
 
     console.log(
