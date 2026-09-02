@@ -63,6 +63,20 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/home.jpg",
   },
   {
+    path: "/past-papers/zimsec",
+    title: "ZIMSEC Past Papers & Answers — O & A Level | StudySync",
+    description:
+      "Practise ZIMSEC O Level and A Level past exam papers with answers — Mathematics, Combined Science, English and more, sorted by subject, level and year.",
+    image: "/og/home.jpg",
+  },
+  {
+    path: "/past-papers/matric",
+    title: "Matric Past Papers & Memos — Grade 12 NSC | StudySync",
+    description:
+      "Download and practise Grade 12 matric past exam papers with memos — Mathematics, Physical Sciences, Life Sciences, English and more, sorted by subject and year.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/past-papers/accounting",
     title: "Accounting Past Papers & Memos — Grade 10-12 Matric",
     description:
