@@ -43,15 +43,25 @@ export default function Privacy() {
 
 
       <h2>6. Your rights</h2>
-      <p>You have the right to access, correct, delete or export your personal data, and to lodge a complaint with the Information Regulator (South Africa) or your local supervisory authority. To exercise these rights email <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a>.</p>
+      <p>You have the right to access, correct, delete or export your personal data, and to lodge a complaint with the Information Regulator (South Africa) or your local supervisory authority.</p>
+      <ul>
+        <li><strong>Export:</strong> download your lesson data as JSON any time from <em>Settings → Data &amp; Compliance</em>.</li>
+        <li><strong>Delete your account:</strong> use the <em>Danger zone</em> in <em>Settings → Data &amp; Compliance</em> to permanently delete your account and personal data yourself — no email required. De-identified financial records are kept for 5 years as required by tax law; everything else is removed immediately.</li>
+        <li><strong>Correct:</strong> update your profile details in the app, or email us for anything you cannot edit yourself.</li>
+        <li><strong>Everything else:</strong> email <a href={`mailto:${COMPANY.email}`}>{COMPANY.email}</a> and we will respond within 30 days.</li>
+      </ul>
+      <p>Information Regulator (South Africa): <a href="https://inforegulator.org.za" target="_blank" rel="noopener noreferrer">inforegulator.org.za</a>.</p>
 
       <h2>7. Children</h2>
       <p>If you are under 18, a parent or guardian must consent to our processing of your information. Guardians may request access to their child's academic data by emailing us from the guardian email on file.</p>
 
-      <h2>8. Security</h2>
+      <h2>8. Cookies &amp; analytics consent</h2>
+      <p>Strictly-necessary cookies (your sign-in session and saved preferences) are always active. Optional analytics — including attaching your email address to error reports so we can help you when something breaks — only runs if you click <em>Accept</em> on the cookie banner. Declining keeps only the essential cookies. Full details in the <a href="/legal/cookies">Cookie Policy</a>.</p>
+
+      <h2>9. Security</h2>
       <p>We use TLS in transit, row-level security in the database, and secrets management for API keys. No system is perfectly secure — please use a strong, unique password.</p>
 
-      <h2>9. Changes</h2>
+      <h2>10. Changes</h2>
       <p>We will notify you of material changes by email or in-app.</p>
     </LegalLayout>
   );
