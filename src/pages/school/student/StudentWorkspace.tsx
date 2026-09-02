@@ -444,8 +444,13 @@ function QuizView({ id, schoolId, onBack }: { id: string; schoolId: string; onBa
         <Button
           disabled={start.isPending || (attempts.data && attempts.data.length >= q.data.attempts_allowed)}
           onClick={async () => {
-            const a = await start.mutateAsync({ school_id: schoolId, quiz_id: id });
-            setAttemptId(a.id);
+            try {
+              const a = await start.mutateAsync({ school_id: schoolId, quiz_id: id });
+              setAttemptId(a.id);
+            } catch (e: any) {
+              // DB trigger enforces attempts_allowed + published status.
+              toast.error(e?.message ?? "Could not start the quiz");
+            }
           }}
         >Start quiz</Button>
       </div>
@@ -489,14 +494,19 @@ function QuizView({ id, schoolId, onBack }: { id: string; schoolId: string; onBa
       ))}
       <div className="flex justify-end">
         <Button
+          disabled={submit.isPending}
           onClick={async () => {
-            const attempt = { id: attemptId, school_id: schoolId, quiz_id: id } as any;
-            const ans = (qs.data ?? []).map((q) => ({ question_id: q.id, response: answers[q.id] }));
-            const res = await submit.mutateAsync({ attempt, answers: ans, questions: qs.data ?? [] });
-            setSubmitted({ score: Number(res.score) || 0, max: Number(res.max_score) || 0 });
-            setAttemptId(null);
+            try {
+              const attempt = { id: attemptId, school_id: schoolId, quiz_id: id } as any;
+              const ans = (qs.data ?? []).map((q) => ({ question_id: q.id, response: answers[q.id] }));
+              const res = await submit.mutateAsync({ attempt, answers: ans, questions: qs.data ?? [] });
+              setSubmitted({ score: Number(res.score) || 0, max: Number(res.max_score) || 0 });
+              setAttemptId(null);
+            } catch (e: any) {
+              toast.error(e?.message ?? "Could not submit the quiz");
+            }
           }}
-        >Submit quiz</Button>
+        >{submit.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Submit quiz</Button>
       </div>
     </div>
   );
