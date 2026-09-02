@@ -15,6 +15,10 @@ const footerLinks = {
     { label: "Become a Tutor", href: "/tutor/auth" },
     { label: "Tutor Dashboard", href: "/tutor" },
   ],
+  "For Parents": [
+    { label: "Guardian Portal", href: "/guardian" },
+    { label: "Refund Policy", href: "/legal/refunds" },
+  ],
   Legal: [
     { label: "Privacy Policy", href: "/legal/privacy" },
     { label: "Terms of Service", href: "/legal/terms" },

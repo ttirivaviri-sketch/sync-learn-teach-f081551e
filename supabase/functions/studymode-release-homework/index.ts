@@ -2,7 +2,12 @@
 // Teacher releases grades (and optionally edits scores/comments) for a
 // homework. Sets matching school_homework_responses.status = 'released'.
 //
-// POST { school_id, homework_id, student_id?, overrides?: [{ question_id, teacher_score, teacher_comment }] }
+// POST { school_id, homework_id, student_id?, overrides?: [{ response_id?, question_id?, teacher_score, teacher_comment }] }
+//
+// Each override should carry response_id (the school_homework_responses row
+// id) so the edit targets exactly one student's answer. question_id alone is
+// a legacy fallback: without response_id or a top-level student_id it would
+// update EVERY student's response to that question.
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { corsHeaders, errorResponse, jsonResponse } from "../_shared/ai-config.ts";
@@ -31,13 +36,20 @@ serve(async (req) => {
     // Apply teacher overrides first.
     if (Array.isArray(overrides) && overrides.length > 0) {
       for (const o of overrides) {
-        if (!o?.question_id) continue;
+        if (!o?.response_id && !o?.question_id) continue;
         const upd: Record<string, unknown> = { status: "teacher_reviewed" };
         if (o.teacher_score != null) upd.teacher_score = Number(o.teacher_score);
         if (o.teacher_comment != null) upd.teacher_comment = String(o.teacher_comment);
         let q = auth.svc.from("school_homework_responses").update(upd)
-          .eq("homework_id", homework_id).eq("school_id", school_id).eq("question_id", o.question_id);
-        if (student_id) q = q.eq("student_id", student_id);
+          .eq("homework_id", homework_id).eq("school_id", school_id);
+        if (o.response_id) {
+          // Precise: exactly one student's answer row (tenant-scoped above).
+          q = q.eq("id", String(o.response_id));
+        } else {
+          // Legacy fallback: question-wide; only safe when scoped to a student.
+          q = q.eq("question_id", o.question_id);
+          if (student_id) q = q.eq("student_id", student_id);
+        }
         await q;
       }
     }

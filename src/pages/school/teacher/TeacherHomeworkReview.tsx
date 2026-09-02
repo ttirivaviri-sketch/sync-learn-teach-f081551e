@@ -68,6 +68,10 @@ function ReviewQueue({ schoolId, homeworkId }: { schoolId: string; homeworkId: s
           const row = (q.data ?? []).find((r: any) => r.id === rid);
           if (!row) return null;
           return {
+            // response_id scopes the override to THIS student's answer row.
+            // (question_id alone would hit every student's response to the
+            // same question — kept only as legacy fallback server-side.)
+            response_id: rid,
             question_id: row.question_id,
             teacher_score: v.score !== undefined && v.score !== "" ? Number(v.score) : undefined,
             teacher_comment: v.comment,

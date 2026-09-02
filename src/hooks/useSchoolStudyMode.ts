@@ -509,7 +509,7 @@ export function useHomeworkReviewQueue(homeworkId?: string) {
 export function useReleaseHomework() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (args: { schoolId: string; homeworkId: string; studentId?: string; overrides?: Array<{ question_id: string; teacher_score?: number; teacher_comment?: string }> }) =>
+    mutationFn: async (args: { schoolId: string; homeworkId: string; studentId?: string; overrides?: Array<{ response_id?: string; question_id: string; teacher_score?: number; teacher_comment?: string }> }) =>
       invokeWithContract<{ ok: boolean; released: number; skipped_unmarked?: number }>(() =>
         supabase.functions.invoke("studymode-release-homework", {
           body: { school_id: args.schoolId, homework_id: args.homeworkId, student_id: args.studentId, overrides: args.overrides },
