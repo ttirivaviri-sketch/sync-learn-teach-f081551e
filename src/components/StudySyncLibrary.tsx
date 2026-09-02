@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
