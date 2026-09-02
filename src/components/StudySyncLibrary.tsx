@@ -54,7 +54,19 @@ const StudySyncLibrary = ({
     recordOpen,
     recordWatch,
     watchCounts,
+    loaded: engagementLoaded,
   } = useResourceEngagement();
+  // Frozen ordering inputs for the Clips feed. The feed derives the current
+  // slide from scroll offset, so re-sorting mid-watch (when a watch/like is
+  // recorded) yanks the viewer to a different clip. Capture the engagement
+  // snapshot once when it first loads; likes/watches still update instantly
+  // everywhere else (icons, counts, saved lists).
+  const frozenEngagementRef = useRef<{ liked: string[]; watched: Record<string, number> } | null>(null);
+  if (frozenEngagementRef.current === null && engagementLoaded) {
+    frozenEngagementRef.current = { liked: likedIds, watched: watchCounts };
+  }
+  const orderLikedIds = frozenEngagementRef.current?.liked ?? [];
+  const orderWatchCounts = frozenEngagementRef.current?.watched ?? {};
   // studyModeActive removed — Study Mode is a top-level nav tab now.
   const [activeCategory, setActiveCategory] = useState("all");
   const [previousCategory, setPreviousCategory] = useState("all");
