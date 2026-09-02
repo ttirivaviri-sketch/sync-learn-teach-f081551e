@@ -77,6 +77,30 @@ export type Database = {
         }
         Relationships: []
       }
+      account_deletion_archive: {
+        Row: {
+          deleted_at: string
+          financial_snapshot: Json
+          had_financial_records: boolean
+          id: string
+          user_hash: string
+        }
+        Insert: {
+          deleted_at?: string
+          financial_snapshot?: Json
+          had_financial_records?: boolean
+          id?: string
+          user_hash: string
+        }
+        Update: {
+          deleted_at?: string
+          financial_snapshot?: Json
+          had_financial_records?: boolean
+          id?: string
+          user_hash?: string
+        }
+        Relationships: []
+      }
       ai_rate_limit_counters: {
         Row: {
           count: number
