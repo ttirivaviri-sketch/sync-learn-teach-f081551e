@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useDebouncedCallback } from "@/hooks/useDebouncedCallback";
 import {
   Search, Filter, Book, FileText, Video, BookOpen,
@@ -54,7 +54,19 @@ const StudySyncLibrary = ({
     recordOpen,
     recordWatch,
     watchCounts,
+    loaded: engagementLoaded,
   } = useResourceEngagement();
+  // Frozen ordering inputs for the Clips feed. The feed derives the current
+  // slide from scroll offset, so re-sorting mid-watch (when a watch/like is
+  // recorded) yanks the viewer to a different clip. Capture the engagement
+  // snapshot once when it first loads; likes/watches still update instantly
+  // everywhere else (icons, counts, saved lists).
+  const frozenEngagementRef = useRef<{ liked: string[]; watched: Record<string, number> } | null>(null);
+  if (frozenEngagementRef.current === null && engagementLoaded) {
+    frozenEngagementRef.current = { liked: likedIds, watched: watchCounts };
+  }
+  const orderLikedIds = frozenEngagementRef.current?.liked ?? [];
+  const orderWatchCounts = frozenEngagementRef.current?.watched ?? {};
   // studyModeActive removed — Study Mode is a top-level nav tab now.
   const [activeCategory, setActiveCategory] = useState("all");
   const [previousCategory, setPreviousCategory] = useState("all");
@@ -102,11 +114,11 @@ const StudySyncLibrary = ({
   // (deduped) — so new uploads always land in the Clips feed instead of Browse.
   // Watch-history ordering: unwatched clips surface first; liked float up.
   const engagementOrder = (a: LibraryResource, b: LibraryResource) => {
-    const wa = watchCounts[String(a.id)] ?? 0;
-    const wb = watchCounts[String(b.id)] ?? 0;
+    const wa = orderWatchCounts[String(a.id)] ?? 0;
+    const wb = orderWatchCounts[String(b.id)] ?? 0;
     if ((wa === 0) !== (wb === 0)) return wa === 0 ? -1 : 1;
-    const la = likedIds.includes(String(a.id)) ? 1 : 0;
-    const lb = likedIds.includes(String(b.id)) ? 1 : 0;
+    const la = orderLikedIds.includes(String(a.id)) ? 1 : 0;
+    const lb = orderLikedIds.includes(String(b.id)) ? 1 : 0;
     return lb - la;
   };
   const personalizedClips = personalizedResources.filter(isClip).sort(engagementOrder);
@@ -437,7 +449,7 @@ const StudySyncLibrary = ({
       {searchQuery.trim() || activeFilterCount > 0 ? (
         <SearchResultsView
           searchQuery={searchQuery.trim() ? searchQuery : "Filtered resources"}
-          searchResults={applyFilters(searchQuery.trim() ? searchResults : personalizedResources)}
+          searchResults={applyFilters(searchQuery.trim() ? searchResults : allResources)}
           myLibraryItems={myLibraryItems}
           onNeedHelp={onNeedHelp}
           onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")}
