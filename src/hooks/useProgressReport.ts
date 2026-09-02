@@ -12,10 +12,9 @@ import { saveAs } from "file-saver";
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { useToast } from "@/hooks/use-toast";
-import {
-  generateProgressReportPdf,
-  type ProgressReportData,
-} from "@/lib/generateProgressReport";
+// Type-only import — the PDF generator itself (jspdf + chart.js, ~500KB) is
+// dynamically imported at download time so it never enters the main bundle.
+import type { ProgressReportData } from "@/lib/generateProgressReport";
 
 export type ReportAudience = "self" | "tutor";
 
@@ -348,6 +347,7 @@ export function useProgressReport(learnerId: string | null | undefined) {
           aiPlan,
         };
 
+        const { generateProgressReportPdf } = await import("@/lib/generateProgressReport");
         const blob = await generateProgressReportPdf(reportData);
         const stamp = new Date().toISOString().slice(0, 10);
         const suffix = opts.audience === "tutor" ? "-for-tutor" : "";

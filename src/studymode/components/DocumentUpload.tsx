@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 import { aiRequest } from '../lib/aiClient';
 import { useAdaptiveLearningEngine } from '../hooks/useAdaptiveLearningEngine';
 import { logger } from "@/utils/logger";
-import { extractTextFromFile, chunkText } from '../lib/pdfExtractor';
 
 interface DocumentUploadProps {
   onUploadComplete?: () => void;
@@ -140,7 +139,10 @@ export function DocumentUpload({ onUploadComplete, onClose }: DocumentUploadProp
           idx === i ? { ...f, status: 'processing' } : f
         ));
 
-        // Extract real text from PDF (or read plain text for other files)
+        // Extract real text from PDF (or read plain text for other files).
+        // pdfjs-dist is heavy — dynamically imported so the study-mode bundle
+        // doesn't pay for it until a file is actually processed.
+        const { extractTextFromFile, chunkText } = await import('../lib/pdfExtractor');
         const fullText = await extractTextFromFile(uploadedFile.file);
         const chunks = chunkText(fullText, 80_000);
 

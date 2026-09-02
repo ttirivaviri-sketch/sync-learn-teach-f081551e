@@ -5,7 +5,8 @@
  * Mounted once in App.tsx; it listens on the AI limit event bus so any AI
  * call site gets the upgrade flow for free.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
+import { Loader2 } from "lucide-react";
 import { Sparkles, Zap } from "lucide-react";
 import {
   Dialog,
@@ -15,7 +16,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { SubscriptionFlow } from "@/components/subscription/SubscriptionFlow";
+// Lazy — SubscriptionFlow pulls framer-motion + payment panels; this dialog is
+// mounted globally in App.tsx so a static import would drag all of that into
+// the entry bundle. Loaded only when the user actually opens the plans view.
+const SubscriptionFlow = lazy(() =>
+  import("@/components/subscription/SubscriptionFlow").then((m) => ({ default: m.SubscriptionFlow })),
+);
 import { onAiLimit, type AiLimitEvent } from "@/studymode/lib/aiLimitBus";
 
 export function AiCreditsDialog() {
@@ -57,13 +63,15 @@ export function AiCreditsDialog() {
         </DialogHeader>
 
         {showPlans ? (
-          <SubscriptionFlow
-            mode="profile"
-            onComplete={() => {
-              setEvent(null);
-              setShowPlans(false);
-            }}
-          />
+          <Suspense fallback={<div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>}>
+            <SubscriptionFlow
+              mode="profile"
+              onComplete={() => {
+                setEvent(null);
+                setShowPlans(false);
+              }}
+            />
+          </Suspense>
         ) : (
           <div className="space-y-4">
             <ul className="space-y-2 text-sm text-muted-foreground">

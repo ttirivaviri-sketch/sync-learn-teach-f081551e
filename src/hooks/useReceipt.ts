@@ -4,7 +4,9 @@
 import { useState, useCallback } from "react";
 import { saveAs } from "file-saver";
 import { supabase } from "@/integrations/supabase/client";
-import { generateReceiptPdf, type ReceiptData } from "@/lib/generateReceipt";
+// Type-only import — jspdf is dynamically imported at download time so the
+// PDF library stays out of the main bundle.
+import type { ReceiptData } from "@/lib/generateReceipt";
 import { logger } from "@/utils/logger";
 import { useToast } from "@/hooks/use-toast";
 
@@ -59,6 +61,7 @@ export function useReceipt() {
           durationMinutes: p.booking?.duration_minutes ?? null,
         };
 
+        const { generateReceiptPdf } = await import("@/lib/generateReceipt");
         const blob = await generateReceiptPdf(receipt);
         const filename = `StudySync-Receipt-${p.id.slice(0, 8).toUpperCase()}.pdf`;
         saveAs(blob, filename);
