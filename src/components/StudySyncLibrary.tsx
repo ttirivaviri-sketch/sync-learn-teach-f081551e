@@ -114,11 +114,11 @@ const StudySyncLibrary = ({
   // (deduped) — so new uploads always land in the Clips feed instead of Browse.
   // Watch-history ordering: unwatched clips surface first; liked float up.
   const engagementOrder = (a: LibraryResource, b: LibraryResource) => {
-    const wa = watchCounts[String(a.id)] ?? 0;
-    const wb = watchCounts[String(b.id)] ?? 0;
+    const wa = orderWatchCounts[String(a.id)] ?? 0;
+    const wb = orderWatchCounts[String(b.id)] ?? 0;
     if ((wa === 0) !== (wb === 0)) return wa === 0 ? -1 : 1;
-    const la = likedIds.includes(String(a.id)) ? 1 : 0;
-    const lb = likedIds.includes(String(b.id)) ? 1 : 0;
+    const la = orderLikedIds.includes(String(a.id)) ? 1 : 0;
+    const lb = orderLikedIds.includes(String(b.id)) ? 1 : 0;
     return lb - la;
   };
   const personalizedClips = personalizedResources.filter(isClip).sort(engagementOrder);
