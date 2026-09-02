@@ -7,12 +7,16 @@
  */
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Download, Trash2, Shield, ExternalLink } from "lucide-react";
+import { ArrowLeft, Download, Trash2, Shield, ExternalLink, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -29,6 +33,9 @@ export default function DataCompliance() {
   const [consents, setConsents] = useState<Consent[]>([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -120,6 +127,34 @@ export default function DataCompliance() {
     for (const r of recordings) await deleteRecording(r.id, r.storage_path, r.booking_id);
   };
 
+  const deleteAccount = async () => {
+    if (deleteConfirmText !== "DELETE") return;
+    setDeletingAccount(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${session?.access_token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ confirm: "DELETE" }),
+        },
+      );
+      const result = await res.json();
+      if (!res.ok || !result.deleted) throw new Error(result.error || "Deletion failed");
+      await supabase.auth.signOut();
+      toast({ title: "Account deleted", description: "Your account and personal data have been permanently removed." });
+      navigate("/");
+    } catch (e) {
+      toast({
+        title: "Account deletion failed",
+        description: e instanceof Error ? e.message : "Please try again or contact support.",
+        variant: "destructive",
+      });
+      setDeletingAccount(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
@@ -202,6 +237,56 @@ export default function DataCompliance() {
                 </div>
               );
             })}
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-4 w-4" /> Danger zone
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Permanently delete your StudySync account and all personal data — profile, bookings,
+              messages, study progress, recordings and notes. De-identified financial records are
+              retained for 5 years as required by South African tax law. This cannot be undone.
+            </p>
+            <Dialog open={deleteDialogOpen} onOpenChange={(open) => { setDeleteDialogOpen(open); if (!open) setDeleteConfirmText(""); }}>
+              <DialogTrigger asChild>
+                <Button variant="destructive" className="w-full justify-start gap-2">
+                  <Trash2 className="h-4 w-4" /> Delete my account
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Delete your account permanently?</DialogTitle>
+                  <DialogDescription>
+                    This removes your profile, bookings, messages, study history, recordings and
+                    every other personal record. It cannot be undone. Type <strong>DELETE</strong>{" "}
+                    below to confirm.
+                  </DialogDescription>
+                </DialogHeader>
+                <Input
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder='Type "DELETE" to confirm'
+                  autoComplete="off"
+                />
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deletingAccount}>
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={deleteAccount}
+                    disabled={deleteConfirmText !== "DELETE" || deletingAccount}
+                  >
+                    {deletingAccount ? "Deleting…" : "Permanently delete account"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
 

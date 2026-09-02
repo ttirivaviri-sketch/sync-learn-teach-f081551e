@@ -2,24 +2,25 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Cookie } from "lucide-react";
+import { getConsent, setConsent } from "@/lib/consent";
 
+/**
+ * Cookie consent banner (POPIA / GDPR).
+ *
+ * Choices are stored via `src/lib/consent.ts` and actually enforced:
+ * optional tracking (e.g. attaching your email to error reports) only runs
+ * after "Accept". "Decline" keeps strictly-necessary cookies only (your
+ * sign-in session and saved preferences).
+ */
 export const CookieConsent = () => {
   const [showConsent, setShowConsent] = useState(false);
 
   useEffect(() => {
-    const consent = localStorage.getItem('cookie-consent');
-    if (!consent) {
-      setShowConsent(true);
-    }
+    if (getConsent() === null) setShowConsent(true);
   }, []);
 
-  const handleAccept = () => {
-    localStorage.setItem('cookie-consent', 'accepted');
-    setShowConsent(false);
-  };
-
-  const handleDecline = () => {
-    localStorage.setItem('cookie-consent', 'declined');
+  const choose = (value: "accepted" | "declined") => {
+    setConsent(value);
     setShowConsent(false);
   };
 
@@ -34,15 +35,16 @@ export const CookieConsent = () => {
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold mb-1">We use cookies</h4>
               <p className="text-sm text-muted-foreground mb-3 md:mb-0">
-                We use cookies to enhance your experience, analyze site traffic, and for marketing purposes. 
-                By clicking "Accept", you consent to our use of cookies.
+                Strictly-necessary cookies keep you signed in. With your consent we also use
+                analytics to improve StudySync. Declining keeps only the essential ones. See our{" "}
+                <a href="/legal/cookies" className="underline hover:text-foreground">Cookie Policy</a>.
               </p>
             </div>
             <div className="flex gap-2 flex-shrink-0">
-              <Button variant="outline" size="sm" onClick={handleDecline}>
+              <Button variant="outline" size="sm" onClick={() => choose("declined")}>
                 Decline
               </Button>
-              <Button size="sm" onClick={handleAccept}>
+              <Button size="sm" onClick={() => choose("accepted")}>
                 Accept
               </Button>
             </div>

@@ -1,7 +1,7 @@
 /** Single source of truth for legal versioning + country/currency mapping. */
 
-export const TERMS_VERSION = "2026-05-16";
-export const LEGAL_LAST_UPDATED = "16 May 2026";
+export const TERMS_VERSION = "2026-09-02";
+export const LEGAL_LAST_UPDATED = "2 September 2026";
 
 export const COMPANY = {
   name: "StudySync",

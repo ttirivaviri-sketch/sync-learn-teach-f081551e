@@ -37,13 +37,22 @@ export function initSentryFrontend() {
   });
 }
 
-/** Set user context after sign-in so errors are attributable. */
+/** Set user context after sign-in so errors are attributable.
+ *
+ * POPIA/GDPR: the email address (a direct identifier) is only attached when
+ * the user has accepted analytics cookies. The opaque user id is always set —
+ * it is strictly necessary to investigate account-specific failures.
+ */
 export function setSentryFrontendUserContext(
   userId: string,
   email?: string,
   extra?: Record<string, unknown>,
 ) {
-  Sentry.setUser({ id: userId, email, ...extra });
+  let allowEmail = false;
+  try {
+    allowEmail = localStorage.getItem('cookie-consent') === 'accepted';
+  } catch { /* storage unavailable — default to no email */ }
+  Sentry.setUser({ id: userId, ...(allowEmail && email ? { email } : {}), ...extra });
 }
 
 /** Clear user context on sign-out. */
