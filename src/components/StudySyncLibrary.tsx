@@ -449,7 +449,7 @@ const StudySyncLibrary = ({
       {searchQuery.trim() || activeFilterCount > 0 ? (
         <SearchResultsView
           searchQuery={searchQuery.trim() ? searchQuery : "Filtered resources"}
-          searchResults={applyFilters(searchQuery.trim() ? searchResults : personalizedResources)}
+          searchResults={applyFilters(searchQuery.trim() ? searchResults : allResources)}
           myLibraryItems={myLibraryItems}
           onNeedHelp={onNeedHelp}
           onEnterStudyMode={() => dispatchToast("Open the Study tab", "Study Mode now lives in the bottom nav — tap the Study tab.")}
