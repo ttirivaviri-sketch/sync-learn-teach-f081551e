@@ -33,7 +33,6 @@ import {
 } from "@/hooks/useSchoolAcademics";
 import { useTeacherSchoolDocuments, usePreviewSchoolQuiz, useSaveSchoolQuizFromPreview, useRegenerateSchoolQuizQuestion, type GeneratedQuizQuestion } from "@/hooks/useSchoolStudyMode";
 import { useIngestSchoolDocument } from "@/hooks/useSchoolAI";
-import { extractTextFromFile } from "@/studymode/lib/pdfExtractor";
 
 export default function TeacherClassDetail() {
   const { school } = useOutletContext<{ school: any }>();
@@ -496,6 +495,8 @@ function AiQuizGeneratorCard({ schoolId, classId }: { schoolId: string; classId:
       if (sourceMode === "upload") {
         if (!file) { toast.error("Choose a sample file first"); setBusy(false); return; }
         setStatus("Reading sample…");
+        // pdfjs-dist is heavy — load the extractor only when a file is uploaded.
+        const { extractTextFromFile } = await import("@/studymode/lib/pdfExtractor");
         const text = await extractTextFromFile(file);
         if (!text.trim()) throw new Error("Could not extract any text from this file");
         setStatus("Uploading to AI index…");

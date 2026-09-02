@@ -5,7 +5,7 @@
  *       header, bottom nav, and online-status toggle.
  * Delegates each tab's UI to a focused sub-component.
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogOut, MessageCircle, Home, BookOpen, Activity, User } from "lucide-react";
 import { NotificationCenter } from "@/components/NotificationCenter";
@@ -24,7 +24,10 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import VideoMeeting from "@/components/VideoMeeting";
-import DirectionsMap from "@/components/DirectionsMap";
+// DirectionsMap statically imports mapbox-gl (~1.5MB). It only renders when a
+// tutor taps "get directions", so lazy-load it to keep it out of the tutor
+// app's initial bundle (a big win on low-end devices).
+const DirectionsMap = lazy(() => import("@/components/DirectionsMap"));
 import ChatInterface from "@/components/ChatInterface";
 import { TutorCreatorDashboard } from "@/components/TutorCreatorDashboard";
 
@@ -284,12 +287,14 @@ const TutorApp = () => {
 
   if (showDirections && selectedRequest) {
     return (
-      <DirectionsMap
-        learnerAddress={selectedRequest.address}
-        learnerName={selectedRequest.student}
-        subject={selectedRequest.subject}
-        onBack={() => { setShowDirections(false); setSelectedRequest(null); }}
-      />
+      <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-sm text-muted-foreground">Loading map…</div>}>
+        <DirectionsMap
+          learnerAddress={selectedRequest.address}
+          learnerName={selectedRequest.student}
+          subject={selectedRequest.subject}
+          onBack={() => { setShowDirections(false); setSelectedRequest(null); }}
+        />
+      </Suspense>
     );
   }
 

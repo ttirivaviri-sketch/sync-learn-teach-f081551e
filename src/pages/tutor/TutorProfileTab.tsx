@@ -1,7 +1,7 @@
 /**
  * TutorProfileTab — Uber-style clean account screen.
  */
-import { useState } from "react";
+import { useState, lazy, Suspense } from "react";
 import { User as UserType } from "@supabase/supabase-js";
 import {
   DollarSign, Clock, ChevronRight, Download, Video,
@@ -11,7 +11,8 @@ import { useNavigate } from "react-router-dom";
 
 import { ProfilePhotoUpload } from "@/components/ProfilePhotoUpload";
 import StarRating from "@/components/StarRating";
-import TutorEarningsChart from "@/components/TutorEarningsChart";
+// Lazy — pulls in recharts (~400KB); only needed when earnings data exists.
+const TutorEarningsChart = lazy(() => import("@/components/TutorEarningsChart"));
 import TutorProfile from "@/components/TutorProfile";
 import { TutorSubjectManager } from "@/components/TutorSubjectManager";
 import { TutorWalletPanel } from "@/components/TutorWalletPanel";
@@ -192,7 +193,11 @@ export const TutorProfileTab = ({
               </div>
             ))}
           </div>
-          {weeklyData.length > 0 && <TutorEarningsChart data={weeklyData} />}
+          {weeklyData.length > 0 && (
+            <Suspense fallback={<div className="h-40 animate-pulse rounded-xl bg-muted/40" />}>
+              <TutorEarningsChart data={weeklyData} />
+            </Suspense>
+          )}
           {recentEarnings.length > 0 && (
             <div className="space-y-2">
               <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Recent Sessions</h4>
