@@ -143,7 +143,17 @@ serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
     const authHeader = req.headers.get("Authorization") || "";
     const token = authHeader.replace("Bearer ", "").trim();
-    const isSystem = !!CRON_SECRET && token === CRON_SECRET;
+    let isSystem = !!CRON_SECRET && token === CRON_SECRET;
+    if (!isSystem && token) {
+      if (token === SERVICE_KEY) {
+        isSystem = true;
+      } else {
+        // pg_cron/pg_net sends the Vault copy of CRON_SECRET, which can drift
+        // from the function-env copy — verify against Vault as a fallback.
+        const { data: cronOk } = await admin.rpc("verify_cron_token", { _token: token });
+        if (cronOk === true) isSystem = true;
+      }
+    }
 
     const body = await req.json().catch(() => ({}));
 
