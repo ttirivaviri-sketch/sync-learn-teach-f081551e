@@ -99,6 +99,11 @@ verify_jwt = false
 [functions.send-guardian-report]
 verify_jwt = false
 
+[functions.send-welcome-email]
+verify_jwt = false
+
+
+
 
 # ── Explicit registration for every remaining function ──────────────────
 # Default posture: verify_jwt = true (platform rejects requests without a
