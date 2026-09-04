@@ -752,30 +752,31 @@ export function buildStudyModeContext(input: StudyModeContextInput): string {
   // ── Performance data ──────────────────────────────────────────────────────
   if (input.performanceData) {
     parts.push(
-      `\nSTUDENT PERFORMANCE DATA:\n${truncate(input.performanceData, 1500)}`
+      `\nSTUDENT PERFORMANCE DATA:\n${truncate(input.performanceData, CONTEXT_BUDGETS.performanceData, "performanceData")}`
     );
   }
 
   // ── Syllabus context ──────────────────────────────────────────────────────
   if (input.syllabusContext) {
     parts.push(
-      `\nSYLLABUS & LEARNING OBJECTIVES:\n${truncate(input.syllabusContext, 3000)}`
+      `\nSYLLABUS & LEARNING OBJECTIVES:\n${truncate(input.syllabusContext, CONTEXT_BUDGETS.syllabusContext, "syllabusContext")}`
     );
   }
 
   // ── Past paper context ────────────────────────────────────────────────────
   if (input.pastPaperContext) {
     parts.push(
-      `\nPAST PAPER PATTERNS:\n${truncate(input.pastPaperContext, 2000)}`
+      `\nPAST PAPER PATTERNS:\n${truncate(input.pastPaperContext, CONTEXT_BUDGETS.pastPaperContext, "pastPaperContext")}`
     );
   }
 
   // ── Notes / documents ─────────────────────────────────────────────────────
   if (input.notesOrDocuments) {
     parts.push(
-      `\nSTUDENT NOTES / UPLOADED DOCUMENTS:\n${truncate(input.notesOrDocuments, 3000)}`
+      `\nSTUDENT NOTES / UPLOADED DOCUMENTS:\n${truncate(input.notesOrDocuments, CONTEXT_BUDGETS.notesOrDocuments, "notesOrDocuments")}`
     );
   }
+
 
   return parts.join("\n");
 }
