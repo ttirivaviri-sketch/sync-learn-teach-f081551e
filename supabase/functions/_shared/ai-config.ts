@@ -916,9 +916,36 @@ function repairTruncatedJson(s: string): string {
   return str;
 }
 
-function truncate(s: string, maxLen: number): string {
-  return s.length > maxLen ? s.substring(0, maxLen) + "…" : s;
+/**
+ * Context budgets (characters) for each block of the StudyMode prompt.
+ * Gemini 2.5 Flash has a 1M-token window, so the old 3k syllabus cap was
+ * throwing away most of a syllabus. These are deliberately generous; the
+ * `truncate` helper logs whenever a block is still clipped so we can see
+ * which sources actually need chunking.
+ */
+export const CONTEXT_BUDGETS = {
+  performanceData: 4_000,
+  syllabusContext: 24_000,
+  pastPaperContext: 12_000,
+  notesOrDocuments: 16_000,
+} as const;
+
+/** Counts of clipped blocks in the current invocation, for log inspection. */
+export const truncationStats: Record<string, { count: number; maxOverflow: number }> = {};
+
+function truncate(s: string, maxLen: number, label = "context"): string {
+  if (s.length <= maxLen) return s;
+  const overflow = s.length - maxLen;
+  const stat = truncationStats[label] ?? { count: 0, maxOverflow: 0 };
+  stat.count += 1;
+  stat.maxOverflow = Math.max(stat.maxOverflow, overflow);
+  truncationStats[label] = stat;
+  console.warn(
+    `[context-truncated] block=${label} kept=${maxLen} dropped=${overflow} original=${s.length}`,
+  );
+  return s.substring(0, maxLen) + "\n…[truncated]";
 }
+
 
 /**
  * Walks a JSON-ish string and escapes backslashes that are not part of a
