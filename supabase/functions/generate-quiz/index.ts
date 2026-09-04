@@ -44,6 +44,7 @@ import {
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
+import { drawFromPool, contributeToPool, QUESTION_BANK_ENABLED } from "../_shared/question-bank.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -89,6 +90,47 @@ serve(async (req) => {
 
     const questionCount = Math.min(Math.max(Number(count) || 1, 1), 5);
 
+    // ── Question-bank pool: serve shared validator-clean questions first ────
+    // (no-op unless QUESTION_BANK_ENABLED; excludes stems this user has seen)
+    //
+    // Personalisation rules — the pool must honour the SAME targeting the AI
+    // prompt receives:
+    //  • notesOrDocuments present → SKIP the pool: questions must be grounded
+    //    in this student's own uploads, which shared questions cannot be.
+    //  • weakAreas present → concept-overlap filter: only serve pool questions
+    //    whose conceptsTested intersect the student's weak concepts.
+    //  • preferredQuestionType → hard filter (blueprint-driven type mix).
+    const poolKey = {
+      curriculum,
+      subject,
+      topic,
+      examLevel,
+      difficulty,
+      surface: "quiz",
+    };
+    const weakAreaList: string[] = Array.isArray(weakAreas)
+      ? weakAreas
+      : weakAreas
+      ? [String(weakAreas)]
+      : [];
+    const documentGrounded =
+      typeof notesOrDocuments === "string" && notesOrDocuments.trim().length > 0;
+    const poolHits = documentGrounded
+      ? []
+      : await drawFromPool({
+          key: poolKey,
+          count: questionCount,
+          userId: gate.caller.userId,
+          targeting: {
+            targetConcepts: weakAreaList.length > 0 ? weakAreaList : undefined,
+            preferredQuestionType:
+              typeof preferredQuestionType === "string" && preferredQuestionType
+                ? preferredQuestionType
+                : undefined,
+          },
+        });
+    const genCount = questionCount - poolHits.length;
+
     // ── Build unified context ───────────────────────────────────────────────
     const context = buildStudyModeContext({
       curriculum,
@@ -107,7 +149,7 @@ serve(async (req) => {
     // ── System prompt ───────────────────────────────────────────────────────
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-YOUR TASK: Generate ${questionCount} high-quality, exam-style quiz question(s) for ${subject} — ${topic}.
+YOUR TASK: Generate ${genCount} high-quality, exam-style quiz question(s) for ${subject} — ${topic}.
 Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 ${KATEX_RULES}
@@ -182,7 +224,7 @@ For non-multiple-choice questions, omit "options" and "correctOption".
 OMIT "visual" entirely for pure-text questions (English essays, history accounts, etc.).`;
 
     // ── User prompt ─────────────────────────────────────────────────────────
-    let userPrompt = `Generate ${questionCount} exam-style question(s).\n\n${context}`;
+    let userPrompt = `Generate ${genCount} exam-style question(s).\n\n${context}`;
 
     if (preferredQuestionType) {
       userPrompt += `\nPreferred question type: ${preferredQuestionType}`;
@@ -227,31 +269,34 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       userPrompt += `\nGenerate a NEW question in this same style, of similar mark value, with an examiner-grade marking scheme.\n`;
     }
 
-    // ── Call AI (with capped output tokens) ─────────────────────────────────
-    const rawContent = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: quota.userId, bucket: "quiz" },
-      temperature: 0.5,
-      jsonMode: true,
-      maxTokens: questionCount === 1 ? 1500 : 3500,
-    });
-
-    const parsed = safeJsonParse<{
-      quiz?: unknown[];
-      weak_area_focus?: string[];
-      question?: string;
-    }>(rawContent);
-
-    // Handle both array and single-question responses
+    // ── Call AI only for the shortfall the pool couldn't cover ──────────────
+    let parsed: { quiz?: unknown[]; weak_area_focus?: string[]; question?: string } = {};
     let quizItems: unknown[] = [];
-    if (parsed.quiz && Array.isArray(parsed.quiz)) {
-      quizItems = parsed.quiz;
-    } else if (parsed.question) {
-      // AI returned a flat question object
-      quizItems = [parsed];
-    }
+    if (genCount > 0) {
+      const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+        usage: { userId: quota.userId, bucket: "quiz" },
+        temperature: 0.5,
+        jsonMode: true,
+        maxTokens: genCount === 1 ? 1500 : 3500,
+      });
 
-    if (quizItems.length === 0) {
-      throw new Error("AI returned empty quiz");
+      parsed = safeJsonParse<{
+        quiz?: unknown[];
+        weak_area_focus?: string[];
+        question?: string;
+      }>(rawContent);
+
+      // Handle both array and single-question responses
+      if (parsed.quiz && Array.isArray(parsed.quiz)) {
+        quizItems = parsed.quiz;
+      } else if (parsed.question) {
+        // AI returned a flat question object
+        quizItems = [parsed];
+      }
+
+      if (quizItems.length === 0 && poolHits.length === 0) {
+        throw new Error("AI returned empty quiz");
+      }
     }
 
     // ── Normalise each question ─────────────────────────────────────────────
@@ -286,11 +331,11 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       visual: normalizeVisual(item.visual),
     }));
 
-    // Validate
+    // Validate (only when we actually generated — pool-only requests skip)
     const valid = quiz.filter(
       (q: any) => q.question && q.marks > 0
     );
-    if (valid.length === 0) {
+    if (valid.length === 0 && poolHits.length === 0) {
       throw new Error("Generated quiz payload is incomplete");
     }
 
@@ -303,15 +348,31 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       subjectId: body.subject_id ?? null,
     });
 
+    // ── Contribute fresh validator-clean questions to the shared pool ───────
+    // (fire-and-forget; no-op unless QUESTION_BANK_ENABLED)
+    if (pp.questions.length > 0) {
+      await contributeToPool({
+        key: poolKey,
+        questions: pp.questions as any[],
+        validatorErrors: pp.meta.validator.blocking_errors,
+      });
+    }
+
+    // ── Merge: pool hits first (cheapest), then fresh AI questions ──────────
+    const merged = [
+      ...poolHits.map((p, i) => ({ ...(p.payload as any), id: `pool${i + 1}`, fromPool: true })),
+      ...(pp.questions as any[]),
+    ].map((q: any, i: number) => ({ ...q, id: q.id || `q${i + 1}` }));
+
     // ── For backward compat: if count === 1, also flatten top-level fields ─
     const response: Record<string, unknown> = {
-      quiz: pp.questions,
+      quiz: merged,
       weak_area_focus: normalizeArray(parsed.weak_area_focus),
     };
 
     // Backward-compat: flatten first question's fields at top level
-    if (pp.questions.length === 1) {
-      const q = pp.questions[0] as any;
+    if (merged.length === 1) {
+      const q = merged[0] as any;
       response.question = q.question;
       response.marks = q.marks;
       response.modelAnswer = q.modelAnswer;
@@ -337,6 +398,9 @@ OMIT "visual" entirely for pure-text questions (English essays, history accounts
       validator_warnings: pp.meta.validator.warnings,
       validator_errors: pp.meta.validator.blocking_errors,
       fingerprints: pp.meta.novelty.fingerprints,
+      question_bank: QUESTION_BANK_ENABLED
+        ? { pool_hits: poolHits.length, generated: pp.questions.length }
+        : undefined,
     });
     return jsonResponse(response);
   } catch (e) {
