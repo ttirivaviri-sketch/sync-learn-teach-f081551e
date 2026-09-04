@@ -741,35 +741,50 @@ export type Database = {
       }
       curriculum_topic_templates: {
         Row: {
+          coverage_score: number | null
           created_at: string
           curriculum: string
           grade: string
+          last_verification_at: string | null
           source: string
           subject: string
           topics: Json
           updated_at: string
+          verification_report: Json | null
+          verification_status: string
+          verified_against: string | null
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
+          coverage_score?: number | null
           created_at?: string
           curriculum: string
           grade: string
+          last_verification_at?: string | null
           source?: string
           subject: string
           topics?: Json
           updated_at?: string
+          verification_report?: Json | null
+          verification_status?: string
+          verified_against?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
+          coverage_score?: number | null
           created_at?: string
           curriculum?: string
           grade?: string
+          last_verification_at?: string | null
           source?: string
           subject?: string
           topics?: Json
           updated_at?: string
+          verification_report?: Json | null
+          verification_status?: string
+          verified_against?: string | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -7934,6 +7949,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      recompute_subject_coverage: {
+        Args: { _subject_id: string }
+        Returns: undefined
       }
       record_ai_token_usage: {
         Args: {
