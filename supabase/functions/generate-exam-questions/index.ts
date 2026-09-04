@@ -45,6 +45,7 @@ import {
 import { buildProvenance, hashPrompt } from "../_shared/provenance.ts";
 import { postProcessQuestions, resolveUserId } from "../_shared/post-process.ts";
 import { KATEX_RULES } from "../_shared/katex-rules.ts";
+import { drawFromPool, contributeToPool, QUESTION_BANK_ENABLED } from "../_shared/question-bank.ts";
 
 serve(async (req) => {
   if (req.method === "OPTIONS")
@@ -80,6 +81,42 @@ serve(async (req) => {
 
     const questionCount = Math.min(Math.max(Number(count) || 3, 1), 10);
 
+    // ── Question-bank pool: serve shared validator-clean questions first ────
+    // (no-op unless QUESTION_BANK_ENABLED; excludes stems this user has seen)
+    //
+    // Personalisation rules — the pool must honour the SAME targeting the AI
+    // prompt receives:
+    //  • notesOrDocuments present → SKIP the pool: questions must be grounded
+    //    in this student's own uploads, which shared questions cannot be.
+    //  • weakAreas present → concept-overlap filter: only serve pool questions
+    //    whose conceptsTested intersect the student's weak concepts.
+    const poolKey = {
+      curriculum,
+      subject,
+      topic,
+      examLevel,
+      difficulty: difficulty === "mixed" ? null : difficulty,
+      surface: "exam_questions",
+    };
+    const weakAreaList: string[] = Array.isArray(weakAreas)
+      ? weakAreas
+      : weakAreas
+      ? [String(weakAreas)]
+      : [];
+    const documentGrounded =
+      typeof notesOrDocuments === "string" && notesOrDocuments.trim().length > 0;
+    const poolHits = documentGrounded
+      ? []
+      : await drawFromPool({
+          key: poolKey,
+          count: questionCount,
+          userId: gate.caller.userId,
+          targeting: {
+            targetConcepts: weakAreaList.length > 0 ? weakAreaList : undefined,
+          },
+        });
+    const genCount = questionCount - poolHits.length;
+
     // ── Build unified context ───────────────────────────────────────────────
     const context = buildStudyModeContext({
       curriculum,
@@ -97,7 +134,7 @@ serve(async (req) => {
     // ── System prompt ───────────────────────────────────────────────────────
     const systemPrompt = `${STUDYMODE_SYSTEM_IDENTITY}
 
-YOUR TASK: Generate ${questionCount} exam-style questions in REAL PAST-PAPER FORMAT for ${subject} — ${topic}.
+YOUR TASK: Generate ${genCount} exam-style questions in REAL PAST-PAPER FORMAT for ${subject} — ${topic}.
 Return ONLY structured JSON study content. Do NOT return HTML, CSS, JavaScript, JSX, or any code.
 
 These questions must look and feel like they came from an actual exam paper — correct structure, mark allocation, command words, and formatting.
@@ -176,34 +213,37 @@ Return ONLY valid JSON:
 }`;
 
     // ── User prompt ─────────────────────────────────────────────────────────
-    const userPrompt = `Generate ${questionCount} exam-style questions.\n\n${context}
+    const userPrompt = `Generate ${genCount} exam-style questions.\n\n${context}
 
 IMPORTANT:
 - Make these questions indistinguishable from real past-paper questions.
-- Total marks should be realistic (roughly ${questionCount * 8} marks total).
+- Total marks should be realistic (roughly ${genCount * 8} marks total).
 - Provide DETAILED marking schemes — examiners need to know exactly where each mark goes.
 - Include step-by-step solutions that teach the student HOW to answer.`;
 
-    // ── Call AI ──────────────────────────────────────────────────────────────
-    const rawContent = await callAI(ai, systemPrompt, userPrompt, {
-      usage: { userId: quota.userId, bucket: "quiz" },
-      temperature: 0.5,
-      jsonMode: true,
-      maxTokens: 3500,
-    });
-
-    const parsed = safeJsonParse<{
+    // ── Call AI only for the shortfall the pool couldn't cover ──────────────
+    let parsed: {
       exam_questions?: unknown[];
       questions?: unknown[];
       weak_area_focus?: string[];
       totalMarks?: number;
       suggestedTime?: string;
-    }>(rawContent);
+    } = {};
+    let examQuestions: any[] = [];
+    if (genCount > 0) {
+      const rawContent = await callAI(ai, systemPrompt, userPrompt, {
+        usage: { userId: quota.userId, bucket: "quiz" },
+        temperature: 0.5,
+        jsonMode: true,
+        maxTokens: 3500,
+      });
 
-    const examQuestions = (parsed.exam_questions || parsed.questions || []) as any[];
+      parsed = safeJsonParse<typeof parsed>(rawContent);
+      examQuestions = (parsed.exam_questions || parsed.questions || []) as any[];
 
-    if (examQuestions.length === 0) {
-      throw new Error("AI returned empty exam questions");
+      if (examQuestions.length === 0 && poolHits.length === 0) {
+        throw new Error("AI returned empty exam questions");
+      }
     }
 
     // ── Normalise ───────────────────────────────────────────────────────────
@@ -237,19 +277,6 @@ IMPORTANT:
       visual: normalizeVisual(q.visual),
     }));
 
-    // Build solutions & explanations lookup
-    const solutions: Record<string, string> = {};
-    const explanations: Record<string, string> = {};
-    normalised.forEach((q: any) => {
-      solutions[q.id] = q.stepByStepSolution || q.modelAnswer;
-      explanations[q.id] = q.explanation;
-    });
-
-    const totalMarks = normalised.reduce(
-      (sum: number, q: any) => sum + q.marks,
-      0
-    );
-
     const userId = await resolveUserId(req);
     const pp = await postProcessQuestions({
       questions: normalised as any[],
@@ -258,12 +285,45 @@ IMPORTANT:
       subjectId: body.subject_id ?? null,
     });
 
+    // ── Contribute fresh validator-clean questions to the shared pool ───────
+    // (fire-and-forget; no-op unless QUESTION_BANK_ENABLED)
+    if (pp.questions.length > 0) {
+      await contributeToPool({
+        key: poolKey,
+        questions: pp.questions as any[],
+        validatorErrors: pp.meta.validator.blocking_errors,
+      });
+    }
+
+    // ── Merge: pool hits first (cheapest), then fresh AI questions ──────────
+    const merged = [
+      ...poolHits.map((p, i) => ({ ...(p.payload as any), id: `pool${i + 1}`, fromPool: true })),
+      ...(pp.questions as any[]),
+    ].map((q: any, i: number) => ({
+      ...q,
+      id: q.id || `eq${i + 1}`,
+      questionNumber: String(i + 1),
+    }));
+
+    // Build solutions & explanations lookup over the merged set
+    const solutions: Record<string, string> = {};
+    const explanations: Record<string, string> = {};
+    merged.forEach((q: any) => {
+      solutions[q.id] = q.stepByStepSolution || q.modelAnswer;
+      explanations[q.id] = q.explanation;
+    });
+
+    const totalMarks = merged.reduce(
+      (sum: number, q: any) => sum + (Number(q.marks) || 0),
+      0
+    );
+
     return jsonResponse({
-      exam_questions: pp.questions,
+      exam_questions: merged,
       solutions,
       explanations,
       weak_area_focus: normalizeArray(parsed.weak_area_focus),
-      totalMarks: parsed.totalMarks || totalMarks,
+      totalMarks: poolHits.length > 0 ? totalMarks : (parsed.totalMarks || totalMarks),
       suggestedTime:
         parsed.suggestedTime || `${Math.round(totalMarks * 1.5)} minutes`,
       generation_meta: buildProvenance({
@@ -279,6 +339,9 @@ IMPORTANT:
         validator_warnings: pp.meta.validator.warnings,
         validator_errors: pp.meta.validator.blocking_errors,
         fingerprints: pp.meta.novelty.fingerprints,
+        question_bank: QUESTION_BANK_ENABLED
+          ? { pool_hits: poolHits.length, generated: pp.questions.length }
+          : undefined,
       }),
     });
   } catch (e) {
