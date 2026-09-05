@@ -203,3 +203,8 @@ verify_jwt = false
 
 [functions.explain-diagram]
 verify_jwt = false
+
+# Admin JWT or x-cron-secret validated in-code.
+[functions.verify-curriculum-templates]
+verify_jwt = false
+

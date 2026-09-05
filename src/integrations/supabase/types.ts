@@ -3843,6 +3843,57 @@ export type Database = {
         }
         Relationships: []
       }
+      question_bank: {
+        Row: {
+          concepts: string[]
+          created_at: string
+          curriculum: string
+          difficulty: string
+          exam_level: string
+          fingerprint: string
+          id: string
+          marks: number | null
+          payload: Json
+          question_type: string | null
+          subject: string
+          surface: string
+          times_served: number
+          topic: string
+        }
+        Insert: {
+          concepts?: string[]
+          created_at?: string
+          curriculum?: string
+          difficulty?: string
+          exam_level?: string
+          fingerprint: string
+          id?: string
+          marks?: number | null
+          payload: Json
+          question_type?: string | null
+          subject: string
+          surface: string
+          times_served?: number
+          topic: string
+        }
+        Update: {
+          concepts?: string[]
+          created_at?: string
+          curriculum?: string
+          difficulty?: string
+          exam_level?: string
+          fingerprint?: string
+          id?: string
+          marks?: number | null
+          payload?: Json
+          question_type?: string | null
+          subject?: string
+          surface?: string
+          times_served?: number
+          topic?: string
+        }
+        Relationships: []
+      }
       question_fingerprints: {
         Row: {
           embedding: string | null
@@ -7607,6 +7658,10 @@ export type Database = {
         }[]
       }
       auto_resolve_kernel_alerts: { Args: never; Returns: number }
+      bump_question_bank_served: {
+        Args: { p_ids: string[] }
+        Returns: undefined
+      }
       check_ai_rate_limit: {
         Args: {
           _fn: string

@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Play, RefreshCw } from "lucide-react";
 import CurriculumImportPanel from "@/components/admin/CurriculumImportPanel";
+import TemplateVerificationPanel from "@/components/admin/TemplateVerificationPanel";
+
 
 interface TemplateRow {
   curriculum: string;
@@ -109,6 +111,9 @@ export default function CurriculumTemplates() {
       </Card>
 
       <CurriculumImportPanel onImported={load} />
+
+      <TemplateVerificationPanel onChanged={load} />
+
 
       <div>
         <h2 className="text-lg font-semibold mb-3">Coverage</h2>
