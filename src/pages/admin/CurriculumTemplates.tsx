@@ -110,6 +110,9 @@ export default function CurriculumTemplates() {
 
       <CurriculumImportPanel onImported={load} />
 
+      <TemplateVerificationPanel onChanged={load} />
+
+
       <div>
         <h2 className="text-lg font-semibold mb-3">Coverage</h2>
         {templates.length === 0 ? (
