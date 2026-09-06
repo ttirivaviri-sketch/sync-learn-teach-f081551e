@@ -179,6 +179,11 @@ const IebPastPapersLanding = () => {
               </Link>
             </li>
             <li>
+              <Link className="hover:underline" to="/past-papers/physical-sciences">
+                Physical Sciences past papers &amp; memos
+              </Link>
+            </li>
+            <li>
               <Link className="hover:underline" to="/books">
                 Free textbooks & set-work novels
               </Link>

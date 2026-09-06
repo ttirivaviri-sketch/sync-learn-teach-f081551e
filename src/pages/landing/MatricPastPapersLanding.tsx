@@ -175,6 +175,11 @@ const MatricPastPapersLanding = () => {
           </div>
           <ul className="grid gap-2 text-sm text-blue-700 sm:grid-cols-3">
             <li>
+              <Link className="hover:underline" to="/past-papers/physical-sciences">
+                Physical Sciences past papers &amp; memos
+              </Link>
+            </li>
+            <li>
               <Link className="hover:underline" to="/past-papers/ieb">
                 IEB past papers &amp; marking guidelines
               </Link>

@@ -20,11 +20,18 @@ export interface LandingFaq {
   answer: string;
 }
 
+export interface LandingBreadcrumb {
+  name: string;
+  path: string;
+}
+
 interface Props {
   title: string;
   description: string;
   path: string;
   faqs: LandingFaq[];
+  /** Optional trail for BreadcrumbList rich results, e.g. Home > Past Papers > Physical Sciences. */
+  breadcrumbs?: LandingBreadcrumb[];
   children: ReactNode;
 }
 
@@ -46,13 +53,30 @@ const faqJsonLd = (faqs: LandingFaq[]) =>
     })),
   });
 
-export default function LandingPageLayout({ title, description, path, faqs, children }: Props) {
+const breadcrumbJsonLd = (crumbs: LandingBreadcrumb[]) =>
+  JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((c, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: c.name,
+      item: `https://studysync.co.za${c.path === "/" ? "/" : c.path}`,
+    })),
+  });
+
+export default function LandingPageLayout({ title, description, path, faqs, breadcrumbs, children }: Props) {
   return (
     <div className="min-h-screen bg-white">
       <Seo title={title} description={description} path={path} />
       {faqs.length > 0 && (
         <Helmet>
           <script type="application/ld+json">{faqJsonLd(faqs)}</script>
+        </Helmet>
+      )}
+      {breadcrumbs && breadcrumbs.length > 1 && (
+        <Helmet>
+          <script type="application/ld+json">{breadcrumbJsonLd(breadcrumbs)}</script>
         </Helmet>
       )}
 
