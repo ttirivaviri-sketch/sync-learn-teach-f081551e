@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.guard_learning_workspace_owner() FROM PUBLIC, anon, authenticated;
