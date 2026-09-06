@@ -429,13 +429,22 @@ interface UseLibraryResourcesReturn {
   getMatchStatsFor: (predicate: (r: LibraryResource) => boolean) => LibraryMatchStats;
 }
 
+// Module-level cache so remounting the Library tab (e.g. when the academic
+// profile key changes) doesn't refetch ~5k rows over the network every time.
+let RESOURCE_CACHE: { data: LibraryResource[]; at: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 export function useLibraryResources(
   academicProfile?: AcademicProfile | null
 ): UseLibraryResourcesReturn {
-  const [dbResources, setDbResources] = useState<LibraryResource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheFresh = !!RESOURCE_CACHE && Date.now() - RESOURCE_CACHE.at < CACHE_TTL_MS;
+  const [dbResources, setDbResources] = useState<LibraryResource[]>(
+    cacheFresh ? RESOURCE_CACHE!.data : []
+  );
+  const [loading, setLoading] = useState(!cacheFresh);
   const [searchQuery, setSearchQuery] = useState("");
-  const [dbFetched, setDbFetched] = useState(false);
+  const [dbFetched, setDbFetched] = useState(cacheFresh);
+
 
   // Show only DB resources once fetched; show seed data only as initial loading placeholder.
   // Study-skills seeds are ALWAYS merged in (deduplicated by id) so the rack is visible
@@ -452,25 +461,75 @@ export function useLibraryResources(
 
   // Fetch tutor-uploaded tutorials AND PDFs from Supabase
   useEffect(() => {
+    let cancelled = false;
+
+    const VIDEO_URL_RE = /(youtube\.com|youtu\.be|vimeo\.com|loom\.com|\.(mp4|webm|mov|m4v)(\?|$))/i;
+
+    const mapSystemRow = (row: any): LibraryResource => {
+      const isDiagram = row.kind === "diagram";
+      const rawVideoUrl = row.video_url || (row.pdf_url && VIDEO_URL_RE.test(row.pdf_url) ? row.pdf_url : null);
+      const urlSaysVideo = !isDiagram && !!rawVideoUrl;
+      const isVideo = !isDiagram && (row.kind === "video" || urlSaysVideo);
+      const isPastPaper = !isVideo && row.kind === "past_paper";
+      const gradeLevels = Array.isArray(row.grade_levels) ? row.grade_levels : [];
+
+      return {
+        id: row.id,
+        title: row.title,
+        author: row.curriculum ?? (isDiagram ? "StudySync" : row.curriculum),
+        type: isDiagram ? "diagram" : isVideo ? "video" : isPastPaper ? "pastpaper" : "book",
+        category: row.subject || "General",
+        gradeLevel: gradeLevels.join(" • ") || "All Grades",
+        summary: row.description || "",
+        rating: 0,
+        reviews: row.view_count || 0,
+        thumbnail:
+          (isDiagram && typeof row.image_url === "string" && row.image_url.startsWith("http")
+            ? row.image_url
+            : null) || row.thumbnail_url || "/placeholder.svg",
+        isOffline: false,
+        duration: isDiagram ? "Diagram" : isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
+        isTutorial: isVideo,
+        videoUrl: isVideo ? rawVideoUrl ?? undefined : isDiagram ? undefined : row.pdf_url,
+        pdfSource: isVideo || isDiagram ? undefined : "system",
+        imageUrl: isDiagram && typeof row.image_url === "string" && row.image_url.startsWith("http")
+          ? row.image_url
+          : null,
+        diagramSpec: isDiagram ? row.diagram_spec ?? undefined : undefined,
+        paperMeta: isPastPaper
+          ? {
+              year: row.paper_year ?? null,
+              session: row.paper_session ?? null,
+              paperNumber: row.paper_number ?? null,
+              markingSchemeUrl: row.marking_scheme_url ?? null,
+            }
+          : undefined,
+        tags: {
+          subject: row.subject || "General",
+          topic: row.topic || "All Topics",
+          grade: gradeLevels[0] || "All Grades",
+          curriculum: row.curriculum,
+        },
+      } as LibraryResource;
+    };
+
     const fetchLibraryResources = async () => {
-      setLoading(true);
+      const hasCache = !!RESOURCE_CACHE;
+      if (!hasCache) setLoading(true);
       try {
-        // NOTE: PostgREST caps each query at 1000 rows. Past papers now number
-        // in the thousands, so a single unfiltered query would return only past
-        // papers and hide every book and clip. Fetch each kind separately.
+        // NOTE: PostgREST caps each query at 1000 rows. Fetch each kind
+        // separately so past papers (thousands of rows) can't crowd out books
+        // and clips.
+        // select("*") on purpose: stays resilient if a metadata migration
+        // hasn't been applied yet (missing columns would 400 the whole fetch).
         const systemQuery = (kind: string, limit: number) =>
           supabase
             .from("library_system_resources")
-            // select("*") on purpose: stays resilient if the past-paper
-            // metadata migration hasn't been applied yet (missing columns
-            // in an explicit select would 400 the whole library fetch).
             .select("*")
             .eq("kind", kind)
             .order("created_at", { ascending: false })
             .limit(limit);
 
-        // Videos now exceed the 1000-row PostgREST cap (large seeded clip
-        // catalogue) — page a second range so topic shelves see everything.
         const systemQueryRange = (kind: string, from: number, to: number) =>
           supabase
             .from("library_system_resources")
@@ -479,39 +538,31 @@ export function useLibraryResources(
             .order("created_at", { ascending: false })
             .range(from, to);
 
-        const [tutorialsResult, booksResult, videosResult, videosResult2, papersResult, diagramsResult] = await Promise.all([
-          supabase
-            .from("tutor_tutorials")
-          .select(
-            `id, title, subject, topic, subtopic, grade, curriculum,
-             description, rating, review_count, thumbnail_url,
-             duration_label, video_url, watch_count, completion_rate,
-             tutor_id, content_type, pdf_url, resource_category`
-          )
-          .eq("status", "published")
-            .order("created_at", { ascending: false }),
-          systemQuery("textbook", 1000),
-          systemQuery("video", 1000),
-          systemQueryRange("video", 1000, 1999),
-          systemQuery("past_paper", 1000),
-          systemQuery("diagram", 1000),
-        ]);
+        // ── Phase 1: everything needed for first paint (books, clips, diagrams,
+        // tutor uploads). Past papers — by far the biggest payload — load after.
+        const [tutorialsResult, booksResult, videosResult, videosResult2, diagramsResult] =
+          await Promise.all([
+            supabase
+              .from("tutor_tutorials")
+              .select(
+                `id, title, subject, topic, subtopic, grade, curriculum,
+                 description, rating, review_count, thumbnail_url,
+                 duration_label, video_url, watch_count, completion_rate,
+                 tutor_id, content_type, pdf_url, resource_category`
+              )
+              .eq("status", "published")
+              .order("created_at", { ascending: false }),
+            systemQuery("textbook", 1000),
+            systemQuery("video", 1000),
+            systemQueryRange("video", 1000, 1999),
+            systemQuery("diagram", 1000),
+          ]);
+
+        if (cancelled) return;
 
         const { data: directData, error: directError } = tutorialsResult;
         const systemError =
-          booksResult.error && videosResult.error && papersResult.error
-            ? booksResult.error
-            : null;
-        const systemData = [
-          ...(booksResult.data ?? []),
-          ...(videosResult.data ?? []),
-          // Second video page fails gracefully (empty) when total ≤ 1000.
-          ...(videosResult2.data ?? []),
-          ...(papersResult.data ?? []),
-          // Diagrams query fails gracefully (empty) if migration not applied yet.
-          ...(diagramsResult.data ?? []),
-        ];
-
+          booksResult.error && videosResult.error ? booksResult.error : null;
 
         if (directError && systemError) {
           logger.warn("tutor_tutorials direct query failed:", directError.message);
@@ -593,108 +644,91 @@ export function useLibraryResources(
                   rating: row.rating || 0,
                   reviews: row.review_count || 0,
                 },
-          };
+          } as LibraryResource;
         });
 
-        const VIDEO_URL_RE = /(youtube\.com|youtu\.be|vimeo\.com|loom\.com|\.(mp4|webm|mov|m4v)(\?|$))/i;
-        const mappedSystemResources: LibraryResource[] = ((systemData as any[]) || []).map((row) => {
-          const isDiagram = row.kind === "diagram";
-          const rawVideoUrl = row.video_url || (row.pdf_url && VIDEO_URL_RE.test(row.pdf_url) ? row.pdf_url : null);
-          const urlSaysVideo = !isDiagram && !!rawVideoUrl;
-          const isVideo = !isDiagram && (row.kind === "video" || urlSaysVideo);
-          if (isVideo && row.kind !== "video") {
-            logger.warn("[useLibraryResources] row classified as video by URL but kind=", row.kind, row.id);
-          }
-          const isPastPaper = !isVideo && row.kind === "past_paper";
-          const gradeLevels = Array.isArray(row.grade_levels) ? row.grade_levels : [];
+        const phase1 = [
+          ...mappedTutorials,
+          ...[
+            ...(booksResult.data ?? []),
+            ...(videosResult.data ?? []),
+            ...(videosResult2.data ?? []),
+            ...(diagramsResult.data ?? []),
+          ].map(mapSystemRow),
+        ];
 
-          return {
-            id: row.id,
-            title: row.title,
-            author: row.curriculum ?? (isDiagram ? "StudySync" : row.curriculum),
-            type: isDiagram ? "diagram" : isVideo ? "video" : isPastPaper ? "pastpaper" : "book",
-            category: row.subject || "General",
-            gradeLevel: gradeLevels.join(" • ") || "All Grades",
-            summary: row.description || "",
-            rating: 0,
-            reviews: row.view_count || 0,
-            thumbnail:
-              (isDiagram && typeof row.image_url === "string" && row.image_url.startsWith("http")
-                ? row.image_url
-                : null) || row.thumbnail_url || "/placeholder.svg",
-            isOffline: false,
-            duration: isDiagram ? "Diagram" : isVideo ? "Video" : row.pages ? `${row.pages} pages` : "PDF",
-            isTutorial: isVideo,
-            videoUrl: isVideo ? rawVideoUrl ?? undefined : isDiagram ? undefined : row.pdf_url,
-            pdfSource: isVideo || isDiagram ? undefined : "system",
-            // image_url may be a private storage path — only pass through real URLs.
-            imageUrl: isDiagram && typeof row.image_url === "string" && row.image_url.startsWith("http")
-              ? row.image_url
-              : null,
+        setDbResources(phase1);
+        setDbFetched(true);
+        setLoading(false);
+        RESOURCE_CACHE = { data: phase1, at: Date.now() };
 
-            diagramSpec: isDiagram ? row.diagram_spec ?? undefined : undefined,
-            paperMeta: isPastPaper
-              ? {
-                  year: row.paper_year ?? null,
-                  session: row.paper_session ?? null,
-                  paperNumber: row.paper_number ?? null,
-                  markingSchemeUrl: row.marking_scheme_url ?? null,
-                }
-              : undefined,
-            tags: {
-              subject: row.subject || "General",
-              topic: row.topic || "All Topics",
-              grade: gradeLevels[0] || "All Grades",
-              curriculum: row.curriculum,
-            },
-          };
-        });
+        // ── Phase 2: past papers stream in behind the first paint ────────────
+        const [papersResult, papersResult2] = await Promise.all([
+          systemQuery("past_paper", 1000),
+          systemQueryRange("past_paper", 1000, 2999),
+        ]);
+        if (cancelled) return;
 
+        const papers = [
+          ...(papersResult.data ?? []),
+          ...(papersResult2.data ?? []),
+        ].map(mapSystemRow);
 
-        const mapped = [...mappedTutorials, ...mappedSystemResources];
+        const merged = [...phase1, ...papers];
+        setDbResources(merged);
+        RESOURCE_CACHE = { data: merged, at: Date.now() };
 
         logger.info(
           "[useLibraryResources] Library resources:",
-          mapped.length,
+          merged.length,
           "videos:",
-          mapped.filter((r) => r.type === "video").length,
-          "documents:",
-          mapped.filter((r) => r.type !== "video").length
+          merged.filter((r) => r.type === "video").length
         );
-        setDbResources(mapped);
-        setDbFetched(true);
       } catch (err) {
         logger.warn("Tutorial fetch error (non-critical):", err);
         setDbFetched(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
-    fetchLibraryResources();
+    // Serve cached data instantly; only refetch when the cache is stale.
+    if (!RESOURCE_CACHE || Date.now() - RESOURCE_CACHE.at >= CACHE_TTL_MS) {
+      fetchLibraryResources();
+    }
+
+    // Realtime updates are debounced — a bulk seed would otherwise trigger
+    // dozens of full refetches.
+    let debounce: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefetch = () => {
+      if (debounce) clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        RESOURCE_CACHE = null;
+        fetchLibraryResources();
+      }, 4000);
+    };
 
     const channel = supabase
       .channel("library-tutorials-sync")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "tutor_tutorials" },
-        () => {
-          fetchLibraryResources();
-        }
+        scheduleRefetch
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "library_system_resources" },
-        () => {
-          fetchLibraryResources();
-        }
+        scheduleRefetch
       )
       .subscribe();
 
     return () => {
+      cancelled = true;
+      if (debounce) clearTimeout(debounce);
       supabase.removeChannel(channel);
     };
   }, []);
+
 
   // ── Personalization logic ─────────────────────────────────────────────────
 
