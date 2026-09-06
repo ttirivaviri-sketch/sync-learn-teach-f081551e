@@ -44,6 +44,11 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://studysync.co.za/past-papers/life-sciences</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
     <loc>https://studysync.co.za/past-papers/accounting</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>

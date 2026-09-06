@@ -93,6 +93,11 @@ const AccountingPastPapersLanding = () => {
       description="Grade 10, 11 and 12 Accounting past papers with memos and marking guidelines for CAPS/NSC matric and IEB — financial statements, cash flow, ratios and cost accounting."
       path="/past-papers/accounting"
       faqs={FAQS}
+      breadcrumbs={[
+        { name: "Home", path: "/" },
+        { name: "Past Papers", path: "/past-papers" },
+        { name: "Accounting", path: "/past-papers/accounting" },
+      ]}
     >
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-14 pt-14 sm:px-6 lg:px-8">

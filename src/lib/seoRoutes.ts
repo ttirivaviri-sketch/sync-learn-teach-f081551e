@@ -81,7 +81,14 @@ export const ROUTE_SEO: RouteSeo[] = [
     title: "Physical Sciences Past Papers & Memos — Grade 10-12",
     description:
       "Practise Physical Sciences past exam papers with memos — Grade 10, 11 and 12 NSC Paper 1 (Physics) and Paper 2 (Chemistry), sorted by grade and year.",
-    image: "/og/home.jpg",
+    image: "/og/physical-sciences-past-papers.jpg",
+  },
+  {
+    path: "/past-papers/life-sciences",
+    title: "Life Sciences Past Papers & Memos — Grade 10-12",
+    description:
+      "Practise Life Sciences past exam papers with memos — Grade 10, 11 and 12 NSC Paper 1 and Paper 2, from genetics to human physiology, sorted by grade and year.",
+    image: "/og/life-sciences-past-papers.jpg",
   },
   {
     path: "/past-papers/accounting",

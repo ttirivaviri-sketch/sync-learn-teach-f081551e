@@ -95,6 +95,11 @@ const MatricPastPapersLanding = () => {
       description="Download and practise Grade 12 matric past exam papers with memos — Mathematics, Physical Sciences, Life Sciences, English and more, sorted by subject and year."
       path="/past-papers/matric"
       faqs={FAQS}
+      breadcrumbs={[
+        { name: "Home", path: "/" },
+        { name: "Past Papers", path: "/past-papers" },
+        { name: "Matric", path: "/past-papers/matric" },
+      ]}
     >
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-14 pt-14 sm:px-6 lg:px-8">
@@ -177,6 +182,11 @@ const MatricPastPapersLanding = () => {
             <li>
               <Link className="hover:underline" to="/past-papers/physical-sciences">
                 Physical Sciences past papers &amp; memos
+              </Link>
+            </li>
+            <li>
+              <Link className="hover:underline" to="/past-papers/life-sciences">
+                Life Sciences past papers &amp; memos
               </Link>
             </li>
             <li>
