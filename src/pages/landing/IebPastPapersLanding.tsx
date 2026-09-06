@@ -93,6 +93,11 @@ const IebPastPapersLanding = () => {
       description="Practise IEB Grade 12 matric past papers for Mathematics, Physical Sciences, Life Sciences and English, with marking guidelines and memos by subject, grade and year."
       path="/past-papers/ieb"
       faqs={FAQS}
+      breadcrumbs={[
+        { name: "Home", path: "/" },
+        { name: "Past Papers", path: "/past-papers" },
+        { name: "IEB", path: "/past-papers/ieb" },
+      ]}
     >
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-14 pt-14 sm:px-6 lg:px-8">

@@ -97,6 +97,11 @@ const ZimsecPastPapersLanding = () => {
       description="Practise ZIMSEC O Level and A Level past exam papers with answers — Mathematics, Combined Science, English and more, sorted by subject, level and year."
       path="/past-papers/zimsec"
       faqs={FAQS}
+      breadcrumbs={[
+        { name: "Home", path: "/" },
+        { name: "Past Papers", path: "/past-papers" },
+        { name: "ZIMSEC", path: "/past-papers/zimsec" },
+      ]}
     >
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-14 pt-14 sm:px-6 lg:px-8">

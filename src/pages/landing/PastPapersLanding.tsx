@@ -82,6 +82,10 @@ const PastPapersLanding = () => {
       description="Download past exam papers with memos: ZIMSEC O Level & A Level, Cambridge IGCSE, O Level & AS/A Level, and CAPS/NSC Grade 12 matric papers — sorted by subject, grade and year."
       path="/past-papers"
       faqs={FAQS}
+      breadcrumbs={[
+        { name: "Home", path: "/" },
+        { name: "Past Papers", path: "/past-papers" },
+      ]}
     >
       {/* Hero */}
       <section className="mx-auto max-w-7xl px-4 pb-14 pt-14 sm:px-6 lg:px-8">
@@ -189,6 +193,16 @@ const PastPapersLanding = () => {
             </p>
             <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/physical-sciences">
               Browse Physical Sciences past papers &amp; memos →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing Life Sciences?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Grade 10–12 Life Sciences papers with memos — Paper 1 and Paper 2, from genetics
+              and evolution to human physiology.
+            </p>
+            <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/life-sciences">
+              Browse Life Sciences past papers &amp; memos →
             </Link>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
