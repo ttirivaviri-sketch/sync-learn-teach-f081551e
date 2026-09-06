@@ -287,13 +287,16 @@ IMPORTANT:
 
     // ── Contribute fresh validator-clean questions to the shared pool ───────
     // (fire-and-forget; no-op unless QUESTION_BANK_ENABLED)
-    if (pp.questions.length > 0) {
+    // Never contribute document-grounded questions: they are written around
+    // this student's own uploads and must not be served to anyone else.
+    if (!documentGrounded && pp.questions.length > 0) {
       await contributeToPool({
         key: poolKey,
         questions: pp.questions as any[],
         validatorErrors: pp.meta.validator.blocking_errors,
       });
     }
+
 
     // ── Merge: pool hits first (cheapest), then fresh AI questions ──────────
     const merged = [

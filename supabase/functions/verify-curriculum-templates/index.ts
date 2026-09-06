@@ -142,9 +142,15 @@ Deno.serve(async (req) => {
   const body = await req.json().catch(() => ({}));
   const { only, limit = 10, force = false } = body ?? {};
 
-  let query = admin
+  const query = admin
     .from('curriculum_topic_templates')
-    .select('curriculum, grade, subject, topics, verification_status');
+    .select('curriculum, grade, subject, topics, verification_status, last_verification_at')
+    // Stalest first (never-verified rows lead) so repeated runs advance through
+    // the full set instead of re-checking the same leading rows every time.
+    .order('last_verification_at', { ascending: true, nullsFirst: true })
+    .order('curriculum', { ascending: true })
+    .order('grade', { ascending: true })
+    .order('subject', { ascending: true });
   const { data: all } = await query;
 
   let candidates = (all ?? []).filter((t: any) => Array.isArray(t.topics) && t.topics.length > 0);
@@ -155,8 +161,10 @@ Deno.serve(async (req) => {
     candidates = candidates.filter((t: any) => (t.verification_status ?? 'unverified') === 'unverified');
   }
 
-  const remaining = candidates.length;
+  const total = candidates.length;
   candidates = candidates.slice(0, Math.min(Number(limit) || 10, 40));
+  const remaining = Math.max(total - candidates.length, 0);
+
 
   if (candidates.length === 0) {
     return new Response(JSON.stringify({ status: 'complete', remaining: 0 }), {
