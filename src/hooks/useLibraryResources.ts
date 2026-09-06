@@ -429,13 +429,22 @@ interface UseLibraryResourcesReturn {
   getMatchStatsFor: (predicate: (r: LibraryResource) => boolean) => LibraryMatchStats;
 }
 
+// Module-level cache so remounting the Library tab (e.g. when the academic
+// profile key changes) doesn't refetch ~5k rows over the network every time.
+let RESOURCE_CACHE: { data: LibraryResource[]; at: number } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 export function useLibraryResources(
   academicProfile?: AcademicProfile | null
 ): UseLibraryResourcesReturn {
-  const [dbResources, setDbResources] = useState<LibraryResource[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cacheFresh = !!RESOURCE_CACHE && Date.now() - RESOURCE_CACHE.at < CACHE_TTL_MS;
+  const [dbResources, setDbResources] = useState<LibraryResource[]>(
+    cacheFresh ? RESOURCE_CACHE!.data : []
+  );
+  const [loading, setLoading] = useState(!cacheFresh);
   const [searchQuery, setSearchQuery] = useState("");
-  const [dbFetched, setDbFetched] = useState(false);
+  const [dbFetched, setDbFetched] = useState(cacheFresh);
+
 
   // Show only DB resources once fetched; show seed data only as initial loading placeholder.
   // Study-skills seeds are ALWAYS merged in (deduplicated by id) so the rack is visible
