@@ -433,6 +433,7 @@ export default function Library() {
                           <SelectItem value="none">—</SelectItem>
                           <SelectItem value="March">March</SelectItem>
                           <SelectItem value="June">June</SelectItem>
+                          <SelectItem value="May/June">May/June</SelectItem>
                           <SelectItem value="November">November</SelectItem>
                         </SelectContent>
                       </Select>
