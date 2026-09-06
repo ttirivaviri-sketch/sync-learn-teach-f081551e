@@ -56,8 +56,13 @@ export default function TemplateVerificationPanel({ onChanged }: { onChanged?: (
       if (data?.status === "complete") {
         toast.success("Nothing left to verify");
       } else {
-        toast.success(`Verification started: ${data?.total ?? "?"} templates in this batch`);
+        const left = Number(data?.remaining ?? 0);
+        toast.success(
+          `Verification started: ${data?.total ?? "?"} templates in this batch` +
+            (left > 0 ? ` — ${left} still queued, click again to continue` : ""),
+        );
       }
+
       load();
       onChanged?.();
     } catch (e: any) {
