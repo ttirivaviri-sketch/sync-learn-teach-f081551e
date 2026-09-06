@@ -182,6 +182,16 @@ const PastPapersLanding = () => {
             </Link>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing Physical Sciences?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Grade 10–12 Physical Sciences papers with memos — Paper 1 (Physics) and Paper 2
+              (Chemistry), sorted by grade and year.
+            </p>
+            <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/physical-sciences">
+              Browse Physical Sciences past papers &amp; memos →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <h2 className="mb-2 text-lg font-semibold text-gray-900">Studying Accounting?</h2>
             <p className="mb-3 text-sm leading-relaxed text-gray-600">
               Grade 10–12 Accounting papers with memos — financial statements, cash flow, ratios and
