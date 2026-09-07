@@ -92,6 +92,20 @@ Be strict: only list a topic as missing if the syllabus text clearly contains it
 }
 
 async function findSyllabus(admin: any, subject: string, curriculum: string) {
+  // 1) Curated shared library of official syllabus documents.
+  const { data: curated } = await admin
+    .from('curriculum_syllabus_sources')
+    .select('name, content, char_count')
+    .eq('status', 'ready')
+    .eq('curriculum', curriculum)
+    .ilike('subject', subject)
+    .order('char_count', { ascending: false })
+    .limit(1);
+  if (curated?.[0]?.content) {
+    return { name: curated[0].name as string, text: curated[0].content as string };
+  }
+
+  // 2) Fallback: syllabus PDFs uploaded by users into `documents`.
   const { data } = await admin
     .from('documents')
     .select('id, name, parsed_content')

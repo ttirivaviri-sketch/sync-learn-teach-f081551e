@@ -739,6 +739,57 @@ export type Database = {
         }
         Relationships: []
       }
+      curriculum_syllabus_sources: {
+        Row: {
+          char_count: number
+          content: string | null
+          created_at: string
+          curriculum: string
+          error: string | null
+          fetched_at: string | null
+          grade: string | null
+          id: string
+          name: string
+          source_url: string | null
+          status: string
+          storage_path: string | null
+          subject: string
+          updated_at: string
+        }
+        Insert: {
+          char_count?: number
+          content?: string | null
+          created_at?: string
+          curriculum: string
+          error?: string | null
+          fetched_at?: string | null
+          grade?: string | null
+          id?: string
+          name: string
+          source_url?: string | null
+          status?: string
+          storage_path?: string | null
+          subject: string
+          updated_at?: string
+        }
+        Update: {
+          char_count?: number
+          content?: string | null
+          created_at?: string
+          curriculum?: string
+          error?: string | null
+          fetched_at?: string | null
+          grade?: string | null
+          id?: string
+          name?: string
+          source_url?: string | null
+          status?: string
+          storage_path?: string | null
+          subject?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       curriculum_topic_templates: {
         Row: {
           coverage_score: number | null
