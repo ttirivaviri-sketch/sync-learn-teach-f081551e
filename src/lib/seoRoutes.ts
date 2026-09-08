@@ -98,6 +98,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/home.jpg",
   },
   {
+    path: "/past-papers/business-studies",
+    title: "Business Studies Past Papers & Memos — Grade 10-12",
+    description:
+      "Grade 10, 11 and 12 Business Studies past papers with memos for CAPS/NSC matric and IEB — business environments, operations, marketing and management essays.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/books",
     title: "Free Textbooks, Set Works & Study Guides | StudySync",
     description:

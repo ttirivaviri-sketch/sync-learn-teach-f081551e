@@ -20,6 +20,7 @@ const MathsTutorLanding = lazy(() => import("./pages/landing/MathsTutorLanding")
 const PastPapersLanding = lazy(() => import("./pages/landing/PastPapersLanding"));
 const IebPastPapersLanding = lazy(() => import("./pages/landing/IebPastPapersLanding"));
 const AccountingPastPapersLanding = lazy(() => import("./pages/landing/AccountingPastPapersLanding"));
+const BusinessStudiesPastPapersLanding = lazy(() => import("./pages/landing/BusinessStudiesPastPapersLanding"));
 const ZimsecPastPapersLanding = lazy(() => import("./pages/landing/ZimsecPastPapersLanding"));
 const MatricPastPapersLanding = lazy(() => import("./pages/landing/MatricPastPapersLanding"));
 const PhysicalSciencesPastPapersLanding = lazy(() => import("./pages/landing/PhysicalSciencesPastPapersLanding"));
@@ -140,6 +141,8 @@ const App = () => {
               <Route path="/past-papers/ieb" element={<IebPastPapersLanding />} />
               <Route path="/past-papers/accounting" element={<AccountingPastPapersLanding />} />
               <Route path="/accounting-past-papers" element={<Navigate to="/past-papers/accounting" replace />} />
+              <Route path="/past-papers/business-studies" element={<BusinessStudiesPastPapersLanding />} />
+              <Route path="/business-studies-past-papers" element={<Navigate to="/past-papers/business-studies" replace />} />
               <Route path="/past-papers/zimsec" element={<ZimsecPastPapersLanding />} />
               <Route path="/zimsec-past-papers" element={<Navigate to="/past-papers/zimsec" replace />} />
               <Route path="/past-papers/matric" element={<MatricPastPapersLanding />} />
