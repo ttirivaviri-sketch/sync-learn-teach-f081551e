@@ -163,14 +163,16 @@ serve(async (req) => {
           ? basePrompt
           : `${basePrompt}\n\nIMPORTANT: Respond with the rendered IMAGE itself. Do not reply with text, questions or a description.`;
 
-      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      const aiResp = await fetch("https://ai.gateway.lovable.dev/v1/images/generations", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${LOVABLE_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-2.5-flash-image",
+          // Highest-fidelity image model — noticeably better at correct
+          // spelling and part placement than the flash image models.
+          model: "google/gemini-3-pro-image",
           messages: [{ role: "user", content: prompt }],
           modalities: ["image", "text"],
         }),
