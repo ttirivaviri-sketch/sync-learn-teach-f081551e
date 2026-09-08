@@ -208,6 +208,17 @@ export function DiagramViewerOverlay({
               {resource.title}
             </h3>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 px-2 text-xs"
+            disabled={rendering}
+            onClick={() => void renderDiagram(true)}
+            title="Redraw this diagram if labels look wrong"
+          >
+            <RefreshCw className={`mr-1 h-3.5 w-3.5 ${rendering ? "animate-spin" : ""}`} />
+            Redraw
+          </Button>
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
