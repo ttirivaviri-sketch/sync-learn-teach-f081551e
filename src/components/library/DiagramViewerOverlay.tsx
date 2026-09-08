@@ -252,35 +252,7 @@ export function DiagramViewerOverlay({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setImageUrl(null);
-                    setRenderError(null);
-                    setRendering(true);
-                    // re-trigger effect by resetting state; effect keyed on id
-                    // won't rerun, so call directly:
-                    (async () => {
-                      try {
-                        const headers = await edgeHeaders();
-                        const resp = await fetch(
-                          `${SUPABASE_URL}/functions/v1/generate-library-diagram`,
-                          {
-                            method: "POST",
-                            headers,
-                            body: JSON.stringify({ resourceId: String(resource.id) }),
-                          },
-                        );
-                        const data = await resp.json().catch(() => ({}));
-                        if (!resp.ok) throw new Error(data?.error || "Render failed");
-                        if (data?.url) setImageUrl(data.url);
-                      } catch (err) {
-                        setRenderError(
-                          err instanceof Error ? err.message : "Could not render this diagram.",
-                        );
-                      } finally {
-                        setRendering(false);
-                      }
-                    })();
-                  }}
+                  onClick={() => void renderDiagram(true)}
                 >
                   Try again
                 </Button>
