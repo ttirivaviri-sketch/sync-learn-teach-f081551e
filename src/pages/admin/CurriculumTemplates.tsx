@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Loader2, Play, RefreshCw } from "lucide-react";
 import CurriculumImportPanel from "@/components/admin/CurriculumImportPanel";
 import TemplateVerificationPanel from "@/components/admin/TemplateVerificationPanel";
+import SyllabusLibraryPanel from "@/components/admin/SyllabusLibraryPanel";
 
 
 interface TemplateRow {
@@ -111,6 +112,8 @@ export default function CurriculumTemplates() {
       </Card>
 
       <CurriculumImportPanel onImported={load} />
+
+      <SyllabusLibraryPanel onChanged={load} />
 
       <TemplateVerificationPanel onChanged={load} />
 
