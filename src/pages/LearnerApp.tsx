@@ -673,11 +673,13 @@ const LearnerApp = () => {
           return ok;
         }}
         onSaved={() => {
+          const wasFirstSetup = !academicProfile;
           setShowAcademicSetup(false);
           setProfileSetupDismissed(true);
           toast({ title: "Profile saved!", description: "Your library and Study Mode have been personalised." });
-          setActiveTab("library");
+          if (wasFirstSetup) setActiveTab("library");
         }}
+
       />
 
       {/* Review Modal */}
