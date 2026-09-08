@@ -26,6 +26,7 @@ const MatricPastPapersLanding = lazy(() => import("./pages/landing/MatricPastPap
 const PhysicalSciencesPastPapersLanding = lazy(() => import("./pages/landing/PhysicalSciencesPastPapersLanding"));
 const LifeSciencesPastPapersLanding = lazy(() => import("./pages/landing/LifeSciencesPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
+const Community = lazy(() => import("./pages/Community"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
 const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
