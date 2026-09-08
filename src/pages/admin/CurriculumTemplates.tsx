@@ -113,6 +113,8 @@ export default function CurriculumTemplates() {
 
       <CurriculumImportPanel onImported={load} />
 
+      <SyllabusLibraryPanel onChanged={load} />
+
       <TemplateVerificationPanel onChanged={load} />
 
 
