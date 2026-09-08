@@ -695,8 +695,9 @@ export function useLibraryResources(
       }
     };
 
-    // Serve cached data instantly; only refetch when the cache is stale.
-    if (!RESOURCE_CACHE || Date.now() - RESOURCE_CACHE.at >= CACHE_TTL_MS) {
+    // Serve cached data instantly; refetch when stale or incomplete
+    // (phase 2 past papers missing).
+    if (!RESOURCE_CACHE || !RESOURCE_CACHE.complete || Date.now() - RESOURCE_CACHE.at >= CACHE_TTL_MS) {
       fetchLibraryResources();
     }
 
