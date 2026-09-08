@@ -557,7 +557,7 @@ const LearnerApp = () => {
               <Suspense fallback={<TabFallback />}>
                 <LearnerLibraryTab
                   academicProfile={academicProfile}
-                  onShowAcademicSetup={openStudySettings}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
                   onBookTutor={handleLibraryBookTutor}
                   onNeedHelp={() => setActiveTab("home")}
                 />
@@ -609,7 +609,8 @@ const LearnerApp = () => {
                   academicProfile={academicProfile}
                   bookings={bookings}
                   onRefreshProfile={loadUserProfile}
-                  onShowAcademicSetup={openStudySettings}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+
                   onShowPaymentMethods={() => setShowPaymentMethods(true)}
                   onShowAllPayments={() => setShowAllPayments(true)}
                   onNavigateTab={setActiveTab}
