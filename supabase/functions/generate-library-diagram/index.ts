@@ -41,17 +41,29 @@ function buildPrompt(spec: DiagramSpec): string {
     .join("\n");
   const rels = (spec.relationships ?? []).map((r) => `- ${r}`).join("\n");
 
-  return `Create a beautiful educational study diagram titled "${spec.title}".
+  return `Create an accurate, textbook-quality educational study diagram titled "${spec.title}".
 
 ${spec.caption ?? ""}
+${spec.subject ? `Subject: ${spec.subject}` : ""}
 
-STYLE (must follow exactly — StudySync house style):
+ACCURACY IS THE TOP PRIORITY — this is used by students revising for real exams.
+1. Scientific/structural accuracy: every part must be drawn in its correct
+   anatomical / physical / geometric position and proportion.
+2. Spelling: reproduce every label character-for-character exactly as written
+   below. Re-check each word letter by letter before finishing. No invented,
+   duplicated, garbled or partially-rendered words anywhere in the image.
+3. Placement: each label must sit next to (or be joined by a thin straight
+   leader line to) the part it names — never floating, overlapping another
+   label, or pointing at the wrong part.
+4. Legibility: generous spacing, no label crossing another line, text large
+   enough to read on a phone screen.
+
+STYLE (StudySync house style):
 - Clean flat vector-illustration style on a soft cream/off-white background
-- Bold black title text at the top
-- Clear sans-serif labels with thin leader lines or arrows pointing at the right parts
-- A restrained modern palette (2-4 accent colours), no photorealism, no clutter
-- Suitable for a secondary-school student revising for exams
-- All text in English, spelled EXACTLY as given below
+- Bold black title text at the top, exactly: "${spec.title}"
+- Crisp sans-serif labels, thin leader lines or arrows
+- Restrained modern palette (2-4 accent colours), no photorealism, no clutter
+- All text in English
 
 LABELS THAT MUST APPEAR (exact spelling, all of them, correctly placed):
 ${labels}
@@ -59,7 +71,7 @@ ${labels}
 RELATIONSHIPS / ARROWS TO SHOW:
 ${rels}
 
-Do not add any labels that are not listed. Do not misspell any label. No watermark.`;
+Do not add any labels, numbers, captions or watermarks that are not listed above.`;
 }
 
 serve(async (req) => {
