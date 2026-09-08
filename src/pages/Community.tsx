@@ -148,15 +148,19 @@ export default function Community() {
     }
 
     setSubmitting(true);
-    const { error } = await supabase
-      .from("community_signups")
-      .upsert(
-        { ...parsed.data, email: parsed.data.email.toLowerCase(), user_id: userId, source },
-        { onConflict: "email" },
-      );
+    const row = {
+      name: parsed.data.name,
+      email: parsed.data.email.toLowerCase(),
+      curriculum: parsed.data.curriculum,
+      grade_level: parsed.data.grade_level,
+      source,
+      ...(userId ? { user_id: userId } : {}),
+    };
+    const { error } = await supabase.from("community_signups").insert(row);
     setSubmitting(false);
 
-    if (error) {
+    // 23505 = already signed up with this email; that's a success for the user.
+    if (error && error.code !== "23505") {
       toast({
         title: "Couldn't save your details",
         description: "Please check your connection and try again.",
