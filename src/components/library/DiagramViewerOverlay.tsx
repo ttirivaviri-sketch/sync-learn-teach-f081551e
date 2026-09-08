@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Loader2, X, Sparkles, Send, ImageOff, MessageCircleQuestion,
+  Loader2, X, Sparkles, Send, ImageOff, MessageCircleQuestion, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
