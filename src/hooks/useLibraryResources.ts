@@ -661,14 +661,13 @@ export function useLibraryResources(
         setDbResources(phase1);
         setDbFetched(true);
         setLoading(false);
-        RESOURCE_CACHE = { data: phase1, at: Date.now() };
+        RESOURCE_CACHE = { data: phase1, at: Date.now(), complete: false };
 
         // ── Phase 2: past papers stream in behind the first paint ────────────
         const [papersResult, papersResult2] = await Promise.all([
           systemQuery("past_paper", 1000),
           systemQueryRange("past_paper", 1000, 2999),
         ]);
-        if (cancelled) return;
 
         const papers = [
           ...(papersResult.data ?? []),
@@ -676,8 +675,11 @@ export function useLibraryResources(
         ].map(mapSystemRow);
 
         const merged = [...phase1, ...papers];
-        setDbResources(merged);
-        RESOURCE_CACHE = { data: merged, at: Date.now() };
+        // Cache even if the component unmounted mid-flight, so a tab switch
+        // doesn't leave a past-paper-free cache behind.
+        if (!cancelled) setDbResources(merged);
+        const papersOk = !papersResult.error && !papersResult2.error;
+        RESOURCE_CACHE = { data: merged, at: Date.now(), complete: papersOk };
 
         logger.info(
           "[useLibraryResources] Library resources:",
