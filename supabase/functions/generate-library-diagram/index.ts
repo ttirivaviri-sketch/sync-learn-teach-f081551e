@@ -84,7 +84,8 @@ serve(async (req) => {
   const authedUserId = auth.caller.userId;
 
   try {
-    const { resourceId } = await req.json();
+    const { resourceId, force } = await req.json();
+    const forceRedraw = force === true;
     if (!resourceId || typeof resourceId !== "string") {
       return new Response(JSON.stringify({ error: "resourceId is required" }), {
         status: 400,
