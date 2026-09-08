@@ -134,6 +134,7 @@ const App = () => {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <StudyModeWarmer />
           <OfflineIndicator />
           <Suspense fallback={<LoadingScreen message="Loading StudySync..." />}>
             <Routes>
