@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  Loader2, X, Sparkles, Send, ImageOff, MessageCircleQuestion,
+  Loader2, X, Sparkles, Send, ImageOff, MessageCircleQuestion, RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,39 +56,40 @@ export function DiagramViewerOverlay({
   const [chatError, setChatError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // ── Render (or fetch cached) diagram on open ──────────────────────────
-  useEffect(() => {
-    if (imageUrl) return;
-    let cancelled = false;
-
-    (async () => {
+  // ── Render (or fetch cached) diagram; force=true redraws from scratch ──
+  const renderDiagram = useCallback(
+    async (force = false) => {
       try {
         setRendering(true);
         setRenderError(null);
+        if (force) setImageUrl(null);
         const headers = await edgeHeaders();
         const resp = await fetch(
           `${SUPABASE_URL}/functions/v1/generate-library-diagram`,
           {
             method: "POST",
             headers,
-            body: JSON.stringify({ resourceId: String(resource.id) }),
+            body: JSON.stringify({ resourceId: String(resource.id), force }),
           },
         );
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error(data?.error || `Render failed (${resp.status})`);
-        if (!cancelled && data?.url) setImageUrl(data.url);
+        if (data?.url) setImageUrl(force ? `${data.url}#${Date.now()}` : data.url);
       } catch (err) {
         logger.warn("[DiagramViewer] render error:", err);
-        if (!cancelled)
-          setRenderError(
-            err instanceof Error ? err.message : "Could not render this diagram.",
-          );
+        setRenderError(
+          err instanceof Error ? err.message : "Could not render this diagram.",
+        );
       } finally {
-        if (!cancelled) setRendering(false);
+        setRendering(false);
       }
-    })();
+    },
+    [resource.id],
+  );
 
-    return () => { cancelled = true; };
+  useEffect(() => {
+    if (resource.imageUrl) return;
+    void renderDiagram(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource.id]);
 
@@ -207,6 +208,17 @@ export function DiagramViewerOverlay({
               {resource.title}
             </h3>
           </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0 px-2 text-xs"
+            disabled={rendering}
+            onClick={() => void renderDiagram(true)}
+            title="Redraw this diagram if labels look wrong"
+          >
+            <RefreshCw className={`mr-1 h-3.5 w-3.5 ${rendering ? "animate-spin" : ""}`} />
+            Redraw
+          </Button>
           <Button variant="ghost" size="sm" className="h-8 px-2" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -240,35 +252,7 @@ export function DiagramViewerOverlay({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setImageUrl(null);
-                    setRenderError(null);
-                    setRendering(true);
-                    // re-trigger effect by resetting state; effect keyed on id
-                    // won't rerun, so call directly:
-                    (async () => {
-                      try {
-                        const headers = await edgeHeaders();
-                        const resp = await fetch(
-                          `${SUPABASE_URL}/functions/v1/generate-library-diagram`,
-                          {
-                            method: "POST",
-                            headers,
-                            body: JSON.stringify({ resourceId: String(resource.id) }),
-                          },
-                        );
-                        const data = await resp.json().catch(() => ({}));
-                        if (!resp.ok) throw new Error(data?.error || "Render failed");
-                        if (data?.url) setImageUrl(data.url);
-                      } catch (err) {
-                        setRenderError(
-                          err instanceof Error ? err.message : "Could not render this diagram.",
-                        );
-                      } finally {
-                        setRendering(false);
-                      }
-                    })();
-                  }}
+                  onClick={() => void renderDiagram(true)}
                 >
                   Try again
                 </Button>
