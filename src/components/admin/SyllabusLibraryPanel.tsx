@@ -132,14 +132,22 @@ export default function SyllabusLibraryPanel({ onChanged }: { onChanged?: () => 
 
   const importCambridge = async () => {
     setImporting(true);
+    let added = 0;
+    let failed = 0;
     try {
-      const { data, error } = await supabase.functions.invoke("ingest-syllabus-sources", {
-        body: { catalog: true },
-      });
-      if (error) throw error;
-      toast.success(
-        `Cambridge import: ${data?.ingested ?? 0} added, ${data?.failed ?? 0} failed`,
-      );
+      // Each call handles one syllabus PDF (parsing is CPU-heavy), so loop
+      // until the server reports nothing left.
+      for (let i = 0; i < 40; i++) {
+        const { data, error } = await supabase.functions.invoke("ingest-syllabus-sources", {
+          body: { catalog: true, limit: 1 },
+        });
+        if (error) throw error;
+        added += data?.ingested ?? 0;
+        failed += data?.failed ?? 0;
+        toast.info(`Importing syllabi… ${added} done, ${data?.remaining ?? 0} left`);
+        if (!data?.remaining) break;
+      }
+      toast.success(`Cambridge import: ${added} added, ${failed} failed`);
       load();
     } catch (e: any) {
       toast.error(e?.message ?? "Import failed");

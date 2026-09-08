@@ -142,10 +142,26 @@ Deno.serve(async (req) => {
   }
 
   if (sources.length === 0) {
-    return new Response(JSON.stringify({ status: 'complete', ingested: 0, results: [] }), {
+    return new Response(JSON.stringify({ status: 'complete', ingested: 0, remaining: 0, results: [] }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
+
+  // Parsing a full syllabus PDF is CPU-heavy; doing the whole catalog in one
+  // invocation exceeds the worker CPU limit (WORKER_RESOURCE_LIMIT). Process a
+  // small batch of distinct URLs per call and let the caller loop.
+  const maxUrls = Math.max(1, Math.min(Number(body?.limit) || 1, 3));
+  const pickedUrls: string[] = [];
+  const batch: Source[] = [];
+  for (const s of sources) {
+    if (!pickedUrls.includes(s.url)) {
+      if (pickedUrls.length >= maxUrls) continue;
+      pickedUrls.push(s.url);
+    }
+    batch.push(s);
+  }
+  const remaining = sources.length - batch.length;
+  sources = batch;
 
   // Fetch each distinct URL once, reuse the text across curricula.
   const textCache = new Map<string, { text?: string; error?: string }>();
@@ -198,7 +214,8 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    status: 'done',
+    status: remaining > 0 ? 'partial' : 'done',
+    remaining,
     ingested: results.filter((r) => r.status === 'ready').length,
     failed: results.filter((r) => r.status !== 'ready').length,
     results,
