@@ -215,6 +215,16 @@ const PastPapersLanding = () => {
               Browse Accounting past papers &amp; memos →
             </Link>
           </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Studying Business Studies?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Grade 10–12 Business Studies papers with memos — business environments, operations,
+              marketing and the essay section.
+            </p>
+            <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/business-studies">
+              Browse Business Studies past papers &amp; memos →
+            </Link>
+          </div>
         </div>
 
         <div className="mt-12 rounded-2xl bg-blue-600 p-8 text-center sm:p-10">
