@@ -214,7 +214,8 @@ Deno.serve(async (req) => {
   }
 
   return new Response(JSON.stringify({
-    status: 'done',
+    status: remaining > 0 ? 'partial' : 'done',
+    remaining,
     ingested: results.filter((r) => r.status === 'ready').length,
     failed: results.filter((r) => r.status !== 'ready').length,
     results,
