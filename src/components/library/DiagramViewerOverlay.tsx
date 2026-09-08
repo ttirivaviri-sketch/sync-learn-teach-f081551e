@@ -56,39 +56,40 @@ export function DiagramViewerOverlay({
   const [chatError, setChatError] = useState<string | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  // ── Render (or fetch cached) diagram on open ──────────────────────────
-  useEffect(() => {
-    if (imageUrl) return;
-    let cancelled = false;
-
-    (async () => {
+  // ── Render (or fetch cached) diagram; force=true redraws from scratch ──
+  const renderDiagram = useCallback(
+    async (force = false) => {
       try {
         setRendering(true);
         setRenderError(null);
+        if (force) setImageUrl(null);
         const headers = await edgeHeaders();
         const resp = await fetch(
           `${SUPABASE_URL}/functions/v1/generate-library-diagram`,
           {
             method: "POST",
             headers,
-            body: JSON.stringify({ resourceId: String(resource.id) }),
+            body: JSON.stringify({ resourceId: String(resource.id), force }),
           },
         );
         const data = await resp.json().catch(() => ({}));
         if (!resp.ok) throw new Error(data?.error || `Render failed (${resp.status})`);
-        if (!cancelled && data?.url) setImageUrl(data.url);
+        if (data?.url) setImageUrl(force ? `${data.url}#${Date.now()}` : data.url);
       } catch (err) {
         logger.warn("[DiagramViewer] render error:", err);
-        if (!cancelled)
-          setRenderError(
-            err instanceof Error ? err.message : "Could not render this diagram.",
-          );
+        setRenderError(
+          err instanceof Error ? err.message : "Could not render this diagram.",
+        );
       } finally {
-        if (!cancelled) setRendering(false);
+        setRendering(false);
       }
-    })();
+    },
+    [resource.id],
+  );
 
-    return () => { cancelled = true; };
+  useEffect(() => {
+    if (resource.imageUrl) return;
+    void renderDiagram(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resource.id]);
 
