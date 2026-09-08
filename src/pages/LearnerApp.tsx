@@ -188,13 +188,9 @@ const LearnerApp = () => {
   // ── Profile & analytics ────────────────────────────────────────────────
   useEffect(() => { analytics.pageView("learner-app"); }, []);
 
-  // Single Academic Profile home: Library "Edit Profile" and Profile
-  // "Academic" both land on Study → Settings instead of a duplicate modal.
-  const openStudySettings = () => {
-    try { sessionStorage.setItem("studymode:initialTab", "setup"); } catch { /* noop */ }
-    window.dispatchEvent(new CustomEvent("studymode-open-tab", { detail: { tab: "setup" } }));
-    setActiveTab("study");
-  };
+  // Academic profile is editable in one tap from Profile and Library via the
+  // AcademicSetupModal (no detour through Study → Settings).
+
 
   // Study → Settings "+ Set" exam-year affordance opens the edit modal.
   useEffect(() => {
@@ -557,7 +553,7 @@ const LearnerApp = () => {
               <Suspense fallback={<TabFallback />}>
                 <LearnerLibraryTab
                   academicProfile={academicProfile}
-                  onShowAcademicSetup={openStudySettings}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
                   onBookTutor={handleLibraryBookTutor}
                   onNeedHelp={() => setActiveTab("home")}
                 />
@@ -609,7 +605,8 @@ const LearnerApp = () => {
                   academicProfile={academicProfile}
                   bookings={bookings}
                   onRefreshProfile={loadUserProfile}
-                  onShowAcademicSetup={openStudySettings}
+                  onShowAcademicSetup={() => setShowAcademicSetup(true)}
+
                   onShowPaymentMethods={() => setShowPaymentMethods(true)}
                   onShowAllPayments={() => setShowAllPayments(true)}
                   onNavigateTab={setActiveTab}
@@ -676,11 +673,13 @@ const LearnerApp = () => {
           return ok;
         }}
         onSaved={() => {
+          const wasFirstSetup = !academicProfile;
           setShowAcademicSetup(false);
           setProfileSetupDismissed(true);
           toast({ title: "Profile saved!", description: "Your library and Study Mode have been personalised." });
-          setActiveTab("library");
+          if (wasFirstSetup) setActiveTab("library");
         }}
+
       />
 
       {/* Review Modal */}
