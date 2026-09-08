@@ -566,6 +566,42 @@ export type Database = {
           },
         ]
       }
+      community_signups: {
+        Row: {
+          created_at: string
+          curriculum: string | null
+          email: string
+          grade_level: string | null
+          id: string
+          name: string
+          source: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          curriculum?: string | null
+          email: string
+          grade_level?: string | null
+          id?: string
+          name: string
+          source?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          curriculum?: string | null
+          email?: string
+          grade_level?: string | null
+          id?: string
+          name?: string
+          source?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       companion_interactions: {
         Row: {
           created_at: string

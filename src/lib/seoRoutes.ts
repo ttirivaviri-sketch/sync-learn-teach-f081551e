@@ -127,6 +127,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/tutor-auth.jpg",
   },
   {
+    path: "/community",
+    title: "WhatsApp Study Community for Exam Students — StudySync",
+    description:
+      "Join the free StudySync WhatsApp study community: share notes and study plans with students writing finals, get exam tips, and talk directly to the StudySync team.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/legal/terms",
     title: "Terms of Service — StudySync",
     description:

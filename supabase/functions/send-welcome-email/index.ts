@@ -28,8 +28,10 @@ const CRON_SECRET = Deno.env.get("CRON_SECRET") || "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
+// Point at the in-app community page (short signup, then the invite link)
+// so joins are captured rather than dropping straight into WhatsApp.
 const WHATSAPP_URL =
-  "https://chat.whatsapp.com/E6vmLWM13LoCrMpc757QLF?s=cl&p=i&mlu=4";
+  "https://studysync.co.za/community?src=welcome_email";
 
 const esc = (s: string) =>
   String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");

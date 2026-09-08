@@ -26,6 +26,7 @@ const MatricPastPapersLanding = lazy(() => import("./pages/landing/MatricPastPap
 const PhysicalSciencesPastPapersLanding = lazy(() => import("./pages/landing/PhysicalSciencesPastPapersLanding"));
 const LifeSciencesPastPapersLanding = lazy(() => import("./pages/landing/LifeSciencesPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
+const Community = lazy(() => import("./pages/Community"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
 const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
@@ -158,6 +159,8 @@ const App = () => {
               <Route path="/life-sciences-grade-12-past-papers" element={<Navigate to="/past-papers/life-sciences" replace />} />
               <Route path="/books" element={<BooksLanding />} />
               <Route path="/textbooks" element={<Navigate to="/books" replace />} />
+              <Route path="/community" element={<Community />} />
+              <Route path="/whatsapp" element={<Navigate to="/community" replace />} />
               <Route path="/app" element={<AppRedirect />} />
               <Route path="/learner" element={<LearnerApp />} />
               <Route path="/start-trial" element={<Navigate to="/learner/auth" replace />} />
