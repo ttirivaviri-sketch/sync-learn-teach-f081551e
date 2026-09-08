@@ -117,11 +117,17 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
-  // Warm the Study Mode chunk on idle so it's cached before the user opens it.
-  useEffect(() => { prefetchStudyMode(); }, []);
+const StudyModeWarmer = () => {
+  const { pathname } = useLocation();
+  // Warm the Study Mode chunk on idle, but only inside the app — landing
+  // visitors should not download it.
+  useEffect(() => { prefetchStudyMode(pathname); }, [pathname]);
+  return null;
+};
 
+const App = () => {
   return (
+
   <ErrorBoundary>
     <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
