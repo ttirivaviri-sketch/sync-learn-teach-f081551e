@@ -116,7 +116,7 @@ serve(async (req) => {
     }
 
     // 2. Cache hit — image already rendered (bucket is private → re-sign)
-    if (row.image_url) {
+    if (row.image_url && !forceRedraw) {
       const cachedPath = `${row.id}.png`;
       const { data: signed } = await supabase.storage
         .from(BUCKET)
