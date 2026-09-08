@@ -188,13 +188,9 @@ const LearnerApp = () => {
   // ── Profile & analytics ────────────────────────────────────────────────
   useEffect(() => { analytics.pageView("learner-app"); }, []);
 
-  // Single Academic Profile home: Library "Edit Profile" and Profile
-  // "Academic" both land on Study → Settings instead of a duplicate modal.
-  const openStudySettings = () => {
-    try { sessionStorage.setItem("studymode:initialTab", "setup"); } catch { /* noop */ }
-    window.dispatchEvent(new CustomEvent("studymode-open-tab", { detail: { tab: "setup" } }));
-    setActiveTab("study");
-  };
+  // Academic profile is editable in one tap from Profile and Library via the
+  // AcademicSetupModal (no detour through Study → Settings).
+
 
   // Study → Settings "+ Set" exam-year affordance opens the edit modal.
   useEffect(() => {
