@@ -6,7 +6,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AiCreditsDialog } from "@/components/subscription/AiCreditsDialog";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingScreen } from "@/components/LoadingSpinner";
 import { OfflineIndicator } from "@/components/OfflineIndicator";
@@ -117,17 +117,24 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => {
-  // Warm the Study Mode chunk on idle so it's cached before the user opens it.
-  useEffect(() => { prefetchStudyMode(); }, []);
+const StudyModeWarmer = () => {
+  const { pathname } = useLocation();
+  // Warm the Study Mode chunk on idle, but only inside the app — landing
+  // visitors should not download it.
+  useEffect(() => { prefetchStudyMode(pathname); }, [pathname]);
+  return null;
+};
 
+const App = () => {
   return (
+
   <ErrorBoundary>
     <HelmetProvider>
     <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <BrowserRouter>
+          <StudyModeWarmer />
           <OfflineIndicator />
           <Suspense fallback={<LoadingScreen message="Loading StudySync..." />}>
             <Routes>
