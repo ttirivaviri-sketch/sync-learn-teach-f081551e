@@ -431,13 +431,14 @@ interface UseLibraryResourcesReturn {
 
 // Module-level cache so remounting the Library tab (e.g. when the academic
 // profile key changes) doesn't refetch ~5k rows over the network every time.
-let RESOURCE_CACHE: { data: LibraryResource[]; at: number } | null = null;
+let RESOURCE_CACHE: { data: LibraryResource[]; at: number; complete: boolean } | null = null;
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 export function useLibraryResources(
   academicProfile?: AcademicProfile | null
 ): UseLibraryResourcesReturn {
-  const cacheFresh = !!RESOURCE_CACHE && Date.now() - RESOURCE_CACHE.at < CACHE_TTL_MS;
+  const cacheFresh =
+    !!RESOURCE_CACHE && RESOURCE_CACHE.complete && Date.now() - RESOURCE_CACHE.at < CACHE_TTL_MS;
   const [dbResources, setDbResources] = useState<LibraryResource[]>(
     cacheFresh ? RESOURCE_CACHE!.data : []
   );
