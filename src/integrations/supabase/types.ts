@@ -7765,6 +7765,10 @@ export type Database = {
           student_id: string
         }[]
       }
+      conversation_parties_unchanged: {
+        Args: { _id: string; _learner_id: string; _tutor_id: string }
+        Returns: boolean
+      }
       current_school_ids: { Args: never; Returns: string[] }
       current_user_verified_email: { Args: never; Returns: string }
       detect_kernel_alerts: { Args: { _school_id: string }; Returns: number }
@@ -8014,6 +8018,15 @@ export type Database = {
       materialize_concept_prerequisite_edges: {
         Args: { p_subject_name?: string }
         Returns: number
+      }
+      message_body_unchanged: {
+        Args: {
+          _content: string
+          _conversation_id: string
+          _id: string
+          _sender_id: string
+        }
+        Returns: boolean
       }
       notify_allocation_event: {
         Args: { p_allocation_id: string; p_event: string; p_extra?: string }
