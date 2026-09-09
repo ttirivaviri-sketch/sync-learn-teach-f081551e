@@ -122,11 +122,9 @@ const ChatInterface = ({
           if (oId === STUDYSYNC_TEAM_ID) {
             return { ...conv, other_user_name: STUDYSYNC_TEAM_NAME };
           }
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("full_name, id")
-            .eq("id", oId)
-            .maybeSingle();
+          const { data: profileRows } = await supabase
+            .rpc("get_public_profiles" as never, { _ids: [oId] } as never);
+          const profile = (profileRows as { full_name: string | null }[] | null)?.[0];
           return {
             ...conv,
             other_user_name: profile?.full_name || "Unknown User",
@@ -169,11 +167,9 @@ const ChatInterface = ({
             if (msg.sender_id === STUDYSYNC_TEAM_ID) {
               return { ...msg, sender_name: STUDYSYNC_TEAM_NAME };
             }
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("full_name")
-              .eq("id", msg.sender_id)
-              .maybeSingle();
+            const { data: senderRows } = await supabase
+              .rpc("get_public_profiles" as never, { _ids: [msg.sender_id] } as never);
+            const profile = (senderRows as { full_name: string | null }[] | null)?.[0];
             return { ...msg, sender_name: profile?.full_name || "Unknown User" };
           }),
         );

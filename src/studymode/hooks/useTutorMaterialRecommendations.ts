@@ -39,9 +39,7 @@ export function useTutorMaterialRecommendations(args: {
       let names = new Map<string, string>();
       if (tutorIds.length) {
         const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id,full_name")
-          .in("id", tutorIds);
+          .rpc("get_public_profiles" as never, { _ids: tutorIds } as never);
         names = new Map((profiles ?? []).map((p: any) => [p.id, p.full_name]));
       }
       return list.map((r) => ({
