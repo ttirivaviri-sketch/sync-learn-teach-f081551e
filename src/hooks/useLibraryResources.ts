@@ -579,9 +579,7 @@ export function useLibraryResources(
         let profilesById: Record<string, { full_name: string | null; avatar_url: string | null; is_official: boolean }> = {};
         if (tutorIds.length > 0) {
           const { data: profilesData } = await supabase
-            .from("profiles")
-            .select("id, full_name, avatar_url, is_official")
-            .in("id", tutorIds);
+            .rpc("get_public_profiles" as never, { _ids: tutorIds } as never);
           (profilesData as any[] | null)?.forEach((p) => {
             profilesById[p.id] = {
               full_name: p.full_name,
