@@ -75,6 +75,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/home.jpg",
   },
   {
+    path: "/past-papers/maths",
+    title: "Maths Past Papers & Memos — Grade 10-12 CAPS, IEB & ZIMSEC",
+    description:
+      "Practise maths past exam papers with memos — Grade 10, 11 and 12 Mathematics Paper 1 and Paper 2 for CAPS/NSC, IEB, Cambridge and ZIMSEC, sorted by grade and year.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/past-papers/physical-sciences",
     title: "Physical Sciences Past Papers & Memos — Grade 10-12",
     description:
