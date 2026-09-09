@@ -7831,6 +7831,15 @@ export type Database = {
         Args: { p_class_id: string }
         Returns: Json
       }
+      get_counterparty_contact: {
+        Args: { _other: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+          phone: string
+        }[]
+      }
       get_exam_readiness: {
         Args: { p_paper_code: string; p_subject_id: string }
         Returns: Json
@@ -7855,6 +7864,17 @@ export type Database = {
       get_overall_leaderboard: {
         Args: { p_curriculum: string; p_limit?: number }
         Returns: Json
+      }
+      get_public_profiles: {
+        Args: { _ids: string[] }
+        Returns: {
+          avatar_url: string
+          bio: string
+          full_name: string
+          id: string
+          is_official: boolean
+          user_type: string
+        }[]
       }
       get_public_qualifications: {
         Args: never
