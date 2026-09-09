@@ -36,8 +36,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       <Seo
-        title="StudySync — Tutors & AI StudyMode for students"
-        description="Book verified tutors and study with AI StudyMode: past papers and memos, quizzes and flashcards for ZIMSEC O & A Level, Cambridge IGCSE, matric (CAPS/NSC) and IEB."
+        title="IEB & Matric Past Papers, Tutors & AI Tools | StudySync"
+        description="Get IEB and Matric past papers with memos, verified tutors and AI study tools for South African learners. Covers CAPS/NSC, Cambridge and ZIMSEC."
         path="/"
       />
       <HeroSection />
