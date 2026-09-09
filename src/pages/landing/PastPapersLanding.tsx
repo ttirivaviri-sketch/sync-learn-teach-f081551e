@@ -186,6 +186,16 @@ const PastPapersLanding = () => {
             </Link>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing Mathematics?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Grade 10–12 maths papers with memos — Paper 1 and Paper 2 for CAPS/NSC, IEB,
+              Cambridge and ZIMSEC, sorted by grade and year.
+            </p>
+            <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/maths">
+              Browse maths past papers &amp; memos →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing Physical Sciences?</h2>
             <p className="mb-3 text-sm leading-relaxed text-gray-600">
               Grade 10–12 Physical Sciences papers with memos — Paper 1 (Physics) and Paper 2
