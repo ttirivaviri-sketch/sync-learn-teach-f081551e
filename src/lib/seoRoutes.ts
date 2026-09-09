@@ -27,11 +27,9 @@ export const DEFAULT_OG_IMAGE = "/og/home.jpg";
 export const ROUTE_SEO: RouteSeo[] = [
   {
     path: "/",
-    title: "StudySync — Tutors & AI StudyMode for students",
+    title: "IEB & Matric Past Papers, Tutors & AI Tools | StudySync",
     description:
-      "Book verified tutors and study with AI StudyMode: past papers and memos, quizzes and flashcards for ZIMSEC O & A Level, Cambridge IGCSE, matric (CAPS/NSC) and IEB.",
-
-
+      "Get IEB and Matric past papers with memos, verified tutors and AI study tools for South African learners. Covers CAPS/NSC, Cambridge and ZIMSEC.",
     image: "/og/home.jpg",
   },
   {
