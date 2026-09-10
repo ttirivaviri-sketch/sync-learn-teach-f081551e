@@ -6,6 +6,7 @@
  * No duplicate "at a glance"/next-action blocks — Today framing lives here once.
  */
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { MapPin, Video, MessageCircle, Search, Award, ChevronRight, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -101,6 +102,11 @@ export const LearnerHomeTab = ({
 }: LearnerHomeTabProps) => {
   // "Find a tutor" teaser (mockup) — expands to the full marketplace below.
   const [marketplaceOpen, setMarketplaceOpen] = useState(false);
+  const navigate = useNavigate();
+  const openTutorProfile = (tutorId: string) => {
+    haptic("selection");
+    navigate(`/tutors/${tutorId}`);
+  };
 
   const teaserTutors = tutors.slice(0, 3);
   const teaserRates = tutors
@@ -234,15 +240,19 @@ export const LearnerHomeTab = ({
             <Card key={tutor.id} className="shadow-sm animate-fade-in transition-all hover:shadow-md">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <Avatar>
-                    <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} />
-                    <AvatarFallback>{tutor.full_name?.split(" ").map((n) => n[0]).join("") || "T"}</AvatarFallback>
-                  </Avatar>
+                  <button onClick={() => openTutorProfile(tutor.id)} aria-label={`View ${tutor.full_name || "tutor"}'s profile`}>
+                    <Avatar>
+                      <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} />
+                      <AvatarFallback>{tutor.full_name?.split(" ").map((n) => n[0]).join("") || "T"}</AvatarFallback>
+                    </Avatar>
+                  </button>
 
                   <div className="flex-1">
                     <div className="flex items-start justify-between">
                       <div>
-                        <h4 className="font-medium">{tutor.full_name || "New StudySync tutor"}</h4>
+                        <button onClick={() => openTutorProfile(tutor.id)} className="text-left">
+                          <h4 className="font-medium underline-offset-2 hover:underline">{tutor.full_name || "New StudySync tutor"}</h4>
+                        </button>
                         <p className="text-sm text-muted-foreground">
                           {hasSubjects
                             ? `${tutor.subjects.map((s) => s.subject).join(", ")}${tutor.subjects[0]?.level ? ` • ${tutor.subjects[0].level}` : ""}`
