@@ -7975,6 +7975,15 @@ export type Database = {
           reviewed_id: string
         }[]
       }
+      get_tutor_reviews: {
+        Args: { _tutor_id: string }
+        Returns: {
+          comment: string
+          created_at: string
+          rating: number
+          reviewer_first_name: string
+        }[]
+      }
       get_upstream_prerequisites: {
         Args: { p_concept_id: string; p_max_depth?: number }
         Returns: {
