@@ -6,7 +6,7 @@
  * Delegates each tab's UI to a focused sub-component.
  */
 import { useState, useEffect, useMemo, useRef, lazy, Suspense } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Home, BookOpen, Activity, User, MessageCircle, Brain } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -429,6 +429,22 @@ const LearnerApp = () => {
     setChatWithUserName(tutor.full_name || tutor.name || "Tutor");
     setShowChat(true);
   };
+
+  // Handoff from the public tutor profile page (/tutors/:id): it navigates
+  // here with state { bookTutorId, bookTutorName } or { chatWithId, chatWithName }
+  // so booking/chat open preselected in the existing flows.
+  const location = useLocation();
+  useEffect(() => {
+    const st = location.state as { bookTutorId?: string; bookTutorName?: string; chatWithId?: string; chatWithName?: string } | null;
+    if (!st) return;
+    navigate(location.pathname, { replace: true, state: null });
+    if (st.bookTutorId) {
+      handleLibraryBookTutor(st.bookTutorId, st.bookTutorName || "Tutor");
+    } else if (st.chatWithId) {
+      handleStartChat({ id: st.chatWithId, name: st.chatWithName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   // ── Early returns ──────────────────────────────────────────────────────
   if (loading) return <LoadingScreen message="Loading your account..." />;
