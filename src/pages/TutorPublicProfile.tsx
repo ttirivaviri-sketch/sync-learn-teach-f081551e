@@ -9,13 +9,45 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft, MapPin, Video, MessageCircle, Award, Sparkles, BookOpen, GraduationCap,
 } from "lucide-react";
+
+/**
+ * Condense grade chips: ["Grade 1"…"Grade 12","Form 1"…"Form 6","IGCSE"]
+ * → ["Grades 1–12","Forms 1–6","IGCSE"] so the header never becomes badge soup.
+ */
+const summarizeGrades = (grades: string[]): string[] => {
+  const nums: number[] = [];
+  const forms: number[] = [];
+  const others: string[] = [];
+  for (const g of grades) {
+    const gm = /^Grade (\d+)$/.exec(g.trim());
+    const fm = /^Form (\d+)$/.exec(g.trim());
+    if (gm) nums.push(Number(gm[1]));
+    else if (fm) forms.push(Number(fm[1]));
+    else others.push(g);
+  }
+  const ranges = (ns: number[], singular: string, plural: string) => {
+    if (!ns.length) return [] as string[];
+    const sorted = [...new Set(ns)].sort((a, b) => a - b);
+    const out: string[] = [];
+    let start = sorted[0];
+    let prev = sorted[0];
+    for (let i = 1; i <= sorted.length; i++) {
+      const n = sorted[i];
+      if (n !== prev + 1) {
+        out.push(start === prev ? `${singular} ${start}` : `${plural} ${start}–${prev}`);
+        start = n;
+      }
+      prev = n;
+    }
+    return out;
+  };
+  return [...ranges(nums, "Grade", "Grades"), ...ranges(forms, "Form", "Forms"), ...others];
+};
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import StarRating from "@/components/StarRating";
-import { OnlineStatus } from "@/components/OnlineStatus";
 import { EmptyState } from "@/components/EmptyState";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -142,15 +174,26 @@ const TutorPublicProfile = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="max-w-lg mx-auto px-4 pt-6 pb-28 space-y-5">
-          <Skeleton className="h-6 w-24" />
-          <div className="flex items-center gap-4">
-            <Skeleton className="h-20 w-20 rounded-full" />
-            <div className="space-y-2 flex-1">
-              <Skeleton className="h-6 w-40" />
-              <Skeleton className="h-4 w-56" />
+        {/* Hero skeleton matches the gradient header so there's no colour jump */}
+        <div className="bg-gradient-to-br from-[#1a3fc4] via-[#2d52e0] to-[#3b63f5]">
+          <div className="max-w-lg mx-auto px-4 pt-4 pb-6 space-y-4">
+            <Skeleton className="h-5 w-16 bg-white/20" />
+            <div className="flex items-center gap-4">
+              <Skeleton className="h-20 w-20 rounded-full bg-white/20" />
+              <div className="space-y-2 flex-1">
+                <Skeleton className="h-6 w-40 bg-white/20" />
+                <Skeleton className="h-4 w-56 bg-white/15" />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-2.5">
+              <Skeleton className="h-16 rounded-2xl bg-white/15" />
+              <Skeleton className="h-16 rounded-2xl bg-white/15" />
+              <Skeleton className="h-16 rounded-2xl bg-white/15" />
             </div>
           </div>
+          <div className="h-4 bg-background rounded-t-3xl" />
+        </div>
+        <div className="max-w-lg mx-auto px-4 pt-3 pb-28 space-y-4">
           <Skeleton className="h-28 w-full rounded-2xl" />
           <Skeleton className="h-28 w-full rounded-2xl" />
           <Skeleton className="h-28 w-full rounded-2xl" />
@@ -174,73 +217,138 @@ const TutorPublicProfile = () => {
   const hasSubjects = tutor.subjects.length > 0;
   const profileIncomplete = !hasSubjects || !tutor.subjects.some((s) => Number(s.hourly_rate) > 0);
   const initials = tutor.full_name.split(" ").map((n) => n[0]).join("").slice(0, 2);
+  const rates = tutor.subjects.map((s) => Number(s.hourly_rate)).filter((r) => Number.isFinite(r) && r > 0);
+  const fromRate = rates.length ? Math.min(...rates) : null;
+  const gradeChips = summarizeGrades(tutor.grades);
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-lg mx-auto px-4 pt-4 pb-32 space-y-5">
-        {/* Back */}
-        <button
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground active:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
+      {/* ── Gradient hero — same visual language as the session screens ── */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-[#1a3fc4] via-[#2d52e0] to-[#3b63f5]">
+        {/* soft glow accents */}
+        <div className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-emerald-400/10 blur-3xl" />
 
-        {/* Header */}
-        <div className="flex items-start gap-4">
-          <Avatar className="h-20 w-20 border border-border">
-            <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} alt={tutor.full_name} />
-            <AvatarFallback className="text-xl">{initials}</AvatarFallback>
-          </Avatar>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold text-foreground truncate">{tutor.full_name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <OnlineStatus isOnline={tutor.online_status} lastSeen={tutor.last_seen || undefined} />
-            </div>
-            <div className="flex items-center gap-1.5 mt-2">
-              {tutor.rating > 0 ? (
-                <>
-                  <StarRating rating={tutor.rating} readonly size="sm" />
-                  <span className="text-sm font-medium">{tutor.rating}</span>
-                  <span className="text-sm text-muted-foreground">({tutor.totalReviews} review{tutor.totalReviews === 1 ? "" : "s"})</span>
-                </>
-              ) : (
-                <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-primary/20">
-                  <Sparkles className="h-3 w-3 mr-1" /> New tutor
-                </Badge>
+        <div className="relative max-w-lg mx-auto px-4 pt-4 pb-6">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center gap-1.5 text-sm text-white/70 hover:text-white active:text-white transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back
+          </button>
+
+          {/* Identity */}
+          <div className="flex items-center gap-4 mt-4">
+            <div className="relative shrink-0">
+              <Avatar className="h-20 w-20 ring-2 ring-white/40 shadow-xl">
+                <AvatarImage src={tutor.avatar_url || "/placeholder.svg"} alt={tutor.full_name} />
+                <AvatarFallback className="text-xl bg-white/20 text-white backdrop-blur">{initials}</AvatarFallback>
+              </Avatar>
+              {tutor.online_status && (
+                <span className="absolute bottom-0.5 right-0.5 h-4 w-4 rounded-full bg-green-400 ring-2 ring-[#2d52e0]" aria-label="Online now" />
               )}
             </div>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl font-bold text-white truncate">{tutor.full_name}</h1>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur rounded-full px-3 py-1 text-xs font-medium text-white">
+                  <span className={`h-1.5 w-1.5 rounded-full ${tutor.online_status ? "bg-green-400" : "bg-white/50"}`} />
+                  {tutor.online_status ? "Online now" : "Offline"}
+                </span>
+                {tutor.rating > 0 ? (
+                  <span className="inline-flex items-center gap-1 bg-white/15 backdrop-blur rounded-full px-3 py-1 text-xs font-medium text-white">
+                    <span className="text-yellow-300">★</span> {tutor.rating}
+                    <span className="text-white/60">({tutor.totalReviews})</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 bg-white/15 backdrop-blur rounded-full px-3 py-1 text-xs font-medium text-white">
+                    <Sparkles className="h-3 w-3" /> New tutor
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
+
+          {/* Glass stat tiles — mirrors the Session Complete summary tiles */}
+          <div className="grid grid-cols-3 gap-2.5 mt-5">
+            <div className="bg-white/10 backdrop-blur rounded-2xl px-2 py-3 text-center border border-white/15">
+              <p className="text-white text-lg font-bold leading-tight">{fromRate ? `R${fromRate}` : "—"}</p>
+              <p className="text-white/60 text-[11px] mt-0.5">{fromRate ? "per hour, from" : "Rate coming"}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-2xl px-2 py-3 text-center border border-white/15">
+              <p className="text-white text-lg font-bold leading-tight">{tutor.subjects.length || "—"}</p>
+              <p className="text-white/60 text-[11px] mt-0.5">Subject{tutor.subjects.length === 1 ? "" : "s"}</p>
+            </div>
+            <div className="bg-white/10 backdrop-blur rounded-2xl px-2 py-3 text-center border border-white/15">
+              <p className="text-white text-lg font-bold leading-tight">
+                {tutor.rating > 0 ? tutor.rating : <Sparkles className="h-5 w-5 mx-auto text-yellow-300" />}
+              </p>
+              <p className="text-white/60 text-[11px] mt-0.5">{tutor.rating > 0 ? "Rating" : "New tutor"}</p>
+            </div>
+          </div>
+
+          {/* Curriculum + condensed grade coverage */}
+          {(tutor.curriculums.length > 0 || gradeChips.length > 0) && (
+            <div className="flex flex-wrap gap-1.5 mt-4">
+              {tutor.curriculums.map((c) => (
+                <span key={c} className="rounded-full bg-white/20 backdrop-blur px-2.5 py-1 text-[11px] font-semibold text-white uppercase tracking-wide">
+                  {c}
+                </span>
+              ))}
+              {gradeChips.map((g) => (
+                <span key={g} className="rounded-full bg-white/10 border border-white/20 px-2.5 py-1 text-[11px] font-medium text-white/85">
+                  {g}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
+
+        {/* curved seam into the content */}
+        <div className="h-4 bg-background rounded-t-3xl" />
+      </div>
+
+      <div className="max-w-lg mx-auto px-4 -mt-1 pb-32 space-y-4">
 
         {/* About */}
         {tutor.bio && (
-          <Card>
+          <Card className="border-0 shadow-sm ring-1 ring-border/60 rounded-2xl">
             <CardContent className="p-4">
-              <h2 className="text-sm font-semibold mb-1.5">About</h2>
-              <p className="text-sm text-muted-foreground whitespace-pre-line">{tutor.bio}</p>
+              <h2 className="text-sm font-semibold mb-1.5 flex items-center gap-2">
+                <span className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                </span>
+                About
+              </h2>
+              <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed">{tutor.bio}</p>
             </CardContent>
           </Card>
         )}
 
         {/* Subjects & rates */}
-        <Card>
+        <Card className="border-0 shadow-sm ring-1 ring-border/60 rounded-2xl">
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-              <BookOpen className="h-4 w-4 text-primary" /> Subjects & rates
+            <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <span className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <BookOpen className="h-3.5 w-3.5 text-primary" />
+              </span>
+              Subjects & rates
             </h2>
             {hasSubjects ? (
               <div className="space-y-2">
                 {tutor.subjects.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between rounded-xl bg-muted/50 px-3 py-2.5">
-                    <div>
-                      <p className="text-sm font-medium">{s.subject}</p>
-                      {s.level && <p className="text-xs text-muted-foreground">{s.level}</p>}
+                  <div
+                    key={s.id}
+                    className="flex items-center justify-between rounded-xl bg-gradient-to-r from-primary/[0.06] to-primary/[0.02] border border-primary/10 px-3.5 py-3"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">{s.subject}</p>
+                      {s.level && <p className="text-xs text-muted-foreground mt-0.5">{s.level}</p>}
                     </div>
                     {Number(s.hourly_rate) > 0 ? (
-                      <p className="text-sm font-semibold text-primary">R{s.hourly_rate}/hr</p>
+                      <p className="text-sm font-bold text-primary shrink-0 ml-3">R{s.hourly_rate}<span className="font-medium text-primary/70">/hr</span></p>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Rate not set</p>
+                      <p className="text-xs text-muted-foreground shrink-0 ml-3">Rate not set</p>
                     )}
                   </div>
                 ))}
@@ -248,25 +356,22 @@ const TutorPublicProfile = () => {
             ) : (
               <p className="text-sm text-muted-foreground">Subjects coming soon.</p>
             )}
-            {(tutor.curriculums.length > 0 || tutor.grades.length > 0) && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {tutor.curriculums.map((c) => <Badge key={c} variant="outline" className="text-xs">{c}</Badge>)}
-                {tutor.grades.map((g) => <Badge key={g} variant="secondary" className="text-xs">{g}</Badge>)}
-              </div>
-            )}
           </CardContent>
         </Card>
 
         {/* Experience / qualifications */}
-        <Card>
+        <Card className="border-0 shadow-sm ring-1 ring-border/60 rounded-2xl">
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold mb-3 flex items-center gap-1.5">
-              <GraduationCap className="h-4 w-4 text-primary" /> Experience & qualifications
+            <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <span className="h-7 w-7 rounded-lg bg-primary/10 flex items-center justify-center">
+                <GraduationCap className="h-3.5 w-3.5 text-primary" />
+              </span>
+              Experience & qualifications
             </h2>
             {tutor.qualifications.length > 0 ? (
               <div className="space-y-2.5">
                 {tutor.qualifications.map((q) => (
-                  <div key={q.id} className="flex items-start gap-2.5">
+                  <div key={q.id} className="flex items-start gap-2.5 rounded-xl bg-muted/40 px-3 py-2.5">
                     <Award className="h-4 w-4 text-primary mt-0.5 shrink-0" />
                     <div>
                       <p className="text-sm font-medium">{q.qualification_type}</p>
@@ -278,20 +383,35 @@ const TutorPublicProfile = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">Qualifications being verified.</p>
+              <div className="flex items-center gap-2.5 rounded-xl border border-dashed border-border bg-muted/30 px-3.5 py-3">
+                <span className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <GraduationCap className="h-4 w-4 text-primary" />
+                </span>
+                <p className="text-sm text-muted-foreground">Qualifications being verified.</p>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Reviews */}
-        <Card>
+        <Card className="border-0 shadow-sm ring-1 ring-border/60 rounded-2xl">
           <CardContent className="p-4">
-            <h2 className="text-sm font-semibold mb-3">Reviews</h2>
+            <h2 className="text-sm font-semibold mb-3 flex items-center gap-2">
+              <span className="h-7 w-7 rounded-lg bg-yellow-400/15 flex items-center justify-center">
+                <span className="text-yellow-500 text-sm leading-none">★</span>
+              </span>
+              Reviews
+            </h2>
             {reviews.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border bg-muted/30 px-3 py-4 text-center">
-                <Sparkles className="h-4 w-4 mx-auto text-primary mb-1.5" />
-                <p className="text-sm text-muted-foreground">
-                  No reviews yet — be one of {tutor.full_name.split(" ")[0]}'s first students.
+              <div className="rounded-xl border border-dashed border-primary/25 bg-gradient-to-br from-primary/[0.05] to-transparent px-4 py-6 text-center">
+                <span className="inline-flex h-10 w-10 rounded-full bg-primary/10 items-center justify-center mb-2">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                </span>
+                <p className="text-sm font-medium text-foreground">
+                  Be one of {tutor.full_name.split(" ")[0]}'s first students
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Your review after the first session helps other learners.
                 </p>
               </div>
             ) : (
@@ -315,26 +435,26 @@ const TutorPublicProfile = () => {
       </div>
 
       {/* Sticky action bar */}
-      <div className="fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur border-t border-border">
-        <div className="max-w-lg mx-auto px-4 py-3">
+      <div className="fixed bottom-0 inset-x-0 bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.06)]">
+        <div className="max-w-lg mx-auto px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
           {profileIncomplete ? (
             <div className="grid grid-cols-2 gap-2">
-              <Button variant="outline" disabled>
+              <Button variant="outline" disabled className="rounded-full h-11">
                 <Video className="h-4 w-4 mr-1.5" /> Booking soon
               </Button>
-              <Button variant="secondary" onClick={handleChat}>
+              <Button onClick={handleChat} className="rounded-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white">
                 <MessageCircle className="h-4 w-4 mr-1.5" /> Chat
               </Button>
             </div>
           ) : (
             <div className="grid grid-cols-3 gap-2">
-              <Button variant="outline" onClick={handleBook}>
+              <Button variant="outline" onClick={handleBook} className="rounded-full h-11">
                 <MapPin className="h-4 w-4 mr-1" /> In-Person
               </Button>
-              <Button onClick={handleBook}>
+              <Button onClick={handleBook} className="rounded-full h-11 bg-gradient-to-r from-[#2d52e0] to-[#3b63f5] hover:from-[#2445c4] hover:to-[#2d52e0] text-white shadow-md">
                 <Video className="h-4 w-4 mr-1" /> Book Online
               </Button>
-              <Button variant="secondary" onClick={handleChat}>
+              <Button onClick={handleChat} className="rounded-full h-11 bg-emerald-600 hover:bg-emerald-700 text-white">
                 <MessageCircle className="h-4 w-4 mr-1" /> Chat
               </Button>
             </div>
