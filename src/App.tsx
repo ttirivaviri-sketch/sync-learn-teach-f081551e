@@ -30,6 +30,7 @@ const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
 const Community = lazy(() => import("./pages/Community"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
+const TutorPublicProfile = lazy(() => import("./pages/TutorPublicProfile"));
 const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
 const TutorApp = lazy(() => import("./pages/TutorApp"));
 const TutorAuth = lazy(() => import("./pages/TutorAuth"));
@@ -179,6 +180,7 @@ const App = () => {
               <Route path="/learner/auth" element={<LearnerAuth />} />
               <Route path="/learner/onboarding" element={<LearnerOnboarding />} />
               <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
+              <Route path="/tutors/:tutorId" element={<TutorPublicProfile />} />
               <Route path="/tutor" element={<TutorApp />} />
               <Route path="/tutor/auth" element={<TutorAuth />} />
 
