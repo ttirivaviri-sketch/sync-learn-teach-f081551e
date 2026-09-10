@@ -1,4 +1,5 @@
 import { DollarSign, MapPin, CalendarCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,6 +14,7 @@ interface TutorBrowseCardProps {
 }
 
 export function TutorBrowseCard({ tutor, isSelected, onSelect }: TutorBrowseCardProps) {
+  const navigate = useNavigate();
   return (
     <Card
       className={`cursor-pointer transition-all ${
@@ -52,10 +54,19 @@ export function TutorBrowseCard({ tutor, isSelected, onSelect }: TutorBrowseCard
                 {tutor.distance || "Location unknown"}
               </span>
             </div>
-            <Button size="sm" className="w-full" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
-              <CalendarCheck className="w-4 h-4 mr-1" />
-              Book Now
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button size="sm" className="flex-1" onClick={(e) => { e.stopPropagation(); onSelect(); }}>
+                <CalendarCheck className="w-4 h-4 mr-1" />
+                Book Now
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={(e) => { e.stopPropagation(); navigate(`/tutors/${tutor.id}`); }}
+              >
+                View profile
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>
