@@ -138,7 +138,7 @@ export function useProgressReport(learnerId: string | null | undefined) {
           streak: number;
         }>;
         const tutorName =
-          (tutorProfileRes as any)?.data?.full_name || undefined;
+          ((tutorProfileRes as any)?.data?.[0]?.full_name as string | undefined) || undefined;
 
         // ── Aggregations ──────────────────────────────────────────────────────
         const totalMinutes = activity.reduce(
