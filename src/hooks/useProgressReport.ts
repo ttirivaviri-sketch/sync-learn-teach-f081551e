@@ -121,11 +121,7 @@ export function useProgressReport(learnerId: string | null | undefined) {
             .select("subject, xp, streak")
             .eq("user_id", learnerId),
           opts.tutorId
-            ? supabase
-                .from("profiles")
-                .select("full_name")
-                .eq("id", opts.tutorId)
-                .maybeSingle()
+            ? (supabase as any).rpc("get_public_profiles", { _ids: [opts.tutorId] })
             : Promise.resolve({ data: null, error: null }),
         ]);
 
