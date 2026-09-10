@@ -106,7 +106,7 @@ const TutorPublicProfile = () => {
           online_status: dirEntry.online_status || false,
           last_seen: dirEntry.last_seen,
           subjects: subjectsRes.data || [],
-          qualifications: (qualsRes.data || []).filter((q: any) => q.user_id === tutorId),
+          qualifications: ((qualsRes.data || []) as any[]).filter((q: any) => q.user_id === tutorId),
           curriculums: teachingRes.data?.curriculums || [],
           grades: teachingRes.data?.grades || [],
           rating,
