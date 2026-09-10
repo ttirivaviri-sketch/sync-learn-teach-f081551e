@@ -89,10 +89,10 @@ const TutorPublicProfile = () => {
         ]);
         if (cancelled) return;
 
-        const dirEntry = (dirRes.data || []).find((t: any) => t.id === tutorId);
+        const dirEntry = ((dirRes.data || []) as any[]).find((t: any) => t.id === tutorId);
         if (!dirEntry) { setNotFound(true); return; }
 
-        const ratings = (ratingsRes.data || []).filter((r: any) => r.reviewed_id === tutorId);
+        const ratings = ((ratingsRes.data || []) as any[]).filter((r: any) => r.reviewed_id === tutorId);
         const totalReviews = ratings.length;
         const rating = totalReviews
           ? Math.round((ratings.reduce((a: number, r: any) => a + r.rating, 0) / totalReviews) * 10) / 10
