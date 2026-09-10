@@ -7873,6 +7873,8 @@ export type Database = {
           full_name: string
           id: string
           is_official: boolean
+          is_suspended: boolean
+          online_status: boolean
           user_type: string
         }[]
       }
