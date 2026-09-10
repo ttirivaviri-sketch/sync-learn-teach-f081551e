@@ -436,12 +436,11 @@ export function useCompanionRecommendations(userId: string | null | undefined) {
       const tutorsBySubject = new Map<string, CompanionTutor>();
       if (tutorRows.length) {
         const ids = Array.from(new Set(tutorRows.map((t) => t.user_id)));
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name, avatar_url, online_status")
-          .in("id", ids)
-          .eq("is_suspended", false);
-        const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+        // Uses a SECURITY DEFINER RPC: RLS on profiles only exposes own row.
+        const { data: profiles } = await supabase.rpc("get_public_profiles" as never, { _ids: ids } as never);
+        const profileById = new Map(
+          ((profiles ?? []) as any[]).filter((p) => !p.is_suspended).map((p) => [p.id, p]),
+        );
         for (const t of tutorRows) {
           const p = profileById.get(t.user_id);
           if (!p?.full_name) continue;

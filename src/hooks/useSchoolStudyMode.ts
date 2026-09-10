@@ -487,10 +487,8 @@ export function useHomeworkReviewQueue(homeworkId?: string) {
       const studentIds = [...new Set(rows.map((r) => r.student_id))];
       let names: Record<string, string> = {};
       if (studentIds.length > 0) {
-        const { data: profiles } = await supabase
-          .from("profiles")
-          .select("id, full_name")
-          .in("id", studentIds);
+        // SECURITY DEFINER RPC — direct profile reads are blocked by RLS.
+        const { data: profiles } = await supabase.rpc("get_public_profiles" as never, { _ids: studentIds } as never);
         for (const p of (profiles ?? []) as any[]) {
           if (p.full_name) names[p.id] = p.full_name;
         }
