@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import {
-  DollarSign, Clock, Users, Star, Bell, Settings, AlertTriangle,
+  DollarSign, Clock, Users, Star, Bell, Settings,
   CheckCircle2, Circle, ChevronRight, Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { TeacherWorkspaceBanner } from "@/components/school/TeacherWorkspaceBanner";
 import { TutorWorkspaceLinkCard } from "@/components/school/TutorWorkspaceLinkCard";
+import { TutorDashboardTab } from "./TutorDashboardTab";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface TodayStats {
@@ -31,8 +32,14 @@ interface TutorHomeTabProps {
   tutorName: string;
   mySubjects: Array<{ id: string; [key: string]: unknown }>;
   tutorId?: string;
+  /** All bookings — powers the dashboard snapshot and student list. */
+  bookings?: BookingRequest[];
   onNavigateTab: (tab: string) => void;
   onJoinSession?: (booking: BookingRequest) => void;
+  onAccept?: (booking: BookingRequest) => void | Promise<void>;
+  onDecline?: (booking: BookingRequest) => void | Promise<void>;
+  onOpenChat?: (learnerId: string, learnerName: string) => void;
+  onOpenBookings?: (filter: "requested" | "confirmed" | "completed") => void;
 }
 
 export const TutorHomeTab = ({
@@ -44,8 +51,13 @@ export const TutorHomeTab = ({
   tutorName,
   mySubjects,
   tutorId,
+  bookings = [],
   onNavigateTab,
   onJoinSession,
+  onAccept,
+  onDecline,
+  onOpenChat,
+  onOpenBookings,
 }: TutorHomeTabProps) => {
   // Onboarding checklist state
   const [hasAvailability, setHasAvailability] = useState<boolean | null>(null);
@@ -86,25 +98,18 @@ export const TutorHomeTab = ({
         <p className="text-sm text-muted-foreground">Here's your overview for today</p>
       </div>
 
-      {/* Pending Requests Alert */}
-      {pendingCount > 0 && (
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-sm font-semibold">
-                  {pendingCount} pending request{pendingCount > 1 ? "s" : ""}
-                </p>
-                <p className="text-xs text-muted-foreground">Respond to secure sessions</p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => onNavigateTab("activity")}>
-              View <ChevronRight className="h-3.5 w-3.5 ml-1" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* Bookings, messages and student progress */}
+      <TutorDashboardTab
+        tutorId={tutorId}
+        bookings={bookings}
+        loading={bookingsLoading}
+        onAccept={(b) => onAccept?.(b)}
+        onDecline={(b) => onDecline?.(b)}
+        onJoinSession={(b) => onJoinSession?.(b)}
+        onOpenChat={(id, name) => onOpenChat?.(id, name)}
+        onOpenBookings={(f) => (onOpenBookings ? onOpenBookings(f) : onNavigateTab("activity"))}
+      />
+
 
       {/* Teacher workspace shortcut (visible only to school teachers/admins) */}
       <TeacherWorkspaceBanner />

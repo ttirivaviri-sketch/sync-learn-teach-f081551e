@@ -16,6 +16,7 @@ interface TutorActivityTabProps {
   onJoinSession: (booking: BookingRequest) => void;
   onStartChat: (booking: BookingRequest) => void;
   onComplete?: (booking: BookingRequest) => void | Promise<void>;
+  bookingFilter?: "all" | "requested" | "confirmed" | "completed" | "canceled";
 }
 
 export const TutorActivityTab = ({
@@ -27,6 +28,7 @@ export const TutorActivityTab = ({
   onJoinSession,
   onStartChat,
   onComplete,
+  bookingFilter = "all",
 }: TutorActivityTabProps) => (
   <div className="space-y-4">
     {/* Booking Manager */}
@@ -38,6 +40,7 @@ export const TutorActivityTab = ({
       onJoinSession={onJoinSession}
       onStartChat={onStartChat}
       onComplete={onComplete}
+      initialFilter={bookingFilter}
     />
 
     {/* Availability Schedule */}

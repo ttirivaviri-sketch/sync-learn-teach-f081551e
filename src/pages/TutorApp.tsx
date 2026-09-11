@@ -63,6 +63,8 @@ const TutorApp = () => {
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("home");
+  // Status filter handed to the Activity booking manager from the Home dashboard.
+  const [bookingFilter, setBookingFilter] = useState<"all" | "requested" | "confirmed" | "completed" | "canceled">("all");
   const [isOnline, setIsOnline] = useState(true);
   const [mySubjects, setMySubjects] = useState<unknown[]>([]);
   const [showApprovalSplash, setShowApprovalSplash] = useState(false);
@@ -368,8 +370,20 @@ const TutorApp = () => {
               tutorName={session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "Tutor"}
               mySubjects={mySubjects as any}
               tutorId={userId}
+              bookings={bookings}
               onNavigateTab={setActiveTab}
               onJoinSession={handleJoinVideoSession}
+              onAccept={handleAcceptRequest}
+              onDecline={handleDeclineRequest}
+              onOpenChat={(learnerId, learnerName) => {
+                setChatWithUserId(learnerId);
+                setChatWithUserName(learnerName);
+                setShowChat(true);
+              }}
+              onOpenBookings={(filter) => {
+                setBookingFilter(filter);
+                setActiveTab("activity");
+              }}
             />
           </TabsContent>
 
@@ -389,6 +403,7 @@ const TutorApp = () => {
               onAccept={handleAcceptRequest}
               onDecline={handleDeclineRequest}
               onComplete={handleCompleteSession}
+              bookingFilter={bookingFilter}
               onJoinSession={handleJoinVideoSession}
               onStartChat={(booking) => {
                 setChatWithUserId(booking.learner_id);

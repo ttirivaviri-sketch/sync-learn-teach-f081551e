@@ -22,6 +22,8 @@ interface TutorBookingManagerProps {
   onJoinSession: (booking: BookingRequest) => void;
   onStartChat: (booking: BookingRequest) => void;
   onComplete?: (booking: BookingRequest) => void | Promise<void>;
+  /** Preselect a status filter (set when arriving from the Home dashboard). */
+  initialFilter?: "all" | "requested" | "confirmed" | "completed" | "canceled";
 }
 
 type FilterStatus = "all" | "requested" | "confirmed" | "completed" | "canceled";
@@ -34,9 +36,12 @@ export const TutorBookingManager = ({
   onJoinSession,
   onStartChat,
   onComplete,
+  initialFilter = "all",
 }: TutorBookingManagerProps) => {
   const [rescheduleBooking, setRescheduleBooking] = useState<BookingRequest | null>(null);
-  const [statusFilter, setStatusFilter] = useState<FilterStatus>("all");
+  const [statusFilter, setStatusFilter] = useState<FilterStatus>(initialFilter);
+
+  useEffect(() => { setStatusFilter(initialFilter); }, [initialFilter]);
   const [processingId, setProcessingId] = useState<string | null>(null);
   const [learnerSubjectsMap, setLearnerSubjectsMap] = useState<Record<string, string[]>>({});
   const [learnerAcademicProfiles, setLearnerAcademicProfiles] = useState<
