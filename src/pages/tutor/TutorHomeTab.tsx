@@ -3,7 +3,7 @@
  */
 import { useState, useEffect } from "react";
 import {
-  DollarSign, Clock, Users, Star, Bell, Settings, AlertTriangle,
+  DollarSign, Clock, Users, Star, Bell, Settings,
   CheckCircle2, Circle, ChevronRight, Video,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
