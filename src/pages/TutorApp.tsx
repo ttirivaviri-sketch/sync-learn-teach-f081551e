@@ -368,8 +368,20 @@ const TutorApp = () => {
               tutorName={session?.user?.user_metadata?.full_name || session?.user?.email?.split("@")[0] || "Tutor"}
               mySubjects={mySubjects as any}
               tutorId={userId}
+              bookings={bookings}
               onNavigateTab={setActiveTab}
               onJoinSession={handleJoinVideoSession}
+              onAccept={handleAcceptRequest}
+              onDecline={handleDeclineRequest}
+              onOpenChat={(learnerId, learnerName) => {
+                setChatWithUserId(learnerId);
+                setChatWithUserName(learnerName);
+                setShowChat(true);
+              }}
+              onOpenBookings={(filter) => {
+                setBookingFilter(filter);
+                setActiveTab("activity");
+              }}
             />
           </TabsContent>
 
