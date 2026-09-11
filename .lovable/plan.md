@@ -1,21 +1,38 @@
-# Make "Delete account" easy to find
+# Tutor dashboard: bookings, messages and student progress
 
-Account deletion already works in the app: Profile → Data & Compliance → Danger zone → "Delete my account", with a typed DELETE confirmation. It is just buried two screens deep.
+Today a tutor's Home tab shows stats and today's schedule; bookings live in a separate tab, chat is a floating button with no inbox, and there is no view of student progress. This turns Home into a real dashboard.
 
-## What changes
+## What the tutor sees
 
-Add a clear **Delete account** entry at the bottom of the learner Profile menu (below Sign Out), styled in red.
+**1. Session overview (top)**
+- Pending requests count with Accept/Decline right on the card
+- Next session with a countdown and Join button when it's within 15 minutes
+- Today's earnings, sessions, hours and rating (kept as-is)
 
-Tapping it opens the same confirmation used today:
-- Explains what is removed (profile, bookings, messages, study history, recordings, notes)
-- Notes that de-identified payment records are kept 5 years for South African tax law
-- Requires typing DELETE
-- On success, signs out and returns to the sign-in screen
+**2. Bookings snapshot**
+- Three small tiles: Pending, Upcoming, Completed this week
+- Each opens the existing full booking manager with that filter applied
 
-Same entry added to the tutor Profile menu so tutors can also delete their own account.
+**3. Messages**
+- New inbox card listing recent conversations: student name, last message preview, time, unread dot
+- Tap a row to open the existing chat with that student
+- "See all" opens the full conversation list
 
-## Technical notes
+**4. Student progress**
+- A card per recent student: name, subject, sessions completed, last session date
+- Tap to open a student detail sheet with their session history, topics covered and a progress summary
+- Where a progress report already exists for that student, show a "View report" action
 
-- Extract the existing dialog from `src/pages/settings/DataCompliance.tsx` into a reusable `DeleteAccountDialog` component that calls the existing `delete-account` edge function.
-- Use it from `LearnerProfileTab.tsx`, `TutorProfileTab.tsx`, and keep the Data & Compliance page using the same component (no duplicate logic).
-- No database or edge-function changes.
+## Notes
+
+- Nothing is removed: the Activity tab keeps the full booking manager, availability and history.
+- Message and progress data is read through existing safe lookups, so students' emails and phone numbers stay hidden.
+- Tutors only see students they actually have bookings with.
+
+## Technical outline
+
+- New `src/pages/tutor/TutorDashboardTab.tsx` composing existing pieces; `TutorHomeTab` becomes the dashboard host.
+- Reuse `ConversationList` (`src/components/chat/ConversationList.tsx`) in a compact "inbox" mode; open chat via the existing `setChatWithUserId` handoff in `TutorApp.tsx`.
+- Bookings tiles reuse `bookings` from `useRealtimeBookings`; tapping sets `activeTab="activity"` plus a status filter passed into `TutorBookingManager`.
+- Student progress uses `useStudentInsights` / `progress_reports` reads scoped to the tutor's booking counterparties; add a `get_tutor_students` RPC only if RLS blocks the direct read (verify first).
+- No changes to booking, payment or chat business logic.
