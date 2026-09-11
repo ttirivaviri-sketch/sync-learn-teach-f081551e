@@ -69,12 +69,43 @@ export const TutorDashboardTab = ({
   onDecline,
   onJoinSession,
   onOpenChat,
+  onOpenAllMessages,
   onOpenBookings,
 }: Props) => {
   const { items: inbox, loading: inboxLoading } = useTutorInbox(tutorId);
   const [reportLearnerIds, setReportLearnerIds] = useState<Set<string>>(new Set());
   const [openStudent, setOpenStudent] = useState<StudentRow | null>(null);
+  const [report, setReport] = useState<{ name: string; data: any; plan: any; generatedAt: string } | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const [tick, setTick] = useState(0);
+
+  const openReport = async (student: StudentRow) => {
+    setReportLoading(true);
+    try {
+      const { data } = await supabase
+        .from("progress_reports")
+        .select("summary_json, ai_plan_json, generated_at")
+        .eq("tutor_id", tutorId!)
+        .eq("learner_id", student.id)
+        .eq("audience", "tutor")
+        .order("generated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setReport({
+          name: student.name,
+          data: (data as any).summary_json ?? {},
+          plan: (data as any).ai_plan_json ?? {},
+          generatedAt: (data as any).generated_at,
+        });
+        setOpenStudent(null);
+      }
+    } catch (e) {
+      logger.warn("progress report open failed", e);
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // Re-render every minute so the next-session countdown stays honest.
   useEffect(() => {
