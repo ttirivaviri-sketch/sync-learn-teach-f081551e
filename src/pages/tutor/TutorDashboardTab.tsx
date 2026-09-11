@@ -72,7 +72,7 @@ export const TutorDashboardTab = ({
   onOpenAllMessages,
   onOpenBookings,
 }: Props) => {
-  const { items: inbox, loading: inboxLoading } = useTutorInbox(tutorId);
+  const { items: inbox, loading: inboxLoading } = useTutorInbox(tutorId, 6);
   const [reportLearnerIds, setReportLearnerIds] = useState<Set<string>>(new Set());
   const [openStudent, setOpenStudent] = useState<StudentRow | null>(null);
   const [report, setReport] = useState<{ name: string; data: any; plan: any; generatedAt: string } | null>(null);
