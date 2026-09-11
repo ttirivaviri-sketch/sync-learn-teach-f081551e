@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { fetchInvitationSummary, useAcceptInvitation, type SchoolRole } from "@/hooks/useSchools";
+import { Seo } from "@/components/Seo";
 
 const roleLabel: Record<SchoolRole, string> = {
   school_admin: "School Admin",
@@ -32,8 +33,6 @@ export default function AcceptInvitation() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof fetchInvitationSummary>>>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-
-  useEffect(() => { document.title = "Join your school | StudySync"; }, []);
 
   useEffect(() => {
     (async () => {
