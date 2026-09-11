@@ -387,11 +387,11 @@ export const TutorDashboardTab = ({
                   size="sm"
                   variant="outline"
                   className="flex-1 gap-1"
-                  disabled={!openStudent.hasReport}
-                  onClick={() => { onOpenBookings("completed"); setOpenStudent(null); }}
+                  disabled={!openStudent.hasReport || reportLoading}
+                  onClick={() => openReport(openStudent)}
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  {openStudent.hasReport ? "View report" : "No report yet"}
+                  {openStudent.hasReport ? (reportLoading ? "Opening…" : "View report") : "No report yet"}
                 </Button>
               </div>
 
