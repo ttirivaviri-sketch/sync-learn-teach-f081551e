@@ -403,6 +403,7 @@ const TutorApp = () => {
               onAccept={handleAcceptRequest}
               onDecline={handleDeclineRequest}
               onComplete={handleCompleteSession}
+              bookingFilter={bookingFilter}
               onJoinSession={handleJoinVideoSession}
               onStartChat={(booking) => {
                 setChatWithUserId(booking.learner_id);
