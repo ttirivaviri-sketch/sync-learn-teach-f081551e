@@ -29,7 +29,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     path: "/",
     title: "IEB & Matric Past Papers, Tutors & AI Tools | StudySync",
     description:
-      "Get IEB and Matric past papers with memos, verified tutors and AI study tools for South African learners. Covers CAPS/NSC, Cambridge and ZIMSEC.",
+      "IEB, Matric and ZIMSEC past papers with memos, verified tutors and AI study tools for learners in South Africa and Zimbabwe. CAPS/NSC and Cambridge too.",
     image: "/og/home.jpg",
   },
   {

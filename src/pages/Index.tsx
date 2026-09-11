@@ -37,7 +37,7 @@ const Index = () => {
     <div className="min-h-screen bg-white">
       <Seo
         title="IEB & Matric Past Papers, Tutors & AI Tools | StudySync"
-        description="Get IEB and Matric past papers with memos, verified tutors and AI study tools for South African learners. Covers CAPS/NSC, Cambridge and ZIMSEC."
+        description="IEB, Matric and ZIMSEC past papers with memos, verified tutors and AI study tools for learners in South Africa and Zimbabwe. CAPS/NSC and Cambridge too."
         path="/"
       />
       <HeroSection />
