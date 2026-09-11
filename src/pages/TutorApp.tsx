@@ -63,6 +63,8 @@ const TutorApp = () => {
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState("home");
+  // Status filter handed to the Activity booking manager from the Home dashboard.
+  const [bookingFilter, setBookingFilter] = useState<"all" | "requested" | "confirmed" | "completed" | "canceled">("all");
   const [isOnline, setIsOnline] = useState(true);
   const [mySubjects, setMySubjects] = useState<unknown[]>([]);
   const [showApprovalSplash, setShowApprovalSplash] = useState(false);
