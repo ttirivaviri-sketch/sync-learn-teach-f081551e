@@ -27,6 +27,7 @@ interface Props {
   onDecline: (b: BookingRequest) => void | Promise<void>;
   onJoinSession: (b: BookingRequest) => void;
   onOpenChat: (learnerId: string, learnerName: string) => void;
+  onOpenAllMessages?: () => void;
   onOpenBookings: (filter: "requested" | "confirmed" | "completed") => void;
 }
 
