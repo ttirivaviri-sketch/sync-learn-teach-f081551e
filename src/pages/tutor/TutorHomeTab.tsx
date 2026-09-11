@@ -98,25 +98,18 @@ export const TutorHomeTab = ({
         <p className="text-sm text-muted-foreground">Here's your overview for today</p>
       </div>
 
-      {/* Pending Requests Alert */}
-      {pendingCount > 0 && (
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
-          <CardContent className="p-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              <div>
-                <p className="text-sm font-semibold">
-                  {pendingCount} pending request{pendingCount > 1 ? "s" : ""}
-                </p>
-                <p className="text-xs text-muted-foreground">Respond to secure sessions</p>
-              </div>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => onNavigateTab("activity")}>
-              View <ChevronRight className="h-3.5 w-3.5 ml-1" />
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* Bookings, messages and student progress */}
+      <TutorDashboardTab
+        tutorId={tutorId}
+        bookings={bookings}
+        loading={bookingsLoading}
+        onAccept={(b) => onAccept?.(b)}
+        onDecline={(b) => onDecline?.(b)}
+        onJoinSession={(b) => onJoinSession?.(b)}
+        onOpenChat={(id, name) => onOpenChat?.(id, name)}
+        onOpenBookings={(f) => (onOpenBookings ? onOpenBookings(f) : onNavigateTab("activity"))}
+      />
+
 
       {/* Teacher workspace shortcut (visible only to school teachers/admins) */}
       <TeacherWorkspaceBanner />
