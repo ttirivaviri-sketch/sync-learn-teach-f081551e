@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { TeacherWorkspaceBanner } from "@/components/school/TeacherWorkspaceBanner";
 import { TutorWorkspaceLinkCard } from "@/components/school/TutorWorkspaceLinkCard";
+import { TutorDashboardTab } from "./TutorDashboardTab";
 import type { BookingRequest } from "@/hooks/useRealtimeBookings";
 
 interface TodayStats {
