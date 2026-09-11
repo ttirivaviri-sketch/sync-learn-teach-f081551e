@@ -61,6 +61,15 @@ export default function AcceptInvitation() {
     }
   };
 
+  const seo = (
+    <Seo
+      title="Join your school on StudySync"
+      description="You've been invited to join a school workspace on StudySync. Sign in with your invited email to accept and start learning with your class."
+      path={`/invite/${token}`}
+      noindex
+    />
+  );
+
   if (loading) {
     return <main className="min-h-screen grid place-items-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invitation…</main>;
   }
