@@ -30,7 +30,8 @@ export async function extractTextFromFile(file: File): Promise<string> {
 
 async function extractPdfText(file: File): Promise<string> {
   const buf = await file.arrayBuffer();
-  const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+  const loadingTask = pdfjsLib.getDocument({ data: buf });
+  const pdf = await loadingTask.promise;
 
   const pages: string[] = [];
   for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
@@ -48,7 +49,7 @@ async function extractPdfText(file: File): Promise<string> {
     }
   }
 
-  await pdf.destroy();
+  await loadingTask.destroy();
   return pages.join("\n\n");
 }
 

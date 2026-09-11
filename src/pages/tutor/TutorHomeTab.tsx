@@ -39,6 +39,7 @@ interface TutorHomeTabProps {
   onAccept?: (booking: BookingRequest) => void | Promise<void>;
   onDecline?: (booking: BookingRequest) => void | Promise<void>;
   onOpenChat?: (learnerId: string, learnerName: string) => void;
+  onOpenAllMessages?: () => void;
   onOpenBookings?: (filter: "requested" | "confirmed" | "completed") => void;
 }
 
@@ -57,6 +58,7 @@ export const TutorHomeTab = ({
   onAccept,
   onDecline,
   onOpenChat,
+  onOpenAllMessages,
   onOpenBookings,
 }: TutorHomeTabProps) => {
   // Onboarding checklist state
@@ -107,6 +109,7 @@ export const TutorHomeTab = ({
         onDecline={(b) => onDecline?.(b)}
         onJoinSession={(b) => onJoinSession?.(b)}
         onOpenChat={(id, name) => onOpenChat?.(id, name)}
+        onOpenAllMessages={onOpenAllMessages}
         onOpenBookings={(f) => (onOpenBookings ? onOpenBookings(f) : onNavigateTab("activity"))}
       />
 

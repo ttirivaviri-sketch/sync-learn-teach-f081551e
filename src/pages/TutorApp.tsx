@@ -380,6 +380,11 @@ const TutorApp = () => {
                 setChatWithUserName(learnerName);
                 setShowChat(true);
               }}
+              onOpenAllMessages={() => {
+                setChatWithUserId(null);
+                setChatWithUserName(null);
+                setShowChat(true);
+              }}
               onOpenBookings={(filter) => {
                 setBookingFilter(filter);
                 setActiveTab("activity");

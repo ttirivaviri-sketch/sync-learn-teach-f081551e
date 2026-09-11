@@ -27,6 +27,7 @@ interface Props {
   onDecline: (b: BookingRequest) => void | Promise<void>;
   onJoinSession: (b: BookingRequest) => void;
   onOpenChat: (learnerId: string, learnerName: string) => void;
+  onOpenAllMessages?: () => void;
   onOpenBookings: (filter: "requested" | "confirmed" | "completed") => void;
 }
 
@@ -68,12 +69,43 @@ export const TutorDashboardTab = ({
   onDecline,
   onJoinSession,
   onOpenChat,
+  onOpenAllMessages,
   onOpenBookings,
 }: Props) => {
-  const { items: inbox, loading: inboxLoading } = useTutorInbox(tutorId);
+  const { items: inbox, loading: inboxLoading } = useTutorInbox(tutorId, 6);
   const [reportLearnerIds, setReportLearnerIds] = useState<Set<string>>(new Set());
   const [openStudent, setOpenStudent] = useState<StudentRow | null>(null);
+  const [report, setReport] = useState<{ name: string; data: any; plan: any; generatedAt: string } | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
   const [tick, setTick] = useState(0);
+
+  const openReport = async (student: StudentRow) => {
+    setReportLoading(true);
+    try {
+      const { data } = await supabase
+        .from("progress_reports")
+        .select("summary_json, ai_plan_json, generated_at")
+        .eq("tutor_id", tutorId!)
+        .eq("learner_id", student.id)
+        .eq("audience", "tutor")
+        .order("generated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (data) {
+        setReport({
+          name: student.name,
+          data: (data as any).summary_json ?? {},
+          plan: (data as any).ai_plan_json ?? {},
+          generatedAt: (data as any).generated_at,
+        });
+        setOpenStudent(null);
+      }
+    } catch (e) {
+      logger.warn("progress report open failed", e);
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   // Re-render every minute so the next-session countdown stays honest.
   useEffect(() => {
@@ -243,11 +275,8 @@ export const TutorDashboardTab = ({
           <h3 className="text-sm font-bold flex items-center gap-1.5">
             <MessageCircle className="h-4 w-4 text-primary" /> Messages
           </h3>
-          {inbox.length > 0 && (
-            <button
-              onClick={() => onOpenChat(inbox[0].learnerId, inbox[0].learnerName)}
-              className="text-xs font-medium text-primary"
-            >
+          {inbox.length > 0 && onOpenAllMessages && (
+            <button onClick={onOpenAllMessages} className="text-xs font-medium text-primary">
               See all
             </button>
           )}
@@ -358,11 +387,11 @@ export const TutorDashboardTab = ({
                   size="sm"
                   variant="outline"
                   className="flex-1 gap-1"
-                  disabled={!openStudent.hasReport}
-                  onClick={() => { onOpenBookings("completed"); setOpenStudent(null); }}
+                  disabled={!openStudent.hasReport || reportLoading}
+                  onClick={() => openReport(openStudent)}
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  {openStudent.hasReport ? "View report" : "No report yet"}
+                  {openStudent.hasReport ? (reportLoading ? "Opening…" : "View report") : "No report yet"}
                 </Button>
               </div>
 
@@ -384,6 +413,90 @@ export const TutorDashboardTab = ({
                   ))}
                 </div>
               </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* ── Progress report ── */}
+      <Sheet open={!!report} onOpenChange={(o) => !o && setReport(null)}>
+        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl">
+          <SheetHeader>
+            <SheetTitle>{report?.name} · Progress report</SheetTitle>
+          </SheetHeader>
+          {report && (
+            <div className="space-y-4 pb-6 pt-2">
+              <p className="text-xs text-muted-foreground">
+                Generated {new Date(report.generatedAt).toLocaleDateString()}
+              </p>
+
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Study time", value: `${Math.round((report.data?.summary?.totalMinutes ?? 0) / 60)}h` },
+                  { label: "Mastery", value: `${Math.round(report.data?.summary?.overallMastery ?? 0)}%` },
+                  { label: "Tasks done", value: `${report.data?.summary?.tasksCompleted ?? 0}` },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl bg-muted/50 p-3">
+                    <p className="text-lg font-bold leading-none">{s.value}</p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              {report.plan?.headline_assessment && (
+                <p className="text-sm leading-relaxed">{report.plan.headline_assessment}</p>
+              )}
+
+              {Array.isArray(report.data?.subjectMastery) && report.data.subjectMastery.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Subjects
+                  </p>
+                  <div className="space-y-2">
+                    {report.data.subjectMastery.map((s: any) => (
+                      <div key={s.subject} className="flex items-center justify-between rounded-xl bg-muted/50 p-3">
+                        <p className="text-sm font-medium truncate">{s.subject}</p>
+                        <span className="text-xs text-muted-foreground shrink-0">{Math.round(s.mastery ?? 0)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(report.data?.weakTopics) && report.data.weakTopics.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Needs work
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {report.data.weakTopics.slice(0, 8).map((t: any) => (
+                      <span key={t.topic} className="rounded-full bg-destructive/10 px-2.5 py-1 text-[11px] text-destructive">
+                        {t.topic} · {Math.round(t.accuracy ?? 0)}%
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {Array.isArray(report.plan?.tutor_session_plan) && report.plan.tutor_session_plan.length > 0 && (
+                <div>
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                    Suggested session plan
+                  </p>
+                  <div className="space-y-2">
+                    {report.plan.tutor_session_plan.map((s: any) => (
+                      <div key={s.session} className="rounded-xl bg-muted/50 p-3">
+                        <p className="text-sm font-medium">Session {s.session}: {s.objective}</p>
+                        {Array.isArray(s.activities) && (
+                          <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground space-y-0.5">
+                            {s.activities.map((a: string, i: number) => <li key={i}>{a}</li>)}
+                          </ul>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </SheetContent>
