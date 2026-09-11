@@ -275,11 +275,8 @@ export const TutorDashboardTab = ({
           <h3 className="text-sm font-bold flex items-center gap-1.5">
             <MessageCircle className="h-4 w-4 text-primary" /> Messages
           </h3>
-          {inbox.length > 0 && (
-            <button
-              onClick={() => onOpenChat(inbox[0].learnerId, inbox[0].learnerName)}
-              className="text-xs font-medium text-primary"
-            >
+          {inbox.length > 0 && onOpenAllMessages && (
+            <button onClick={onOpenAllMessages} className="text-xs font-medium text-primary">
               See all
             </button>
           )}
