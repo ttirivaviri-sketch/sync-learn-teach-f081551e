@@ -32,8 +32,14 @@ interface TutorHomeTabProps {
   tutorName: string;
   mySubjects: Array<{ id: string; [key: string]: unknown }>;
   tutorId?: string;
+  /** All bookings — powers the dashboard snapshot and student list. */
+  bookings?: BookingRequest[];
   onNavigateTab: (tab: string) => void;
   onJoinSession?: (booking: BookingRequest) => void;
+  onAccept?: (booking: BookingRequest) => void | Promise<void>;
+  onDecline?: (booking: BookingRequest) => void | Promise<void>;
+  onOpenChat?: (learnerId: string, learnerName: string) => void;
+  onOpenBookings?: (filter: "requested" | "confirmed" | "completed") => void;
 }
 
 export const TutorHomeTab = ({
@@ -45,8 +51,13 @@ export const TutorHomeTab = ({
   tutorName,
   mySubjects,
   tutorId,
+  bookings = [],
   onNavigateTab,
   onJoinSession,
+  onAccept,
+  onDecline,
+  onOpenChat,
+  onOpenBookings,
 }: TutorHomeTabProps) => {
   // Onboarding checklist state
   const [hasAvailability, setHasAvailability] = useState<boolean | null>(null);
