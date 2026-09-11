@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { fetchInvitationSummary, useAcceptInvitation, type SchoolRole } from "@/hooks/useSchools";
+import { Seo } from "@/components/Seo";
 
 const roleLabel: Record<SchoolRole, string> = {
   school_admin: "School Admin",
@@ -32,8 +33,6 @@ export default function AcceptInvitation() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<Awaited<ReturnType<typeof fetchInvitationSummary>>>(null);
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-
-  useEffect(() => { document.title = "Join your school | StudySync"; }, []);
 
   useEffect(() => {
     (async () => {
@@ -62,13 +61,23 @@ export default function AcceptInvitation() {
     }
   };
 
+  const seo = (
+    <Seo
+      title="Join your school on StudySync"
+      description="You've been invited to join a school workspace on StudySync. Sign in with your invited email to accept and start learning with your class."
+      path={`/invite/${token}`}
+      noindex
+    />
+  );
+
   if (loading) {
-    return <main className="min-h-screen grid place-items-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invitation…</main>;
+    return <>{seo}<main className="min-h-screen grid place-items-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invitation…</main></>;
   }
 
   if (!summary) {
     return (
       <main className="min-h-screen grid place-items-center p-6">
+        {seo}
         <Card className="p-8 max-w-md text-center">
           <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-amber-500" />
           <h1 className="text-lg font-semibold">Invitation not found</h1>
@@ -86,6 +95,7 @@ export default function AcceptInvitation() {
 
   return (
     <main className="min-h-screen grid place-items-center p-6 bg-background">
+      {seo}
       <Card className="p-8 max-w-md w-full text-center space-y-4">
         <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-12 mx-auto object-contain" />
         <div className="flex justify-center"><Icon className="h-10 w-10 text-primary" /></div>

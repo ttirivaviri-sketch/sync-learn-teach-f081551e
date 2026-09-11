@@ -27,7 +27,7 @@ export const DEFAULT_OG_IMAGE = "/og/home.jpg";
 export const ROUTE_SEO: RouteSeo[] = [
   {
     path: "/",
-    title: "IEB & Matric Past Papers, Tutors & AI Tools | StudySync",
+    title: "Past Papers & Tutors for IEB, Matric & ZIMSEC | StudySync",
     description:
       "IEB, Matric and ZIMSEC past papers with memos, verified tutors and AI study tools for learners in South Africa and Zimbabwe. CAPS/NSC and Cambridge too.",
     image: "/og/home.jpg",
