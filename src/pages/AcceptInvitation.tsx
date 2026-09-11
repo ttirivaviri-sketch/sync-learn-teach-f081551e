@@ -71,12 +71,13 @@ export default function AcceptInvitation() {
   );
 
   if (loading) {
-    return <main className="min-h-screen grid place-items-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invitation…</main>;
+    return <>{seo}<main className="min-h-screen grid place-items-center text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin mr-2" /> Loading invitation…</main></>;
   }
 
   if (!summary) {
     return (
       <main className="min-h-screen grid place-items-center p-6">
+        {seo}
         <Card className="p-8 max-w-md text-center">
           <AlertTriangle className="h-10 w-10 mx-auto mb-2 text-amber-500" />
           <h1 className="text-lg font-semibold">Invitation not found</h1>
@@ -94,6 +95,7 @@ export default function AcceptInvitation() {
 
   return (
     <main className="min-h-screen grid place-items-center p-6 bg-background">
+      {seo}
       <Card className="p-8 max-w-md w-full text-center space-y-4">
         <img src="/lovable-uploads/studysync-logo.png" alt="StudySync" className="h-12 mx-auto object-contain" />
         <div className="flex justify-center"><Icon className="h-10 w-10 text-primary" /></div>
