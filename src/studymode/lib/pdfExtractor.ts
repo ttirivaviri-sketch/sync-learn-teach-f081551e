@@ -49,7 +49,7 @@ async function extractPdfText(file: File): Promise<string> {
     }
   }
 
-  await pdf.destroy();
+  await loadingTask.destroy();
   return pages.join("\n\n");
 }
 
