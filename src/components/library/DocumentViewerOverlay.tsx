@@ -92,6 +92,31 @@ export function DocumentViewerOverlay({
   }
 
   const canRenderInApp = !!streamUrl && !pdfRenderFailed;
+  const isPastPaper = resource.type === "pastpaper";
+  // "Mark my answers" should be available for any past paper we can open,
+  // even when the browser falls back to the iframe viewer. The panel will
+  // fall back to paper metadata if pdf.js text extraction isn't available.
+  const canMarkPaper = isPastPaper && !!url;
+
+  // Lazy extractor that prefers pdf.js text, but falls back to paper metadata
+  // so marking still works when the document is rendered via iframe.
+  const getDocumentTextFallback = async (): Promise<string> => {
+    if (extractorReady && extractorRef.current) {
+      return extractorRef.current();
+    }
+    const bits = [
+      resource.title,
+      resource.paperMeta?.year ? `Year: ${resource.paperMeta.year}` : "",
+      resource.paperMeta?.session ? `Session: ${resource.paperMeta.session}` : "",
+      resource.paperMeta?.paperNumber ? `Paper: ${resource.paperMeta.paperNumber}` : "",
+      resource.tags?.subject ? `Subject: ${resource.tags.subject}` : "",
+      resource.tags?.curriculum ? `Curriculum: ${resource.tags.curriculum}` : "",
+      resource.tags?.grade ? `Grade: ${resource.tags.grade}` : resource.gradeLevel ? `Grade: ${resource.gradeLevel}` : "",
+    ].filter(Boolean);
+    return bits.length
+      ? `PAPER METADATA (full text unavailable):\n${bits.join("\n")}`
+      : "";
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 p-2 print:hidden sm:p-4">
