@@ -71,13 +71,19 @@ export function DocumentViewerOverlay({
       ? "Study guide"
       : "Study material";
 
-  // ── No pdfSource means it's a legacy/fallback seed with a direct URL.
-  // Open it immediately in a new tab instead of trying the edge function.
-  const isUuid = /^[0-9a-f-]{36}$/i.test(String(resource.id));
-  if ((!resource.pdfSource || !isUuid) && resource.videoUrl) {
-    window.open(resource.videoUrl, "_blank", "noopener,noreferrer");
-    onClose();
-    return null;
+  // ── No pdfSource AND no streamable URL means there's no file at all. ──
+  if (!resource.pdfSource && !directUrl) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/80 p-2 print:hidden sm:p-4">
+        <div className="flex h-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-background p-6 text-center shadow-2xl">
+          <FileText className="h-10 w-10 text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">
+            This resource doesn't have an attached file yet.
+          </p>
+          <Button variant="outline" onClick={onClose}>Back to Library</Button>
+        </div>
+      </div>
+    );
   }
 
   const canRenderInApp = !!data && !pdfRenderFailed;
