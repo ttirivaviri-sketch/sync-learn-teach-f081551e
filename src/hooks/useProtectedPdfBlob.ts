@@ -106,22 +106,32 @@ export function useProtectedPdfBlob(
         if (!token) throw new Error("Not signed in");
 
         const base = resolveBase();
-        const endpoint = `${base}/functions/v1/library-stream?id=${encodeURIComponent(
-          resourceId,
-        )}&source=${source}`;
+        let url: string;
+        let kind: PdfKind;
+        let endpoint: string | null = null;
 
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (isDbBacked) {
+          endpoint = `${base}/functions/v1/library-stream?id=${encodeURIComponent(
+            resourceId,
+          )}&source=${source}`;
 
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(json?.error ?? `Request failed (${res.status})`);
+          const res = await fetch(endpoint, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(json?.error ?? `Request failed (${res.status})`);
+          }
+          if (!json?.url) throw new Error("No URL returned");
+
+          url = json.url as string;
+          kind = (json.kind as PdfKind | undefined) ?? "external";
+        } else {
+          // Seed resource: stream the known external URL directly.
+          url = directUrl!;
+          kind = detectUrlKind(url) === "webpage" ? "webpage" : "external";
         }
-        if (!json?.url) throw new Error("No URL returned");
-
-        const url = json.url as string;
-        const kind = (json.kind as PdfKind | undefined) ?? "external";
 
         // Webpages can't be read in-app — surface URL only.
         if (kind === "webpage") {
