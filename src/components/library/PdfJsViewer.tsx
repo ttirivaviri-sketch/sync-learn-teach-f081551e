@@ -29,8 +29,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 const MAX_TEXT_PAGES = 40;
 
 interface PdfJsViewerProps {
-  /** Raw PDF bytes. The viewer copies them before handing to the worker. */
-  data: ArrayBuffer;
+  /** URL pdf.js streams from (range requests → page 1 paints early). */
+  src: string;
+  /** Extra headers pdf.js must send (proxy auth). */
+  httpHeaders?: Record<string, string>;
   title: string;
   /**
    * Called once the document is ready with a lazy text extractor the AI
@@ -49,7 +51,7 @@ type PdfPage = {
   getTextContent: () => Promise<{ items: Array<{ str?: string }> }>;
 };
 
-export function PdfJsViewer({ data, title, onReady, onError }: PdfJsViewerProps) {
+export function PdfJsViewer({ src, httpHeaders, title, onReady, onError }: PdfJsViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [doc, setDoc] = useState<PdfDoc | null>(null);
   const [numPages, setNumPages] = useState(0);
@@ -63,6 +65,8 @@ export function PdfJsViewer({ data, title, onReady, onError }: PdfJsViewerProps)
   const onErrorRef = useRef(onError);
   onErrorRef.current = onError;
 
+  const headersKey = JSON.stringify(httpHeaders ?? null);
+
   // ── Load document ─────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -70,10 +74,15 @@ export function PdfJsViewer({ data, title, onReady, onError }: PdfJsViewerProps)
 
     (async () => {
       try {
-        // pdf.js transfers the buffer to its worker — copy so callers can
-        // reuse the original bytes (e.g. retry, download).
-        const copy = data.slice(0);
-        const task = pdfjsLib.getDocument({ data: copy });
+        // Stream from the URL: pdf.js requests only the ranges it needs, so
+        // the first page renders long before a big textbook finishes.
+        const task = pdfjsLib.getDocument({
+          url: src,
+          httpHeaders: httpHeaders ?? undefined,
+          rangeChunkSize: 262144,
+          disableAutoFetch: true,
+          disableStream: false,
+        });
         const pdf = (await task.promise) as PdfDoc;
         if (cancelled) {
           pdf.destroy?.();
@@ -82,6 +91,7 @@ export function PdfJsViewer({ data, title, onReady, onError }: PdfJsViewerProps)
         loadedDoc = pdf;
         setDoc(pdf);
         setNumPages(pdf.numPages);
+
 
         // Lazy text extractor for the AI panel
         onReadyRef.current?.(async () => {
