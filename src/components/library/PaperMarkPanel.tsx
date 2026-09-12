@@ -131,6 +131,7 @@ export function PaperMarkPanel({
   const [showSolution, setShowSolution] = useState(false);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [practising, setPractising] = useState(false);
+  const [usingMetadataFallback, setUsingMetadataFallback] = useState(false);
   const paperTextRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
