@@ -93,8 +93,8 @@ const ZimsecPastPapersLanding = () => {
 
   return (
     <LandingPageLayout
-      title="ZIMSEC Past Papers & Answers — O & A Level | StudySync"
-      description="Practise ZIMSEC O Level and A Level past exam papers with answers — Mathematics, Combined Science, English and more, sorted by subject, level and year."
+      title="ZIMSEC Past Papers Free Download — O Level & A Level | StudySync"
+      description="Free ZIMSEC O Level and A Level past exam papers with answers — Mathematics, Combined Science, English, Accounts and more, sorted by subject, level and year."
       path="/past-papers/zimsec"
       faqs={FAQS}
       breadcrumbs={[

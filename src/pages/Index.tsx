@@ -36,8 +36,8 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-white">
       <Seo
-        title="Past Papers & Tutors: IEB, Matric, ZIMSEC, Cambridge, NSC | StudySync"
-        description="IEB, Matric and ZIMSEC past papers with memos, verified tutors and AI study tools for learners in South Africa and Zimbabwe. CAPS/NSC and Cambridge too."
+        title="Free Past Papers & Exam Prep — Matric, IEB, ZIMSEC | StudySync"
+        description="Free past exam papers with memos, AI exam prep and verified tutors for Matric/NSC, IEB, ZIMSEC, Cambridge and CAPS learners in South Africa and Zimbabwe."
         path="/"
       />
       <HeroSection />

@@ -18,6 +18,10 @@ const Index = lazy(() => import("./pages/Index"));
 const TutoringLanding = lazy(() => import("./pages/landing/TutoringLanding"));
 const MathsTutorLanding = lazy(() => import("./pages/landing/MathsTutorLanding"));
 const PastPapersLanding = lazy(() => import("./pages/landing/PastPapersLanding"));
+const ExamPrepLanding = lazy(() => import("./pages/landing/ExamPrepLanding"));
+const CambridgePastPapersLanding = lazy(() => import("./pages/landing/CambridgePastPapersLanding"));
+const Grade10PastPapersLanding = lazy(() => import("./pages/landing/Grade10PastPapersLanding"));
+const Grade11PastPapersLanding = lazy(() => import("./pages/landing/Grade11PastPapersLanding"));
 const IebPastPapersLanding = lazy(() => import("./pages/landing/IebPastPapersLanding"));
 const AccountingPastPapersLanding = lazy(() => import("./pages/landing/AccountingPastPapersLanding"));
 const BusinessStudiesPastPapersLanding = lazy(() => import("./pages/landing/BusinessStudiesPastPapersLanding"));
@@ -148,6 +152,19 @@ const App = () => {
               <Route path="/maths-tutor" element={<Navigate to="/tutoring/maths" replace />} />
               <Route path="/tutors" element={<Navigate to="/tutoring" replace />} />
               <Route path="/past-papers" element={<PastPapersLanding />} />
+              <Route path="/exam-prep" element={<ExamPrepLanding />} />
+              <Route path="/exam-preparation" element={<Navigate to="/exam-prep" replace />} />
+              <Route path="/exam-prep-help" element={<Navigate to="/exam-prep" replace />} />
+              <Route path="/matric-exam-prep" element={<Navigate to="/exam-prep" replace />} />
+              <Route path="/past-papers/cambridge" element={<CambridgePastPapersLanding />} />
+              <Route path="/cambridge-past-papers" element={<Navigate to="/past-papers/cambridge" replace />} />
+              <Route path="/igcse-past-papers" element={<Navigate to="/past-papers/cambridge" replace />} />
+              <Route path="/o-level-past-papers" element={<Navigate to="/past-papers/cambridge" replace />} />
+              <Route path="/a-level-past-papers" element={<Navigate to="/past-papers/cambridge" replace />} />
+              <Route path="/past-papers/grade-10" element={<Grade10PastPapersLanding />} />
+              <Route path="/grade-10-past-papers" element={<Navigate to="/past-papers/grade-10" replace />} />
+              <Route path="/past-papers/grade-11" element={<Grade11PastPapersLanding />} />
+              <Route path="/grade-11-past-papers" element={<Navigate to="/past-papers/grade-11" replace />} />
               <Route path="/past-papers/ieb" element={<IebPastPapersLanding />} />
               <Route path="/past-papers/accounting" element={<AccountingPastPapersLanding />} />
               <Route path="/accounting-past-papers" element={<Navigate to="/past-papers/accounting" replace />} />

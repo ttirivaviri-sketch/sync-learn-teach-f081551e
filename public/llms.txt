@@ -1,14 +1,26 @@
 # StudySync
 
-> StudySync connects South African students with verified tutors and an AI-powered StudyMode for curriculum-aligned learning, quizzes, flashcards, and exam prep.
+> StudySync gives learners in South Africa and Zimbabwe free past exam papers with memos, AI exam prep tools (including photo marking of written answers against real papers), verified online tutors and an AI StudyMode — covering Matric/NSC (CAPS), IEB, ZIMSEC O & A Level and Cambridge IGCSE/O/A Level.
 
 ## Pages
 
-- [Home](/): Overview of StudySync — AI study tools, tutor matching, and resource library.
-- [Learner Sign Up](/learner/auth): Create a learner account to access StudyMode and book tutors.
+- [Home](/): Overview of StudySync — past papers, AI exam prep, tutor matching and the resource library.
+- [Exam Prep](/exam-prep): Exam preparation hub — past papers with memos, AI marking of written answers, study tools and tutors.
+- [Past Papers](/past-papers): Free past exam papers with memos for Matric/NSC, IEB, ZIMSEC and Cambridge, sorted by subject, grade and year.
+- [Matric Past Papers](/past-papers/matric): Grade 12 NSC past papers with official memos.
+- [ZIMSEC Past Papers](/past-papers/zimsec): ZIMSEC O Level and A Level past papers with answers for learners in Zimbabwe.
+- [Cambridge Past Papers](/past-papers/cambridge): IGCSE, O Level and AS/A Level past papers with mark schemes.
+- [IEB Past Papers](/past-papers/ieb): IEB Grade 12 past papers with marking guidelines.
+- [Grade 10 Past Papers](/past-papers/grade-10): Grade 10 exam papers with memos for all major subjects.
+- [Grade 11 Past Papers](/past-papers/grade-11): Grade 11 exam papers with memos for all major subjects.
+- [Maths Past Papers](/past-papers/maths): Grade 10–12 Mathematics papers with memos for CAPS/NSC, IEB, Cambridge and ZIMSEC.
+- [Tutoring](/tutoring): Book verified online tutors for Maths, Sciences, English and more.
+- [Books](/books): Free openly licensed textbooks, set works and study guides.
+- [Learner Sign Up](/learner/auth): Create a learner account to access StudyMode, past papers and tutors.
 - [Become a Tutor](/tutor/auth): Apply to join as a verified tutor on StudySync.
 
 ## Optional
 
+- [Community](/community): Free WhatsApp study community for exam students.
 - [Payment Success](/payment-success): Post-checkout confirmation page.
 - [Payment Cancelled](/payment-cancelled): Cancelled checkout page.

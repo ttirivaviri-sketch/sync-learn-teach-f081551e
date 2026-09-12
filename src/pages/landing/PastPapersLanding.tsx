@@ -78,8 +78,8 @@ const PastPapersLanding = () => {
 
   return (
     <LandingPageLayout
-      title="Past Exam Papers &amp; Memos — ZIMSEC, Cambridge, Grade 12"
-      description="Download past exam papers with memos: ZIMSEC O Level & A Level, Cambridge IGCSE, O Level & AS/A Level, and CAPS/NSC Grade 12 matric papers — sorted by subject, grade and year."
+      title="Free Past Exam Papers &amp; Memos — Matric, ZIMSEC, Cambridge, IEB"
+      description="Download free past exam papers with memos and answers: Grade 10–12 Matric/NSC, IEB, ZIMSEC O & A Level and Cambridge IGCSE — sorted by subject, grade and year."
       path="/past-papers"
       faqs={FAQS}
       breadcrumbs={[
@@ -234,6 +234,31 @@ const PastPapersLanding = () => {
             <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/business-studies">
               Browse Business Studies past papers &amp; memos →
             </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing Cambridge exams?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              IGCSE, O Level and AS/A Level past papers with mark schemes — Maths 0580/4024/9709,
+              Sciences, English and more.
+            </p>
+            <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/cambridge">
+              Browse Cambridge past papers →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">In Grade 10 or 11?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Build exam technique before matric with Grade 10 and Grade 11 papers and memos for
+              every major subject.
+            </p>
+            <div className="flex flex-wrap gap-x-4 gap-y-1">
+              <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/grade-10">
+                Grade 10 past papers →
+              </Link>
+              <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/grade-11">
+                Grade 11 past papers →
+              </Link>
+            </div>
           </div>
         </div>
 
