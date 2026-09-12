@@ -179,6 +179,8 @@ export function PaperMarkPanel({
         }
       }
       const paperText = (paperTextRef.current || "").slice(0, PAPER_CONTEXT_CAP);
+      const isMetadataOnly = paperText.startsWith("PAPER METADATA (full text unavailable):");
+      setUsingMetadataFallback(isMetadataOnly);
 
       // 2) Build the marking context. The paper content rides in the
       //    `question` field — the grader treats it as the source questions.
