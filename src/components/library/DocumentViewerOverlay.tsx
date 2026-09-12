@@ -288,7 +288,7 @@ export function DocumentViewerOverlay({
           </div>
 
           {/* ── Side pane: Ask AI chat / Mark my answers ── */}
-          {sidePanel && canRenderInApp && (
+          {sidePanel && (canRenderInApp || (sidePanel === "mark" && canMarkPaper)) && (
             <div className="h-[55%] w-full border-t border-border sm:h-auto sm:w-[340px] sm:border-l sm:border-t-0">
               {sidePanel === "chat" ? (
                 <ResourceChatPanel
@@ -299,7 +299,7 @@ export function DocumentViewerOverlay({
               ) : (
                 <PaperMarkPanel
                   resource={resource}
-                  getDocumentText={extractorReady ? extractorRef.current : null}
+                  getDocumentText={getDocumentTextFallback}
                   onClose={() => setSidePanel(null)}
                 />
               )}
