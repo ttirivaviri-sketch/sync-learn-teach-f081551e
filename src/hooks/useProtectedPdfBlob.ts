@@ -47,9 +47,32 @@ function resolveBase(): string {
  *   b) fall back to `&mode=proxy`, which streams the bytes through the
  *      edge function with CORS headers (papacambridge etc. block CORS).
  */
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+/** Client-side mirror of the edge function's URL kind detection. */
+function detectUrlKind(url: string): "pdf" | "webpage" {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.toLowerCase();
+    if (path.endsWith(".pdf")) return "pdf";
+    if (u.hostname === "assets.openstax.org") return "pdf";
+    if (u.hostname.includes("archive.org") && path.startsWith("/download/")) return "pdf";
+    return "webpage";
+  } catch {
+    return "webpage";
+  }
+}
+
+/**
+ * @param directUrl For seed resources without a DB id: the external PDF URL
+ * itself. When the id isn't a UUID, the hook skips the DB resolve step and
+ * streams this URL instead (direct fetch first, then the allowlisted
+ * `mode=proxy&url=` fallback on the edge function).
+ */
 export function useProtectedPdfBlob(
   resourceId: string | null | undefined,
   source: "system" | "tutorial" | null | undefined,
+  directUrl?: string | null,
 ): State {
   const [state, setState] = useState<State>({
     url: null,
