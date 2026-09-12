@@ -133,18 +133,19 @@ export function DocumentViewerOverlay({
             </h3>
           </div>
           <div className="flex items-center gap-1">
-            {/* Mark my answers — past papers only, needs a readable document */}
-            {canRenderInApp && resource.type === "pastpaper" && (
+            {/* Mark my answers — past papers only, needs a readable URL */}
+            {canMarkPaper && (
               <Button
                 variant={sidePanel === "mark" ? "default" : "outline"}
                 size="sm"
                 className={
                   sidePanel === "mark"
-                    ? "h-8 gap-1.5 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
-                    : "h-8 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    ? "h-8 gap-1.5 px-2 text-xs shrink-0 bg-emerald-600 hover:bg-emerald-700"
+                    : "h-8 gap-1.5 px-2 text-xs shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 }
                 onClick={() => setSidePanel((v) => (v === "mark" ? null : "mark"))}
                 title="Photograph your answers and get them marked against this paper"
+                aria-label="Mark my answers"
               >
                 <ClipboardCheck className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Mark my answers</span>
