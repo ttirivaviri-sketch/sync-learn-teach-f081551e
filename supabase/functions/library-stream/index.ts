@@ -8,6 +8,12 @@
 //
 // Request:  GET /library-stream?id=<resource_uuid>&source=system|tutorial
 // Response: 200 application/json { url, kind } | 4xx/5xx { error }
+//
+// PROXY MODE (`&mode=proxy`): streams the resolved PDF bytes back through
+// this function with CORS headers. Needed by the in-app pdf.js reader —
+// most external paper hosts (e.g. pastpapers.papacambridge.com) don't send
+// Access-Control-Allow-Origin, so the browser cannot fetch their bytes
+// directly. Only PDFs are proxied; webpages still return JSON.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -21,6 +27,9 @@ const corsHeaders = {
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+
+/** Refuse to proxy documents larger than this (bytes). */
+const MAX_PROXY_BYTES = 40 * 1024 * 1024; // 40 MB
 
 function json(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
@@ -81,6 +90,7 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   const source = (url.searchParams.get("source") ?? "").toLowerCase();
+  const mode = (url.searchParams.get("mode") ?? "").toLowerCase();
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(400, { error: "Invalid id" });
   if (source !== "system" && source !== "tutorial") {
     return json(400, { error: "Invalid source" });
@@ -122,6 +132,9 @@ Deno.serve(async (req) => {
   // Case 1: External URL (OpenStax CDN, archive.org, Siyavula, Gutenberg …)
   if (/^https?:\/\//i.test(path)) {
     const kind = detectUrlKind(path);
+    if (mode === "proxy" && kind === "pdf") {
+      return proxyPdf(path);
+    }
     return json(200, { url: path, kind });
   }
 
@@ -132,5 +145,48 @@ Deno.serve(async (req) => {
   if (signErr || !signed?.signedUrl) {
     return json(404, { error: signErr?.message ?? "File missing" });
   }
+  if (mode === "proxy") {
+    return proxyPdf(signed.signedUrl);
+  }
   return json(200, { url: signed.signedUrl, kind: "signed" });
 });
+
+/**
+ * Fetch a remote PDF server-side and stream its bytes back with CORS
+ * headers so the browser's pdf.js reader can consume them.
+ */
+async function proxyPdf(remoteUrl: string): Promise<Response> {
+  let upstream: Response;
+  try {
+    upstream = await fetch(remoteUrl, {
+      redirect: "follow",
+      headers: {
+        // Some paper hosts block requests without a browser-like UA.
+        "User-Agent":
+          "Mozilla/5.0 (compatible; StudySyncReader/1.0; +https://studysync.app)",
+        Accept: "application/pdf,*/*",
+      },
+    });
+  } catch (err) {
+    return json(502, {
+      error: `Upstream fetch failed: ${err instanceof Error ? err.message : "network error"}`,
+    });
+  }
+
+  if (!upstream.ok || !upstream.body) {
+    return json(502, { error: `Upstream returned ${upstream.status}` });
+  }
+
+  const len = Number(upstream.headers.get("content-length") || 0);
+  if (len > MAX_PROXY_BYTES) {
+    return json(413, { error: "Document too large to stream" });
+  }
+
+  const headers = new Headers(corsHeaders);
+  headers.set("Content-Type", "application/pdf");
+  if (len > 0) headers.set("Content-Length", String(len));
+  // Papers are immutable — let the browser/CDN cache aggressively.
+  headers.set("Cache-Control", "public, max-age=86400");
+
+  return new Response(upstream.body, { status: 200, headers });
+}
