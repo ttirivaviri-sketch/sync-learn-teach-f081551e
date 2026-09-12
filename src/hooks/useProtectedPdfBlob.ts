@@ -8,16 +8,19 @@ interface State {
   /** Resolved URL (still exposed for "Open in browser" / webpage kinds). */
   url: string | null;
   /**
-   * Raw PDF bytes for the in-app pdf.js reader. Null while loading, for
-   * webpage kinds, or if both direct and proxied fetches failed (the
-   * viewer then falls back to the iframe/open-in-browser path).
+   * URL pdf.js should stream from (progressive / range requests, so page 1
+   * paints before the whole file arrives). Null for webpage kinds or when
+   * no readable PDF could be resolved.
    */
-  data: ArrayBuffer | null;
+  streamUrl: string | null;
+  /** Headers pdf.js must send (only set when streaming via the proxy). */
+  streamHeaders: Record<string, string> | undefined;
   loading: boolean;
   error: string | null;
   /** Undefined while loading. Set once the edge function responds. */
   kind: PdfKind | undefined;
 }
+
 
 function resolveBase(): string {
   const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
