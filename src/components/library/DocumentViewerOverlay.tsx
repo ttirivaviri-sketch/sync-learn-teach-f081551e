@@ -48,11 +48,12 @@ export function DocumentViewerOverlay({
   const isUuid = /^[0-9a-f-]{36}$/i.test(String(resource.id));
   const directUrl = !isUuid && resource.videoUrl ? resource.videoUrl : null;
 
-  const { url, data, loading, error, kind } = useProtectedPdfBlob(
+  const { url, streamUrl, streamHeaders, loading, error, kind } = useProtectedPdfBlob(
     String(resource.id),
     resource.pdfSource ?? null,
     directUrl,
   );
+
 
   const [sidePanel, setSidePanel] = useState<"chat" | "mark" | null>(null);
   const [pdfRenderFailed, setPdfRenderFailed] = useState(false);
@@ -90,7 +91,7 @@ export function DocumentViewerOverlay({
     );
   }
 
-  const canRenderInApp = !!data && !pdfRenderFailed;
+  const canRenderInApp = !!streamUrl && !pdfRenderFailed;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 p-2 print:hidden sm:p-4">
@@ -237,7 +238,8 @@ export function DocumentViewerOverlay({
             {/* ── In-app scrollable PDF reader (pdf.js) ── */}
             {!loading && url && kind !== "webpage" && canRenderInApp && (
               <PdfJsViewer
-                data={data!}
+                src={streamUrl!}
+                httpHeaders={streamHeaders}
                 title={resource.title}
                 onReady={(extract) => {
                   extractorRef.current = extract;
@@ -246,6 +248,7 @@ export function DocumentViewerOverlay({
                 onError={() => setPdfRenderFailed(true)}
               />
             )}
+
 
             {/* ── Fallback: iframe (bytes unavailable or pdf.js failed) ── */}
             {!loading && url && kind !== "webpage" && !canRenderInApp && (

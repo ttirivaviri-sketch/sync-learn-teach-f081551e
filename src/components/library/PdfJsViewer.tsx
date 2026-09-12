@@ -125,7 +125,9 @@ export function PdfJsViewer({ src, httpHeaders, title, onReady, onError }: PdfJs
       cancelled = true;
       loadedDoc?.destroy?.();
     };
-  }, [data]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, headersKey]);
+
 
   // ── Track which page is in view (for the "3 / 20" indicator) ─────────────
   const handleScroll = useCallback(() => {
