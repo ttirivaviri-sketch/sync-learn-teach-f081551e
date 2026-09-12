@@ -150,10 +150,14 @@ export function useProtectedPdfBlob(
           /* CORS or network — try proxy */
         }
 
-        // (b) Proxy through the edge function.
+        // (b) Proxy through the edge function (allowlisted hosts only for
+        // direct URLs; DB-backed resources proxy their resolved URL).
         if (!bytes && !cancelled) {
           try {
-            const proxied = await fetch(`${endpoint}&mode=proxy`, {
+            const proxyEndpoint = endpoint
+              ? `${endpoint}&mode=proxy`
+              : `${base}/functions/v1/library-stream?mode=proxy&url=${encodeURIComponent(url)}`;
+            const proxied = await fetch(proxyEndpoint, {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (proxied.ok && (proxied.headers.get("content-type") || "").includes("pdf")) {
