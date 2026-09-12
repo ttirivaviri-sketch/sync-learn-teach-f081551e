@@ -47,9 +47,32 @@ function resolveBase(): string {
  *   b) fall back to `&mode=proxy`, which streams the bytes through the
  *      edge function with CORS headers (papacambridge etc. block CORS).
  */
+const UUID_RE = /^[0-9a-f-]{36}$/i;
+
+/** Client-side mirror of the edge function's URL kind detection. */
+function detectUrlKind(url: string): "pdf" | "webpage" {
+  try {
+    const u = new URL(url);
+    const path = u.pathname.toLowerCase();
+    if (path.endsWith(".pdf")) return "pdf";
+    if (u.hostname === "assets.openstax.org") return "pdf";
+    if (u.hostname.includes("archive.org") && path.startsWith("/download/")) return "pdf";
+    return "webpage";
+  } catch {
+    return "webpage";
+  }
+}
+
+/**
+ * @param directUrl For seed resources without a DB id: the external PDF URL
+ * itself. When the id isn't a UUID, the hook skips the DB resolve step and
+ * streams this URL instead (direct fetch first, then the allowlisted
+ * `mode=proxy&url=` fallback on the edge function).
+ */
 export function useProtectedPdfBlob(
   resourceId: string | null | undefined,
   source: "system" | "tutorial" | null | undefined,
+  directUrl?: string | null,
 ): State {
   const [state, setState] = useState<State>({
     url: null,
@@ -67,6 +90,13 @@ export function useProtectedPdfBlob(
       return;
     }
 
+    // Seed/external resources have no DB row — stream the direct URL.
+    const isDbBacked = UUID_RE.test(String(resourceId));
+    if (!isDbBacked && !directUrl) {
+      setState({ url: null, data: null, loading: false, error: "No file attached", kind: undefined });
+      return;
+    }
+
     setState({ url: null, data: null, loading: true, error: null, kind: undefined });
 
     (async () => {
@@ -76,22 +106,32 @@ export function useProtectedPdfBlob(
         if (!token) throw new Error("Not signed in");
 
         const base = resolveBase();
-        const endpoint = `${base}/functions/v1/library-stream?id=${encodeURIComponent(
-          resourceId,
-        )}&source=${source}`;
+        let url: string;
+        let kind: PdfKind;
+        let endpoint: string | null = null;
 
-        const res = await fetch(endpoint, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (isDbBacked) {
+          endpoint = `${base}/functions/v1/library-stream?id=${encodeURIComponent(
+            resourceId,
+          )}&source=${source}`;
 
-        const json = await res.json().catch(() => ({}));
-        if (!res.ok) {
-          throw new Error(json?.error ?? `Request failed (${res.status})`);
+          const res = await fetch(endpoint, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+
+          const json = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(json?.error ?? `Request failed (${res.status})`);
+          }
+          if (!json?.url) throw new Error("No URL returned");
+
+          url = json.url as string;
+          kind = (json.kind as PdfKind | undefined) ?? "external";
+        } else {
+          // Seed resource: stream the known external URL directly.
+          url = directUrl!;
+          kind = detectUrlKind(url) === "webpage" ? "webpage" : "external";
         }
-        if (!json?.url) throw new Error("No URL returned");
-
-        const url = json.url as string;
-        const kind = (json.kind as PdfKind | undefined) ?? "external";
 
         // Webpages can't be read in-app — surface URL only.
         if (kind === "webpage") {
@@ -110,10 +150,14 @@ export function useProtectedPdfBlob(
           /* CORS or network — try proxy */
         }
 
-        // (b) Proxy through the edge function.
+        // (b) Proxy through the edge function (allowlisted hosts only for
+        // direct URLs; DB-backed resources proxy their resolved URL).
         if (!bytes && !cancelled) {
           try {
-            const proxied = await fetch(`${endpoint}&mode=proxy`, {
+            const proxyEndpoint = endpoint
+              ? `${endpoint}&mode=proxy`
+              : `${base}/functions/v1/library-stream?mode=proxy&url=${encodeURIComponent(url)}`;
+            const proxied = await fetch(proxyEndpoint, {
               headers: { Authorization: `Bearer ${token}` },
             });
             if (proxied.ok && (proxied.headers.get("content-type") || "").includes("pdf")) {
@@ -143,7 +187,7 @@ export function useProtectedPdfBlob(
     })();
 
     return () => { cancelled = true; };
-  }, [resourceId, source]);
+  }, [resourceId, source, directUrl]);
 
   return state;
 }

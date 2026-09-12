@@ -91,6 +91,18 @@ Deno.serve(async (req) => {
   const id = url.searchParams.get("id");
   const source = (url.searchParams.get("source") ?? "").toLowerCase();
   const mode = (url.searchParams.get("mode") ?? "").toLowerCase();
+  const directUrl = url.searchParams.get("url");
+
+  // Direct-URL proxy mode: for seed resources with no DB row. Auth is still
+  // required, and the host must be allowlisted so this can't be abused as an
+  // open proxy.
+  if (!id && mode === "proxy" && directUrl) {
+    if (!isAllowedDirectUrl(directUrl)) {
+      return json(403, { error: "URL host not allowed" });
+    }
+    return proxyPdf(directUrl);
+  }
+
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(400, { error: "Invalid id" });
   if (source !== "system" && source !== "tutorial") {
     return json(400, { error: "Invalid source" });
@@ -150,6 +162,34 @@ Deno.serve(async (req) => {
   }
   return json(200, { url: signed.signedUrl, kind: "signed" });
 });
+
+/**
+ * Allowlist for direct-URL proxy mode — hosts we know serve our seeded
+ * public-domain/open-licensed PDFs. Prevents the endpoint being used as an
+ * open proxy.
+ */
+const DIRECT_PROXY_HOSTS = [
+  "assets.openstax.org",
+  "openstax.org",
+  "gutenberg.org",
+  "www.gutenberg.org",
+  "archive.org",
+  "ia800300.us.archive.org",
+];
+
+function isAllowedDirectUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    if (host.endsWith(".supabase.co")) return true; // our own storage
+    return DIRECT_PROXY_HOSTS.some(
+      (h) => host === h || host.endsWith(`.${h}`),
+    ) && detectUrlKind(raw) === "pdf";
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Fetch a remote PDF server-side and stream its bytes back with CORS
