@@ -922,11 +922,11 @@ export function useLibraryResources(
     ? personalizedResources.filter((r) => {
         const q = searchQuery.toLowerCase();
         return (
-          r.title.toLowerCase().includes(q) ||
-          r.author.toLowerCase().includes(q) ||
-          r.category.toLowerCase().includes(q) ||
-          r.summary.toLowerCase().includes(q) ||
-          r.tags?.subject.toLowerCase().includes(q) ||
+          (r.title || "").toLowerCase().includes(q) ||
+          (r.author || "").toLowerCase().includes(q) ||
+          (r.category || "").toLowerCase().includes(q) ||
+          (r.summary || "").toLowerCase().includes(q) ||
+          (r.tags?.subject || "").toLowerCase().includes(q) ||
           r.tags?.topic?.toLowerCase().includes(q) ||
           r.tags?.subtopic?.toLowerCase().includes(q) ||
           false
