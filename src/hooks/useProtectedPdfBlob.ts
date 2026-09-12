@@ -90,6 +90,13 @@ export function useProtectedPdfBlob(
       return;
     }
 
+    // Seed/external resources have no DB row — stream the direct URL.
+    const isDbBacked = UUID_RE.test(String(resourceId));
+    if (!isDbBacked && !directUrl) {
+      setState({ url: null, data: null, loading: false, error: "No file attached", kind: undefined });
+      return;
+    }
+
     setState({ url: null, data: null, loading: true, error: null, kind: undefined });
 
     (async () => {
