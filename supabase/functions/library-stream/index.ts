@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     if (!isAllowedDirectUrl(directUrl)) {
       return json(403, { error: "URL host not allowed" });
     }
-    return proxyPdf(directUrl);
+    return proxyPdf(directUrl, req.headers.get("Range"));
   }
 
   if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return json(400, { error: "Invalid id" });
@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
   if (/^https?:\/\//i.test(path)) {
     const kind = detectUrlKind(path);
     if (mode === "proxy" && kind === "pdf") {
-      return proxyPdf(path);
+      return proxyPdf(path, req.headers.get("Range"));
     }
     return json(200, { url: path, kind });
   }
@@ -158,7 +158,7 @@ Deno.serve(async (req) => {
     return json(404, { error: signErr?.message ?? "File missing" });
   }
   if (mode === "proxy") {
-    return proxyPdf(signed.signedUrl);
+    return proxyPdf(signed.signedUrl, req.headers.get("Range"));
   }
   return json(200, { url: signed.signedUrl, kind: "signed" });
 });
@@ -195,7 +195,7 @@ function isAllowedDirectUrl(raw: string): boolean {
  * Fetch a remote PDF server-side and stream its bytes back with CORS
  * headers so the browser's pdf.js reader can consume them.
  */
-async function proxyPdf(remoteUrl: string): Promise<Response> {
+async function proxyPdf(remoteUrl: string, range?: string | null): Promise<Response> {
   let upstream: Response;
   try {
     upstream = await fetch(remoteUrl, {
@@ -205,6 +205,9 @@ async function proxyPdf(remoteUrl: string): Promise<Response> {
         "User-Agent":
           "Mozilla/5.0 (compatible; StudySyncReader/1.0; +https://studysync.app)",
         Accept: "application/pdf,*/*",
+        // Forward the reader's byte range so pdf.js can render page 1
+        // without downloading the whole document.
+        ...(range ? { Range: range } : {}),
       },
     });
   } catch (err) {
@@ -213,7 +216,10 @@ async function proxyPdf(remoteUrl: string): Promise<Response> {
     });
   }
 
-  if (!upstream.ok || !upstream.body) {
+  if (!upstream.ok && upstream.status !== 206) {
+    return json(502, { error: `Upstream returned ${upstream.status}` });
+  }
+  if (!upstream.body) {
     return json(502, { error: `Upstream returned ${upstream.status}` });
   }
 
@@ -224,9 +230,15 @@ async function proxyPdf(remoteUrl: string): Promise<Response> {
 
   const headers = new Headers(corsHeaders);
   headers.set("Content-Type", "application/pdf");
+  headers.set("Accept-Ranges", "bytes");
   if (len > 0) headers.set("Content-Length", String(len));
+  const contentRange = upstream.headers.get("content-range");
+  if (contentRange) headers.set("Content-Range", contentRange);
   // Papers are immutable — let the browser/CDN cache aggressively.
   headers.set("Cache-Control", "public, max-age=86400");
 
-  return new Response(upstream.body, { status: 200, headers });
+  return new Response(upstream.body, {
+    status: upstream.status === 206 ? 206 : 200,
+    headers,
+  });
 }
