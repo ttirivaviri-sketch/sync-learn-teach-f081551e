@@ -11,6 +11,10 @@
  * Reuses the proven photo-solve engine (multimodal Gemini) — the paper
  * text rides in the `question` context field, so no edge-function changes
  * or redeploys are needed.
+ *
+ * After marking, "Practice this question type" hands the graded result to
+ * PhotoSolvePractice, which generates 5 isomorphic variants (same method &
+ * marks, new values) drilling the exact steps the student got wrong.
  */
 import { useCallback, useRef, useState } from "react";
 import {
@@ -24,6 +28,7 @@ import {
   RefreshCcw,
   Sparkles,
   ClipboardCheck,
+  Target,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -33,6 +38,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { aiRequestJSON } from "@/studymode/lib/aiClient";
 import { MathMarkdown } from "@/studymode/components/MathMarkdown";
 import type { PhotoSolveResult } from "@/studymode/components/PhotoSolvePanel";
+import { PhotoSolvePractice } from "@/studymode/components/PhotoSolvePractice";
 import { imageCompressionParams } from "@/lib/dataSaver";
 import type { LibraryResource } from "@/types/academicProfile";
 
@@ -123,6 +129,8 @@ export function PaperMarkPanel({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<PhotoSolveResult | null>(null);
   const [showSolution, setShowSolution] = useState(false);
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [practising, setPractising] = useState(false);
   const paperTextRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -199,22 +207,28 @@ export function PaperMarkPanel({
         const { data: userData } = await supabase.auth.getUser();
         const uid = userData?.user?.id;
         if (uid) {
-          await supabase.from("photo_solve_attempts").insert({
-            user_id: uid,
-            subject_name: subject ?? null,
-            topic_name: resource.title ?? null,
-            curriculum: resource.tags?.curriculum ?? null,
-            question_detected: data.question_detected || null,
-            final_answer: data.final_answer || null,
-            final_answer_correct: data.final_answer_correct,
-            steps: data.steps,
-            missed_steps: data.missed_steps,
-            next_hint: data.next_hint || null,
-            model_solution: data.model_solution || null,
-            confidence: data.confidence,
-            marks_awarded: data.marks_awarded,
-            marks_possible: data.marks_possible,
-          } as never);
+          const { data: row, error: insErr } = await supabase
+            .from("photo_solve_attempts")
+            .insert({
+              user_id: uid,
+              subject_name: subject ?? null,
+              topic_name: resource.title ?? null,
+              curriculum: resource.tags?.curriculum ?? null,
+              question_detected: data.question_detected || null,
+              final_answer: data.final_answer || null,
+              final_answer_correct: data.final_answer_correct,
+              steps: data.steps,
+              missed_steps: data.missed_steps,
+              next_hint: data.next_hint || null,
+              model_solution: data.model_solution || null,
+              confidence: data.confidence,
+              marks_awarded: data.marks_awarded,
+              marks_possible: data.marks_possible,
+            } as never)
+            .select("id")
+            .single();
+          if (insErr) logger.warn("paper-mark attempt persist failed", insErr);
+          else setAttemptId((row as { id?: string } | null)?.id ?? null);
         }
       } catch (persistErr) {
         logger.warn("paper-mark attempt persistence failed:", persistErr);
@@ -235,12 +249,43 @@ export function PaperMarkPanel({
     setResult(null);
     setError(null);
     setShowSolution(false);
+    setAttemptId(null);
+    setPractising(false);
   };
+
+  // Practice is worthwhile when we know the question and its solution, and
+  // there is something to fix (any non-correct step, missed step, or a wrong
+  // final answer).
+  const canPractise =
+    !!result &&
+    !!result.question_detected &&
+    !!result.model_solution &&
+    (result.final_answer_correct === false ||
+      result.steps?.some((s) => s.verdict !== "correct") ||
+      (result.missed_steps?.length ?? 0) > 0);
 
   const scorePct =
     result && result.marks_possible > 0
       ? Math.round((result.marks_awarded / result.marks_possible) * 100)
       : null;
+
+  // ── Practice mode: isomorphic variants of the marked paper question ──────
+  if (practising && result) {
+    return (
+      <div className="flex h-full flex-col bg-background">
+        <div className="flex-1 overflow-y-auto p-3">
+          <PhotoSolvePractice
+            original={result}
+            attemptId={attemptId}
+            subjectName={subject}
+            topicName={resource.title}
+            curriculum={resource.tags?.curriculum ?? null}
+            onBack={() => setPractising(false)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-full flex-col bg-background">
@@ -476,6 +521,17 @@ export function PaperMarkPanel({
                   </div>
                 )}
               </div>
+            )}
+
+            {canPractise && (
+              <Button
+                size="sm"
+                className="w-full gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+                onClick={() => setPractising(true)}
+              >
+                <Target className="h-3.5 w-3.5" />
+                Practice this question type
+              </Button>
             )}
 
             <Button
