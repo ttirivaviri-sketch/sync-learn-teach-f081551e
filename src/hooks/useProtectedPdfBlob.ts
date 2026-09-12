@@ -8,16 +8,19 @@ interface State {
   /** Resolved URL (still exposed for "Open in browser" / webpage kinds). */
   url: string | null;
   /**
-   * Raw PDF bytes for the in-app pdf.js reader. Null while loading, for
-   * webpage kinds, or if both direct and proxied fetches failed (the
-   * viewer then falls back to the iframe/open-in-browser path).
+   * URL pdf.js should stream from (progressive / range requests, so page 1
+   * paints before the whole file arrives). Null for webpage kinds or when
+   * no readable PDF could be resolved.
    */
-  data: ArrayBuffer | null;
+  streamUrl: string | null;
+  /** Headers pdf.js must send (only set when streaming via the proxy). */
+  streamHeaders: Record<string, string> | undefined;
   loading: boolean;
   error: string | null;
   /** Undefined while loading. Set once the edge function responds. */
   kind: PdfKind | undefined;
 }
+
 
 function resolveBase(): string {
   const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
@@ -76,7 +79,8 @@ export function useProtectedPdfBlob(
 ): State {
   const [state, setState] = useState<State>({
     url: null,
-    data: null,
+    streamUrl: null,
+    streamHeaders: undefined,
     loading: !!resourceId,
     error: null,
     kind: undefined,
@@ -84,20 +88,28 @@ export function useProtectedPdfBlob(
 
   useEffect(() => {
     let cancelled = false;
+    const idle: State = {
+      url: null,
+      streamUrl: null,
+      streamHeaders: undefined,
+      loading: false,
+      error: null,
+      kind: undefined,
+    };
 
     if (!resourceId || !source) {
-      setState({ url: null, data: null, loading: false, error: null, kind: undefined });
+      setState(idle);
       return;
     }
 
     // Seed/external resources have no DB row — stream the direct URL.
     const isDbBacked = UUID_RE.test(String(resourceId));
     if (!isDbBacked && !directUrl) {
-      setState({ url: null, data: null, loading: false, error: "No file attached", kind: undefined });
+      setState({ ...idle, error: "No file attached" });
       return;
     }
 
-    setState({ url: null, data: null, loading: true, error: null, kind: undefined });
+    setState({ ...idle, loading: true });
 
     (async () => {
       try {
@@ -135,54 +147,55 @@ export function useProtectedPdfBlob(
 
         // Webpages can't be read in-app — surface URL only.
         if (kind === "webpage") {
-          if (!cancelled) setState({ url, data: null, loading: false, error: null, kind });
+          if (!cancelled) setState({ ...idle, url, kind });
           return;
         }
 
-        // ── Fetch PDF bytes for the in-app reader ──────────────────────────
-        let bytes: ArrayBuffer | null = null;
-
-        // (a) Direct fetch — free, works for CORS-enabled hosts.
+        // ── Pick a streamable source for pdf.js ───────────────────────────
+        // pdf.js fetches the file itself with range requests, so the first
+        // page paints without downloading the whole PDF. We only probe the
+        // first bytes here to decide whether CORS allows a direct stream.
+        let directOk = false;
         try {
-          const direct = await fetch(url, { headers: { Accept: "application/pdf,*/*" } });
-          if (direct.ok) bytes = await direct.arrayBuffer();
-        } catch {
-          /* CORS or network — try proxy */
-        }
-
-        // (b) Proxy through the edge function (allowlisted hosts only for
-        // direct URLs; DB-backed resources proxy their resolved URL).
-        if (!bytes && !cancelled) {
-          try {
-            const proxyEndpoint = endpoint
-              ? `${endpoint}&mode=proxy`
-              : `${base}/functions/v1/library-stream?mode=proxy&url=${encodeURIComponent(url)}`;
-            const proxied = await fetch(proxyEndpoint, {
-              headers: { Authorization: `Bearer ${token}` },
-            });
-            if (proxied.ok && (proxied.headers.get("content-type") || "").includes("pdf")) {
-              bytes = await proxied.arrayBuffer();
-            }
-          } catch {
-            /* fall through — viewer will use iframe fallback */
+          const probe = await fetch(url, {
+            headers: { Range: "bytes=0-1023", Accept: "application/pdf,*/*" },
+          });
+          if (probe.ok || probe.status === 206) {
+            const head = new Uint8Array(await probe.arrayBuffer()).subarray(0, 4);
+            directOk =
+              head.length < 4 ||
+              String.fromCharCode(...head) === "%PDF" ||
+              probe.status === 206;
           }
-        }
-
-        // Sanity: PDF files start with "%PDF".
-        if (bytes && bytes.byteLength >= 4) {
-          const head = new Uint8Array(bytes, 0, 4);
-          const sig = String.fromCharCode(...head);
-          if (sig !== "%PDF") bytes = null;
-        } else {
-          bytes = null;
+        } catch {
+          /* CORS or network — stream through the proxy instead */
         }
 
         if (cancelled) return;
-        setState({ url, data: bytes, loading: false, error: null, kind });
+
+        if (directOk) {
+          setState({ url, streamUrl: url, streamHeaders: undefined, loading: false, error: null, kind });
+          return;
+        }
+
+        // Proxy through the edge function (adds CORS headers; allowlisted
+        // hosts only for direct URLs).
+        const proxyUrl = endpoint
+          ? `${endpoint}&mode=proxy`
+          : `${base}/functions/v1/library-stream?mode=proxy&url=${encodeURIComponent(url)}`;
+
+        setState({
+          url,
+          streamUrl: proxyUrl,
+          streamHeaders: { Authorization: `Bearer ${token}` },
+          loading: false,
+          error: null,
+          kind,
+        });
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Failed to load";
-        setState({ url: null, data: null, loading: false, error: msg, kind: undefined });
+        setState({ ...idle, error: msg });
       }
     })();
 
@@ -190,4 +203,5 @@ export function useProtectedPdfBlob(
   }, [resourceId, source, directUrl]);
 
   return state;
+
 }
