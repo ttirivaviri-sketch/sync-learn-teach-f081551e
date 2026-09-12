@@ -132,7 +132,7 @@ export function DocumentViewerOverlay({
               {resource.title}
             </h3>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex max-w-[65%] items-center gap-1 overflow-x-auto sm:max-w-none sm:overflow-visible">
             {/* Mark my answers — past papers only, needs a readable URL */}
             {canMarkPaper && (
               <Button
@@ -140,8 +140,8 @@ export function DocumentViewerOverlay({
                 size="sm"
                 className={
                   sidePanel === "mark"
-                    ? "h-8 gap-1.5 px-2 text-xs shrink-0 bg-emerald-600 hover:bg-emerald-700"
-                    : "h-8 gap-1.5 px-2 text-xs shrink-0 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    ? "h-8 shrink-0 gap-1.5 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    : "h-8 shrink-0 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 }
                 onClick={() => setSidePanel((v) => (v === "mark" ? null : "mark"))}
                 title="Photograph your answers and get them marked against this paper"
@@ -156,9 +156,10 @@ export function DocumentViewerOverlay({
               <Button
                 variant={sidePanel === "chat" ? "default" : "outline"}
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs"
                 onClick={() => setSidePanel((v) => (v === "chat" ? null : "chat"))}
                 title="Ask AI about this document"
+                aria-label="Ask AI"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Ask AI</span>
