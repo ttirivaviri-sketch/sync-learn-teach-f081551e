@@ -92,6 +92,31 @@ export function DocumentViewerOverlay({
   }
 
   const canRenderInApp = !!streamUrl && !pdfRenderFailed;
+  const isPastPaper = resource.type === "pastpaper";
+  // "Mark my answers" should be available for any past paper we can open,
+  // even when the browser falls back to the iframe viewer. The panel will
+  // fall back to paper metadata if pdf.js text extraction isn't available.
+  const canMarkPaper = isPastPaper && !!url;
+
+  // Lazy extractor that prefers pdf.js text, but falls back to paper metadata
+  // so marking still works when the document is rendered via iframe.
+  const getDocumentTextFallback = async (): Promise<string> => {
+    if (extractorReady && extractorRef.current) {
+      return extractorRef.current();
+    }
+    const bits = [
+      resource.title,
+      resource.paperMeta?.year ? `Year: ${resource.paperMeta.year}` : "",
+      resource.paperMeta?.session ? `Session: ${resource.paperMeta.session}` : "",
+      resource.paperMeta?.paperNumber ? `Paper: ${resource.paperMeta.paperNumber}` : "",
+      resource.tags?.subject ? `Subject: ${resource.tags.subject}` : "",
+      resource.tags?.curriculum ? `Curriculum: ${resource.tags.curriculum}` : "",
+      resource.tags?.grade ? `Grade: ${resource.tags.grade}` : resource.gradeLevel ? `Grade: ${resource.gradeLevel}` : "",
+    ].filter(Boolean);
+    return bits.length
+      ? `PAPER METADATA (full text unavailable):\n${bits.join("\n")}`
+      : "";
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 p-2 print:hidden sm:p-4">
@@ -107,19 +132,20 @@ export function DocumentViewerOverlay({
               {resource.title}
             </h3>
           </div>
-          <div className="flex items-center gap-1">
-            {/* Mark my answers — past papers only, needs a readable document */}
-            {canRenderInApp && resource.type === "pastpaper" && (
+          <div className="flex max-w-[65%] items-center gap-1 overflow-x-auto sm:max-w-none sm:overflow-visible">
+            {/* Mark my answers — past papers only, needs a readable URL */}
+            {canMarkPaper && (
               <Button
                 variant={sidePanel === "mark" ? "default" : "outline"}
                 size="sm"
                 className={
                   sidePanel === "mark"
-                    ? "h-8 gap-1.5 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
-                    : "h-8 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                    ? "h-8 shrink-0 gap-1.5 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    : "h-8 shrink-0 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 }
                 onClick={() => setSidePanel((v) => (v === "mark" ? null : "mark"))}
                 title="Photograph your answers and get them marked against this paper"
+                aria-label="Mark my answers"
               >
                 <ClipboardCheck className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Mark my answers</span>
@@ -130,9 +156,10 @@ export function DocumentViewerOverlay({
               <Button
                 variant={sidePanel === "chat" ? "default" : "outline"}
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs"
                 onClick={() => setSidePanel((v) => (v === "chat" ? null : "chat"))}
                 title="Ask AI about this document"
+                aria-label="Ask AI"
               >
                 <Sparkles className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Ask AI</span>
@@ -143,7 +170,7 @@ export function DocumentViewerOverlay({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 onClick={() =>
                   window.open(
                     resource.paperMeta!.markingSchemeUrl!,
@@ -152,6 +179,7 @@ export function DocumentViewerOverlay({
                   )
                 }
                 title="Open marking scheme"
+                aria-label="Open marking scheme"
               >
                 <ClipboardCheck className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Marking scheme</span>
@@ -162,15 +190,22 @@ export function DocumentViewerOverlay({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs"
                 onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
                 title="Open in new tab"
+                aria-label="Open in new tab"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Open in browser</span>
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="h-8 px-2" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 px-2"
+              onClick={onClose}
+              aria-label="Close viewer"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -262,7 +297,7 @@ export function DocumentViewerOverlay({
           </div>
 
           {/* ── Side pane: Ask AI chat / Mark my answers ── */}
-          {sidePanel && canRenderInApp && (
+          {sidePanel && (canRenderInApp || (sidePanel === "mark" && canMarkPaper)) && (
             <div className="h-[55%] w-full border-t border-border sm:h-auto sm:w-[340px] sm:border-l sm:border-t-0">
               {sidePanel === "chat" ? (
                 <ResourceChatPanel
@@ -273,7 +308,7 @@ export function DocumentViewerOverlay({
               ) : (
                 <PaperMarkPanel
                   resource={resource}
-                  getDocumentText={extractorReady ? extractorRef.current : null}
+                  getDocumentText={getDocumentTextFallback}
                   onClose={() => setSidePanel(null)}
                 />
               )}

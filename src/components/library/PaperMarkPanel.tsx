@@ -131,6 +131,7 @@ export function PaperMarkPanel({
   const [showSolution, setShowSolution] = useState(false);
   const [attemptId, setAttemptId] = useState<string | null>(null);
   const [practising, setPractising] = useState(false);
+  const [usingMetadataFallback, setUsingMetadataFallback] = useState(false);
   const paperTextRef = useRef<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -178,6 +179,8 @@ export function PaperMarkPanel({
         }
       }
       const paperText = (paperTextRef.current || "").slice(0, PAPER_CONTEXT_CAP);
+      const isMetadataOnly = paperText.startsWith("PAPER METADATA (full text unavailable):");
+      setUsingMetadataFallback(isMetadataOnly);
 
       // 2) Build the marking context. The paper content rides in the
       //    `question` field — the grader treats it as the source questions.
@@ -317,6 +320,14 @@ export function PaperMarkPanel({
               I'll identify the question, mark each step like an examiner, and
               show you what earns the marks.
             </p>
+
+            {usingMetadataFallback && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                I can't read this paper's full text, but I can still mark from
+                your photo. Results may be less precise than when the full paper
+                is loaded.
+              </p>
+            )}
 
             {/* Hidden inputs */}
             <input
