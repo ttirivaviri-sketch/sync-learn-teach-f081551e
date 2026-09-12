@@ -39,9 +39,15 @@ export function DocumentViewerOverlay({
   resource,
   onClose,
 }: DocumentViewerOverlayProps) {
+  // Seed resources (non-UUID ids) have no DB row — stream their external
+  // URL directly instead of bouncing the learner out to a new tab.
+  const isUuid = /^[0-9a-f-]{36}$/i.test(String(resource.id));
+  const directUrl = !isUuid && resource.videoUrl ? resource.videoUrl : null;
+
   const { url, data, loading, error, kind } = useProtectedPdfBlob(
     String(resource.id),
     resource.pdfSource ?? null,
+    directUrl,
   );
 
   const [showChat, setShowChat] = useState(false);

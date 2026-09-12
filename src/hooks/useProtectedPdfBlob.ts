@@ -187,7 +187,7 @@ export function useProtectedPdfBlob(
     })();
 
     return () => { cancelled = true; };
-  }, [resourceId, source]);
+  }, [resourceId, source, directUrl]);
 
   return state;
 }
