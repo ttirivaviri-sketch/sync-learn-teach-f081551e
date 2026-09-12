@@ -7749,6 +7749,10 @@ export type Database = {
         Args: { p_ids: string[] }
         Returns: undefined
       }
+      can_read_school_ai_document: {
+        Args: { _document_id: string }
+        Returns: boolean
+      }
       check_ai_rate_limit: {
         Args: {
           _fn: string
