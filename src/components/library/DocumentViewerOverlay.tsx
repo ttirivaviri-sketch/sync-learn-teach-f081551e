@@ -170,7 +170,7 @@ export function DocumentViewerOverlay({
               <Button
                 variant="outline"
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                 onClick={() =>
                   window.open(
                     resource.paperMeta!.markingSchemeUrl!,
@@ -179,6 +179,7 @@ export function DocumentViewerOverlay({
                   )
                 }
                 title="Open marking scheme"
+                aria-label="Open marking scheme"
               >
                 <ClipboardCheck className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Marking scheme</span>
@@ -189,15 +190,22 @@ export function DocumentViewerOverlay({
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-8 gap-1.5 px-2 text-xs"
+                className="h-8 shrink-0 gap-1.5 px-2 text-xs"
                 onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
                 title="Open in new tab"
+                aria-label="Open in new tab"
               >
                 <ExternalLink className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Open in browser</span>
               </Button>
             )}
-            <Button variant="ghost" size="sm" className="h-8 px-2" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 shrink-0 px-2"
+              onClick={onClose}
+              aria-label="Close viewer"
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
