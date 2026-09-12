@@ -321,6 +321,14 @@ export function PaperMarkPanel({
               show you what earns the marks.
             </p>
 
+            {usingMetadataFallback && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">
+                I can't read this paper's full text, but I can still mark from
+                your photo. Results may be less precise than when the full paper
+                is loaded.
+              </p>
+            )}
+
             {/* Hidden inputs */}
             <input
               ref={cameraInputRef}
