@@ -27,9 +27,16 @@ export const DEFAULT_OG_IMAGE = "/og/home.jpg";
 export const ROUTE_SEO: RouteSeo[] = [
   {
     path: "/",
-    title: "Past Papers & Tutors: IEB, Matric, ZIMSEC, Cambridge, NSC | StudySync",
+    title: "Free Past Papers & Exam Prep — Matric, IEB, ZIMSEC | StudySync",
     description:
-      "IEB, Matric and ZIMSEC past papers with memos, verified tutors and AI study tools for learners in South Africa and Zimbabwe. CAPS/NSC and Cambridge too.",
+      "Free past exam papers with memos, AI exam prep and verified tutors for Matric/NSC, IEB, ZIMSEC, Cambridge and CAPS learners in South Africa and Zimbabwe.",
+    image: "/og/home.jpg",
+  },
+  {
+    path: "/exam-prep",
+    title: "Exam Prep for Matric, IEB, ZIMSEC & Cambridge | StudySync",
+    description:
+      "Exam preparation help for Grade 10–12: past papers with memos, AI study tools, photo marking against real exam papers and verified tutors — South Africa and Zimbabwe.",
     image: "/og/home.jpg",
   },
   {
@@ -48,9 +55,9 @@ export const ROUTE_SEO: RouteSeo[] = [
   },
   {
     path: "/past-papers",
-    title: "Past Exam Papers & Memos — ZIMSEC, Cambridge, Grade 12",
+    title: "Free Past Exam Papers & Memos — Matric, ZIMSEC, Cambridge, IEB",
     description:
-      "Download past exam papers with memos: ZIMSEC O & A Level, Cambridge IGCSE, O/A Level, and CAPS/NSC Grade 12 matric — sorted by subject, grade and year.",
+      "Download free past exam papers with memos and answers: Grade 10–12 Matric/NSC, IEB, ZIMSEC O & A Level and Cambridge IGCSE — sorted by subject, grade and year.",
     image: "/og/home.jpg",
   },
   {
@@ -62,9 +69,16 @@ export const ROUTE_SEO: RouteSeo[] = [
   },
   {
     path: "/past-papers/zimsec",
-    title: "ZIMSEC Past Papers & Answers — O & A Level | StudySync",
+    title: "ZIMSEC Past Papers Free Download — O Level & A Level | StudySync",
     description:
-      "Practise ZIMSEC O Level and A Level past exam papers with answers — Mathematics, Combined Science, English and more, sorted by subject, level and year.",
+      "Free ZIMSEC O Level and A Level past exam papers with answers — Mathematics, Combined Science, English, Accounts and more, sorted by subject, level and year.",
+    image: "/og/home.jpg",
+  },
+  {
+    path: "/past-papers/cambridge",
+    title: "Cambridge Past Papers — IGCSE, O Level & A Level | StudySync",
+    description:
+      "Practise Cambridge IGCSE, O Level and AS/A Level past exam papers with mark schemes — Maths, Sciences, English and more, sorted by subject, level and year.",
     image: "/og/home.jpg",
   },
   {
@@ -107,6 +121,20 @@ export const ROUTE_SEO: RouteSeo[] = [
     title: "Business Studies Past Papers & Memos — Grade 10-12",
     description:
       "Grade 10, 11 and 12 Business Studies past papers with memos for CAPS/NSC matric and IEB — business environments, operations, marketing and management essays.",
+    image: "/og/home.jpg",
+  },
+  {
+    path: "/past-papers/grade-10",
+    title: "Grade 10 Past Papers & Memos — All Subjects | StudySync",
+    description:
+      "Free Grade 10 past exam papers with memos — Mathematics, Physical Sciences, Life Sciences, Accounting and English for CAPS/NSC and IEB, sorted by year.",
+    image: "/og/home.jpg",
+  },
+  {
+    path: "/past-papers/grade-11",
+    title: "Grade 11 Past Papers & Memos — All Subjects | StudySync",
+    description:
+      "Grade 11 past exam papers with memos for every major subject — Maths, Physical Sciences, Life Sciences, Accounting and English — CAPS/NSC and IEB, free to practise.",
     image: "/og/home.jpg",
   },
   {
