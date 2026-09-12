@@ -5,25 +5,47 @@ import { supabase } from "@/integrations/supabase/client";
 export type PdfKind = "external" | "signed" | "webpage";
 
 interface State {
+  /** Resolved URL (still exposed for "Open in browser" / webpage kinds). */
   url: string | null;
+  /**
+   * Raw PDF bytes for the in-app pdf.js reader. Null while loading, for
+   * webpage kinds, or if both direct and proxied fetches failed (the
+   * viewer then falls back to the iframe/open-in-browser path).
+   */
+  data: ArrayBuffer | null;
   loading: boolean;
   error: string | null;
   /** Undefined while loading. Set once the edge function responds. */
   kind: PdfKind | undefined;
 }
 
+function resolveBase(): string {
+  const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+  const fallbackUrl = (supabase as unknown as { supabaseUrl?: string })?.supabaseUrl;
+  return (
+    envUrl ||
+    (projectId ? `https://${projectId}.supabase.co` : undefined) ||
+    fallbackUrl?.replace(/\/$/, "") ||
+    "https://uynoykcratwbcdzmsxfw.supabase.co"
+  );
+}
+
 /**
- * Resolves a library resource to a directly-usable URL by calling the
- * authenticated `library-stream` Edge Function.
+ * Resolves a library resource to something the in-app reader can render by
+ * calling the authenticated `library-stream` Edge Function.
  *
- * The edge function returns { url, kind } where kind is one of:
- *   "external"  — a direct, publicly-accessible PDF URL (OpenStax, archive.org)
+ * Step 1 — resolve: GET /library-stream?id&source → { url, kind }
+ *   "external"  — direct, publicly-accessible PDF URL (OpenStax, archive.org)
  *   "signed"    — a time-limited Supabase Storage signed URL
- *   "webpage"   — the stored path is an HTML page (Siyavula, CK-12, Gutenberg)
- *                 that cannot be iframed — caller should open in new tab.
+ *   "webpage"   — HTML page (Siyavula, CK-12, Gutenberg) — open in new tab.
  *
- * The hook surfaces `kind` so the DocumentViewerOverlay can pick the right
- * rendering strategy.
+ * Step 2 — for PDF kinds, fetch the actual bytes so pdf.js can render a
+ * real scrollable document (iframes show only page 1 on iOS Safari):
+ *   a) direct fetch of the resolved URL (works when the host sends CORS
+ *      headers — Supabase signed URLs always do);
+ *   b) fall back to `&mode=proxy`, which streams the bytes through the
+ *      edge function with CORS headers (papacambridge etc. block CORS).
  */
 export function useProtectedPdfBlob(
   resourceId: string | null | undefined,
@@ -31,6 +53,7 @@ export function useProtectedPdfBlob(
 ): State {
   const [state, setState] = useState<State>({
     url: null,
+    data: null,
     loading: !!resourceId,
     error: null,
     kind: undefined,
@@ -40,11 +63,11 @@ export function useProtectedPdfBlob(
     let cancelled = false;
 
     if (!resourceId || !source) {
-      setState({ url: null, loading: false, error: null, kind: undefined });
+      setState({ url: null, data: null, loading: false, error: null, kind: undefined });
       return;
     }
 
-    setState({ url: null, loading: true, error: null, kind: undefined });
+    setState({ url: null, data: null, loading: true, error: null, kind: undefined });
 
     (async () => {
       try {
@@ -52,15 +75,7 @@ export function useProtectedPdfBlob(
         const token = sessionData.session?.access_token;
         if (!token) throw new Error("Not signed in");
 
-        const envUrl = (import.meta.env.VITE_SUPABASE_URL as string | undefined)?.replace(/\/$/, "");
-        const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
-        const fallbackUrl = (supabase as unknown as { supabaseUrl?: string })?.supabaseUrl;
-        const base =
-          envUrl ||
-          (projectId ? `https://${projectId}.supabase.co` : undefined) ||
-          fallbackUrl?.replace(/\/$/, "") ||
-          "https://uynoykcratwbcdzmsxfw.supabase.co";
-
+        const base = resolveBase();
         const endpoint = `${base}/functions/v1/library-stream?id=${encodeURIComponent(
           resourceId,
         )}&source=${source}`;
@@ -75,17 +90,55 @@ export function useProtectedPdfBlob(
         }
         if (!json?.url) throw new Error("No URL returned");
 
+        const url = json.url as string;
+        const kind = (json.kind as PdfKind | undefined) ?? "external";
+
+        // Webpages can't be read in-app — surface URL only.
+        if (kind === "webpage") {
+          if (!cancelled) setState({ url, data: null, loading: false, error: null, kind });
+          return;
+        }
+
+        // ── Fetch PDF bytes for the in-app reader ──────────────────────────
+        let bytes: ArrayBuffer | null = null;
+
+        // (a) Direct fetch — free, works for CORS-enabled hosts.
+        try {
+          const direct = await fetch(url, { headers: { Accept: "application/pdf,*/*" } });
+          if (direct.ok) bytes = await direct.arrayBuffer();
+        } catch {
+          /* CORS or network — try proxy */
+        }
+
+        // (b) Proxy through the edge function.
+        if (!bytes && !cancelled) {
+          try {
+            const proxied = await fetch(`${endpoint}&mode=proxy`, {
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            if (proxied.ok && (proxied.headers.get("content-type") || "").includes("pdf")) {
+              bytes = await proxied.arrayBuffer();
+            }
+          } catch {
+            /* fall through — viewer will use iframe fallback */
+          }
+        }
+
+        // Sanity: PDF files start with "%PDF".
+        if (bytes && bytes.byteLength >= 4) {
+          const head = new Uint8Array(bytes, 0, 4);
+          const sig = String.fromCharCode(...head);
+          if (sig !== "%PDF") bytes = null;
+        } else {
+          bytes = null;
+        }
+
         if (cancelled) return;
-        setState({
-          url: json.url as string,
-          loading: false,
-          error: null,
-          kind: (json.kind as PdfKind | undefined) ?? "external",
-        });
+        setState({ url, data: bytes, loading: false, error: null, kind });
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Failed to load";
-        setState({ url: null, loading: false, error: msg, kind: undefined });
+        setState({ url: null, data: null, loading: false, error: msg, kind: undefined });
       }
     })();
 
