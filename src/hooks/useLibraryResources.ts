@@ -6,6 +6,7 @@ import {
   curriculumMatches as curriculumMatchesShared,
   gradeMatches as gradeMatchesShared,
   subjectMatches as subjectMatchesShared,
+  canonicalSubjectKey,
 } from "@/lib/personalization";
 
 /** Try to extract a video URL from a text string (description, summary, etc.) */
@@ -662,21 +663,35 @@ export function useLibraryResources(
         RESOURCE_CACHE = { data: phase1, at: Date.now(), complete: false };
 
         // ── Phase 2: past papers stream in behind the first paint ────────────
-        const [papersResult, papersResult2] = await Promise.all([
-          systemQuery("past_paper", 1000),
-          systemQueryRange("past_paper", 1000, 2999),
-        ]);
+        // Paged loop: PostgREST caps each query at 1000 rows, and the paper
+        // catalogue keeps growing (already >3,000 rows). Keep fetching pages
+        // until a short page signals the end — no hardcoded ceiling.
+        const PAGE = 1000;
+        const MAX_PAPER_PAGES = 20; // safety valve: 20k rows
+        const paperRows: any[] = [];
+        let papersOk = true;
+        for (let page = 0; page < MAX_PAPER_PAGES; page++) {
+          const { data, error } = await systemQueryRange(
+            "past_paper",
+            page * PAGE,
+            page * PAGE + PAGE - 1
+          );
+          if (error) {
+            // Keep whatever pages we already have, but mark the cache
+            // incomplete so the next mount retries.
+            papersOk = false;
+            break;
+          }
+          paperRows.push(...(data ?? []));
+          if ((data?.length ?? 0) < PAGE) break;
+        }
 
-        const papers = [
-          ...(papersResult.data ?? []),
-          ...(papersResult2.data ?? []),
-        ].map(mapSystemRow);
+        const papers = paperRows.map(mapSystemRow);
 
         const merged = [...phase1, ...papers];
         // Cache even if the component unmounted mid-flight, so a tab switch
         // doesn't leave a past-paper-free cache behind.
         if (!cancelled) setDbResources(merged);
-        const papersOk = !papersResult.error && !papersResult2.error;
         RESOURCE_CACHE = { data: merged, at: Date.now(), complete: papersOk };
 
         logger.info(
@@ -785,15 +800,48 @@ export function useLibraryResources(
     [visibleResources]
   );
 
+  // Exam-proximity ordering: learners can record per-subject exam dates in
+  // their academic profile (exam_dates). Papers for the subject with the
+  // NEAREST upcoming exam surface first — that's what the learner needs to
+  // practise right now. Within a subject bucket, newest exam year first.
+  const examProximityRank = useMemo(() => {
+    const rank = new Map<string, number>();
+    const dates = academicProfile?.exam_dates;
+    if (!dates?.length) return rank;
+    const now = Date.now();
+    for (const { subject, date } of dates) {
+      if (!subject || !date) continue;
+      const t = new Date(date).getTime();
+      if (Number.isNaN(t) || t < now) continue; // past exams don't reorder
+      const key = canonicalSubjectKey(subject);
+      const days = Math.ceil((t - now) / 86_400_000);
+      const prev = rank.get(key);
+      if (prev === undefined || days < prev) rank.set(key, days);
+    }
+    return rank;
+  }, [academicProfile?.exam_dates]);
+
   const pastPapers = useMemo(() => visibleResources
     .filter(
       (r) =>
         r.type === "pastpaper" ||
         (r.category || "").toLowerCase().includes("past paper")
     )
-    // Newest exam year first; papers without a year sink to the end.
-    .sort((a, b) => (b.paperMeta?.year ?? 0) - (a.paperMeta?.year ?? 0)),
-    [visibleResources]
+    .sort((a, b) => {
+      // 1) Subjects with the nearest upcoming exam first.
+      if (examProximityRank.size > 0) {
+        const ra = examProximityRank.get(
+          canonicalSubjectKey(a.tags?.subject || a.category)
+        ) ?? Number.POSITIVE_INFINITY;
+        const rb = examProximityRank.get(
+          canonicalSubjectKey(b.tags?.subject || b.category)
+        ) ?? Number.POSITIVE_INFINITY;
+        if (ra !== rb) return ra - rb;
+      }
+      // 2) Newest exam year first; papers without a year sink to the end.
+      return (b.paperMeta?.year ?? 0) - (a.paperMeta?.year ?? 0);
+    }),
+    [visibleResources, examProximityRank]
   );
 
   const topTutors = useMemo(() => visibleResources

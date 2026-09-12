@@ -30,6 +30,15 @@ const CURRICULUM_SYNONYMS: Record<string, string[]> = {
   zimsec: ["zimsec"],
 };
 
+// One-directional fallbacks: a LEARNER on these curricula also accepts
+// resources tagged with the listed curricula (but not vice versa).
+// ZIMSEC follows the Cambridge syllabus lineage, and the library currently
+// has no ZIMSEC-tagged past papers — Cambridge O/A-Level papers are the
+// closest usable material for ZIMSEC learners.
+const LEARNER_CURRICULUM_FALLBACKS: Record<string, string[]> = {
+  zimsec: ["cambridge", "camb", "igcse", "o-level", "olevel", "a-level", "alevel"],
+};
+
 export function curriculumMatches(
   resourceCurriculum: string | null | undefined,
   learnerCurriculum: string | null | undefined,
@@ -41,7 +50,10 @@ export function curriculumMatches(
   const l = norm(learnerCurriculum);
   if (r === l) return true;
   const synR = CURRICULUM_SYNONYMS[r] || [r];
-  const synL = CURRICULUM_SYNONYMS[l] || [l];
+  const synL = [
+    ...(CURRICULUM_SYNONYMS[l] || [l]),
+    ...(LEARNER_CURRICULUM_FALLBACKS[l] || []),
+  ];
   return synR.some((x) => synL.includes(x));
 }
 
@@ -169,6 +181,52 @@ export function expandGradeTokens(raw: string | null | undefined): string[] {
   return result;
 }
 
+// ─── Exam-tier gate ───────────────────────────────────────────────────────
+// Grade-atom expansion is intentionally fuzzy (Form 5 ↔ Grade 11 ↔ IGCSE all
+// share atoms), which lets exam TIERS bleed into each other: an IGCSE learner
+// would match A-Level papers via the shared "grade 11" atom. When BOTH the
+// learner's grade and a resource label declare an exam tier (O-tier =
+// IGCSE/O-Level/Forms 1-4; A-tier = A-Level/Forms 5-6), require the tiers to
+// intersect before falling through to atom matching. Untiered labels (plain
+// "Grade N") are unaffected.
+interface TierFlags {
+  o: boolean;
+  a: boolean;
+}
+
+function tiersOfSingle(raw: string): TierFlags {
+  const s = norm(raw).replace(/[–—]/g, "-").replace(/\s+/g, " ");
+  const f: TierFlags = { o: false, a: false };
+  if (/\bo[\s-]?level\b/.test(s) || /\bigcse\b/.test(s)) f.o = true;
+  if (/\ba[\s-]?level\b/.test(s)) f.a = true;
+  const formRange = s.match(/^form\s+(\d)\s*-\s*(\d)$/);
+  if (formRange) {
+    const lo = +formRange[1], hi = +formRange[2];
+    if (lo <= 4) f.o = true;
+    if (hi >= 5) f.a = true;
+  } else {
+    const formSingle = s.match(/^form\s+(\d)$/);
+    if (formSingle) {
+      const n = +formSingle[1];
+      if (n <= 4) f.o = true;
+      else f.a = true;
+    }
+  }
+  return f;
+}
+
+function tiersOf(label: string): TierFlags {
+  const f: TierFlags = { o: false, a: false };
+  for (const part of label.split(/[\/•·,&]/)) {
+    const p = part.trim();
+    if (!p) continue;
+    const t = tiersOfSingle(p);
+    f.o = f.o || t.o;
+    f.a = f.a || t.a;
+  }
+  return f;
+}
+
 /** True if any of the resource's grade labels overlaps the learner's grade. */
 export function gradeMatches(
   resourceGradeLabels: Array<string | null | undefined> | null | undefined,
@@ -179,6 +237,24 @@ export function gradeMatches(
   if (labels.length === 0) return true; // untagged resource visible to all
   const learnerAtoms = new Set(expandGradeTokens(learnerGrade));
   if (learnerAtoms.size === 0) return true;
+
+  // Exam-tier gate: if both sides declare exam tiers, they must intersect.
+  const lt = tiersOf(learnerGrade);
+  if (lt.o || lt.a) {
+    let declared = false;
+    let ro = false;
+    let ra = false;
+    for (const l of labels) {
+      const t = tiersOf(l);
+      if (t.o || t.a) {
+        declared = true;
+        ro = ro || t.o;
+        ra = ra || t.a;
+      }
+    }
+    if (declared && !((lt.o && ro) || (lt.a && ra))) return false;
+  }
+
   for (const l of labels) {
     const atoms = expandGradeTokens(l);
     if (atoms.includes("*")) return true;
@@ -201,16 +277,27 @@ const SUBJECT_ALIAS_GROUPS: string[][] = [
   ["chemistry"],
   ["biology", "life sciences", "life science"],
   ["combined science", "integrated science", "natural sciences", "natural science", "general science", "science"],
-  ["accounting", "accountancy", "principles of accounts", "financial accounting"],
+  ["accounting", "accountancy", "accounts", "principles of accounts", "financial accounting"],
   ["business studies", "business management", "business"],
   ["economics", "economic management sciences", "ems"],
-  ["english", "english home language", "english first additional language", "english language", "english fal", "english hl"],
+  // English Home Language and English FAL are DIFFERENT exam subjects with
+  // different papers — never alias them together. Bare "english" and
+  // "English Language" (ZIMSEC/Cambridge) canonicalize to the HL group.
+  ["english", "english home language", "english language", "english hl"],
+  ["english first additional language", "english fal", "english as a second language", "esl", "english second language"],
+  // Afrikaans: seed titles use Afrikaans-language subject names
+  // ("Afrikaans Eerste Addisionele Taal" = First Additional Language,
+  // "Afrikaans Huistaal" = Home Language). By convention (see
+  // subjectAliases.ts) bare "afrikaans" means FAL.
+  ["afrikaans first additional language", "afrikaans eerste addisionele taal", "afrikaans fal", "afrikaans eat", "afrikaans"],
+  ["afrikaans home language", "afrikaans huistaal", "afrikaans hl", "afrikaans ht"],
+  ["isizulu first additional language", "isizulu fal"],
   ["literature in english", "english literature"],
   ["history"],
   ["geography"],
   ["computer science", "computing", "information technology", "it", "computers"],
   ["agriculture", "agricultural science", "agricultural sciences"],
-  ["religious studies", "religious education", "divinity", "bible knowledge"],
+  ["religious studies", "religious education", "divinity", "bible knowledge", "religion studies"],
 ];
 
 const SUBJECT_TO_CANONICAL = (() => {
@@ -225,6 +312,16 @@ const SUBJECT_TO_CANONICAL = (() => {
 function subjectKey(s: string | null | undefined): string {
   const c = canonicalSubject(s);
   return SUBJECT_TO_CANONICAL.get(c) ?? c;
+}
+
+/**
+ * Public canonical key for a subject name — two subject strings refer to the
+ * same subject iff their canonical keys are equal. Used e.g. to map a
+ * learner's exam_dates entries onto resource subjects for exam-proximity
+ * ordering.
+ */
+export function canonicalSubjectKey(s: string | null | undefined): string {
+  return subjectKey(s);
 }
 
 /**
