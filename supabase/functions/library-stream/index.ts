@@ -164,6 +164,34 @@ Deno.serve(async (req) => {
 });
 
 /**
+ * Allowlist for direct-URL proxy mode — hosts we know serve our seeded
+ * public-domain/open-licensed PDFs. Prevents the endpoint being used as an
+ * open proxy.
+ */
+const DIRECT_PROXY_HOSTS = [
+  "assets.openstax.org",
+  "openstax.org",
+  "gutenberg.org",
+  "www.gutenberg.org",
+  "archive.org",
+  "ia800300.us.archive.org",
+];
+
+function isAllowedDirectUrl(raw: string): boolean {
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== "https:") return false;
+    const host = u.hostname.toLowerCase();
+    if (host.endsWith(".supabase.co")) return true; // our own storage
+    return DIRECT_PROXY_HOSTS.some(
+      (h) => host === h || host.endsWith(`.${h}`),
+    ) && detectUrlKind(raw) === "pdf";
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Fetch a remote PDF server-side and stream its bytes back with CORS
  * headers so the browser's pdf.js reader can consume them.
  */
