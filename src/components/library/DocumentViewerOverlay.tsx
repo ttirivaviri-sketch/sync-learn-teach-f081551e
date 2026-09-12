@@ -12,6 +12,7 @@ import type { LibraryResource } from "@/types/academicProfile";
 import { useProtectedPdfBlob } from "@/hooks/useProtectedPdfBlob";
 import { PdfJsViewer } from "./PdfJsViewer";
 import { ResourceChatPanel } from "./ResourceChatPanel";
+import { PaperMarkPanel } from "./PaperMarkPanel";
 
 interface DocumentViewerOverlayProps {
   resource: LibraryResource;
@@ -31,6 +32,9 @@ interface DocumentViewerOverlayProps {
  * 3. "Ask AI" opens a docked chat panel (ResourceChatPanel) that reads the
  *    document's extracted text, so learners can ask about the material
  *    while viewing it.
+ * 3b. For past papers, "Mark my answers" (PaperMarkPanel) lets the learner
+ *    photograph their attempted answers; the photo-solve engine marks them
+ *    against the paper's actual questions with examiner-style feedback.
  * 4. Fallbacks preserved: bytes unavailable → iframe (desktop browsers can
  *    still scroll those); webpage kinds → "Open in browser" card; legacy
  *    seeds without pdfSource → open stored URL in a new tab.
@@ -50,7 +54,7 @@ export function DocumentViewerOverlay({
     directUrl,
   );
 
-  const [showChat, setShowChat] = useState(false);
+  const [sidePanel, setSidePanel] = useState<"chat" | "mark" | null>(null);
   const [pdfRenderFailed, setPdfRenderFailed] = useState(false);
   // Text extractor handed up from PdfJsViewer once the doc parses.
   const extractorRef = useRef<(() => Promise<string>) | null>(null);
@@ -103,13 +107,30 @@ export function DocumentViewerOverlay({
             </h3>
           </div>
           <div className="flex items-center gap-1">
+            {/* Mark my answers — past papers only, needs a readable document */}
+            {canRenderInApp && resource.type === "pastpaper" && (
+              <Button
+                variant={sidePanel === "mark" ? "default" : "outline"}
+                size="sm"
+                className={
+                  sidePanel === "mark"
+                    ? "h-8 gap-1.5 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    : "h-8 gap-1.5 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                }
+                onClick={() => setSidePanel((v) => (v === "mark" ? null : "mark"))}
+                title="Photograph your answers and get them marked against this paper"
+              >
+                <ClipboardCheck className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Mark my answers</span>
+              </Button>
+            )}
             {/* Ask AI — only meaningful once we have a readable document */}
             {canRenderInApp && (
               <Button
-                variant={showChat ? "default" : "outline"}
+                variant={sidePanel === "chat" ? "default" : "outline"}
                 size="sm"
                 className="h-8 gap-1.5 px-2 text-xs"
-                onClick={() => setShowChat((v) => !v)}
+                onClick={() => setSidePanel((v) => (v === "chat" ? null : "chat"))}
                 title="Ask AI about this document"
               >
                 <Sparkles className="h-3.5 w-3.5" />
@@ -237,14 +258,22 @@ export function DocumentViewerOverlay({
             )}
           </div>
 
-          {/* ── AI chat pane ── */}
-          {showChat && canRenderInApp && (
-            <div className="h-[45%] w-full border-t border-border sm:h-auto sm:w-[340px] sm:border-l sm:border-t-0">
-              <ResourceChatPanel
-                resource={resource}
-                getDocumentText={extractorReady ? extractorRef.current : null}
-                onClose={() => setShowChat(false)}
-              />
+          {/* ── Side pane: Ask AI chat / Mark my answers ── */}
+          {sidePanel && canRenderInApp && (
+            <div className="h-[55%] w-full border-t border-border sm:h-auto sm:w-[340px] sm:border-l sm:border-t-0">
+              {sidePanel === "chat" ? (
+                <ResourceChatPanel
+                  resource={resource}
+                  getDocumentText={extractorReady ? extractorRef.current : null}
+                  onClose={() => setSidePanel(null)}
+                />
+              ) : (
+                <PaperMarkPanel
+                  resource={resource}
+                  getDocumentText={extractorReady ? extractorRef.current : null}
+                  onClose={() => setSidePanel(null)}
+                />
+              )}
             </div>
           )}
         </div>
