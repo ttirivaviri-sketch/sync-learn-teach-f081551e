@@ -1,4 +1,4 @@
-import aiEducationImage from "@/assets/ai-education-learning-partner.jpg.asset.json";
+import aiEducationImage from "@/assets/ai-education-learning-partner.jpg";
 
 export interface BlogPostSummary {
   slug: string;
@@ -25,7 +25,7 @@ export const AI_EDUCATION_POST: BlogPostSummary = {
   publishedLabel: "13 September 2026",
   readingTime: "12 min read",
   topic: "AI & learning",
-  image: aiEducationImage.url,
+  image: aiEducationImage,
   imageAlt: "A teacher guiding a secondary school student as they work with a laptop and handwritten notes",
 };
 
