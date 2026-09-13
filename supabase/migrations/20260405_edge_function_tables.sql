@@ -95,6 +95,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY "Service role manages wallets"
     ON tutor_wallets FOR ALL
+    TO service_role
     USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -102,6 +103,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY "Service role manages payouts"
     ON tutor_payouts FOR ALL
+    TO service_role
     USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -109,6 +111,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY "Service role manages payout audit"
     ON payout_audit_log FOR ALL
+    TO service_role
     USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -197,6 +200,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY "Service role manages video audit"
     ON video_audit_log FOR ALL
+    TO service_role
     USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -271,6 +275,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY "Service role manages insights cache"
     ON student_insights_cache FOR ALL
+    TO service_role
     USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
@@ -278,6 +283,7 @@ END $$;
 DO $$ BEGIN
   CREATE POLICY "Service role manages learning signals"
     ON learning_signals FOR ALL
+    TO service_role
     USING (true) WITH CHECK (true);
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
