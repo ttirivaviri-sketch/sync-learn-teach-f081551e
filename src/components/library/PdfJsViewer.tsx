@@ -79,7 +79,9 @@ export function PdfJsViewer({ src, httpHeaders, title, onReady, onError }: PdfJs
         const task = pdfjsLib.getDocument({
           url: src,
           httpHeaders: httpHeaders ?? undefined,
-          rangeChunkSize: 262144,
+          // 1 MB chunks: fewer proxied range requests per document, so a long
+          // textbook can't burn through the per-minute request budget.
+          rangeChunkSize: 1048576,
           disableAutoFetch: true,
           disableStream: false,
         });
