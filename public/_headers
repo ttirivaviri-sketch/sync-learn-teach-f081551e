@@ -1,0 +1,22 @@
+# Security headers for all routes (Netlify / Cloudflare Pages format).
+#
+# Notes:
+# - frame-ancestors 'none' / X-Frame-Options DENY: nothing legitimate embeds
+#   StudySync in an iframe; this blocks clickjacking. The Jitsi lesson room is
+#   the OTHER direction (we embed 8x8.vc) and is unaffected.
+# - Permissions-Policy grants camera/mic to self and 8x8.vc so the embedded
+#   Jitsi lesson iframe keeps working.
+# - No enforced Content-Security-Policy yet: the app loads Supabase, Google
+#   Fonts, Jitsi, payment providers and inline JSON-LD; an untested strict CSP
+#   would risk breaking production. Start with Report-Only in future work.
+
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self "https://8x8.vc"), microphone=(self "https://8x8.vc"), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

@@ -16,6 +16,7 @@
 // directly. Only PDFs are proxied; webpages still return JSON.
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { enforceRateLimit, guardIp, rateLimitedResponse } from "../_shared/ai-config.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,6 +89,15 @@ Deno.serve(async (req) => {
   });
   const { data: { user }, error: userErr } = await userClient.auth.getUser();
   if (userErr || !user) return json(401, { error: "Invalid session" });
+
+  // ── Rate limits ──────────────────────────────────────────────────────────
+  // Proxy mode relays up to 40 MB per request; without a cap an authenticated
+  // account could use this function as a free bandwidth relay. Generous
+  // limits: paging through a paper needs a handful of calls per minute.
+  const ipBlocked = await guardIp(req, "library-stream", { userId: user.id, isService: false }, { limit: 120 });
+  if (ipBlocked) return ipBlocked;
+  const rl = await enforceRateLimit("library-stream", user.id, { limit: 60 });
+  if (!rl.allowed) return rateLimitedResponse("library-stream", rl.retryAfter, rl.limit);
 
   // ── Params ────────────────────────────────────────────────────────────────
   const url = new URL(req.url);

@@ -33,10 +33,18 @@ export interface BlockedRequestEvent {
 }
 
 export function clientIp(req: Request): string | null {
+  // cf-connecting-ip is set by Cloudflare (which fronts Supabase edge
+  // functions) and cannot be spoofed by the client. x-forwarded-for's FIRST
+  // hop, by contrast, is client-supplied: a caller can send their own
+  // `X-Forwarded-For: 1.2.3.4` and the platform appends the real IP after it
+  // — so trusting the first entry let attackers rotate fake IPs to dodge the
+  // per-IP rate limit. Prefer the trusted header; fall back to the LAST
+  // x-forwarded-for entry (the hop the platform itself observed).
+  const cf = req.headers.get("cf-connecting-ip");
+  if (cf) return cf;
   const fwd = req.headers.get("x-forwarded-for") || "";
-  const first = fwd.split(",")[0]?.trim();
-  if (first) return first;
-  return req.headers.get("cf-connecting-ip") || null;
+  const parts = fwd.split(",").map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : null;
 }
 
 export async function logBlockedRequest(
