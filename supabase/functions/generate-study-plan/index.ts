@@ -38,6 +38,11 @@ import {
   normalizeArray,
   errorResponse,
   jsonResponse,
+  enforceQuota,
+  enforceRateLimit,
+  guardIp,
+  quotaExceededResponse,
+  rateLimitedResponse,
 } from "../_shared/ai-config.ts";
 
 serve(async (req: Request) => {
@@ -64,6 +69,15 @@ serve(async (req: Request) => {
       return jsonResponse({ error: "Unauthorized" }, 401);
     }
     const userId = userData.user.id;
+
+    // ── Rate limit + daily quota (this was the only AI endpoint without them,
+    // making it a free unmetered LLM relay for any authenticated account) ───
+    const ipBlocked = await guardIp(req, "generate-study-plan", { userId, isService: false });
+    if (ipBlocked) return ipBlocked;
+    const rl = await enforceRateLimit("generate-study-plan", userId, { limit: 6 });
+    if (!rl.allowed) return rateLimitedResponse("generate-study-plan", rl.retryAfter, rl.limit);
+    const quota = await enforceQuota(req, "misc", { userId });
+    if (!quota.allowed) return quotaExceededResponse("misc", quota.used, quota.limit);
 
     const body = await req.json();
     const {
