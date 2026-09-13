@@ -241,6 +241,8 @@ const AiInEducationArticle = () => (
                   <Link to="/learner/auth">Start learning <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               </section>
+
+              <BlogComments postSlug={post.slug} />
             </div>
           </div>
         </div>
