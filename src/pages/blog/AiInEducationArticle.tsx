@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Seo, SITE_URL } from "@/components/Seo";
 import { BlogHeader } from "@/components/blog/BlogHeader";
+import { BlogComments } from "@/components/blog/BlogComments";
 import { Button } from "@/components/ui/button";
 import { AI_EDUCATION_POST } from "@/content/blogPosts";
 
@@ -240,6 +241,8 @@ const AiInEducationArticle = () => (
                   <Link to="/learner/auth">Start learning <ArrowRight className="ml-2 h-4 w-4" /></Link>
                 </Button>
               </section>
+
+              <BlogComments postSlug={post.slug} />
             </div>
           </div>
         </div>
