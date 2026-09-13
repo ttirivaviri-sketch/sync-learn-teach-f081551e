@@ -90,21 +90,29 @@ Deno.serve(async (req) => {
   const { data: { user }, error: userErr } = await userClient.auth.getUser();
   if (userErr || !user) return json(401, { error: "Invalid session" });
 
-  // ── Rate limits ──────────────────────────────────────────────────────────
-  // Proxy mode relays up to 40 MB per request; without a cap an authenticated
-  // account could use this function as a free bandwidth relay. Generous
-  // limits: paging through a paper needs a handful of calls per minute.
-  const ipBlocked = await guardIp(req, "library-stream", { userId: user.id, isService: false }, { limit: 120 });
-  if (ipBlocked) return ipBlocked;
-  const rl = await enforceRateLimit("library-stream", user.id, { limit: 60 });
-  if (!rl.allowed) return rateLimitedResponse("library-stream", rl.retryAfter, rl.limit);
-
   // ── Params ────────────────────────────────────────────────────────────────
   const url = new URL(req.url);
   const id = url.searchParams.get("id");
   const source = (url.searchParams.get("source") ?? "").toLowerCase();
   const mode = (url.searchParams.get("mode") ?? "").toLowerCase();
   const directUrl = url.searchParams.get("url");
+
+  // ── Rate limits ──────────────────────────────────────────────────────────
+  // Proxy mode is served to pdf.js as many small HTTP range requests (one per
+  // 256 KB–1 MB chunk), so a single big textbook legitimately needs dozens to
+  // hundreds of calls a minute. Resolve-mode calls stay tightly capped; proxy
+  // reads get a much higher ceiling so scrolling never 429s mid-document,
+  // while still preventing use as an unlimited bandwidth relay.
+  const isProxy = mode === "proxy";
+  const ipBlocked = await guardIp(
+    req,
+    "library-stream",
+    { userId: user.id, isService: false },
+    { limit: isProxy ? 1200 : 120 },
+  );
+  if (ipBlocked) return ipBlocked;
+  const rl = await enforceRateLimit("library-stream", user.id, { limit: isProxy ? 900 : 60 });
+  if (!rl.allowed) return rateLimitedResponse("library-stream", rl.retryAfter, rl.limit);
 
   // Direct-URL proxy mode: for seed resources with no DB row. Auth is still
   // required, and the host must be allowlisted so this can't be abused as an
