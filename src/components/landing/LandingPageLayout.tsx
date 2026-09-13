@@ -40,6 +40,7 @@ const LANDING_NAV = [
   { label: "Find a Tutor", path: "/tutoring" },
   { label: "Past Papers", path: "/past-papers" },
   { label: "Books & Study Guides", path: "/books" },
+  { label: "Blog", path: "/blog" },
 ];
 
 const faqJsonLd = (faqs: LandingFaq[]) =>

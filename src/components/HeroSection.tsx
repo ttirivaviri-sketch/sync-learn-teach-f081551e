@@ -46,10 +46,11 @@ const Navbar = () => {
             { label: "Features", id: "features" },
             { label: "How It Works", id: "how-it-works" },
             { label: "Pricing", id: "pricing" },
+            { label: "Blog", path: "/blog" },
           ].map((item) => (
             <button
-              key={item.id}
-              onClick={() => scrollToSection(item.id)}
+              key={item.label}
+              onClick={() => item.path ? navigate(item.path) : scrollToSection(item.id ?? "")}
               className="text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
             >
               {item.label}
@@ -99,11 +100,12 @@ const Navbar = () => {
             { label: "Features", id: "features" },
             { label: "How It Works", id: "how-it-works" },
             { label: "Pricing", id: "pricing" },
+            { label: "Blog", path: "/blog" },
           ].map((item) => (
             <button
-              key={item.id}
+              key={item.label}
               className="block w-full text-left text-sm font-medium text-gray-600 py-2"
-              onClick={() => scrollToSection(item.id)}
+              onClick={() => item.path ? navigate(item.path) : scrollToSection(item.id ?? "")}
             >
               {item.label}
             </button>

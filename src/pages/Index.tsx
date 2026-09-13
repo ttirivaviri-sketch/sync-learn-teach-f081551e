@@ -16,6 +16,7 @@ const TestimonialSection = lazy(() =>
 );
 const PricingSection = lazy(() => import("@/components/PricingSection"));
 const ContactStrip = lazy(() => import("@/components/ContactStrip"));
+const BlogFeatureSection = lazy(() => import("@/components/BlogFeatureSection"));
 const Footer = lazy(() => import("@/components/Footer"));
 const LandingStickyCTA = lazy(() => import("@/components/LandingStickyCTA"));
 const PWAInstallPrompt = lazy(() =>
@@ -50,6 +51,7 @@ const Index = () => {
         <PricingSection />
         <TestimonialSection />
         <TrustSection />
+        <BlogFeatureSection />
         <ContactStrip />
         <Footer />
         <PWAInstallPrompt />

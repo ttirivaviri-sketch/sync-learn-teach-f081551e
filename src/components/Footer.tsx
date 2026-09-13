@@ -9,6 +9,7 @@ const footerLinks = {
     { label: "IEB Past Papers", href: "/past-papers/ieb" },
     { label: "Accounting Past Papers", href: "/past-papers/accounting" },
     { label: "Books & Study Guides", href: "/books" },
+    { label: "StudySync Blog", href: "/blog" },
     { label: "Pricing", href: "/#pricing" },
   ],
   "For Tutors": [
