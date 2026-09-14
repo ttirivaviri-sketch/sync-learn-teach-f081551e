@@ -16,6 +16,8 @@
 - [Maths Past Papers](/past-papers/maths): Grade 10–12 Mathematics papers with memos for CAPS/NSC, IEB, Cambridge and ZIMSEC.
 - [Tutoring](/tutoring): Book verified online tutors for Maths, Sciences, English and more.
 - [Books](/books): Free openly licensed textbooks, set works and study guides.
+- [Blog](/blog): Evidence-informed StudySync writing on AI in education, assessment design, teaching and study practice.
+- [AI in Education: From Cheating Tool to Learning Partner](/blog/ai-in-education-learning-partner): Ashlie Potera on redesigning assessment, AI literacy, teacher training and equity, with sources from UNESCO, OECD, the World Bank and peer-reviewed research.
 - [Learner Sign Up](/learner/auth): Create a learner account to access StudyMode, past papers and tutors.
 - [Become a Tutor](/tutor/auth): Apply to join as a verified tutor on StudySync.
 
