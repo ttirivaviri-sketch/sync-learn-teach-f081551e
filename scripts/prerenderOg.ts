@@ -15,6 +15,7 @@ import fs from "node:fs";
 import path from "node:path";
 import type { Plugin } from "vite";
 import { ROUTE_SEO, SITE_URL } from "../src/lib/seoRoutes";
+import { PRERENDER_BODIES } from "../src/content/prerenderFallbacks";
 
 const escapeHtml = (value: string) =>
   value
@@ -81,10 +82,17 @@ export function prerenderOg(): Plugin {
       const baseHtml = fs.readFileSync(indexPath, "utf8");
 
       for (const route of ROUTE_SEO) {
-        const html = stripManagedTags(baseHtml).replace(
+        let html = stripManagedTags(baseHtml).replace(
           "</head>",
           `${headFor(route)}  </head>`,
         );
+
+        // Content routes ship real text in the shell so non-JS crawlers
+        // (GPTBot, PerplexityBot, ClaudeBot, link previews) can read them.
+        const body = PRERENDER_BODIES[route.path];
+        if (body) {
+          html = html.replace('<div id="root"></div>', `<div id="root">${body}</div>`);
+        }
 
         const target =
           route.path === "/"
