@@ -7,19 +7,12 @@ import { BlogHeader } from "@/components/blog/BlogHeader";
 import { BlogComments } from "@/components/blog/BlogComments";
 import { Button } from "@/components/ui/button";
 import { AI_EDUCATION_POST } from "@/content/blogPosts";
+import { AI_EDUCATION_ARTICLE_HTML, ARTICLE_SECTIONS } from "@/content/aiEducationArticleHtml";
 
 const Footer = lazy(() => import("@/components/Footer"));
 const post = AI_EDUCATION_POST;
 
-const sourceLink = "font-semibold text-primary underline decoration-primary/25 underline-offset-4 hover:decoration-primary";
-
-const SECTIONS = [
-  ["assessment", "The assessment problem"],
-  ["regulation", "Smart regulation"],
-  ["missing-pieces", "Literacy, teachers and equity"],
-  ["potential", "What AI can do well"],
-  ["path-forward", "The path forward"],
-];
+const SECTIONS = ARTICLE_SECTIONS;
 
 const articleJsonLd = JSON.stringify({
   "@context": "https://schema.org",
