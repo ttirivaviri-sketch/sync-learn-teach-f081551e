@@ -182,6 +182,14 @@ export const ROUTE_SEO: RouteSeo[] = [
     type: "article",
   },
   {
+    path: "/blog/ai-cure-or-incurable-virus",
+    title: "AI: Cure for the Lack of Intelligence, or Incurable Virus?",
+    description:
+      "From viruses to malware to autonomous AI: what the OpenAI–Hugging Face incident reveals about a pattern history has shown three times.",
+    image: "/og/ai-cure-or-incurable-virus.jpg",
+    type: "article",
+  },
+  {
     path: "/legal/terms",
     title: "Terms of Service — StudySync",
     description:
