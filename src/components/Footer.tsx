@@ -1,5 +1,5 @@
 import { Separator } from "@/components/ui/separator";
-import { Instagram, Mail, Phone, MessageCircle } from "lucide-react";
+import { Facebook, Instagram, Mail, Phone, MessageCircle } from "lucide-react";
 
 const footerLinks = {
   "For Students": [
@@ -33,6 +33,7 @@ const footerLinks = {
 
 // Only channels that actually exist — no dead '#' socials.
 const socials = [
+  { icon: Facebook, label: "Facebook", href: "https://www.facebook.com/people/studysyncplatform/61592077657971/" },
   { icon: Instagram, label: "Instagram", href: "https://instagram.com/studysyncplatform" },
   { icon: MessageCircle, label: "WhatsApp", href: "https://wa.me/27686523995" },
   { icon: Mail, label: "Email", href: "mailto:supportstudysync@gmail.com" },
