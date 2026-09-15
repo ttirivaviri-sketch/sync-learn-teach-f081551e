@@ -47,7 +47,7 @@ const tiers = [
     features: [
       "Background-checked tutors",
       "Online or in-person",
-      "Book 30-minute slots",
+      "1-hour sessions, R300 each",
       "No subscription required",
     ],
     cta: "Find a tutor",

@@ -306,7 +306,7 @@ const HeroCarousel = () => {
       eyebrow="Tutor Marketplace"
       title="Verified tutors,"
       highlight="on your schedule."
-      description="Find expert tutors for Maths, Sciences, English and more — book a 30-minute slot online or in person."
+      description="Find expert tutors for Maths, Sciences, English and more — book a 1-hour session online or in person."
       bullets={[
         "Background-checked tutors",
         "Online or in-person sessions",
