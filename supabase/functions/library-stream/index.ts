@@ -198,15 +198,24 @@ const DIRECT_PROXY_HOSTS = [
   "ia800300.us.archive.org",
 ];
 
+/** This project's own Supabase storage host (derived from SUPABASE_URL). */
+const OWN_SUPABASE_HOST = (() => {
+  try {
+    return new URL(SUPABASE_URL).hostname.toLowerCase();
+  } catch {
+    return "";
+  }
+})();
+
 function isAllowedDirectUrl(raw: string): boolean {
   try {
     const u = new URL(raw);
     if (u.protocol !== "https:") return false;
+    if (detectUrlKind(raw) !== "pdf") return false;
     const host = u.hostname.toLowerCase();
-    if (host.endsWith(".supabase.co")) return true; // our own storage
-    return DIRECT_PROXY_HOSTS.some(
-      (h) => host === h || host.endsWith(`.${h}`),
-    ) && detectUrlKind(raw) === "pdf";
+    // Only this project's own storage — never any other *.supabase.co project.
+    if (OWN_SUPABASE_HOST && host === OWN_SUPABASE_HOST) return true;
+    return DIRECT_PROXY_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
   } catch {
     return false;
   }
