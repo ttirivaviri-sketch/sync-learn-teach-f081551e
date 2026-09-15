@@ -178,7 +178,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     title: "AI in Education: From Cheating Tool to Learning Partner",
     description:
       "How schools can redesign assessment, build AI literacy and keep teachers central as students learn to use AI well.",
-    image: "/og/home.jpg",
+    image: "/og/ai-in-education-learning-partner.jpg",
     type: "article",
   },
   {
