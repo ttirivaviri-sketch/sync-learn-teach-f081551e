@@ -133,7 +133,7 @@ const MathsTutorLanding = () => {
               { icon: Calculator, title: "Topic-by-topic help", text: "Start from the exact topic you're stuck on — algebra, trig, geometry or calculus — not a generic syllabus recap." },
               { icon: FileText, title: "Past papers & memos", text: "Work through real NSC, IEB, Cambridge and ZIMSEC maths papers with a tutor marking your method." },
               { icon: Video, title: "Online video lessons", text: "Learn from home with built-in video and a shared workspace for working through problems." },
-              { icon: CalendarClock, title: "Book around school", text: "See live tutor availability and book 30-minute slots that fit around school and sport." },
+              { icon: CalendarClock, title: "Book around school", text: "See live tutor availability and book 1-hour sessions that fit around school and sport." },
               { icon: ShieldCheck, title: "Fair refund policy", text: "Covered if a tutor cancels or doesn't show — you only pay for lessons that actually happen." },
             ].map(({ icon: Icon, title, text }) => (
               <div key={title} className="rounded-2xl border border-gray-200 bg-white p-6">
