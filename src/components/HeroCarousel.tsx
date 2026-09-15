@@ -89,7 +89,7 @@ const Slide1 = () => {
             Learn smarter. Pass faster.
           </p>
           <h1 className="text-[clamp(1.75rem,6vw,3.25rem)] font-extrabold text-gray-900 leading-[1.08] tracking-tight mb-4 max-w-[20ch] mx-auto lg:mx-0">
-            AI study tools &amp; verified tutors for{" "}
+            Free past papers, AI study tools &amp; verified tutors for{" "}
             <span className="text-primary">ZIMSEC, Cambridge, IEB &amp; NSC</span>
           </h1>
           <p className="text-base md:text-lg text-gray-600 mb-6 max-w-xl mx-auto lg:mx-0">
