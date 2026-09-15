@@ -171,7 +171,7 @@ export const ROUTE_SEO: RouteSeo[] = [
     title: "StudySync Blog — Better Learning with AI & Evidence",
     description:
       "Evidence-informed ideas on AI in education, assessment, teaching and study practice from StudySync in South Africa.",
-    image: "/og/home.jpg",
+    image: "/og/blog.jpg",
   },
   {
     path: "/blog/ai-in-education-learning-partner",
