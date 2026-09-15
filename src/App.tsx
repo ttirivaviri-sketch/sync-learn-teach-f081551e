@@ -34,6 +34,7 @@ const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
 const Community = lazy(() => import("./pages/Community"));
 const BlogHub = lazy(() => import("./pages/blog/BlogHub"));
 const AiInEducationArticle = lazy(() => import("./pages/blog/AiInEducationArticle"));
+const AiVirusArticle = lazy(() => import("./pages/blog/AiVirusArticle"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
 const TutorPublicProfile = lazy(() => import("./pages/TutorPublicProfile"));
@@ -195,6 +196,7 @@ const App = () => {
               <Route path="/whatsapp" element={<Navigate to="/community" replace />} />
               <Route path="/blog" element={<BlogHub />} />
               <Route path="/blog/ai-in-education-learning-partner" element={<AiInEducationArticle />} />
+              <Route path="/blog/ai-cure-or-incurable-virus" element={<AiVirusArticle />} />
               <Route path="/app" element={<AppRedirect />} />
               <Route path="/learner" element={<LearnerApp />} />
               <Route path="/start-trial" element={<Navigate to="/learner/auth" replace />} />
