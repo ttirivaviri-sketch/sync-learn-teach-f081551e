@@ -91,3 +91,35 @@ export function installScrollDepthTracking(): () => void {
     document.removeEventListener("mouseleave", onMouseLeave);
   };
 }
+
+/**
+ * Tutor enquiry intent tracking.
+ *
+ * Records every click that signals "I want a tutor / I want to talk to you",
+ * together with the subject and session type the visitor was looking at, so
+ * the admin Enquiries page can show which subjects and sessions are wanted.
+ */
+export type EnquiryChannel =
+  | "whatsapp"
+  | "email"
+  | "instagram"
+  | "phone"
+  | "booking"
+  | "signup";
+
+export function trackEnquiryClick(details: {
+  channel: EnquiryChannel;
+  subject?: string;
+  sessionType?: string;
+  source?: string;
+  label?: string;
+}) {
+  void track("cta_click", {
+    intent: "tutor_enquiry",
+    channel: details.channel,
+    subject: details.subject ?? "general",
+    session_type: details.sessionType ?? "unspecified",
+    source: details.source ?? null,
+    label: details.label ?? null,
+  });
+}

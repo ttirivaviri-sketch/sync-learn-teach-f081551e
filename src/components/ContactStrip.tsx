@@ -1,8 +1,10 @@
 import { Instagram, Mail, MessageCircle, Phone } from "lucide-react";
+import { trackEnquiryClick, type EnquiryChannel } from "@/utils/landingAnalytics";
 
 const contactItems = [
   {
     title: "WhatsApp",
+    channel: "whatsapp" as EnquiryChannel,
     value: "+27 68 652 3995",
     href: "https://wa.me/27686523995",
     Icon: MessageCircle,
@@ -10,6 +12,7 @@ const contactItems = [
   },
   {
     title: "Instagram",
+    channel: "instagram" as EnquiryChannel,
     value: "@studysyncplatform",
     href: "https://instagram.com/studysyncplatform",
     Icon: Instagram,
@@ -17,6 +20,7 @@ const contactItems = [
   },
   {
     title: "Email",
+    channel: "email" as EnquiryChannel,
     value: "supportstudysync@gmail.com",
     href: "mailto:supportstudysync@gmail.com",
     Icon: Mail,
@@ -24,6 +28,7 @@ const contactItems = [
   },
   {
     title: "Calls (SA)",
+    channel: "phone" as EnquiryChannel,
     value: "+27 61 548 3423",
     href: "tel:+27615483423",
     Icon: Phone,
@@ -31,6 +36,7 @@ const contactItems = [
   },
   {
     title: "Calls (ZW)",
+    channel: "phone" as EnquiryChannel,
     value: "+263 78 067 4090",
     href: "tel:+263780674090",
     Icon: Phone,
@@ -55,12 +61,15 @@ const ContactStrip = () => {
         </div>
 
         <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {contactItems.map(({ title, value, href, Icon, accent }) => (
+          {contactItems.map(({ title, value, href, Icon, accent, channel }) => (
             <a
               key={title}
               href={href}
               target={href.startsWith("http") ? "_blank" : undefined}
               rel={href.startsWith("http") ? "noopener noreferrer" : undefined}
+              onClick={() =>
+                trackEnquiryClick({ channel, source: "contact_strip", label: title })
+              }
               className={`group rounded-2xl border p-4 transition-all hover:-translate-y-1 hover:shadow-md ${accent}`}
             >
               <div className="mb-3 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white shadow-sm">

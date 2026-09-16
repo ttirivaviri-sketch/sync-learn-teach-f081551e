@@ -25,6 +25,7 @@ import {
   BookOpen,
   Building2,
   Search,
+  MessageCircle,
 } from "lucide-react";
 
 const items = [
@@ -42,6 +43,7 @@ const items = [
   { title: "Reports", url: "/admin/reports", icon: BarChart3 },
   { title: "Study Analytics", url: "/admin/study-analytics", icon: BarChart3 },
   { title: "Search Queries", url: "/admin/search-queries", icon: Search },
+  { title: "Tutor Enquiries", url: "/admin/enquiries", icon: MessageCircle },
   { title: "Roles", url: "/admin/roles", icon: ShieldCheck },
   { title: "Security", url: "/admin/security", icon: Shield },
   { title: "Refunds", url: "/admin/refunds", icon: RotateCcw },

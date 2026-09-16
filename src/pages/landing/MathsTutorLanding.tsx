@@ -11,6 +11,7 @@ import { BadgeCheck, CalendarClock, Calculator, FileText, ShieldCheck, Video } f
 import { Button } from "@/components/ui/button";
 import { PRICING, TRIAL_DURATION_DAYS } from "@/sail/types";
 import { analytics } from "@/utils/analytics";
+import { trackEnquiryClick } from "@/utils/landingAnalytics";
 import LandingPageLayout, { type LandingFaq } from "@/components/landing/LandingPageLayout";
 
 const TOPICS = [
@@ -109,7 +110,14 @@ const MathsTutorLanding = () => {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
-              <Link to="/learner/auth">Book a maths tutor</Link>
+              <Link
+                to="/learner/auth"
+                onClick={() =>
+                  trackEnquiryClick({ channel: "booking", subject: "Mathematics", source: "maths_tutor_hero", label: "Book a maths tutor" })
+                }
+              >
+                Book a maths tutor
+              </Link>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/past-papers">Practise maths past papers</Link>
@@ -202,7 +210,14 @@ const MathsTutorLanding = () => {
               tutor for your next session.
             </p>
             <Button asChild size="lg" variant="secondary" className="mt-6">
-              <Link to="/learner/auth">Start your free trial</Link>
+              <Link
+                to="/learner/auth"
+                onClick={() =>
+                  trackEnquiryClick({ channel: "signup", subject: "Mathematics", source: "maths_tutor_footer_cta", label: "Start your free trial" })
+                }
+              >
+                Start your free trial
+              </Link>
             </Button>
           </div>
         </div>
