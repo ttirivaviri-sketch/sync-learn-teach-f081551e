@@ -50,7 +50,7 @@ const ContactStrip = () => {
             Need help choosing the right study support?
           </h2>
           <p className="mt-4 text-base leading-7 text-slate-600">
-            Reach out directly on WhatsApp, Instagram, email or phone. We want visitors to get answers fast instead of leaving the page.
+            Reach out directly on WhatsApp, Instagram, email or phone — our team is happy to help you find the right tutor, past papers or study plan for your child.
           </p>
         </div>
 
