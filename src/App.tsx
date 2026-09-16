@@ -71,6 +71,7 @@ const AdminAllocations = lazy(() => import("./pages/admin/Allocations"));
 const AdminStudyAnalytics = lazy(() => import("./pages/admin/StudyAnalytics"));
 const AdminSchools = lazy(() => import("./pages/admin/Schools"));
 const AdminSearchQueries = lazy(() => import("./pages/admin/SearchQueries"));
+const AdminEnquiries = lazy(() => import("./pages/admin/Enquiries"));
 const AdminSchoolDetail = lazy(() => import("./pages/admin/SchoolDetail"));
 const GuardianPortal = lazy(() => import("./pages/GuardianPortal"));
 
@@ -242,6 +243,7 @@ const App = () => {
                 <Route path="schools" element={<AdminSchools />} />
                 <Route path="schools/:id" element={<AdminSchoolDetail />} />
                 <Route path="search-queries" element={<AdminSearchQueries />} />
+                <Route path="enquiries" element={<AdminEnquiries />} />
               </Route>
 
               {/* School admin portal — gated behind FEATURE_SCHOOLS for P8 rollout */}
