@@ -23,12 +23,16 @@ const STATIC_DUPLICATE_SELECTORS = [
   'meta[property="og:description"]',
   'meta[property="og:url"]',
   'meta[property="og:image"]',
+  'meta[property="og:image:secure_url"]',
+  'meta[property="og:image:type"]',
+  'meta[property="og:image:alt"]',
   'meta[name="twitter:title"]',
   'meta[name="twitter:description"]',
   'meta[property="twitter:title"]',
   'meta[property="twitter:description"]',
   'meta[property="twitter:url"]',
   'meta[name="twitter:image"]',
+  'meta[name="twitter:image:alt"]',
   'meta[property="twitter:image"]',
   "link[rel=canonical]",
 ].join(",");
@@ -76,13 +80,17 @@ export const Seo = ({ title, description, path, image, noindex, type = "website"
       <meta property="og:url" content={url} />
       <meta property="og:type" content={type} />
       <meta property="og:image" content={imageUrl} />
+      <meta property="og:image:secure_url" content={imageUrl} />
+      <meta property="og:image:type" content="image/jpeg" />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
+      <meta property="og:image:alt" content={title} />
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={imageUrl} />
+      <meta name="twitter:image:alt" content={title} />
     </Helmet>
   );
 };

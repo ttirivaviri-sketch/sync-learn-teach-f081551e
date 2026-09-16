@@ -31,8 +31,8 @@ function stripManagedTags(html: string): string {
     /<meta\s+name="title"[^>]*>\s*/gi,
     /<meta\s+name="description"[^>]*>\s*/gi,
     /<link\s+rel="canonical"[^>]*>\s*/gi,
-    /<meta\s+(?:property|name)="og:(?:title|description|url|image|image:width|image:height|type)"[^>]*>\s*/gi,
-    /<meta\s+(?:property|name)="twitter:(?:title|description|url|image|card)"[^>]*>\s*/gi,
+    /<meta\s+(?:property|name)="og:(?:title|description|url|image|image:secure_url|image:type|image:width|image:height|image:alt|type)"[^>]*>\s*/gi,
+    /<meta\s+(?:property|name)="twitter:(?:title|description|url|image|image:alt|card)"[^>]*>\s*/gi,
   ];
   return patterns.reduce((acc, re) => acc.replace(re, ""), html);
 }
@@ -54,14 +54,18 @@ function headFor(route: (typeof ROUTE_SEO)[number]): string {
     <meta property="og:description" content="${description}" />
     <meta property="og:url" content="${url}" />
     <meta property="og:image" content="${image}" />
+    <meta property="og:image:secure_url" content="${image}" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${title}" />
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${title}" />
     <meta name="twitter:description" content="${description}" />
     <meta name="twitter:url" content="${url}" />
     <meta name="twitter:image" content="${image}" />
+    <meta name="twitter:image:alt" content="${title}" />
 `;
 }
 
