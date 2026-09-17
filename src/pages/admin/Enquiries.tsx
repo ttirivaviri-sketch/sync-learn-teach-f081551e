@@ -269,7 +269,14 @@ export default function Enquiries() {
                   Enquiries
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-2xl font-bold">{rows.length}</CardContent>
+              <CardContent className="flex items-center gap-2 text-2xl font-bold">
+                {rows.length}
+                {openCount > 0 && (
+                  <Badge variant={STATUS_VARIANTS.new} className="text-xs font-medium">
+                    {openCount} to answer
+                  </Badge>
+                )}
+              </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
