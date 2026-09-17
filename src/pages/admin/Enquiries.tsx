@@ -153,6 +153,59 @@ export default function Enquiries() {
     [rows],
   );
 
+  const statusOf = useCallback(
+    (id: string): EnquiryStatus => statuses[id] ?? "new",
+    [statuses],
+  );
+
+  const openCount = useMemo(
+    () => rows.filter((r) => statusOf(r.id) === "new").length,
+    [rows, statusOf],
+  );
+
+  const visibleRows = useMemo(
+    () =>
+      statusFilter === "all"
+        ? rows
+        : rows.filter((r) => statusOf(r.id) === statusFilter),
+    [rows, statusFilter, statusOf],
+  );
+
+  const updateStatus = useCallback(
+    async (id: string, status: EnquiryStatus) => {
+      const previous = statuses[id];
+      setSavingId(id);
+      setStatuses((s) => ({ ...s, [id]: status }));
+      const { data: auth } = await supabase.auth.getUser();
+      const { error: upsertError } = await supabase
+        .from("enquiry_status")
+        .upsert(
+          {
+            event_id: id,
+            status,
+            updated_by: auth.user?.id ?? null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "event_id" },
+        );
+      setSavingId(null);
+      if (upsertError) {
+        setStatuses((s) => {
+          const next = { ...s };
+          if (previous) next[id] = previous;
+          else delete next[id];
+          return next;
+        });
+        toast.error(upsertError.message || "Could not update the status");
+      } else {
+        toast.success(
+          `Marked as ${STATUSES.find((s) => s.value === status)?.label.toLowerCase()}`,
+        );
+      }
+    },
+    [statuses],
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
