@@ -1160,6 +1160,38 @@ export type Database = {
         }
         Relationships: []
       }
+      enquiry_status: {
+        Row: {
+          event_id: string
+          note: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          event_id: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          event_id?: string
+          note?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enquiry_status_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: true
+            referencedRelation: "landing_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enrollments: {
         Row: {
           class_id: string
