@@ -73,6 +73,9 @@ function countBy(rows: Enquiry[], pick: (r: Enquiry) => string) {
 export default function Enquiries() {
   const [days, setDays] = useState<number>(28);
   const [rows, setRows] = useState<Enquiry[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, EnquiryStatus>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | EnquiryStatus>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
