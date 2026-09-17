@@ -122,4 +122,21 @@ export function trackEnquiryClick(details: {
     source: details.source ?? null,
     label: details.label ?? null,
   });
+
+  // Also email the admins so a booking request is never missed.
+  void supabase.functions
+    .invoke("notify-enquiry", {
+      body: {
+        channel: details.channel,
+        subject: details.subject ?? "general",
+        sessionType: details.sessionType ?? "unspecified",
+        label: details.label ?? details.source ?? null,
+        path: typeof window !== "undefined" ? window.location.pathname : null,
+        referrer:
+          typeof document !== "undefined" ? document.referrer || null : null,
+      },
+    })
+    .catch(() => {
+      // Best-effort — never block the visitor's click on the email.
+    });
 }
