@@ -116,6 +116,23 @@ export default function Enquiries() {
           .filter((r) => r.intent === "tutor_enquiry")
           .map(({ intent: _intent, ...rest }) => rest);
         setRows(mapped);
+
+        if (mapped.length) {
+          const { data: statusRows } = await supabase
+            .from("enquiry_status")
+            .select("event_id, status")
+            .in(
+              "event_id",
+              mapped.map((r) => r.id),
+            );
+          const map: Record<string, EnquiryStatus> = {};
+          (statusRows ?? []).forEach((s) => {
+            map[s.event_id] = s.status as EnquiryStatus;
+          });
+          setStatuses(map);
+        } else {
+          setStatuses({});
+        }
       }
       setLoading(false);
       setRefreshing(false);
