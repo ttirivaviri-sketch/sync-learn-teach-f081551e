@@ -4,6 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, RefreshCw, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,6 +22,22 @@ import {
 } from "@/components/ui/table";
 
 const RANGES = [7, 28, 90] as const;
+
+export type EnquiryStatus = "new" | "in_progress" | "answered" | "cancelled";
+
+const STATUSES: { value: EnquiryStatus; label: string }[] = [
+  { value: "new", label: "New" },
+  { value: "in_progress", label: "In progress" },
+  { value: "answered", label: "Answered" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+const STATUS_VARIANTS: Record<EnquiryStatus, "default" | "secondary" | "outline"> = {
+  new: "default",
+  in_progress: "secondary",
+  answered: "outline",
+  cancelled: "outline",
+};
 
 interface Enquiry {
   id: string;
@@ -49,6 +73,9 @@ function countBy(rows: Enquiry[], pick: (r: Enquiry) => string) {
 export default function Enquiries() {
   const [days, setDays] = useState<number>(28);
   const [rows, setRows] = useState<Enquiry[]>([]);
+  const [statuses, setStatuses] = useState<Record<string, EnquiryStatus>>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | EnquiryStatus>("all");
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,6 +116,23 @@ export default function Enquiries() {
           .filter((r) => r.intent === "tutor_enquiry")
           .map(({ intent: _intent, ...rest }) => rest);
         setRows(mapped);
+
+        if (mapped.length) {
+          const { data: statusRows } = await supabase
+            .from("enquiry_status")
+            .select("event_id, status")
+            .in(
+              "event_id",
+              mapped.map((r) => r.id),
+            );
+          const map: Record<string, EnquiryStatus> = {};
+          (statusRows ?? []).forEach((s) => {
+            map[s.event_id] = s.status as EnquiryStatus;
+          });
+          setStatuses(map);
+        } else {
+          setStatuses({});
+        }
       }
       setLoading(false);
       setRefreshing(false);
@@ -107,6 +151,59 @@ export default function Enquiries() {
   const uniqueVisitors = useMemo(
     () => new Set(rows.map((r) => r.session_id)).size,
     [rows],
+  );
+
+  const statusOf = useCallback(
+    (id: string): EnquiryStatus => statuses[id] ?? "new",
+    [statuses],
+  );
+
+  const openCount = useMemo(
+    () => rows.filter((r) => statusOf(r.id) === "new").length,
+    [rows, statusOf],
+  );
+
+  const visibleRows = useMemo(
+    () =>
+      statusFilter === "all"
+        ? rows
+        : rows.filter((r) => statusOf(r.id) === statusFilter),
+    [rows, statusFilter, statusOf],
+  );
+
+  const updateStatus = useCallback(
+    async (id: string, status: EnquiryStatus) => {
+      const previous = statuses[id];
+      setSavingId(id);
+      setStatuses((s) => ({ ...s, [id]: status }));
+      const { data: auth } = await supabase.auth.getUser();
+      const { error: upsertError } = await supabase
+        .from("enquiry_status")
+        .upsert(
+          {
+            event_id: id,
+            status,
+            updated_by: auth.user?.id ?? null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "event_id" },
+        );
+      setSavingId(null);
+      if (upsertError) {
+        setStatuses((s) => {
+          const next = { ...s };
+          if (previous) next[id] = previous;
+          else delete next[id];
+          return next;
+        });
+        toast.error(upsertError.message || "Could not update the status");
+      } else {
+        toast.success(
+          `Marked as ${STATUSES.find((s) => s.value === status)?.label.toLowerCase()}`,
+        );
+      }
+    },
+    [statuses],
   );
 
   return (
@@ -172,7 +269,14 @@ export default function Enquiries() {
                   Enquiries
                 </CardTitle>
               </CardHeader>
-              <CardContent className="text-2xl font-bold">{rows.length}</CardContent>
+              <CardContent className="flex items-center gap-2 text-2xl font-bold">
+                {rows.length}
+                {openCount > 0 && (
+                  <Badge variant={STATUS_VARIANTS.new} className="text-xs font-medium">
+                    {openCount} to answer
+                  </Badge>
+                )}
+              </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
@@ -231,14 +335,34 @@ export default function Enquiries() {
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
               <CardTitle className="text-base">Recent enquiries</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("all")}
+                >
+                  All
+                </Button>
+                {STATUSES.map((s) => (
+                  <Button
+                    key={s.value}
+                    size="sm"
+                    variant={statusFilter === s.value ? "default" : "outline"}
+                    onClick={() => setStatusFilter(s.value)}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>When</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Channel</TableHead>
                     <TableHead>Subject</TableHead>
                     <TableHead>Session</TableHead>
@@ -247,18 +371,44 @@ export default function Enquiries() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.slice(0, 100).map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(r.created_at).toLocaleString()}
+                  {visibleRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                        Nothing with this status yet.
                       </TableCell>
-                      <TableCell>{CHANNEL_LABELS[r.channel] ?? r.channel}</TableCell>
-                      <TableCell className="capitalize">{r.subject}</TableCell>
-                      <TableCell className="capitalize">{r.sessionType}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{r.path ?? "—"}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{r.label ?? "—"}</TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    visibleRows.slice(0, 100).map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {new Date(r.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={statusOf(r.id)}
+                            onValueChange={(v) => void updateStatus(r.id, v as EnquiryStatus)}
+                            disabled={savingId === r.id}
+                          >
+                            <SelectTrigger className="h-8 w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUSES.map((s) => (
+                                <SelectItem key={s.value} value={s.value}>
+                                  {s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{CHANNEL_LABELS[r.channel] ?? r.channel}</TableCell>
+                        <TableCell className="capitalize">{r.subject}</TableCell>
+                        <TableCell className="capitalize">{r.sessionType}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{r.path ?? "—"}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{r.label ?? "—"}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
