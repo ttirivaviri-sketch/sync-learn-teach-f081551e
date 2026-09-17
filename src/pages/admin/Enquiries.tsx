@@ -328,14 +328,34 @@ export default function Enquiries() {
           </div>
 
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3">
               <CardTitle className="text-base">Recent enquiries</CardTitle>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant={statusFilter === "all" ? "default" : "outline"}
+                  onClick={() => setStatusFilter("all")}
+                >
+                  All
+                </Button>
+                {STATUSES.map((s) => (
+                  <Button
+                    key={s.value}
+                    size="sm"
+                    variant={statusFilter === s.value ? "default" : "outline"}
+                    onClick={() => setStatusFilter(s.value)}
+                  >
+                    {s.label}
+                  </Button>
+                ))}
+              </div>
             </CardHeader>
             <CardContent className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>When</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Channel</TableHead>
                     <TableHead>Subject</TableHead>
                     <TableHead>Session</TableHead>
@@ -344,18 +364,44 @@ export default function Enquiries() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rows.slice(0, 100).map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="whitespace-nowrap text-muted-foreground">
-                        {new Date(r.created_at).toLocaleString()}
+                  {visibleRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
+                        Nothing with this status yet.
                       </TableCell>
-                      <TableCell>{CHANNEL_LABELS[r.channel] ?? r.channel}</TableCell>
-                      <TableCell className="capitalize">{r.subject}</TableCell>
-                      <TableCell className="capitalize">{r.sessionType}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{r.path ?? "—"}</TableCell>
-                      <TableCell className="max-w-[200px] truncate">{r.label ?? "—"}</TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    visibleRows.slice(0, 100).map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="whitespace-nowrap text-muted-foreground">
+                          {new Date(r.created_at).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            value={statusOf(r.id)}
+                            onValueChange={(v) => void updateStatus(r.id, v as EnquiryStatus)}
+                            disabled={savingId === r.id}
+                          >
+                            <SelectTrigger className="h-8 w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {STATUSES.map((s) => (
+                                <SelectItem key={s.value} value={s.value}>
+                                  {s.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>{CHANNEL_LABELS[r.channel] ?? r.channel}</TableCell>
+                        <TableCell className="capitalize">{r.subject}</TableCell>
+                        <TableCell className="capitalize">{r.sessionType}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{r.path ?? "—"}</TableCell>
+                        <TableCell className="max-w-[200px] truncate">{r.label ?? "—"}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
