@@ -4,6 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, RefreshCw, MessageCircle } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -14,6 +22,22 @@ import {
 } from "@/components/ui/table";
 
 const RANGES = [7, 28, 90] as const;
+
+export type EnquiryStatus = "new" | "in_progress" | "answered" | "cancelled";
+
+const STATUSES: { value: EnquiryStatus; label: string }[] = [
+  { value: "new", label: "New" },
+  { value: "in_progress", label: "In progress" },
+  { value: "answered", label: "Answered" },
+  { value: "cancelled", label: "Cancelled" },
+];
+
+const STATUS_VARIANTS: Record<EnquiryStatus, "default" | "secondary" | "outline"> = {
+  new: "default",
+  in_progress: "secondary",
+  answered: "outline",
+  cancelled: "outline",
+};
 
 interface Enquiry {
   id: string;
