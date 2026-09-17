@@ -208,3 +208,6 @@ verify_jwt = false
 [functions.verify-curriculum-templates]
 verify_jwt = false
 
+# Public visitors are not signed in; input is validated in-code.
+[functions.notify-enquiry]
+verify_jwt = false
