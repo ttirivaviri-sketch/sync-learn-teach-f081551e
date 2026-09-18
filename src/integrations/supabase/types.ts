@@ -7931,6 +7931,20 @@ export type Database = {
         Args: { p_curriculum: string; p_limit?: number }
         Returns: Json
       }
+      get_public_bookable_tutors: {
+        Args: never
+        Returns: {
+          avatar_url: string
+          bio: string
+          full_name: string
+          id: string
+          last_seen: string
+          online_status: boolean
+          rating: number
+          subjects: Json
+          total_reviews: number
+        }[]
+      }
       get_public_profiles: {
         Args: { _ids: string[] }
         Returns: {
@@ -7952,6 +7966,15 @@ export type Database = {
           qualification_type: string
           user_id: string
           year_obtained: number
+        }[]
+      }
+      get_public_tutor_availability: {
+        Args: { _tutor_id: string }
+        Returns: {
+          day_of_week: number
+          end_time: string
+          id: string
+          start_time: string
         }[]
       }
       get_published_tutorials: {
