@@ -1,0 +1,1 @@
+GRANT EXECUTE ON FUNCTION public.get_tutor_busy_slots(uuid, timestamptz, timestamptz) TO anon;
