@@ -7893,6 +7893,16 @@ export type Database = {
         Returns: string
       }
       get_ai_usage_today: { Args: never; Returns: Json }
+      get_blog_comments: {
+        Args: { _post_slug: string }
+        Returns: {
+          author_name: string
+          body: string
+          created_at: string
+          id: string
+          is_mine: boolean
+        }[]
+      }
       get_class_misconception_digest: {
         Args: { p_class_id: string }
         Returns: Json
