@@ -111,7 +111,7 @@ const MathsTutorLanding = () => {
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
               <Link
-                to="/learner/auth"
+                to="/book?subject=Mathematics"
                 onClick={() =>
                   trackEnquiryClick({ channel: "booking", subject: "Mathematics", source: "maths_tutor_hero", label: "Book a maths tutor" })
                 }

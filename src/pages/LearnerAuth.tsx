@@ -4,10 +4,21 @@
  * Delegates all form logic to the shared AuthForm component.
  * Only provides learner-specific branding (logo, tagline).
  */
+import { useSearchParams } from "react-router-dom";
 import { AuthForm } from "@/components/AuthForm";
 import { Seo } from "@/components/Seo";
 
-const LearnerAuth = () => (
+/** Only same-site paths are honoured, so the redirect can't be used for phishing. */
+const safeRedirect = (value: string | null) =>
+  value && /^\/[A-Za-z0-9\-._~/?=&%]*$/.test(value) && !value.startsWith("//")
+    ? value
+    : "/learner";
+
+const LearnerAuth = () => {
+  const [searchParams] = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get("redirect"));
+
+  return (
   <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-foreground flex items-center justify-center p-4">
     <Seo
       title="Student Sign In — StudySync"
@@ -33,11 +44,12 @@ const LearnerAuth = () => (
 
       <AuthForm
         userType="learner"
-        redirectTo="/learner"
+        redirectTo={redirectTo}
         subtitle="Sign in to your account or create a new one"
       />
     </div>
   </div>
-);
+  );
+};
 
 export default LearnerAuth;

@@ -1,7 +1,15 @@
-import { Instagram, Mail, MessageCircle, Phone } from "lucide-react";
+import { CalendarCheck, Instagram, Mail, MessageCircle, Phone } from "lucide-react";
 import { trackEnquiryClick, type EnquiryChannel } from "@/utils/landingAnalytics";
 
 const contactItems = [
+  {
+    title: "Book online",
+    channel: "booking" as EnquiryChannel,
+    value: "Pick a tutor, day & time",
+    href: "/book",
+    Icon: CalendarCheck,
+    accent: "text-primary bg-primary/5 border-primary/20 hover:border-primary/40",
+  },
   {
     title: "WhatsApp",
     channel: "whatsapp" as EnquiryChannel,

@@ -38,6 +38,7 @@ const AiVirusArticle = lazy(() => import("./pages/blog/AiVirusArticle"));
 const AppRedirect = lazy(() => import("./pages/AppRedirect"));
 const LearnerApp = lazy(() => import("./pages/LearnerApp"));
 const TutorPublicProfile = lazy(() => import("./pages/TutorPublicProfile"));
+const BookTutor = lazy(() => import("./pages/BookTutor"));
 const LearnerAuth = lazy(() => import("./pages/LearnerAuth"));
 const TutorApp = lazy(() => import("./pages/TutorApp"));
 const TutorAuth = lazy(() => import("./pages/TutorAuth"));
@@ -205,6 +206,8 @@ const App = () => {
               <Route path="/learner/onboarding" element={<LearnerOnboarding />} />
               <Route path="/learner/choose-level" element={<ChooseStudyLevel />} />
               <Route path="/tutors/:tutorId" element={<TutorPublicProfile />} />
+              <Route path="/book" element={<BookTutor />} />
+              <Route path="/book/:tutorId" element={<BookTutor />} />
               <Route path="/tutor" element={<TutorApp />} />
               <Route path="/tutor/auth" element={<TutorAuth />} />
 

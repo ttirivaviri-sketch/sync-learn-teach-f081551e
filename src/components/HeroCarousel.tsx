@@ -312,10 +312,10 @@ const HeroCarousel = () => {
         "Online or in-person sessions",
         "Transparent ratings & reviews",
       ]}
-      ctaLabel="Find a tutor"
+      ctaLabel="Book a tutor"
       onCta={() => {
         track("cta_click", { id: "hero_find_tutor", slide: 2 });
-        navigate("/learner/auth");
+        navigate("/book");
       }}
       image={heroTutorMarketplace}
       imageAlt="Verified online tutor"
