@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface BlogComment {
   id: string;
-  user_id: string;
   author_name: string;
   body: string;
   created_at: string;
+  is_mine: boolean;
 }
 
 const MAX_LENGTH = 2000;
@@ -38,15 +38,15 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
   const [authorName, setAuthorName] = useState("");
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("blog_comments")
-      .select("id, user_id, author_name, body, created_at")
-      .eq("post_slug", postSlug)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (!error && data) setComments(data as BlogComment[]);
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: BlogComment[] | null; error: unknown }>)("get_blog_comments", {
+      _post_slug: postSlug,
+    });
+    if (!error && data) setComments(data);
     setLoading(false);
-  }, [postSlug]);
+  }, [postSlug, userId]);
 
   useEffect(() => {
     void load();
@@ -87,14 +87,14 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
         author_name: authorName || "StudySync reader",
         body: body.trim(),
       })
-      .select("id, user_id, author_name, body, created_at")
+      .select("id, author_name, body, created_at")
       .single();
     setSubmitting(false);
     if (error || !data) {
       toast.error("Could not post your comment", { description: "Please try again in a moment." });
       return;
     }
-    setComments((prev) => [data as BlogComment, ...prev]);
+    setComments((prev) => [{ ...data, is_mine: true } as BlogComment, ...prev]);
     setBody("");
     toast.success("Comment posted");
   };
@@ -170,7 +170,7 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
                 <time dateTime={comment.created_at} className="text-muted-foreground">
                   {formatDate(comment.created_at)}
                 </time>
-                {comment.user_id === userId && (
+                {comment.is_mine && userId && (
                   <button
                     type="button"
                     onClick={() => handleDelete(comment.id)}
