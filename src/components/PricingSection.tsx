@@ -50,7 +50,8 @@ const tiers = [
       "1-hour sessions, R300 each",
       "No subscription required",
     ],
-    cta: "Find a tutor",
+    cta: "Book a tutor",
+    href: "/book",
     highlighted: false,
   },
 ];
@@ -105,7 +106,7 @@ const PricingSection = () => {
                 ))}
               </ul>
               <Button
-                onClick={() => navigate("/learner/auth")}
+                onClick={() => navigate(("href" in t && t.href) || "/learner/auth")}
                 className={
                   t.highlighted
                     ? "w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full"
