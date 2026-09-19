@@ -38,13 +38,13 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
   const [authorName, setAuthorName] = useState("");
 
   const load = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("blog_comments")
-      .select("id, user_id, author_name, body, created_at")
-      .eq("post_slug", postSlug)
-      .order("created_at", { ascending: false })
-      .limit(200);
-    if (!error && data) setComments(data as BlogComment[]);
+    const { data, error } = await (supabase.rpc as unknown as (
+      fn: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: BlogComment[] | null; error: unknown }>)("get_blog_comments", {
+      _post_slug: postSlug,
+    });
+    if (!error && data) setComments(data);
     setLoading(false);
   }, [postSlug]);
 
