@@ -9,10 +9,10 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface BlogComment {
   id: string;
-  user_id: string;
   author_name: string;
   body: string;
   created_at: string;
+  is_mine: boolean;
 }
 
 const MAX_LENGTH = 2000;
