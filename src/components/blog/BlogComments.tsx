@@ -87,14 +87,14 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
         author_name: authorName || "StudySync reader",
         body: body.trim(),
       })
-      .select("id, user_id, author_name, body, created_at")
+      .select("id, author_name, body, created_at")
       .single();
     setSubmitting(false);
     if (error || !data) {
       toast.error("Could not post your comment", { description: "Please try again in a moment." });
       return;
     }
-    setComments((prev) => [data as BlogComment, ...prev]);
+    setComments((prev) => [{ ...data, is_mine: true } as BlogComment, ...prev]);
     setBody("");
     toast.success("Comment posted");
   };
