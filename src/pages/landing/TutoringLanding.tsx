@@ -89,7 +89,7 @@ const TutoringLanding = () => {
           <div className="mt-8 flex flex-wrap gap-3">
             <Button asChild size="lg" className="bg-blue-600 hover:bg-blue-700">
               <Link
-                to="/learner/auth"
+                to="/book"
                 onClick={() =>
                   trackEnquiryClick({ channel: "booking", source: "tutoring_hero", label: "Find my tutor" })
                 }
