@@ -170,7 +170,7 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
                 <time dateTime={comment.created_at} className="text-muted-foreground">
                   {formatDate(comment.created_at)}
                 </time>
-                {comment.user_id === userId && (
+                {comment.is_mine && userId && (
                   <button
                     type="button"
                     onClick={() => handleDelete(comment.id)}
