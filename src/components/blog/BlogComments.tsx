@@ -46,7 +46,7 @@ export const BlogComments = ({ postSlug }: { postSlug: string }) => {
     });
     if (!error && data) setComments(data);
     setLoading(false);
-  }, [postSlug]);
+  }, [postSlug, userId]);
 
   useEffect(() => {
     void load();
