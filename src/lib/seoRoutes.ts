@@ -146,6 +146,13 @@ export const ROUTE_SEO: RouteSeo[] = [
   },
 
   {
+    path: "/book",
+    title: "Book a Verified Tutor Online — R300 per hour | StudySync",
+    description:
+      "Book a background-checked StudySync tutor in minutes. Choose your subject, pick a 1-hour slot online or in person, and only pay once the tutor confirms.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/learner/auth",
     title: "Sign in to StudySync — Start learning",
     description:

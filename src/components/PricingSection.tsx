@@ -21,6 +21,7 @@ const tiers = [
       `Premium tier available (R${PRICING.ai_premium.monthly}/mo)`,
     ],
     cta: "Start free trial",
+    href: "/learner/auth",
     highlighted: false,
   },
   {
@@ -36,6 +37,7 @@ const tiers = [
       `Premium combo R${PRICING.ai_premium_combo.monthly}/mo`,
     ],
     cta: "Start free trial",
+    href: "/learner/auth",
     highlighted: true,
   },
   {
@@ -106,7 +108,7 @@ const PricingSection = () => {
                 ))}
               </ul>
               <Button
-                onClick={() => navigate(("href" in t && t.href) || "/learner/auth")}
+                onClick={() => navigate(t.href)}
                 className={
                   t.highlighted
                     ? "w-full bg-primary hover:bg-primary/90 text-primary-foreground font-semibold rounded-full"
