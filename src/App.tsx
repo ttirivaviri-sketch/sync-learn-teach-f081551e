@@ -104,6 +104,7 @@ const LegalLibrary = lazy(() => import("./pages/legal/LibraryDisclaimer"));
 const LegalCommunity = lazy(() => import("./pages/legal/Community"));
 const LegalRefunds = lazy(() => import("./pages/legal/Refunds"));
 const LegalDataCompliance = lazy(() => import("./pages/legal/DataCompliance"));
+const LegalPaymentPolicy = lazy(() => import("./pages/legal/PaymentPolicy"));
 
 // Settings
 const SettingsDataCompliance = lazy(() => import("./pages/settings/DataCompliance"));
@@ -289,6 +290,7 @@ const App = () => {
               <Route path="/legal/community" element={<LegalCommunity />} />
               <Route path="/legal/refunds" element={<LegalRefunds />} />
               <Route path="/legal/data-compliance" element={<LegalDataCompliance />} />
+              <Route path="/legal/payments" element={<LegalPaymentPolicy />} />
 
               {/* Settings */}
               <Route path="/settings/data-compliance" element={<SettingsDataCompliance />} />

@@ -246,6 +246,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/legal.jpg",
   },
   {
+    path: "/legal/payments",
+    title: "Payment Policy — StudySync",
+    description:
+      "How tutor payments work on StudySync: R300 per 1-hour session, how the fee is split between the platform and the tutor, and when tutors get paid.",
+    image: "/og/legal.jpg",
+  },
+  {
     path: "/legal/data-compliance",
     title: "Data & Compliance — StudySync",
     description:

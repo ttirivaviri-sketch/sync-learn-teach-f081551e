@@ -27,6 +27,7 @@ const footerLinks = {
     { label: "Copyright & Takedown", href: "/legal/copyright" },
     { label: "Library Disclaimer", href: "/legal/library" },
     { label: "Refund Policy", href: "/legal/refunds" },
+    { label: "Payment Policy", href: "/legal/payments" },
     { label: "Community Guidelines", href: "/legal/community" },
   ],
 };
