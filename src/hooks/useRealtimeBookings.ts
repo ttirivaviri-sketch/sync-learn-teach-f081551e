@@ -14,6 +14,7 @@ export interface BookingRequest {
   duration_minutes: number;
   status: 'requested' | 'confirmed' | 'completed' | 'canceled';
   price: number;
+  learner_note?: string | null;
   created_at: string;
   updated_at: string;
   learner_profile?: {
