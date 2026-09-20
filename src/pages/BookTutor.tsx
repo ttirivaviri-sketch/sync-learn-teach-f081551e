@@ -124,6 +124,7 @@ const BookTutor = () => {
           duration_minutes: SESSION_MINUTES,
           price: pending.price,
           room_name: `session-${crypto.randomUUID()}`,
+          learner_note: pending.note || null,
         });
         if (insertError) throw insertError;
 
