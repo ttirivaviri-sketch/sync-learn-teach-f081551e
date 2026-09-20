@@ -406,6 +406,7 @@ export type Database = {
           duration_minutes: number
           id: string
           learner_id: string
+          learner_note: string | null
           price: number
           room_name: string | null
           scheduled_at: string
@@ -421,6 +422,7 @@ export type Database = {
           duration_minutes: number
           id?: string
           learner_id: string
+          learner_note?: string | null
           price: number
           room_name?: string | null
           scheduled_at: string
@@ -436,6 +438,7 @@ export type Database = {
           duration_minutes?: number
           id?: string
           learner_id?: string
+          learner_note?: string | null
           price?: number
           room_name?: string | null
           scheduled_at?: string

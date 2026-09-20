@@ -206,6 +206,12 @@ export function BookingCard({
             </Badge>
             <span className="font-semibold text-primary">R{booking.price}</span>
           </div>
+          {booking.learner_note && (
+            <div className="rounded-lg bg-muted/60 p-3 text-sm">
+              <span className="font-medium">Learner note: </span>
+              <span className="text-muted-foreground">{booking.learner_note}</span>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
