@@ -3,7 +3,7 @@ import LegalLayout from "@/components/legal/LegalLayout";
 export default function Refunds() {
   return (
     <LegalLayout title="Refund Policy">
-      <p>This policy explains when you can request a refund for tutor bookings on StudySync.</p>
+      <p>This policy explains when you can request a refund for tutor bookings on StudySync. For how session fees are split and when tutors get paid, see our <a href="/legal/payments">Payment Policy</a>.</p>
 
       <h2>Cancellations by the learner</h2>
       <ul>

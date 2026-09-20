@@ -16,7 +16,7 @@ export default function Terms() {
       <p>Tutors offer services through {COMPANY.name} as independent contractors. They are <strong>not employees, agents or partners</strong> of {COMPANY.name}. We facilitate bookings and payments but do not deliver tuition ourselves and do not control how a tutor conducts a session.</p>
 
       <h2>4. Bookings, payments and refunds</h2>
-      <p>Tutor sessions are booked in 1-hour blocks at R300 per session, which the learner pays for up-front. Payments are processed by PayFast (PayFast (Pty) Ltd). Refunds are governed by our <a href="/legal/refunds">Refund Policy</a>. Tutor earnings are paid out to verified bank accounts on request, subject to anti-fraud review.</p>
+      <p>Tutor sessions are booked in 1-hour blocks at R300 per session, which the learner pays for up-front. Payments are processed by PayFast (PayFast (Pty) Ltd). Refunds are governed by our <a href="/legal/refunds">Refund Policy</a>. How session fees are split and when tutors are paid is set out in our <a href="/legal/payments">Payment Policy</a>.</p>
 
       <h2>5. Acceptable use</h2>
       <p>You agree not to use {COMPANY.name} to cheat in active examinations, to harass or defraud other users, to upload illegal or infringing content, or to reverse-engineer the platform. Detailed rules live in our <a href="/legal/community">Community Guidelines</a>.</p>
