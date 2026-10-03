@@ -211,3 +211,7 @@ verify_jwt = false
 # Public visitors are not signed in; input is validated in-code.
 [functions.notify-enquiry]
 verify_jwt = false
+
+# Called right after a booking insert; booking_id is validated in-code.
+[functions.notify-booking]
+verify_jwt = false
