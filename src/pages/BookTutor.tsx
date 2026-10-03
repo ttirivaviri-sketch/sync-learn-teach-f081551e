@@ -134,6 +134,15 @@ const BookTutor = () => {
           .single();
         if (insertError) throw insertError;
 
+        // Save the learner's phone so the StudySync team can reach them.
+        if (pending.phone) {
+          void supabase
+            .from("profiles")
+            .update({ phone: pending.phone })
+            .eq("id", learnerId)
+            .then(() => {});
+        }
+
         // Best-effort email to the tutor + admins; never blocks the booking.
         if (inserted?.id) {
           void supabase.functions
@@ -189,6 +198,7 @@ const BookTutor = () => {
       scheduledAt: selectedStart.toISOString(),
       price,
       note: note.trim(),
+      phone: phone.trim(),
     };
   };
 
