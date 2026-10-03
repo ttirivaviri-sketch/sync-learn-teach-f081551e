@@ -83,7 +83,7 @@ serve(async (req) => {
       .from("bookings")
       .select(
         `id, scheduled_at, duration_minutes, price, status, learner_note,
-         learner_profile:profiles!bookings_learner_id_fkey(full_name, email),
+         learner_profile:profiles!bookings_learner_id_fkey(full_name, email, phone),
          tutor_profile:profiles!bookings_tutor_id_fkey(full_name, email),
          tutor_subjects(subject, level)`,
       )
@@ -100,6 +100,7 @@ serve(async (req) => {
     const learner = booking.learner_profile as {
       full_name: string | null;
       email: string | null;
+      phone: string | null;
     } | null;
     const tutor = booking.tutor_profile as {
       full_name: string | null;
@@ -123,6 +124,7 @@ serve(async (req) => {
     const rows: [string, string][] = [
       ["Learner", learner?.full_name || "—"],
       ["Learner email", learner?.email || "—"],
+      ["Learner phone", learner?.phone || "—"],
       ["Tutor", tutor?.full_name || "—"],
       ["Subject", subject ? `${subject.subject} (${subject.level})` : "—"],
       ["When", `${when} (SAST)`],
