@@ -116,17 +116,28 @@ const BookTutor = () => {
     async (pending: PendingBooking, learnerId: string) => {
       setSubmitting(true);
       try {
-        const { error: insertError } = await supabase.from("bookings").insert({
-          learner_id: learnerId,
-          tutor_id: pending.tutorId,
-          tutor_subject_id: pending.subjectId,
-          scheduled_at: pending.scheduledAt,
-          duration_minutes: SESSION_MINUTES,
-          price: pending.price,
-          room_name: `session-${crypto.randomUUID()}`,
-          learner_note: pending.note || null,
-        });
+        const { data: inserted, error: insertError } = await supabase
+          .from("bookings")
+          .insert({
+            learner_id: learnerId,
+            tutor_id: pending.tutorId,
+            tutor_subject_id: pending.subjectId,
+            scheduled_at: pending.scheduledAt,
+            duration_minutes: SESSION_MINUTES,
+            price: pending.price,
+            room_name: `session-${crypto.randomUUID()}`,
+            learner_note: pending.note || null,
+          })
+          .select("id")
+          .single();
         if (insertError) throw insertError;
+
+        // Best-effort email to the tutor + admins; never blocks the booking.
+        if (inserted?.id) {
+          void supabase.functions
+            .invoke("notify-booking", { body: { booking_id: inserted.id } })
+            .catch(() => {});
+        }
 
         clearPending();
         setConfirmed(pending);

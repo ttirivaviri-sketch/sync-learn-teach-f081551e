@@ -323,6 +323,12 @@ export const useRealtimeBookings = (userType: 'learner' | 'tutor', userId?: stri
 
     logger.info('✅ Booking created with room:', { bookingId: data.id, roomName: data.room_name });
     security.logSecurityEvent('booking_created', { bookingId: data.id, userId, roomName: data.room_name });
+
+    // Best-effort email to the tutor + admins; never blocks the booking.
+    void supabase.functions
+      .invoke('notify-booking', { body: { booking_id: data.id } })
+      .catch(() => {});
+
     return data;
   };
 
