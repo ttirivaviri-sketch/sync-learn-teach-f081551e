@@ -16,6 +16,7 @@ import { AuthForm } from "@/components/AuthForm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -238,6 +239,7 @@ const BookTutor = () => {
     setConfirmed(null);
     setSelectedStart(null);
     setNote("");
+    setPhone("");
     submittedRef.current = false;
   };
 
@@ -392,6 +394,27 @@ const BookTutor = () => {
                 <dd className="font-bold text-slate-900">R{price.toFixed(0)}</dd>
               </div>
             </dl>
+
+            <div className="mb-5">
+              <label htmlFor="booking-phone" className="mb-2 block text-sm font-medium">
+                Your phone number
+              </label>
+              <Input
+                id="booking-phone"
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="e.g. 068 652 3995"
+                className="h-11 rounded-xl"
+                maxLength={20}
+              />
+              <p className="mt-1.5 text-xs text-slate-500">
+                So the StudySync team can call or WhatsApp you about this session. Optional, but
+                recommended.
+              </p>
+            </div>
 
             {showAuth && !userId ? (
               <div className="space-y-3">
