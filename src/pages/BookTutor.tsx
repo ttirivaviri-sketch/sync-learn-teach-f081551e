@@ -36,6 +36,7 @@ interface PendingBooking {
   scheduledAt: string;
   price: number;
   note: string;
+  phone: string;
 }
 
 const readPending = (): PendingBooking | null => {
@@ -69,6 +70,7 @@ const BookTutor = () => {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedStart, setSelectedStart] = useState<Date | null>(null);
   const [note, setNote] = useState("");
+  const [phone, setPhone] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [confirmed, setConfirmed] = useState<PendingBooking | null>(null);
   const [showAuth, setShowAuth] = useState(false);
