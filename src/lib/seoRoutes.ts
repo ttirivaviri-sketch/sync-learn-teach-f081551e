@@ -110,6 +110,13 @@ export const ROUTE_SEO: RouteSeo[] = [
     image: "/og/life-sciences-past-papers.jpg",
   },
   {
+    path: "/past-papers/geography",
+    title: "Geography Past Papers & Memos — Grade 10-12",
+    description:
+      "Grade 12, 11 and 10 Geography past papers with memos — NSC Paper 1 theory and Paper 2 mapwork & GIS, sorted by grade and year. Free to start.",
+    image: "/og/home.jpg",
+  },
+  {
     path: "/past-papers/accounting",
     title: "Accounting Past Papers & Memos — Grade 10-12 Matric",
     description:

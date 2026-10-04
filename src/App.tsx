@@ -29,6 +29,7 @@ const ZimsecPastPapersLanding = lazy(() => import("./pages/landing/ZimsecPastPap
 const MatricPastPapersLanding = lazy(() => import("./pages/landing/MatricPastPapersLanding"));
 const PhysicalSciencesPastPapersLanding = lazy(() => import("./pages/landing/PhysicalSciencesPastPapersLanding"));
 const MathsPastPapersLanding = lazy(() => import("./pages/landing/MathsPastPapersLanding"));
+const GeographyPastPapersLanding = lazy(() => import("./pages/landing/GeographyPastPapersLanding"));
 const LifeSciencesPastPapersLanding = lazy(() => import("./pages/landing/LifeSciencesPastPapersLanding"));
 const BooksLanding = lazy(() => import("./pages/landing/BooksLanding"));
 const Community = lazy(() => import("./pages/Community"));
@@ -189,6 +190,8 @@ const App = () => {
               <Route path="/physical-sciences-past-papers" element={<Navigate to="/past-papers/physical-sciences" replace />} />
               <Route path="/physical-science-past-papers" element={<Navigate to="/past-papers/physical-sciences" replace />} />
               <Route path="/physical-sciences-grade-12-past-papers" element={<Navigate to="/past-papers/physical-sciences" replace />} />
+              <Route path="/past-papers/geography" element={<GeographyPastPapersLanding />} />
+              <Route path="/geography-past-papers" element={<Navigate to="/past-papers/geography" replace />} />
               <Route path="/past-papers/life-sciences" element={<LifeSciencesPastPapersLanding />} />
               <Route path="/life-sciences-past-papers" element={<Navigate to="/past-papers/life-sciences" replace />} />
               <Route path="/life-science-past-papers" element={<Navigate to="/past-papers/life-sciences" replace />} />
