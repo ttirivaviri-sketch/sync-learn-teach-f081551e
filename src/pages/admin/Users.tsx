@@ -62,8 +62,12 @@ const Users = () => {
         }
       }
 
+      const loginByUser: Record<string, any> = {};
+      const { data: stats } = await (supabase.rpc as any)('admin_user_login_stats');
+      for (const s of (stats ?? []) as any[]) loginByUser[s.user_id] = s;
+
       setUsers(
-        (profiles ?? []).map((p: any) => ({ ...p, user_roles: rolesByUser[p.id] ?? [] }))
+        (profiles ?? []).map((p: any) => ({ ...p, user_roles: rolesByUser[p.id] ?? [], login: loginByUser[p.id] }))
       );
     } catch (error) {
       logger.error('Error loading users:', error);
@@ -219,6 +223,15 @@ const Users = () => {
                             <Badge variant={user.online_status ? 'default' : 'outline'}>
                               {user.online_status ? 'Online' : 'Offline'}
                             </Badge>
+                            <div className="mt-1 text-xs text-muted-foreground">
+                              {(() => {
+                                const ts = user.login?.last_login || user.last_seen;
+                                return ts ? `Last seen ${formatDistanceToNow(new Date(ts), { addSuffix: true })}` : 'Never seen';
+                              })()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {user.login ? `${user.login.days_30} days active / 30d · ${user.login.sessions_30} visits` : 'No logins tracked yet'}
+                            </div>
                           </td>
                           <td className="px-4 py-3 text-sm text-muted-foreground">
                             <div className="flex items-center gap-2">
