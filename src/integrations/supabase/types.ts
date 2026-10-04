@@ -7367,6 +7367,30 @@ export type Database = {
           },
         ]
       }
+      user_login_days: {
+        Row: {
+          day: string
+          first_at: string
+          last_at: string
+          sessions: number
+          user_id: string
+        }
+        Insert: {
+          day?: string
+          first_at?: string
+          last_at?: string
+          sessions?: number
+          user_id: string
+        }
+        Update: {
+          day?: string
+          first_at?: string
+          last_at?: string
+          sessions?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_preferences: {
         Row: {
           haptics_enabled: boolean
@@ -7807,6 +7831,16 @@ export type Database = {
           subject_name: string
           tasks_with_regen: number
           total_regens: number
+        }[]
+      }
+      admin_user_login_stats: {
+        Args: never
+        Returns: {
+          days_30: number
+          last_login: string
+          sessions_30: number
+          total_days: number
+          user_id: string
         }[]
       }
       auto_resolve_kernel_alerts: { Args: never; Returns: number }
@@ -8256,6 +8290,7 @@ export type Database = {
         Args: { p_resource_id: string; p_source?: string }
         Returns: undefined
       }
+      record_user_login: { Args: never; Returns: undefined }
       refresh_student_context_snapshot: {
         Args: { _user_id: string }
         Returns: {
