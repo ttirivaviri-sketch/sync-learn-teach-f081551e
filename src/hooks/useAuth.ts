@@ -99,6 +99,13 @@ export const useAuth = (options: UseAuthOptions = {}) => {
           });
           if (ok) {
             watchSuspension(newSession.user.id);
+            try {
+              const k = `ss_login_rec_${newSession.user.id}`;
+              if (!sessionStorage.getItem(k)) {
+                sessionStorage.setItem(k, "1");
+                void (supabase.rpc as any)("record_user_login").then(() => {}, () => {});
+              }
+            } catch { /* ignore */ }
             if (options.redirectIfFound) navigate(options.redirectIfFound);
           }
         }, 0);
