@@ -216,6 +216,15 @@ const PastPapersLanding = () => {
             </Link>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="mb-2 text-lg font-semibold text-gray-900">Writing Geography?</h2>
+            <p className="mb-3 text-sm leading-relaxed text-gray-600">
+              Grade 10–12 Geography papers with memos — Paper 1 theory and Paper 2 mapwork &amp; GIS.
+            </p>
+            <Link className="text-sm font-medium text-blue-700 hover:underline" to="/past-papers/geography">
+              Browse Geography past papers &amp; memos →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <h2 className="mb-2 text-lg font-semibold text-gray-900">Studying Accounting?</h2>
             <p className="mb-3 text-sm leading-relaxed text-gray-600">
               Grade 10–12 Accounting papers with memos — financial statements, cash flow, ratios and
