@@ -31,20 +31,20 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
 }) => {
   const [newSubject, setNewSubject] = useState('');
   const [newLevel, setNewLevel] = useState('');
-  const [newRate, setNewRate] = useState('');
+  const [newRate, setNewRate] = useState('300');
   const [isAdding, setIsAdding] = useState(false);
 
   const { addTutorSubject, removeTutorSubject } = useTutorManagement();
 
   const handleAddSubject = async () => {
-    if (!newSubject || !newLevel || !newRate) return;
+    if (!newSubject || !newLevel || !newRate || parseFloat(newRate) < 300) return;
 
     try {
       setIsAdding(true);
       await addTutorSubject(newSubject, newLevel, parseFloat(newRate));
       setNewSubject('');
       setNewLevel('');
-      setNewRate('');
+      setNewRate('300');
       onSubjectAdded?.();
     } catch (error) {
       logger.error('Error adding subject:', error);
@@ -131,7 +131,8 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
 
             <Input
               type="number"
-              placeholder="Hourly rate (R)"
+              placeholder="Hourly rate (min R300)"
+              min={300}
               value={newRate}
               onChange={(e) => setNewRate(e.target.value)}
               min="50"
@@ -141,7 +142,7 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
 
           <Button
             onClick={handleAddSubject}
-            disabled={!newSubject || !newLevel || !newRate || isAdding}
+            disabled={!newSubject || !newLevel || !newRate || parseFloat(newRate) < 300 || isAdding}
             className="w-full"
           >
             <Plus className="h-4 w-4 mr-2" />

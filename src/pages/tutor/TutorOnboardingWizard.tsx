@@ -57,7 +57,7 @@ interface SerialState {
 
 const INITIAL: SerialState = {
   step: 0, idNumber: "", studentStatus: "", qualType: "", institution: "", year: "",
-  curriculums: [], grades: [], subjects: [], rate: "250", bio: "", style: "",
+  curriculums: [], grades: [], subjects: [], rate: "300", bio: "", style: "",
 };
 
 export default function TutorOnboardingWizard() {
@@ -107,7 +107,7 @@ export default function TutorOnboardingWizard() {
         : (!!qualification && !!state.qualType.trim() && !!state.institution.trim());
       case 4: return state.curriculums.length > 0;
       case 5: return state.grades.length > 0;
-      case 6: return state.subjects.length > 0 && Number(state.rate) > 0;
+      case 6: return state.subjects.length > 0 && Number(state.rate) >= 300;
       case 7: return state.bio.trim().length >= 30;
       case 8: return true;
       default: return true;
@@ -349,8 +349,8 @@ export default function TutorOnboardingWizard() {
                     ))}
                   </div>
                   <Label className="mt-4 block">Default hourly rate (R)</Label>
-                  <Input type="number" min={50} step={50} value={state.rate} onChange={(e) => setField("rate", e.target.value)} />
-                  <p className="mt-1 text-xs text-muted-foreground">You can set per-subject rates from your profile later.</p>
+                  <Input type="number" min={300} step={50} value={state.rate} onChange={(e) => setField("rate", e.target.value)} />
+                  <p className="mt-1 text-xs text-muted-foreground">Minimum R300 per hour. You can set per-subject rates from your profile later.</p>
                 </Section>
               )}
 
