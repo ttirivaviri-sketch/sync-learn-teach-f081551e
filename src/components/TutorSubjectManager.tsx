@@ -135,7 +135,6 @@ export const TutorSubjectManager: React.FC<TutorSubjectManagerProps> = ({
               min={300}
               value={newRate}
               onChange={(e) => setNewRate(e.target.value)}
-              min="50"
               max="1000"
             />
           </div>
