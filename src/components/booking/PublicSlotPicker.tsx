@@ -131,14 +131,37 @@ export function PublicSlotPicker({ tutorId, selectedStart, onSelect }: PublicSlo
     );
   }
 
+  const customPicker = (
+    <div className="space-y-2 rounded-2xl border border-dashed border-border p-4">
+      <p className="text-sm font-medium">Request a custom time</p>
+      <p className="text-xs text-muted-foreground">
+        The tutor will confirm or suggest another time before any payment.
+      </p>
+      <input
+        type="datetime-local"
+        min={format(addDays(new Date(), 0), "yyyy-MM-dd'T'HH:mm")}
+        value={selectedStart ? format(selectedStart, "yyyy-MM-dd'T'HH:mm") : ""}
+        onChange={(e) => {
+          if (!e.target.value) return;
+          const d = new Date(e.target.value);
+          if (d.getTime() > Date.now()) onSelect(d);
+        }}
+        className="w-full rounded-xl border border-border bg-card px-3 py-2 text-sm"
+      />
+    </div>
+  );
+
   if (slots.length === 0) {
     return (
-      <div className="rounded-2xl border border-border bg-muted/40 p-6 text-center">
-        <CalendarDays className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
-        <p className="font-medium">This tutor hasn't published times yet</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Pick another tutor, or message us and we'll arrange a session for you.
-        </p>
+      <div className="space-y-3">
+        <div className="rounded-2xl border border-border bg-muted/40 p-6 text-center">
+          <CalendarDays className="mx-auto mb-2 h-8 w-8 text-muted-foreground" />
+          <p className="font-medium">This tutor hasn't published times yet</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Suggest a time below and we'll arrange it with the tutor.
+          </p>
+        </div>
+        {customPicker}
       </div>
     );
   }
@@ -212,6 +235,8 @@ export function PublicSlotPicker({ tutorId, selectedStart, onSelect }: PublicSlo
           )}
         </div>
       )}
+
+      {customPicker}
     </div>
   );
 }
