@@ -1,0 +1,10 @@
+REVOKE EXECUTE ON FUNCTION public.current_school_ids FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.get_counterparty_contact FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.has_shared_relationship FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.check_and_increment_ai_usage FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.check_school_ai_quota FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.increment_school_ai_usage FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.match_school_chunks FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.rebuild_school_analytics_today FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.is_tutor_user FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.current_school_ids, public.get_counterparty_contact, public.has_shared_relationship, public.check_and_increment_ai_usage, public.check_school_ai_quota, public.increment_school_ai_usage, public.match_school_chunks, public.rebuild_school_analytics_today TO service_role;
