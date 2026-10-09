@@ -79,7 +79,8 @@ const LearnerApp = () => {
   const { isOnline } = useNetworkStatus();
 
   // ── Auth ────────────────────────────────────────────────────────────────
-  const { session, loading } = useAuth({ redirectTo: "/learner/auth" });
+  const emailDestination = window.location.pathname + window.location.search;
+  const { session, loading } = useAuth({ redirectTo: `/learner/auth?redirect=${encodeURIComponent(emailDestination)}` });
 
   // ── UI state ────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState(() => {
