@@ -68,7 +68,10 @@ const StudySyncLibrary = ({
   const orderLikedIds = frozenEngagementRef.current?.liked ?? [];
   const orderWatchCounts = frozenEngagementRef.current?.watched ?? {};
   // studyModeActive removed — Study Mode is a top-level nav tab now.
-  const [activeCategory, setActiveCategory] = useState("all");
+  const [activeCategory, setActiveCategory] = useState(() => {
+    const category = new URLSearchParams(window.location.search).get("category");
+    return category && ["all", "books", "tutorials", "papers", "diagrams", "mylibrary"].includes(category) ? category : "all";
+  });
   const [previousCategory, setPreviousCategory] = useState("all");
   const [activeVideoResource, setActiveVideoResource] = useState<LibraryResource | null>(null);
   const [activeDocument, setActiveDocument] = useState<{ resource: LibraryResource } | null>(null);

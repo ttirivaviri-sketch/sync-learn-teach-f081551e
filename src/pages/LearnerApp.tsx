@@ -79,10 +79,14 @@ const LearnerApp = () => {
   const { isOnline } = useNetworkStatus();
 
   // ── Auth ────────────────────────────────────────────────────────────────
-  const { session, loading } = useAuth({ redirectTo: "/learner/auth" });
+  const emailDestination = window.location.pathname + window.location.search;
+  const { session, loading } = useAuth({ redirectTo: `/learner/auth?redirect=${encodeURIComponent(emailDestination)}` });
 
   // ── UI state ────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState("home");
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    return tab && ["home", "library", "study", "activity", "profile"].includes(tab) ? tab : "home";
+  });
   const [showLaunchScreen, setShowLaunchScreen] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("");

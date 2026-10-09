@@ -215,3 +215,7 @@ verify_jwt = false
 # Called right after a booking insert; booking_id is validated in-code.
 [functions.notify-booking]
 verify_jwt = false
+
+# Scheduled reminders and signed unsubscribe links validate access in-code.
+[functions.send-reengagement-emails]
+verify_jwt = false

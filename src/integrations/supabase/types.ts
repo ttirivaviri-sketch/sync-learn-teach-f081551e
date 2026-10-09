@@ -1739,6 +1739,63 @@ export type Database = {
         }
         Relationships: []
       }
+      learner_reengagement_campaigns: {
+        Row: {
+          claimed_at: string | null
+          created_at: string
+          delivery_key: string | null
+          id: string
+          inactive_since: string
+          last_sent_at: string | null
+          step: number
+          stopped_at: string | null
+          unsubscribed_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          created_at?: string
+          delivery_key?: string | null
+          id?: string
+          inactive_since: string
+          last_sent_at?: string | null
+          step?: number
+          stopped_at?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string | null
+          created_at?: string
+          delivery_key?: string | null
+          id?: string
+          inactive_since?: string
+          last_sent_at?: string | null
+          step?: number
+          stopped_at?: string | null
+          unsubscribed_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learner_reengagement_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learner_reengagement_campaigns_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "tutors_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learner_resource_engagement: {
         Row: {
           created_at: string
@@ -7889,6 +7946,17 @@ export type Database = {
           allowed: boolean
           limit: number
           used: number
+        }[]
+      }
+      claim_learner_reengagement: {
+        Args: { _limit?: number }
+        Returns: {
+          campaign_id: string
+          delivery_key: string
+          email: string
+          full_name: string
+          learner_id: string
+          next_step: number
         }[]
       }
       class_topic_affected_students: {

@@ -1,0 +1,3 @@
+# Architecture rules
+- Learner re-engagement uses a server-only Supabase campaign ledger and one daily Edge Function callback, because delivery must be deduplicated and stop on activity or unsubscribe.
+- Email screenshot pointers live under the owning Edge Function and use absolute Lovable-hosted asset URLs, because function deployment cannot import frontend files and email clients need public image URLs.
