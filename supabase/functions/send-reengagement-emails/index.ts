@@ -41,13 +41,31 @@ Deno.serve(async req => {
     }
     if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
     const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
+    const rawBody = await req.json().catch(() => null);
+    // Admin-only test send: does not touch the campaign ledger.
+    if (rawBody && typeof rawBody === 'object' && 'test_user_id' in rawBody) {
+      const t = z.object({ test_user_id: z.string().uuid(), step: z.number().int().min(1).max(3) }).strict().safeParse(rawBody);
+      if (!t.success) return json({ error: 'Invalid request' }, 400);
+      const { data: u } = await admin.auth.getUser(token);
+      if (!u?.user) return json({ error: 'Unauthorized' }, 401);
+      const { data: role } = await admin.from('user_roles').select('role').eq('user_id', u.user.id).eq('role', 'admin').maybeSingle();
+      if (!role) return json({ error: 'Admins only' }, 403);
+      const apiKey = Deno.env.get('RESEND_API_KEY');
+      if (!apiKey) return json({ error: 'Resend not configured' }, 503);
+      const { data: p, error: pe } = await admin.from('profiles').select('email,full_name').eq('id', t.data.test_user_id).single();
+      if (pe || !p?.email) return json({ error: 'Learner not found' }, 404);
+      const content = reengagementEmail(t.data.step, p.full_name ?? '', 'https://studysync.co.za', true);
+      const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ from: Deno.env.get('RESEND_UPDATES_FROM') || 'StudySync <updates@studysync.co.za>', to: [p.email], ...content, subject: `[Test] ${content.subject}` }) });
+      const details = await r.text();
+      return json({ sent: r.ok, status: r.status, details }, r.ok ? 200 : r.status);
+    }
     let authorized = equal(token, cron);
     if (!authorized && token) {
       const { data } = await admin.rpc('verify_cron_token', { _token: token });
       authorized = data === true;
     }
     if (!authorized) return json({ error: 'Unauthorized' }, 401);
-    const parsed = schema.safeParse(await req.json().catch(() => null));
+    const parsed = schema.safeParse(rawBody);
     if (!parsed.success) return json({ error: 'Invalid request', details: parsed.error.flatten() }, 400);
     if (parsed.data.dry_run) {
       const { count, error } = await admin.from('profiles').select('id', { count: 'exact', head: true }).eq('user_type', 'learner').eq('is_suspended', false).lt('last_seen', new Date(Date.now() - 5 * 86_400_000).toISOString());
